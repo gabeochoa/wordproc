@@ -64,7 +64,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Basic text buffer and caret model.
 - [x] Keyboard input for typing, backspace/delete, and line breaks.
 - [x] Selection model (start/end, shift-select) as needed.
-- [ ] Simple layout for lines and wrapping.
+- [x] Simple layout for lines and wrapping.
 
 ### 5) File I/O
 - [ ] Save document to file.

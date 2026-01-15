@@ -65,3 +65,7 @@ This is how Ralph maintains continuity across iterations.
 - Added selection tracking to `TextBuffer` with anchor/end positions.
 - Wired shift+arrow selection updates in the main loop.
 - Marked selection model task complete.
+
+### 2026-01-15 17:42:45
+- Added a simple fixed-column line wrapping helper for layout.
+- Marked line layout/wrapping task complete.
