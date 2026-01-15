@@ -18,3 +18,7 @@ This is how Ralph maintains continuity across iterations.
 
 ### 2026-01-15 17:21:29
 **Session 1 started** (model: gpt-5.2-codex)
+
+### 2026-01-15 17:23:45
+- Copied `vendor/` dependencies from `wm_afterhours` (excluding existing `vendor/afterhours` submodule).
+- Marked Vendor & Build System vendor-copy task complete.
