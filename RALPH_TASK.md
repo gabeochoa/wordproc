@@ -50,7 +50,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### 1) Vendor & Build System
 - [x] Copy `vendor/` from `wm_afterhours` (keep any `vendor/afterhours` modifications on `wordproc` branch only).
 - [x] Copy `.clang-format`, `.gitignore`, `makefile`, and `.cursor` rules.
-- [ ] Verify build succeeds with copied vendor + build config.
+- [x] Verify build succeeds with copied vendor + build config.
 
 ### 2) Resources
 - [ ] Copy selected fonts from `wm_afterhours/resources/fonts/` (document licenses if needed).
