@@ -1,2 +1,83 @@
+# Build artifacts
+**/x64/Debug/*
+**/x64/.vs/*
+*.dSYM
+*.o
+*.d
+*.obj
+game.obj
+a.out
+*.exe
+build/*
+release/*
+release*
+
+# Coverage files
+*.gcno
+*.gcov
+*.gcda
+coverage/
+
+# IDE and editor files
+.cache/
+.vscode/
+.idea/
+**/.vs
+.obsidian/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Project-specific
+WinPharmaSea/**/
+pharmasea/WinPharmaSea/**/
+pharmasea.exe
+!/lib*.dylib
+recording.trace/
+output/
+baseline_screenshots/
+# until they are used in the project, hiding the kennynl folder
+art_storage/*
+.xmake/*
+settings.json
+.watchman*
+TODO.md
+resources/sounds/possibles/*
+tools/dependency_graph
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env/
+*.egg-info/
+.pytest_cache/
+
+# Linting and analysis
+cppcheck_err
+
+# Profiling data files
+*.spall
+
+# ClangBuildAnalyzer output files
+build-analysis.html
+build-analysis.txt
+
+# Compilation database
+compile_commands.json
+
 # Ralph config (may contain API key)
 .cursor/ralph-config.json
