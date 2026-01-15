@@ -53,7 +53,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Verify build succeeds with copied vendor + build config.
 
 ### 2) Resources
-- [ ] Copy selected fonts from `wm_afterhours/resources/fonts/` (document licenses if needed).
+- [x] Copy selected fonts from `wm_afterhours/resources/fonts/` (document licenses if needed).
 - [ ] Decide which additional resources (images, cursors) are needed for the UI skin.
 
 ### 3) Core Runtime (preload / window / raylib)
