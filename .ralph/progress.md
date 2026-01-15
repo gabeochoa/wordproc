@@ -37,3 +37,7 @@ This is how Ralph maintains continuity across iterations.
 - Copied fonts from `wm_afterhours/resources/fonts/`.
 - Added `resources/fonts/README.md` pointing to included license texts.
 - Marked fonts task complete.
+
+### 2026-01-15 17:31:30
+- Added `RESOURCES_NEEDED.md` listing UI icons/cursors needed for the Win95/Mac 3.1 skin.
+- Marked additional resources decision task complete.
