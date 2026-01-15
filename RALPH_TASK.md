@@ -61,7 +61,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Document any missing needs in `AfterhoursGaps.md` and implement temporary workarounds in app code.
 
 ### 4) Editor Engine (small features first)
-- [ ] Basic text buffer and caret model.
+- [x] Basic text buffer and caret model.
 - [ ] Keyboard input for typing, backspace/delete, and line breaks.
 - [ ] Selection model (start/end, shift-select) as needed.
 - [ ] Simple layout for lines and wrapping.

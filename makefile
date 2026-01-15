@@ -112,6 +112,7 @@ OUTPUT_DIR := output
 
 # Source files
 MAIN_SRC := $(wildcard src/*.cpp)
+MAIN_SRC += $(wildcard src/editor/*.cpp)
 MAIN_SRC += $(wildcard src/components/*.cpp)
 MAIN_SRC += $(wildcard src/systems/*.cpp)
 MAIN_SRC += $(wildcard src/ui/*.cpp)

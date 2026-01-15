@@ -50,3 +50,8 @@ This is how Ralph maintains continuity across iterations.
 ### 2026-01-15 17:35:10
 - Added `AfterhoursGaps.md` with current gap notes and app-side workaround.
 - Marked Afterhours gaps documentation task complete.
+
+### 2026-01-15 17:37:15
+- Added `TextBuffer` and `CaretPosition` with insert/delete and movement logic.
+- Updated build sources to compile editor code.
+- Marked text buffer + caret model task complete.
