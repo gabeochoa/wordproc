@@ -63,7 +63,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### 4) Editor Engine (small features first)
 - [x] Basic text buffer and caret model.
 - [x] Keyboard input for typing, backspace/delete, and line breaks.
-- [ ] Selection model (start/end, shift-select) as needed.
+- [x] Selection model (start/end, shift-select) as needed.
 - [ ] Simple layout for lines and wrapping.
 
 ### 5) File I/O

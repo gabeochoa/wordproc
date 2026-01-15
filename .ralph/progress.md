@@ -60,3 +60,8 @@ This is how Ralph maintains continuity across iterations.
 - Wired keyboard input to the text buffer (typing, enter, backspace, delete).
 - Added test input/injector sources to satisfy input hooks.
 - Marked keyboard input task complete.
+
+### 2026-01-15 17:41:10
+- Added selection tracking to `TextBuffer` with anchor/end positions.
+- Wired shift+arrow selection updates in the main loop.
+- Marked selection model task complete.

@@ -36,6 +36,65 @@ int main() {
       buffer.del();
     }
 
+    bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
+                      raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
+
+    if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
+      CaretPosition before = buffer.caret();
+      if (shift_down && !buffer.hasSelection()) {
+        buffer.setSelectionAnchor(before);
+      }
+      if (!shift_down) {
+        buffer.clearSelection();
+      }
+      buffer.moveLeft();
+      if (shift_down) {
+        buffer.updateSelectionToCaret();
+      }
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_RIGHT)) {
+      CaretPosition before = buffer.caret();
+      if (shift_down && !buffer.hasSelection()) {
+        buffer.setSelectionAnchor(before);
+      }
+      if (!shift_down) {
+        buffer.clearSelection();
+      }
+      buffer.moveRight();
+      if (shift_down) {
+        buffer.updateSelectionToCaret();
+      }
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_UP)) {
+      CaretPosition before = buffer.caret();
+      if (shift_down && !buffer.hasSelection()) {
+        buffer.setSelectionAnchor(before);
+      }
+      if (!shift_down) {
+        buffer.clearSelection();
+      }
+      buffer.moveUp();
+      if (shift_down) {
+        buffer.updateSelectionToCaret();
+      }
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_DOWN)) {
+      CaretPosition before = buffer.caret();
+      if (shift_down && !buffer.hasSelection()) {
+        buffer.setSelectionAnchor(before);
+      }
+      if (!shift_down) {
+        buffer.clearSelection();
+      }
+      buffer.moveDown();
+      if (shift_down) {
+        buffer.updateSelectionToCaret();
+      }
+    }
+
     raylib::BeginDrawing();
     raylib::ClearBackground(raylib::RAYWHITE);
     raylib::EndDrawing();

@@ -8,9 +8,44 @@ const std::vector<std::string> &TextBuffer::lines() const { return lines_; }
 
 CaretPosition TextBuffer::caret() const { return caret_; }
 
+bool TextBuffer::hasSelection() const { return has_selection_; }
+
+CaretPosition TextBuffer::selectionStart() const {
+  if (!has_selection_) {
+    return caret_;
+  }
+  return comparePositions(selection_anchor_, selection_end_) <= 0
+             ? selection_anchor_
+             : selection_end_;
+}
+
+CaretPosition TextBuffer::selectionEnd() const {
+  if (!has_selection_) {
+    return caret_;
+  }
+  return comparePositions(selection_anchor_, selection_end_) <= 0
+             ? selection_end_
+             : selection_anchor_;
+}
+
 void TextBuffer::setCaret(CaretPosition caret) {
   caret_ = caret;
   clampCaret();
+}
+
+void TextBuffer::clearSelection() { has_selection_ = false; }
+
+void TextBuffer::setSelectionAnchor(CaretPosition anchor) {
+  has_selection_ = true;
+  selection_anchor_ = anchor;
+  selection_end_ = caret_;
+}
+
+void TextBuffer::updateSelectionToCaret() {
+  if (!has_selection_) {
+    return;
+  }
+  selection_end_ = caret_;
 }
 
 void TextBuffer::insertChar(char ch) {
@@ -140,4 +175,15 @@ void TextBuffer::clampCaret() {
   if (caret_.column > max_column) {
     caret_.column = max_column;
   }
+}
+
+int TextBuffer::comparePositions(const CaretPosition &a,
+                                 const CaretPosition &b) {
+  if (a.row != b.row) {
+    return a.row < b.row ? -1 : 1;
+  }
+  if (a.column != b.column) {
+    return a.column < b.column ? -1 : 1;
+  }
+  return 0;
 }

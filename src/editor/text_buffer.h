@@ -15,8 +15,14 @@ public:
 
   const std::vector<std::string> &lines() const;
   CaretPosition caret() const;
+  bool hasSelection() const;
+  CaretPosition selectionStart() const;
+  CaretPosition selectionEnd() const;
 
   void setCaret(CaretPosition caret);
+  void clearSelection();
+  void setSelectionAnchor(CaretPosition anchor);
+  void updateSelectionToCaret();
 
   void insertChar(char ch);
   void insertText(const std::string &text);
@@ -31,7 +37,12 @@ public:
 private:
   void ensureNonEmpty();
   void clampCaret();
+  static int comparePositions(const CaretPosition &a,
+                              const CaretPosition &b);
 
   std::vector<std::string> lines_;
   CaretPosition caret_;
+  bool has_selection_ = false;
+  CaretPosition selection_anchor_;
+  CaretPosition selection_end_;
 };
