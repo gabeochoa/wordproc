@@ -46,3 +46,7 @@ This is how Ralph maintains continuity across iterations.
 - Copied preload/window init sources (`preload`, `settings`, `rl`, `external`, `render_backend`) from `wm_afterhours`.
 - Wired `src/main.cpp` to initialize the window via `Preload` and `Settings`.
 - Marked preload/window initialization task complete.
+
+### 2026-01-15 17:35:10
+- Added `AfterhoursGaps.md` with current gap notes and app-side workaround.
+- Marked Afterhours gaps documentation task complete.
