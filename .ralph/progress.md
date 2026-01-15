@@ -55,3 +55,8 @@ This is how Ralph maintains continuity across iterations.
 - Added `TextBuffer` and `CaretPosition` with insert/delete and movement logic.
 - Updated build sources to compile editor code.
 - Marked text buffer + caret model task complete.
+
+### 2026-01-15 17:39:05
+- Wired keyboard input to the text buffer (typing, enter, backspace, delete).
+- Added test input/injector sources to satisfy input hooks.
+- Marked keyboard input task complete.

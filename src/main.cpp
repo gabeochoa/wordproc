@@ -1,3 +1,4 @@
+#include "editor/text_buffer.h"
 #include "preload.h"
 #include "rl.h"
 #include "settings.h"
@@ -13,7 +14,28 @@ int main() {
   Preload::get().init("Wordproc").make_singleton();
   Settings::get().refresh_settings();
 
+  TextBuffer buffer;
+
   while (!raylib::WindowShouldClose()) {
+    int codepoint = raylib::GetCharPressed();
+    while (codepoint > 0) {
+      if (codepoint >= 32) {
+        buffer.insertChar(static_cast<char>(codepoint));
+      }
+      codepoint = raylib::GetCharPressed();
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_ENTER) ||
+        raylib::IsKeyPressed(raylib::KEY_KP_ENTER)) {
+      buffer.insertChar('\n');
+    }
+    if (raylib::IsKeyPressed(raylib::KEY_BACKSPACE)) {
+      buffer.backspace();
+    }
+    if (raylib::IsKeyPressed(raylib::KEY_DELETE)) {
+      buffer.del();
+    }
+
     raylib::BeginDrawing();
     raylib::ClearBackground(raylib::RAYWHITE);
     raylib::EndDrawing();
