@@ -41,3 +41,8 @@ This is how Ralph maintains continuity across iterations.
 ### 2026-01-15 17:31:30
 - Added `RESOURCES_NEEDED.md` listing UI icons/cursors needed for the Win95/Mac 3.1 skin.
 - Marked additional resources decision task complete.
+
+### 2026-01-15 17:34:05
+- Copied preload/window init sources (`preload`, `settings`, `rl`, `external`, `render_backend`) from `wm_afterhours`.
+- Wired `src/main.cpp` to initialize the window via `Preload` and `Settings`.
+- Marked preload/window initialization task complete.

@@ -57,7 +57,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Decide which additional resources (images, cursors) are needed for the UI skin.
 
 ### 3) Core Runtime (preload / window / raylib)
-- [ ] Copy preload and window initialization pieces from `wm_afterhours/src/` as a starting point.
+- [x] Copy preload and window initialization pieces from `wm_afterhours/src/` as a starting point.
 - [ ] Document any missing needs in `AfterhoursGaps.md` and implement temporary workarounds in app code.
 
 ### 4) Editor Engine (small features first)
