@@ -1,3 +1,4 @@
+#include "editor/document_io.h"
 #include "editor/text_buffer.h"
 #include "preload.h"
 #include "rl.h"
@@ -15,6 +16,7 @@ int main() {
   Settings::get().refresh_settings();
 
   TextBuffer buffer;
+  const std::string doc_path = "output/document.txt";
 
   while (!raylib::WindowShouldClose()) {
     int codepoint = raylib::GetCharPressed();
@@ -34,6 +36,15 @@ int main() {
     }
     if (raylib::IsKeyPressed(raylib::KEY_DELETE)) {
       buffer.del();
+    }
+
+    bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
+                     raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_S)) {
+      saveTextFile(buffer, doc_path);
+    }
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_O)) {
+      loadTextFile(buffer, doc_path);
     }
 
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||

@@ -26,6 +26,8 @@ public:
 
   void insertChar(char ch);
   void insertText(const std::string &text);
+  void setText(const std::string &text);
+  std::string getText() const;
   void backspace();
   void del();
 

@@ -73,6 +73,48 @@ void TextBuffer::insertText(const std::string &text) {
   }
 }
 
+void TextBuffer::setText(const std::string &text) {
+  lines_.clear();
+  std::string current;
+
+  for (char ch : text) {
+    if (ch == '\n') {
+      if (!current.empty() && current.back() == '\r') {
+        current.pop_back();
+      }
+      lines_.push_back(current);
+      current.clear();
+      continue;
+    }
+    current.push_back(ch);
+  }
+
+  if (!current.empty() && current.back() == '\r') {
+    current.pop_back();
+  }
+  lines_.push_back(current);
+
+  ensureNonEmpty();
+  caret_.row = lines_.size() - 1;
+  caret_.column = lines_[caret_.row].size();
+  clearSelection();
+}
+
+std::string TextBuffer::getText() const {
+  if (lines_.empty()) {
+    return "";
+  }
+
+  std::string result;
+  for (std::size_t i = 0; i < lines_.size(); ++i) {
+    result += lines_[i];
+    if (i + 1 < lines_.size()) {
+      result += '\n';
+    }
+  }
+  return result;
+}
+
 void TextBuffer::backspace() {
   ensureNonEmpty();
 

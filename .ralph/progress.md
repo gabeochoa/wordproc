@@ -69,3 +69,7 @@ This is how Ralph maintains continuity across iterations.
 ### 2026-01-15 17:42:45
 - Added a simple fixed-column line wrapping helper for layout.
 - Marked line layout/wrapping task complete.
+
+### 2026-01-15 17:45:10
+- Added document save/load helpers and wired Ctrl+S/Ctrl+O.
+- Marked save/open file tasks complete.

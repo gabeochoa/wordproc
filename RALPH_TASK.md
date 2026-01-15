@@ -67,8 +67,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Simple layout for lines and wrapping.
 
 ### 5) File I/O
-- [ ] Save document to file.
-- [ ] Open document from file.
+- [x] Save document to file.
+- [x] Open document from file.
 - [ ] Persist formatting metadata (at least bold/italic and font choice).
 
 ### 6) Formatting & Fonts
