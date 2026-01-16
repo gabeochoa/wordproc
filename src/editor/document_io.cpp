@@ -68,6 +68,8 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
     doc["style"] = {
         {"bold", style.bold},
         {"italic", style.italic},
+        {"underline", style.underline},
+        {"strikethrough", style.strikethrough},
         {"font", style.font},
         {"fontSize", style.fontSize},
     };
@@ -142,6 +144,12 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             }
             if (style_json.contains("italic")) {
                 style.italic = style_json.at("italic").get<bool>();
+            }
+            if (style_json.contains("underline")) {
+                style.underline = style_json.at("underline").get<bool>();
+            }
+            if (style_json.contains("strikethrough")) {
+                style.strikethrough = style_json.at("strikethrough").get<bool>();
             }
             if (style_json.contains("font")) {
                 style.font = style_json.at("font").get<std::string>();

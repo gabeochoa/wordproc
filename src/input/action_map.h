@@ -50,6 +50,8 @@ enum class Action {
     // Formatting
     ToggleBold,
     ToggleItalic,
+    ToggleUnderline,
+    ToggleStrikethrough,
     FontGaegu,
     FontGaramond,
     IncreaseFontSize,

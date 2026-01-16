@@ -63,6 +63,8 @@ inline std::vector<win95::Menu> createMenuBar() {
         // Text formatting
         {"Bold", "Ctrl+B", true, false, nullptr},
         {"Italic", "Ctrl+I", true, false, nullptr},
+        {"Underline", "Ctrl+U", true, false, nullptr},
+        {"Strikethrough", "Ctrl+Shift+S", true, false, nullptr},
         {"", "", false, true, nullptr},  // Separator
         {"Font: Gaegu", "Ctrl+1", true, false, nullptr},
         {"Font: Garamond", "Ctrl+2", true, false, nullptr},

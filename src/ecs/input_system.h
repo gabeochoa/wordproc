@@ -123,6 +123,20 @@ struct KeyboardShortcutSystem
             doc.buffer.setTextStyle(style);
         }
 
+        // Underline
+        if (actionMap_.isActionPressed(Action::ToggleUnderline)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.underline = !style.underline;
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Strikethrough
+        if (actionMap_.isActionPressed(Action::ToggleStrikethrough)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.strikethrough = !style.strikethrough;
+            doc.buffer.setTextStyle(style);
+        }
+
         // Font selection
         if (actionMap_.isActionPressed(Action::FontGaegu)) {
             TextStyle style = doc.buffer.textStyle();

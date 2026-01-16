@@ -16,6 +16,7 @@
 #include "rl.h"
 #include "settings.h"
 #include "ui/ui_context.h"
+#include "util/logging.h"
 
 using namespace afterhours;
 
@@ -64,18 +65,24 @@ Preload &Preload::init(const char *title) {
     // Set log level BEFORE InitWindow to suppress init messages
     raylib::SetTraceLogLevel(raylib::LOG_ERROR);
 
-    raylib::InitWindow(width, height, title);
-    raylib::SetWindowSize(width, height);
-    raylib::SetWindowState(raylib::FLAG_WINDOW_RESIZABLE);
+    {
+        SCOPED_TIMER("InitWindow");
+        raylib::InitWindow(width, height, title);
+        raylib::SetWindowSize(width, height);
+        raylib::SetWindowState(raylib::FLAG_WINDOW_RESIZABLE);
+    }
 
     raylib::SetTargetFPS(200);
 
-    raylib::SetAudioStreamBufferSizeDefault(4096);
-    raylib::InitAudioDevice();
-    if (!raylib::IsAudioDeviceReady()) {
-        log_warn("audio device not ready; continuing without audio");
+    {
+        SCOPED_TIMER("InitAudioDevice");
+        raylib::SetAudioStreamBufferSizeDefault(4096);
+        raylib::InitAudioDevice();
+        if (!raylib::IsAudioDeviceReady()) {
+            log_warn("audio device not ready; continuing without audio");
+        }
+        raylib::SetMasterVolume(1.f);
     }
-    raylib::SetMasterVolume(1.f);
 
     raylib::SetExitKey(0);
 
@@ -169,34 +176,45 @@ Preload &Preload::make_singleton() {
         auto korean_cps = get_korean_codepoints();
         auto japanese_cps = get_japanese_codepoints();
 
-        sophie
-            .get<ui::FontManager>()
-            // Default font (used when no language-specific font is set)
-            .load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str())
-            .load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str())
-            // English font (ASCII only)
-            .load_font("Gaegu-Bold", english_font.c_str())
-            // Rounded font for cartoon/tycoon style
-            .load_font("EqProRounded", rounded_font.c_str())
-            // Garamond for elegant/cozy style
-            .load_font("Garamond", garamond_font.c_str())
-            // Symbols/icons font
-            .load_font("NerdSymbols", symbols_font.c_str())
-            // Fredoka for thick cartoon/bubble style (Tycoon, Angry Birds,
-            // Rubber Bandits)
-            .load_font("Fredoka", fredoka_font.c_str())
-            // Black Ops One for military/stencil style (Shooter HUD)
-            .load_font("BlackOpsOne", blackops_font.c_str())
-            // Atkinson Hyperlegible for accessibility
-            .load_font("Atkinson", atkinson_font.c_str())
+        {
+            SCOPED_TIMER("Load English/Latin fonts");
+            sophie
+                .get<ui::FontManager>()
+                // Default font (used when no language-specific font is set)
+                .load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str())
+                .load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str())
+                // English font (ASCII only)
+                .load_font("Gaegu-Bold", english_font.c_str())
+                // Rounded font for cartoon/tycoon style
+                .load_font("EqProRounded", rounded_font.c_str())
+                // Garamond for elegant/cozy style
+                .load_font("Garamond", garamond_font.c_str())
+                // Symbols/icons font
+                .load_font("NerdSymbols", symbols_font.c_str())
+                // Fredoka for thick cartoon/bubble style (Tycoon, Angry Birds,
+                // Rubber Bandits)
+                .load_font("Fredoka", fredoka_font.c_str())
+                // Black Ops One for military/stencil style (Shooter HUD)
+                .load_font("BlackOpsOne", blackops_font.c_str())
+                // Atkinson Hyperlegible for accessibility
+                .load_font("Atkinson", atkinson_font.c_str());
+        }
+
+        {
+            SCOPED_TIMER("Load Korean font (11k codepoints)");
             // Korean font with Hangul codepoints
-            .load_font_with_codepoints("NotoSansKR", korean_font.c_str(),
-                                       korean_cps.data(),
-                                       static_cast<int>(korean_cps.size()))
+            sophie.get<ui::FontManager>().load_font_with_codepoints(
+                "NotoSansKR", korean_font.c_str(), korean_cps.data(),
+                static_cast<int>(korean_cps.size()));
+        }
+
+        {
+            SCOPED_TIMER("Load Japanese font (21k codepoints)");
             // Japanese font with Hiragana/Katakana/Kanji codepoints
-            .load_font_with_codepoints("Sazanami", japanese_font.c_str(),
-                                       japanese_cps.data(),
-                                       static_cast<int>(japanese_cps.size()));
+            sophie.get<ui::FontManager>().load_font_with_codepoints(
+                "Sazanami", japanese_font.c_str(), japanese_cps.data(),
+                static_cast<int>(japanese_cps.size()));
+        }
 
         // Register loaded fonts with FontLoader for P2 font listing
         fonts::FontLoader::get().loadStartupFonts(

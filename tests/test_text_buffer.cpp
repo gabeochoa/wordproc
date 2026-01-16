@@ -702,3 +702,64 @@ TEST_CASE("Paragraph styles", "[text_buffer][paragraph_styles]") {
         REQUIRE(buffer.lineCount() == 2);
     }
 }
+
+TEST_CASE("Font family and size selection", "[text_buffer][font]") {
+    TextBuffer buffer;
+    
+    SECTION("default font is Gaegu-Bold") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.font == "Gaegu-Bold");
+    }
+    
+    SECTION("default font size is 16") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.fontSize == 16);
+    }
+    
+    SECTION("set font family") {
+        TextStyle style = buffer.textStyle();
+        style.font = "EBGaramond-Regular";
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.font == "EBGaramond-Regular");
+    }
+    
+    SECTION("set font size") {
+        TextStyle style = buffer.textStyle();
+        style.fontSize = 24;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.fontSize == 24);
+    }
+    
+    SECTION("font size limits") {
+        TextStyle style = buffer.textStyle();
+        
+        // Test max limit (72)
+        style.fontSize = 72;
+        buffer.setTextStyle(style);
+        REQUIRE(buffer.textStyle().fontSize == 72);
+        
+        // Test min limit (8)
+        style.fontSize = 8;
+        buffer.setTextStyle(style);
+        REQUIRE(buffer.textStyle().fontSize == 8);
+    }
+    
+    SECTION("font and size independent of bold/italic") {
+        TextStyle style = buffer.textStyle();
+        style.font = "TestFont";
+        style.fontSize = 20;
+        style.bold = true;
+        style.italic = true;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.font == "TestFont");
+        REQUIRE(updated.fontSize == 20);
+        REQUIRE(updated.bold == true);
+        REQUIRE(updated.italic == true);
+    }
+}

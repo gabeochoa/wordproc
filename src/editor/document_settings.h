@@ -75,6 +75,8 @@ inline bool paragraphStyleIsItalic(ParagraphStyle style) {
 struct TextStyle {
     bool bold = false;
     bool italic = false;
+    bool underline = false;
+    bool strikethrough = false;
     std::string font = "Gaegu-Bold";
     int fontSize = 16;  // Default size in pixels
 };

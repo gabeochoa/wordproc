@@ -1805,3 +1805,57 @@ Ralph Session Started: Thu Jan 15 21:16:28 CST 2026
 [21:22:46] 🔴 TOKENS: 75491 / 80000 (94%) - rotation imminent [read:290KB write:0KB assist:1KB shell:0KB]
 [21:23:08] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs_fresh2 2>&1 | tail -30 → exit 0
 [21:23:16] 🔴 TOKENS: 75516 / 80000 (94%) - rotation imminent [read:290KB write:0KB assist:1KB shell:0KB]
+[21:23:22] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git add -A && git commit -m "$(cat <<'EOF'
+Add paragraph style tests and mark styles feature complete
+
+- Added 42 test assertions for ParagraphStyle functionality
+- Tests cover: default style, setting/getting styles, per-line independence,
+  all style types (Normal, Title, Subtitle, H1-H6), helper functions
+- Verified existing implementation: enum, keyboard shortcuts (Ctrl+Alt+0-6),
+  Format menu items, rendering with per-style font sizes and bold/italic
+EOF
+)" → exit 0
+[21:23:47] 🔴 TOKENS: 75619 / 80000 (94%) - rotation imminent [read:290KB write:0KB assist:1KB shell:0KB]
+[21:23:52] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_document_io.cpp (221 lines, ~21.5KB)
+[21:23:52] 🔴 ROTATE: Token threshold reached (81144 >= 80000)
+[21:23:56] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_text_buffer.cpp (705 lines, ~68.8KB)
+[21:23:56] 🔴 ROTATE: Token threshold reached (98769 >= 80000)
+[21:24:08] 🔴 ROTATE: Token threshold reached (98769 >= 80000)
+[21:24:31] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs_fresh3 2>&1 | tail -15 → exit 0
+[21:24:31] 🔴 ROTATE: Token threshold reached (98769 >= 80000)
+[21:24:31] 🔴 TOKENS: 98769 / 80000 (123%) - rotation imminent [read:381KB write:0KB assist:1KB shell:0KB]
+[21:24:37] 🔴 ROTATE: Token threshold reached (98769 >= 80000)
+[21:24:42] 🔴 ROTATE: Token threshold reached (98797 >= 80000)
+[21:24:45] 🔴 ROTATE: Token threshold reached (98797 >= 80000)
+[21:24:51] 🔴 ROTATE: Token threshold reached (98818 >= 80000)
+[21:24:55] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.cpp (193 lines, ~18.8KB)
+[21:24:56] 🔴 ROTATE: Token threshold reached (103643 >= 80000)
+[21:25:00] 🔴 ROTATE: Token threshold reached (103643 >= 80000)
+[21:25:02] 🔴 TOKENS: 103643 / 80000 (129%) - rotation imminent [read:399KB write:0KB assist:2KB shell:0KB]
+[21:25:04] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.cpp (195 lines, ~19.0KB)
+[21:25:04] 🔴 ROTATE: Token threshold reached (108518 >= 80000)
+[21:25:13] 🔴 ROTATE: Token threshold reached (108518 >= 80000)
+[21:25:17] 🔴 READ /Users/gabeochoa/p/wordproc/src/input/action_map.h (157 lines, ~15.3KB)
+[21:25:17] 🔴 ROTATE: Token threshold reached (112460 >= 80000)
+[21:25:22] 🔴 ROTATE: Token threshold reached (112460 >= 80000)
+[21:25:26] 🔴 READ /Users/gabeochoa/p/wordproc/src/input/action_map.cpp (653 lines, ~63.7KB)
+[21:25:26] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:25:31] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:25:32] 🔴 TOKENS: 128785 / 80000 (160%) - rotation imminent [read:498KB write:0KB assist:2KB shell:0KB]
+[21:25:35] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:25:40] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:25:43] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:25:50] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:25:57] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:26:02] 🔴 TOKENS: 128785 / 80000 (160%) - rotation imminent [read:498KB write:0KB assist:2KB shell:0KB]
+[21:26:02] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:26:09] 🔴 ROTATE: Token threshold reached (128785 >= 80000)
+[21:26:12] 🔴 READ /Users/gabeochoa/p/wordproc/src/ecs/input_system.h (354 lines, ~34.5KB)
+[21:26:13] 🔴 ROTATE: Token threshold reached (137635 >= 80000)
+[21:26:19] 🔴 ROTATE: Token threshold reached (137635 >= 80000)
+
+═══════════════════════════════════════════════════════════════
+Ralph Session Started: Thu Jan 15 21:26:21 CST 2026
+═══════════════════════════════════════════════════════════════
+[21:26:22] 🔴 ROTATE: Token threshold reached (137635 >= 80000)
+[21:26:26] 🔴 ROTATE: Token threshold reached (137635 >= 80000)

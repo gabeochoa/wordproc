@@ -99,6 +99,10 @@ const char* ActionMap::actionName(Action action) {
             return "ToggleBold";
         case Action::ToggleItalic:
             return "ToggleItalic";
+        case Action::ToggleUnderline:
+            return "ToggleUnderline";
+        case Action::ToggleStrikethrough:
+            return "ToggleStrikethrough";
         case Action::FontGaegu:
             return "FontGaegu";
         case Action::FontGaramond:
@@ -191,6 +195,8 @@ static void bindWindowsPreset(ActionMap& map) {
     // Formatting: Ctrl+key
     map.bind({raylib::KEY_B, true, false, false}, Action::ToggleBold);
     map.bind({raylib::KEY_I, true, false, false}, Action::ToggleItalic);
+    map.bind({raylib::KEY_U, true, false, false}, Action::ToggleUnderline);
+    map.bind({raylib::KEY_S, true, true, false}, Action::ToggleStrikethrough);  // Ctrl+Shift+S
     map.bind({raylib::KEY_ONE, true, false, false}, Action::FontGaegu);
     map.bind({raylib::KEY_TWO, true, false, false}, Action::FontGaramond);
     map.bind({raylib::KEY_EQUAL, true, false, false}, Action::IncreaseFontSize);
@@ -252,6 +258,8 @@ static void bindMacOSPreset(ActionMap& map) {
     // Formatting: Cmd+key
     map.bind({raylib::KEY_B, true, false, false}, Action::ToggleBold);
     map.bind({raylib::KEY_I, true, false, false}, Action::ToggleItalic);
+    map.bind({raylib::KEY_U, true, false, false}, Action::ToggleUnderline);
+    map.bind({raylib::KEY_S, true, true, false}, Action::ToggleStrikethrough);  // Cmd+Shift+S
     map.bind({raylib::KEY_ONE, true, false, false}, Action::FontGaegu);
     map.bind({raylib::KEY_TWO, true, false, false}, Action::FontGaramond);
     map.bind({raylib::KEY_EQUAL, true, false, false}, Action::IncreaseFontSize);
@@ -357,6 +365,10 @@ const char* actionDisplayName(Action action) {
             return "Toggle Bold";
         case Action::ToggleItalic:
             return "Toggle Italic";
+        case Action::ToggleUnderline:
+            return "Toggle Underline";
+        case Action::ToggleStrikethrough:
+            return "Toggle Strikethrough";
         case Action::FontGaegu:
             return "Font: Gaegu";
         case Action::FontGaramond:
@@ -631,6 +643,8 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // Formatting
     addBinding(Action::ToggleBold, {raylib::KEY_B, true, false, false});
     addBinding(Action::ToggleItalic, {raylib::KEY_I, true, false, false});
+    addBinding(Action::ToggleUnderline, {raylib::KEY_U, true, false, false});
+    addBinding(Action::ToggleStrikethrough, {raylib::KEY_S, true, true, false});
     addBinding(Action::IncreaseFontSize,
                {raylib::KEY_EQUAL, true, false, false});
     addBinding(Action::DecreaseFontSize,
