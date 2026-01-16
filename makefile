@@ -302,7 +302,7 @@ e2e: $(MAIN_EXE)
 benchmark: $(MAIN_EXE)
 	@echo "Running load-time benchmark..."
 	@mkdir -p output/perf
-	@./tests/run_benchmark.sh
+	@bash ./tests/run_benchmark.sh
 
 .PHONY: test test-verbose bench-unit e2e benchmark
 

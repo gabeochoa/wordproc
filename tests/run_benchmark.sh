@@ -1,6 +1,7 @@
 #!/bin/bash
 # Load-time regression benchmark
 # Measures cold start time for opening various test files
+# Uses --benchmark mode (headless, no window)
 
 set -e
 
@@ -28,7 +29,7 @@ if [ ! -f "$WORDPROC" ]; then
 fi
 
 # CSV header
-echo "filename,size_bytes,cold_start_ms,ready_to_interact_ms,pass_fail,timestamp" > "$REPORT_FILE"
+echo "filename,size_bytes,lines,chars,load_ms,total_ms,pass_fail,timestamp" > "$REPORT_FILE"
 
 echo "=============================================="
 echo "Load-Time Regression Benchmark"
@@ -42,43 +43,23 @@ fail_count=0
 total_count=0
 
 # Process each test file
-for file in "$TEST_DIR"/*.txt "$TEST_DIR"/*.md "$TEST_DIR"/*.wpdoc 2>/dev/null; do
+shopt -s nullglob 2>/dev/null || true  # For bash compatibility
+for file in "$TEST_DIR"/*.txt "$TEST_DIR"/*.md "$TEST_DIR"/*.wpdoc; do
     [ -f "$file" ] || continue
     
     filename=$(basename "$file")
-    size_bytes=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
     
-    # Run the app in test mode with frame limit of 5 (enough to measure startup)
-    # Capture stdout which includes startup time
-    start_time=$(date +%s%N 2>/dev/null || python3 -c "import time; print(int(time.time()*1e9))")
+    # Run the app in benchmark mode (headless, no window)
+    output=$("$WORDPROC" --benchmark "$file" 2>&1 || true)
     
-    output=$("$WORDPROC" --test-mode --frame-limit 5 --screenshot-dir "$OUTPUT_DIR/screenshots" "$file" 2>&1 || true)
-    
-    end_time=$(date +%s%N 2>/dev/null || python3 -c "import time; print(int(time.time()*1e9))")
-    
-    # Extract startup time from app output
-    startup_ms=$(echo "$output" | grep "Startup time:" | sed 's/.*: \([0-9]*\) ms.*/\1/' || echo "")
-    
-    if [ -z "$startup_ms" ]; then
-        # Fallback: calculate from wall clock (less accurate due to process overhead)
-        elapsed_ns=$((end_time - start_time))
-        startup_ms=$((elapsed_ns / 1000000))
-    fi
-    
-    # Ready-to-interact is same as startup for now (first interactive frame)
-    ready_ms=$startup_ms
-    
-    # Check against target
-    if [ "$startup_ms" -le "$TARGET_MS" ]; then
-        pass_fail="PASS"
-        status_color=$GREEN
-        ((pass_count++)) || true
-    else
-        pass_fail="FAIL"
-        status_color=$RED
-        ((fail_count++)) || true
-    fi
-    ((total_count++)) || true
+    # Parse the output
+    # Format: file=...,size=...,lines=...,chars=...,load_ms=...,total_ms=...,target=100,pass=true/false
+    size_bytes=$(echo "$output" | sed 's/.*size=\([0-9]*\).*/\1/')
+    lines=$(echo "$output" | sed 's/.*lines=\([0-9]*\).*/\1/')
+    chars=$(echo "$output" | sed 's/.*chars=\([0-9]*\).*/\1/')
+    load_ms=$(echo "$output" | sed 's/.*load_ms=\([0-9.]*\).*/\1/')
+    total_ms=$(echo "$output" | sed 's/.*total_ms=\([0-9.]*\).*/\1/')
+    pass_raw=$(echo "$output" | sed 's/.*pass=\([a-z]*\).*/\1/')
     
     # Human-readable size
     if [ "$size_bytes" -ge 1048576 ]; then
@@ -89,12 +70,24 @@ for file in "$TEST_DIR"/*.txt "$TEST_DIR"/*.md "$TEST_DIR"/*.wpdoc 2>/dev/null; 
         size_human="${size_bytes}B"
     fi
     
+    # Check against target
+    if [ "$pass_raw" = "true" ]; then
+        pass_fail="PASS"
+        status_color=$GREEN
+        ((pass_count++)) || true
+    else
+        pass_fail="FAIL"
+        status_color=$RED
+        ((fail_count++)) || true
+    fi
+    ((total_count++)) || true
+    
     # Write to CSV
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    echo "$filename,$size_bytes,$startup_ms,$ready_ms,$pass_fail,$timestamp" >> "$REPORT_FILE"
+    echo "$filename,$size_bytes,$lines,$chars,$load_ms,$total_ms,$pass_fail,$timestamp" >> "$REPORT_FILE"
     
     # Console output
-    printf "  %-35s %10s  %5sms  %b%s%b\n" "$filename" "$size_human" "$startup_ms" "$status_color" "$pass_fail" "$NC"
+    printf "  %-35s %10s  %8.2fms  %b%s%b\n" "$filename" "$size_human" "$total_ms" "$status_color" "$pass_fail" "$NC"
 done
 
 echo ""

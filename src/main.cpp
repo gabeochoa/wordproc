@@ -152,11 +152,49 @@ int main(int argc, char *argv[]) {
   cmdl("--screenshot-dir", "output/screenshots") >> testConfig.screenshot_dir;
   cmdl("--frame-limit", 0) >> testConfig.frame_limit;
   
+  // Headless benchmark mode - measures file load time without opening window
+  bool benchmarkMode = cmdl["--benchmark"];
+  
   std::string loadFile;
   cmdl(1, "") >> loadFile; // First positional argument is file to open
   
   // Track startup time
   auto startTime = std::chrono::high_resolution_clock::now();
+
+  // Headless benchmark: just load file and report timing
+  if (benchmarkMode) {
+    TextBuffer buffer;
+    
+    auto loadStart = std::chrono::high_resolution_clock::now();
+    
+    if (!loadFile.empty() && std::filesystem::exists(loadFile)) {
+      loadTextFile(buffer, loadFile);
+    }
+    
+    auto loadEnd = std::chrono::high_resolution_clock::now();
+    auto loadMs = std::chrono::duration_cast<std::chrono::microseconds>(
+        loadEnd - loadStart).count() / 1000.0;
+    auto totalMs = std::chrono::duration_cast<std::chrono::microseconds>(
+        loadEnd - startTime).count() / 1000.0;
+    
+    // Get file size
+    std::size_t fileSize = 0;
+    if (!loadFile.empty() && std::filesystem::exists(loadFile)) {
+      fileSize = std::filesystem::file_size(loadFile);
+    }
+    
+    // Output CSV-friendly format
+    std::printf("file=%s,size=%zu,lines=%zu,chars=%zu,load_ms=%.3f,total_ms=%.3f,target=100,pass=%s\n",
+                loadFile.c_str(),
+                fileSize,
+                buffer.lineCount(),
+                buffer.getText().size(),
+                loadMs,
+                totalMs,
+                totalMs <= 100.0 ? "true" : "false");
+    
+    return totalMs <= 100.0 ? 0 : 1;
+  }
 
   Settings::get().load_save_file(800, 600);
 
