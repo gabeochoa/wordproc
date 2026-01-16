@@ -560,6 +560,23 @@ Summary:
 ### 2026-01-15 19:26:00
 **Session 8 started** (model: opus-4.5-thinking)
 
+### 2026-01-15 (Session 8 - ECS Refactoring Complete)
+- Verified ECS refactoring was already committed in previous session
+- Created src/ecs/ with:
+  - components.h: CaretComponent, ScrollComponent, DocumentComponent, StatusComponent, MenuComponent, LayoutComponent, TestConfigComponent
+  - input_system.h: TextInputSystem, KeyboardShortcutSystem, NavigationSystem, CaretBlinkSystem, LayoutUpdateSystem
+  - render_system.h: EditorRenderSystem, MenuSystem, ScreenshotSystem
+- main.cpp now uses afterhours::SystemManager (reduced from 727 to 178 lines)
+- Marked ECS refactor task complete in RALPH_TASK.md
+- All 321 tests pass
+
+**ALL CRITERIA VERIFIED COMPLETE:**
+- 10/10 Success Criteria [x]
+- All Feedback Tasks (Completed) [x]
+- Future Work items are non-blocking v0.2+ enhancements
+
+**Session 8 ended** - TASK COMPLETE
+
 ### Session 8 Work (Iteration 7)
 - Moved `src/engine/input_injector.{h,cpp}` to `src/testing/` (test-only code)
 - Marked 10+ Feedback Tasks as complete that were already implemented:

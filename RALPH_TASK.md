@@ -171,6 +171,7 @@ These are architectural improvements and new features for future versions. They 
 - Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
 - Ensure `.doc` import support; collect sample `.doc` files for tests.
 - Add a test that loads the largest file and logs FPS while scrolling.
+- Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
 
 ---
 
