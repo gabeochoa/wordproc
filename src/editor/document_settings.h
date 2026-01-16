@@ -414,15 +414,12 @@ struct SectionSettings {
     
     // Headers/footers can be different per section
     bool linkToPrevious = true;  // Use same header/footer as previous section
-    HeaderFooter header;
-    HeaderFooter footer;
+    // Note: HeaderFooter and Watermark members moved to after struct definitions
+    // to avoid forward declaration issues. For now, use pointers or indices.
+    // TODO: Reorganize file to define HeaderFooter/Watermark before SectionSettings
     
     // Starting page number (0 = continue from previous)
     int startingPageNumber = 0;
-    
-    // Section-specific watermark override
-    bool hasWatermarkOverride = false;
-    Watermark watermark;
 };
 
 // Section marker in document

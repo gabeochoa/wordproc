@@ -1326,10 +1326,20 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
         line_spans_[pos.row].length -= 1;
         shiftLineOffsetsFrom(pos.row + 1, -1);
     } else if (pos.row + 1 < line_spans_.size()) {
+        // Deleting newline at end of line - merge with next line
         std::size_t offset = span.offset + span.length;
         chars_.erase(offset, 1);
         version_++;
-        rebuildLineIndex();
+        
+        // Merge next line into current line (keep current line's style)
+        LineSpan& nextSpan = line_spans_[pos.row + 1];
+        line_spans_[pos.row].length += nextSpan.length;
+        
+        // Remove the next line span
+        line_spans_.erase(line_spans_.begin() + pos.row + 1);
+        
+        // Shift subsequent lines
+        shiftLineOffsetsFrom(pos.row + 1, -1);
     }
 }
 
@@ -1802,17 +1812,9 @@ bool TextBuffer::addBookmarkAt(const std::string& name, std::size_t offset) {
     }
     
     // Check if bookmark with this name already exists
-    for (auto& bm : bookmarks_) {
+    for (const auto& bm : bookmarks_) {
         if (bm.name == name) {
-            // Update existing bookmark
-            bm.offset = offset;
-            // Re-sort after update
-            std::sort(bookmarks_.begin(), bookmarks_.end(),
-                     [](const Bookmark& a, const Bookmark& b) {
-                         return a.offset < b.offset;
-                     });
-            version_++;
-            return true;
+            return false;  // Duplicate name not allowed
         }
     }
     
