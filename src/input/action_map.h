@@ -78,6 +78,11 @@ enum class Action {
     // Indentation
     IndentIncrease,
     IndentDecrease,
+    
+    // Line spacing
+    LineSpacingSingle,
+    LineSpacing1_5,
+    LineSpacingDouble,
 
     // Count (for iteration)
     COUNT

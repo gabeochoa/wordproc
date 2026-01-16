@@ -103,6 +103,11 @@ struct LineSpan {
     // Indentation (in pixels or character widths)
     int leftIndent = 0;       // Left margin indent for entire paragraph
     int firstLineIndent = 0;  // Additional indent for first line only (can be negative for hanging)
+    
+    // Spacing
+    float lineSpacing = 1.0f;   // Line height multiplier (1.0 = single, 1.5 = 1.5x, 2.0 = double)
+    int spaceBefore = 0;        // Extra pixels of space before this paragraph
+    int spaceAfter = 0;         // Extra pixels of space after this paragraph
 };
 
 // Gap buffer for efficient text editing
@@ -211,6 +216,24 @@ class TextBuffer {
     // Get indentation for a specific line
     int lineLeftIndent(std::size_t row) const;
     int lineFirstLineIndent(std::size_t row) const;
+    
+    // Spacing for current line (where caret is)
+    float currentLineSpacing() const;
+    int currentSpaceBefore() const;
+    int currentSpaceAfter() const;
+    void setCurrentLineSpacing(float multiplier);  // 1.0 = single, 1.5 = 1.5x, 2.0 = double
+    void setCurrentSpaceBefore(int pixels);
+    void setCurrentSpaceAfter(int pixels);
+    
+    // Convenience methods for common line spacings
+    void setLineSpacingSingle();    // 1.0
+    void setLineSpacing1_5();       // 1.5
+    void setLineSpacingDouble();    // 2.0
+    
+    // Get spacing for a specific line
+    float lineSpacing(std::size_t row) const;
+    int lineSpaceBefore(std::size_t row) const;
+    int lineSpaceAfter(std::size_t row) const;
     
     void backspace();
     void del();

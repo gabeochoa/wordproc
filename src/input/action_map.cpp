@@ -143,6 +143,12 @@ const char* ActionMap::actionName(Action action) {
             return "IndentIncrease";
         case Action::IndentDecrease:
             return "IndentDecrease";
+        case Action::LineSpacingSingle:
+            return "LineSpacingSingle";
+        case Action::LineSpacing1_5:
+            return "LineSpacing1_5";
+        case Action::LineSpacingDouble:
+            return "LineSpacingDouble";
         case Action::COUNT:
         default:
             return "NONE";
@@ -441,6 +447,12 @@ const char* actionDisplayName(Action action) {
             return "Increase Indent";
         case Action::IndentDecrease:
             return "Decrease Indent";
+        case Action::LineSpacingSingle:
+            return "Single Spacing";
+        case Action::LineSpacing1_5:
+            return "1.5 Line Spacing";
+        case Action::LineSpacingDouble:
+            return "Double Spacing";
         case Action::COUNT:
         default:
             return "";

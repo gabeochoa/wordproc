@@ -549,6 +549,86 @@ int TextBuffer::lineFirstLineIndent(std::size_t row) const {
     return 0;
 }
 
+// ============================================================================
+// Spacing methods
+// ============================================================================
+
+float TextBuffer::currentLineSpacing() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].lineSpacing;
+    }
+    return 1.0f;
+}
+
+int TextBuffer::currentSpaceBefore() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].spaceBefore;
+    }
+    return 0;
+}
+
+int TextBuffer::currentSpaceAfter() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].spaceAfter;
+    }
+    return 0;
+}
+
+void TextBuffer::setCurrentLineSpacing(float multiplier) {
+    if (caret_.row < line_spans_.size()) {
+        // Clamp to reasonable range (0.5 to 3.0)
+        line_spans_[caret_.row].lineSpacing = std::max(0.5f, std::min(3.0f, multiplier));
+        version_++;
+    }
+}
+
+void TextBuffer::setCurrentSpaceBefore(int pixels) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].spaceBefore = std::max(0, pixels);
+        version_++;
+    }
+}
+
+void TextBuffer::setCurrentSpaceAfter(int pixels) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].spaceAfter = std::max(0, pixels);
+        version_++;
+    }
+}
+
+void TextBuffer::setLineSpacingSingle() {
+    setCurrentLineSpacing(1.0f);
+}
+
+void TextBuffer::setLineSpacing1_5() {
+    setCurrentLineSpacing(1.5f);
+}
+
+void TextBuffer::setLineSpacingDouble() {
+    setCurrentLineSpacing(2.0f);
+}
+
+float TextBuffer::lineSpacing(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].lineSpacing;
+    }
+    return 1.0f;
+}
+
+int TextBuffer::lineSpaceBefore(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].spaceBefore;
+    }
+    return 0;
+}
+
+int TextBuffer::lineSpaceAfter(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].spaceAfter;
+    }
+    return 0;
+}
+
 TextBuffer::PerfStats TextBuffer::perfStats() const {
     PerfStats stats;
     stats.total_inserts = stats_.total_inserts;
