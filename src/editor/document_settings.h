@@ -389,10 +389,6 @@ enum class SectionBreakType {
     OddPage        // New section starts on next odd-numbered page
 };
 
-// Forward declarations for types used in SectionSettings
-struct HeaderFooter;
-struct Watermark;
-
 // Section configuration (each document can have multiple sections)
 // Sections allow different page settings within the same document
 struct SectionSettings {
