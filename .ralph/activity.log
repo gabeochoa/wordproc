@@ -2840,3 +2840,93 @@ EOF
 [23:24:12] 🔴 TOKENS: 644297 / 80000 (805%) - rotation imminent [read:2512KB write:0KB assist:1KB shell:0KB]
 [23:24:22] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs3_$$ 2>&1 | tail -30 → exit 0
 [23:24:26] 🔴 SHELL head -5 /Users/gabeochoa/p/wordproc/tests/test_bookmark.cpp → exit 0
+[23:24:57] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs4_$$ 2>&1 | tail -20 → exit 0
+[23:24:57] 🔴 TOKENS: 74600 / 80000 (93%) - rotation imminent [read:287KB write:0KB assist:1KB shell:0KB]
+[23:25:07] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/spellcheck.cpp (567 lines, ~55.3KB)
+[23:25:07] 🔴 ROTATE: Token threshold reached (88815 >= 80000)
+[23:25:13] 🔴 ROTATE: Token threshold reached (88815 >= 80000)
+[23:25:37] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs5_$$ 2>&1 | tail -20 → exit 0
+[23:25:37] 🔴 ROTATE: Token threshold reached (88815 >= 80000)
+[23:25:37] 🔴 TOKENS: 88815 / 80000 (111%) - rotation imminent [read:342KB write:0KB assist:1KB shell:0KB]
+[23:25:44] 🔴 ROTATE: Token threshold reached (88842 >= 80000)
+[23:26:06] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs6_$$ 2>&1 | tail -15 → exit 0
+[23:26:06] 🔴 ROTATE: Token threshold reached (88842 >= 80000)
+[23:26:08] 🔴 TOKENS: 88842 / 80000 (111%) - rotation imminent [read:342KB write:0KB assist:1KB shell:0KB]
+[23:26:11] 🔴 ROTATE: Token threshold reached (88861 >= 80000)
+[23:26:14] 🔴 SHELL grep -E '"brown"|"fox"' /Users/gabeochoa/p/wordproc/src/editor/spellcheck.cpp → exit 0
+[23:26:14] 🔴 ROTATE: Token threshold reached (88861 >= 80000)
+[23:26:18] 🔴 ROTATE: Token threshold reached (88877 >= 80000)
+[23:26:24] 🔴 ROTATE: Token threshold reached (88877 >= 80000)
+[23:26:27] 🔴 ROTATE: Token threshold reached (88887 >= 80000)
+[23:26:33] 🔴 ROTATE: Token threshold reached (88887 >= 80000)
+[23:26:57] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs7_$$ 2>&1 | tail -10 → exit 0
+[23:26:57] 🔴 ROTATE: Token threshold reached (88887 >= 80000)
+[23:26:57] 🔴 TOKENS: 88887 / 80000 (111%) - rotation imminent [read:342KB write:0KB assist:1KB shell:0KB]
+[23:27:03] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_spellcheck.cpp (469 lines, ~45.8KB)
+[23:27:03] 🔴 ROTATE: Token threshold reached (100621 >= 80000)
+[23:27:10] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/spellcheck.cpp (577 lines, ~56.3KB)
+[23:27:10] 🔴 ROTATE: Token threshold reached (115077 >= 80000)
+[23:27:13] 🔴 ROTATE: Token threshold reached (115077 >= 80000)
+[23:27:19] 🔴 ROTATE: Token threshold reached (115077 >= 80000)
+[23:27:43] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs8_$$ 2>&1 | tail -10 → exit 0
+[23:27:43] 🔴 ROTATE: Token threshold reached (115077 >= 80000)
+[23:27:43] 🔴 TOKENS: 115077 / 80000 (143%) - rotation imminent [read:444KB write:0KB assist:1KB shell:0KB]
+[23:28:00] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && cat > /tmp/test_spell.cpp << 'EOF'
+#include "src/editor/spellcheck.h"
+#include <iostream>
+int main() {
+    SpellChecker checker;
+    auto suggestions = checker.getSuggestions("wrold");
+    std::cout << "Suggestions for 'wrold':\n";
+    for (const auto& s : suggestions) {
+        std::cout << "  " << s << "\n";
+    }
+    std::cout << "isCorrect('world'): " << checker.isCorrect("world") << "\n";
+    std::cout << "isCorrect('wrold'): " << checker.isCorrect("wrold") << "\n";
+    return 0;
+}
+EOF
+clang++ -std=c++23 -isystem vendor/ -c /tmp/test_spell.cpp -o /tmp/test_spell.o 2>&1 && \
+clang++ -std=c++23 -isystem vendor/ -c src/editor/spellcheck.cpp -o /tmp/spellcheck.o 2>&1 && \
+clang++ /tmp/test_spell.o /tmp/spellcheck.o -o /tmp/test_spell 2>&1 && \
+/tmp/test_spell → exit 0
+[23:28:00] 🔴 ROTATE: Token threshold reached (115092 >= 80000)
+[23:28:06] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && cat > /tmp/test_spell.cpp << 'EOF'
+#include "../../../Users/gabeochoa/p/wordproc/src/editor/spellcheck.h"
+#include <iostream>
+int main() {
+    SpellChecker checker;
+    auto suggestions = checker.getSuggestions("wrold");
+    std::cout << "Suggestions for 'wrold':\n";
+    for (const auto& s : suggestions) {
+        std::cout << "  " << s << "\n";
+    }
+    std::cout << "isCorrect('world'): " << checker.isCorrect("world") << "\n";
+    std::cout << "isCorrect('wrold'): " << checker.isCorrect("wrold") << "\n";
+    return 0;
+}
+EOF
+clang++ -std=c++23 -isystem vendor/ -I. -c /tmp/test_spell.cpp -o /tmp/test_spell.o 2>&1 → exit 0
+[23:28:06] 🔴 ROTATE: Token threshold reached (115092 >= 80000)
+[23:28:30] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs9_$$ 2>&1 | grep -A 20 "Suggestions for transposition" → exit 0
+[23:28:30] 🔴 ROTATE: Token threshold reached (115092 >= 80000)
+[23:28:30] 🔴 TOKENS: 115092 / 80000 (143%) - rotation imminent [read:444KB write:0KB assist:1KB shell:0KB]
+[23:28:35] 🔴 ROTATE: Token threshold reached (115092 >= 80000)
+[23:28:49] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/spellcheck.cpp (580 lines, ~56.6KB)
+[23:28:49] 🔴 ROTATE: Token threshold reached (129626 >= 80000)
+[23:29:00] 🔴 TOKENS: 129640 / 80000 (162%) - rotation imminent [read:501KB write:0KB assist:1KB shell:0KB]
+[23:29:01] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/spellcheck.cpp (580 lines, ~56.6KB)
+[23:29:01] 🔴 ROTATE: Token threshold reached (144140 >= 80000)
+[23:29:31] 🔴 TOKENS: 144170 / 80000 (180%) - rotation imminent [read:558KB write:0KB assist:2KB shell:0KB]
+[23:29:31] 🔴 ROTATE: Token threshold reached (144170 >= 80000)
+[23:29:55] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs10_$$ 2>&1 | tail -10 → exit 0
+[23:29:55] 🔴 ROTATE: Token threshold reached (144170 >= 80000)
+[23:29:59] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_spellcheck.cpp (469 lines, ~45.8KB)
+[23:29:59] 🔴 ROTATE: Token threshold reached (155903 >= 80000)
+[23:30:01] 🔴 TOKENS: 155903 / 80000 (194%) - rotation imminent [read:604KB write:0KB assist:2KB shell:0KB]
+[23:30:20] 🔴 ROTATE: Token threshold reached (155924 >= 80000)
+[23:30:47] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs11_$$ 2>&1 | tail -10 → exit 0
+[23:30:47] 🔴 ROTATE: Token threshold reached (155924 >= 80000)
+[23:30:47] 🔴 TOKENS: 155924 / 80000 (194%) - rotation imminent [read:604KB write:0KB assist:2KB shell:0KB]
+[23:30:53] 🔴 ROTATE: Token threshold reached (155950 >= 80000)
+[23:31:01] 🔴 ROTATE: Token threshold reached (155978 >= 80000)

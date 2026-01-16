@@ -15,6 +15,10 @@ void SpellChecker::initDefaultDictionary() {
     // Common English words - this is a minimal dictionary for v0.1
     // A full implementation would load from a file (e.g., /usr/share/dict/words)
     static const char* commonWords[] = {
+        // Greetings and common words
+        "hello", "world", "hi", "bye", "goodbye", "yes", "no", "ok", "okay",
+        "please", "thank", "thanks", "sorry", "welcome", "here", "there",
+        
         // Articles and pronouns
         "a", "an", "the", "i", "you", "he", "she", "it", "we", "they", "me",
         "him", "her", "us", "them", "my", "your", "his", "its", "our", "their",
@@ -70,13 +74,19 @@ void SpellChecker::initDefaultDictionary() {
         "change", "morning", "reason", "research", "girl", "guy", "moment",
         "air", "teacher", "force", "education",
 
+        // Animals
+        "dog", "cat", "fox", "bird", "fish", "horse", "cow", "pig", "sheep",
+        "lion", "tiger", "bear", "wolf", "rabbit", "mouse", "rat", "deer",
+        "elephant", "monkey", "snake", "frog", "duck", "chicken", "turkey",
+
         // Common adjectives
         "good", "new", "first", "last", "long", "great", "little", "own",
         "other", "old", "right", "big", "high", "different", "small", "large",
         "next", "early", "young", "important", "few", "public", "bad", "same",
         "able", "best", "better", "sure", "free", "true", "whole", "special",
         "easy", "clear", "recent", "certain", "personal", "open", "red",
-        "blue", "green", "black", "white", "short", "full", "wrong", "real",
+        "blue", "green", "black", "white", "brown", "yellow", "purple", "orange",
+        "short", "full", "wrong", "real",
         "local", "hard", "major", "strong", "happy", "serious", "ready",
         "simple", "possible", "nice", "beautiful", "quick", "fast", "slow",
 
@@ -246,6 +256,9 @@ std::vector<std::string> SpellChecker::getSuggestions(
     const std::string& word, std::size_t maxSuggestions) const {
     std::string normalized = normalizeWord(word);
     if (normalized.empty()) return {};
+
+    // If word is already correct, no suggestions needed
+    if (isCorrect(word)) return {};
 
     // Collect candidates with their edit distances
     std::vector<std::pair<std::size_t, std::string>> candidates;
