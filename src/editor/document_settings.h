@@ -71,6 +71,51 @@ inline bool paragraphStyleIsItalic(ParagraphStyle style) {
     return style == ParagraphStyle::Subtitle;
 }
 
+// Color represented as RGBA for document storage
+struct TextColor {
+    unsigned char r = 0;
+    unsigned char g = 0;
+    unsigned char b = 0;
+    unsigned char a = 255;
+    
+    bool operator==(const TextColor& other) const {
+        return r == other.r && g == other.g && b == other.b && a == other.a;
+    }
+    bool operator!=(const TextColor& other) const { return !(*this == other); }
+    
+    // Check if color is the "none" color (transparent, used for no highlight)
+    bool isNone() const { return a == 0; }
+};
+
+// Predefined text colors
+namespace TextColors {
+    constexpr TextColor Black = {0, 0, 0, 255};
+    constexpr TextColor White = {255, 255, 255, 255};
+    constexpr TextColor Red = {200, 0, 0, 255};
+    constexpr TextColor DarkRed = {128, 0, 0, 255};
+    constexpr TextColor Orange = {255, 128, 0, 255};
+    constexpr TextColor Yellow = {255, 255, 0, 255};
+    constexpr TextColor Green = {0, 128, 0, 255};
+    constexpr TextColor Blue = {0, 0, 200, 255};
+    constexpr TextColor DarkBlue = {0, 0, 128, 255};
+    constexpr TextColor Purple = {128, 0, 128, 255};
+    constexpr TextColor Gray = {128, 128, 128, 255};
+    constexpr TextColor None = {0, 0, 0, 0};  // Transparent (no highlight)
+}
+
+// Predefined highlight colors (lighter versions for background)
+namespace HighlightColors {
+    constexpr TextColor None = {0, 0, 0, 0};  // Transparent (no highlight)
+    constexpr TextColor Yellow = {255, 255, 0, 255};
+    constexpr TextColor Green = {0, 255, 0, 255};
+    constexpr TextColor Cyan = {0, 255, 255, 255};
+    constexpr TextColor Pink = {255, 192, 203, 255};
+    constexpr TextColor Orange = {255, 200, 100, 255};
+    constexpr TextColor Blue = {173, 216, 230, 255};
+    constexpr TextColor Purple = {221, 160, 221, 255};
+    constexpr TextColor Gray = {211, 211, 211, 255};
+}
+
 // Text styling settings
 struct TextStyle {
     bool bold = false;
@@ -79,6 +124,8 @@ struct TextStyle {
     bool strikethrough = false;
     std::string font = "Gaegu-Bold";
     int fontSize = 16;  // Default size in pixels
+    TextColor textColor = TextColors::Black;  // Text color (default black)
+    TextColor highlightColor = HighlightColors::None;  // Highlight/background color (default none)
 };
 
 // Page layout mode

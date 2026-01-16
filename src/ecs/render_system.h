@@ -133,33 +133,46 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
         // Draw text with paragraph style applied
         if (!line.empty()) {
-            // Get global text style for underline/strikethrough
+            // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
             int textWidth = raylib::MeasureText(line.c_str(), lineFontSize);
+            
+            // Convert TextColor to raylib::Color
+            raylib::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
+                                       globalStyle.textColor.b, globalStyle.textColor.a};
+            
+            // Draw highlight background if set
+            if (!globalStyle.highlightColor.isNone()) {
+                raylib::Color highlightColor = {globalStyle.highlightColor.r, globalStyle.highlightColor.g,
+                                                globalStyle.highlightColor.b, globalStyle.highlightColor.a};
+                raylib::DrawRectangle(x, y, textWidth, lineHeight, highlightColor);
+            }
             
             // For headings and titles, draw bold text (simulated by drawing twice with offset)
             if (paragraphStyleIsBold(paraStyle) || globalStyle.bold) {
                 // Draw bold effect by drawing text twice with 1px offset
-                raylib::DrawText(line.c_str(), x, y, lineFontSize, theme::TEXT_COLOR);
-                raylib::DrawText(line.c_str(), x + 1, y, lineFontSize, theme::TEXT_COLOR);
+                raylib::DrawText(line.c_str(), x, y, lineFontSize, textColor);
+                raylib::DrawText(line.c_str(), x + 1, y, lineFontSize, textColor);
             } else if (paragraphStyleIsItalic(paraStyle) || globalStyle.italic) {
-                // For subtitle italic style, just draw normally for now
-                // (true italics would require a separate font or skewing)
-                raylib::DrawText(line.c_str(), x, y, lineFontSize, raylib::DARKGRAY);
+                // For subtitle italic style, draw in a slightly different shade
+                raylib::Color italicColor = {static_cast<unsigned char>(textColor.r / 2 + 64),
+                                             static_cast<unsigned char>(textColor.g / 2 + 64),
+                                             static_cast<unsigned char>(textColor.b / 2 + 64), textColor.a};
+                raylib::DrawText(line.c_str(), x, y, lineFontSize, italicColor);
             } else {
-                raylib::DrawText(line.c_str(), x, y, lineFontSize, theme::TEXT_COLOR);
+                raylib::DrawText(line.c_str(), x, y, lineFontSize, textColor);
             }
             
             // Draw underline if enabled
             if (globalStyle.underline) {
                 int underlineY = y + lineFontSize + 1;
-                raylib::DrawLine(x, underlineY, x + textWidth, underlineY, theme::TEXT_COLOR);
+                raylib::DrawLine(x, underlineY, x + textWidth, underlineY, textColor);
             }
             
             // Draw strikethrough if enabled
             if (globalStyle.strikethrough) {
                 int strikeY = y + lineFontSize / 2;
-                raylib::DrawLine(x, strikeY, x + textWidth, strikeY, theme::TEXT_COLOR);
+                raylib::DrawLine(x, strikeY, x + textWidth, strikeY, textColor);
             }
         }
 

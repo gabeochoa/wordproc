@@ -172,9 +172,10 @@ Preload &Preload::make_singleton() {
                                      "AtkinsonHyperlegible-Regular.ttf")
                 .string();
 
-        // Get codepoints for CJK fonts
-        auto korean_cps = get_korean_codepoints();
-        auto japanese_cps = get_japanese_codepoints();
+        // CJK fonts are lazy-loaded on demand to keep startup fast
+        // See fonts::FontLoader::loadCJKFontsIfNeeded()
+        (void)korean_font;
+        (void)japanese_font;
 
         {
             SCOPED_TIMER("Load English/Latin fonts");
@@ -198,22 +199,6 @@ Preload &Preload::make_singleton() {
                 .load_font("BlackOpsOne", blackops_font.c_str())
                 // Atkinson Hyperlegible for accessibility
                 .load_font("Atkinson", atkinson_font.c_str());
-        }
-
-        {
-            SCOPED_TIMER("Load Korean font (11k codepoints)");
-            // Korean font with Hangul codepoints
-            sophie.get<ui::FontManager>().load_font_with_codepoints(
-                "NotoSansKR", korean_font.c_str(), korean_cps.data(),
-                static_cast<int>(korean_cps.size()));
-        }
-
-        {
-            SCOPED_TIMER("Load Japanese font (21k codepoints)");
-            // Japanese font with Hiragana/Katakana/Kanji codepoints
-            sophie.get<ui::FontManager>().load_font_with_codepoints(
-                "Sazanami", japanese_font.c_str(), japanese_cps.data(),
-                static_cast<int>(japanese_cps.size()));
         }
 
         // Register loaded fonts with FontLoader for P2 font listing

@@ -68,6 +68,24 @@ TEST_CASE("saveTextFile and loadTextFile roundtrip", "[document_io]") {
         REQUIRE(loaded_style.italic == true);
         REQUIRE(loaded_style.font == "TestFont");
     }
+    
+    SECTION("save and load preserves underline and strikethrough") {
+        TextBuffer original;
+        original.setText("Emphasized text");
+        TextStyle style;
+        style.underline = true;
+        style.strikethrough = true;
+        original.setTextStyle(style);
+
+        REQUIRE(saveTextFile(original, path));
+
+        TextBuffer loaded;
+        REQUIRE(loadTextFile(loaded, path));
+
+        TextStyle loaded_style = loaded.textStyle();
+        REQUIRE(loaded_style.underline == true);
+        REQUIRE(loaded_style.strikethrough == true);
+    }
 }
 
 TEST_CASE("loadTextFile handles plain text files", "[document_io]") {

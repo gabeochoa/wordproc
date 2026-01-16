@@ -54,7 +54,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### Word Processing Features
 - [x] Add styles for title, subtitle, and headings (H1-H6) with style picker UI. (Implemented: ParagraphStyle enum, keyboard shortcuts Ctrl+Alt+0-6, Format menu items, rendering with per-style font sizes, 42 test assertions)
 - [x] Add font family and size selection for text runs. (Implemented: Ctrl+1/2 for font family, Ctrl++/-/0 for size, Format menu, 10 test assertions. Per-run styling deferred to v0.2)
-- [ ] Add basic text emphasis formatting (bold, italic, underline, strikethrough).
+- [x] Add basic text emphasis formatting (bold, italic, underline, strikethrough). (Implemented: TextStyle struct, Ctrl+B/I/U, Ctrl+Shift+S, Format menu items 10-13, rendering with bold double-draw, underline/strikethrough lines, status bar indicators)
 - [ ] Add text color and highlight color formatting.
 - [ ] Add paragraph alignment controls (left, center, right, justify).
 - [ ] Add indentation controls (increase/decrease, first-line, hanging).

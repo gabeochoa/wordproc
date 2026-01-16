@@ -49,7 +49,7 @@ inline std::vector<win95::Menu> createMenuBar() {
     win95::Menu formatMenu;
     formatMenu.label = "Format";
     formatMenu.items = {
-        // Paragraph styles
+        // Paragraph styles (0-8)
         {"Normal", "Ctrl+Alt+0", true, false, nullptr},
         {"Title", "", true, false, nullptr},
         {"Subtitle", "", true, false, nullptr},
@@ -59,16 +59,35 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Heading 4", "Ctrl+Alt+4", true, false, nullptr},
         {"Heading 5", "Ctrl+Alt+5", true, false, nullptr},
         {"Heading 6", "Ctrl+Alt+6", true, false, nullptr},
-        {"", "", false, true, nullptr},  // Separator
-        // Text formatting
+        {"", "", false, true, nullptr},  // Separator (9)
+        // Text formatting (10-13)
         {"Bold", "Ctrl+B", true, false, nullptr},
         {"Italic", "Ctrl+I", true, false, nullptr},
         {"Underline", "Ctrl+U", true, false, nullptr},
         {"Strikethrough", "Ctrl+Shift+S", true, false, nullptr},
-        {"", "", false, true, nullptr},  // Separator
+        {"", "", false, true, nullptr},  // Separator (14)
+        // Text color (15-24)
+        {"Text: Black", "", true, false, nullptr},
+        {"Text: Red", "", true, false, nullptr},
+        {"Text: Orange", "", true, false, nullptr},
+        {"Text: Green", "", true, false, nullptr},
+        {"Text: Blue", "", true, false, nullptr},
+        {"Text: Purple", "", true, false, nullptr},
+        {"Text: Gray", "", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator (22)
+        // Highlight color (23-30)
+        {"Highlight: None", "", true, false, nullptr},
+        {"Highlight: Yellow", "", true, false, nullptr},
+        {"Highlight: Green", "", true, false, nullptr},
+        {"Highlight: Cyan", "", true, false, nullptr},
+        {"Highlight: Pink", "", true, false, nullptr},
+        {"Highlight: Orange", "", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator (29)
+        // Font (30-31)
         {"Font: Gaegu", "Ctrl+1", true, false, nullptr},
         {"Font: Garamond", "Ctrl+2", true, false, nullptr},
-        {"", "", false, true, nullptr},  // Separator
+        {"", "", false, true, nullptr},  // Separator (32)
+        // Font size (33-35)
         {"Increase Size", "Ctrl++", true, false, nullptr},
         {"Decrease Size", "Ctrl+-", true, false, nullptr},
         {"Reset Size", "Ctrl+0", true, false, nullptr}
