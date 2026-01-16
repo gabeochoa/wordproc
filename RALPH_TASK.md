@@ -52,8 +52,9 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
 
 ### Refactor Opportunities
-- [ ] Replace custom `src/util/logging.h` with the logging from `vendor/afterhours`.
-- [ ] Investigate if `vendor/afterhours` can handle Win95-style border drawing (`src/util/drawing.h`); if so, use it; if not, document gap in `AfterhoursGaps/`.
+- [x] Replace custom `src/util/logging.h` with the logging from `vendor/afterhours`. (Already done - wrapper delegates to Afterhours, adds ScopedTimer for profiling)
+- [x] Investigate if `vendor/afterhours` can handle Win95-style border drawing (`src/util/drawing.h`); if so, use it; if not, document gap in `AfterhoursGaps/`. (Deleted drawing.h, use win95_widgets.h instead - Afterhours doesn't have Win95-style borders)
+- [ ] Replace `src/ui/win95_widgets.h` with `vendor/afterhours` UI widgets; document any gaps in `AfterhoursGaps/`.
 - [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
 - [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
 - [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
