@@ -1918,13 +1918,19 @@ void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
 // ============================================================================
 
 std::string TextBuffer::generateTableOfContents() const {
+    auto outline = getOutline();
+    
+    // Return empty if no headings
+    if (outline.empty()) {
+        return "";
+    }
+    
     std::string toc = "Table of Contents\n";
     toc += "=================\n\n";
     
-    auto outline = getOutline();
     for (const auto& entry : outline) {
         // Add indentation based on level
-        for (std::size_t i = 0; i < entry.level; ++i) {
+        for (std::size_t i = 0; i < static_cast<std::size_t>(entry.level); ++i) {
             toc += "  ";
         }
         toc += entry.text + "\n";
