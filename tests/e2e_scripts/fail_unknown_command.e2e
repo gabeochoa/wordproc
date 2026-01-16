@@ -1,0 +1,10 @@
+# Test: Unknown command detection
+# This test validates that unknown commands are properly detected and reported
+# Expected: FAIL (test should fail because of unknown command)
+
+# This command doesn't exist
+this_is_not_a_valid_command
+
+# Should never reach here
+type "Hello"
+

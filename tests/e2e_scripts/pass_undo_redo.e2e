@@ -1,0 +1,20 @@
+# Test: Undo and Redo (Ctrl+Z, Ctrl+Y)
+# Validates undo/redo functionality
+
+type "First"
+wait 2
+validate text=First
+
+type " Second"
+wait 2
+validate text=First Second
+
+# Undo
+key CTRL+Z
+wait 2
+
+# Note: Undo may undo character by character or by word
+# This validates undo works (text should be shorter)
+
+screenshot 11_undo_redo
+

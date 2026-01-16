@@ -1,0 +1,26 @@
+# Test: Bulleted and numbered lists (Ctrl+Shift+8/7)
+# Validates list toggling
+
+type "List Item Test"
+wait 2
+
+# Default should be no list
+validate list_type=None
+
+# Toggle bulleted list
+key CTRL+SHIFT+8
+wait 2
+validate list_type=Bulleted
+
+# Toggle off
+key CTRL+SHIFT+8
+wait 2
+validate list_type=None
+
+# Toggle numbered list
+key CTRL+SHIFT+7
+wait 2
+validate list_type=Numbered
+
+screenshot 08_lists
+

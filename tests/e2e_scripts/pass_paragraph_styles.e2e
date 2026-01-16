@@ -1,0 +1,26 @@
+# Test: Paragraph styles (H1-H6, Title)
+# Validates heading and title styles
+
+type "Heading Test"
+wait 2
+
+# Default should be Normal
+validate paragraph_style=Normal
+
+# Apply Heading 1 (Ctrl+Alt+1)
+key CTRL+ALT+1
+wait 2
+validate paragraph_style=Heading 1
+
+# Apply Heading 2 (Ctrl+Alt+2)
+key CTRL+ALT+2
+wait 2
+validate paragraph_style=Heading 2
+
+# Apply Normal (Ctrl+Alt+0)
+key CTRL+ALT+0
+wait 2
+validate paragraph_style=Normal
+
+screenshot 06_paragraph_styles
+

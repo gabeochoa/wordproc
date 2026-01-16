@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <format>
 #include <string>
 
@@ -16,6 +17,9 @@
 #include "preload.h"
 #include "rl.h"
 #include "settings.h"
+#include "testing/e2e_runner.h"
+#include "testing/e2e_script.h"
+#include "testing/test_input.h"
 #include "ui/menu_setup.h"
 #include "ui/theme.h"
 #include "ui/ui_context.h"
@@ -47,7 +51,9 @@ int main(int argc, char* argv[]) {
     bool testModeEnabled = cmdl["--test-mode"];
     std::string screenshotDir = "output/screenshots";
     int frameLimit = 0;
-    // Parse --screenshot-dir and --frame-limit arguments
+    std::string testScriptPath;
+    std::string testScriptDir;  // For batch mode
+    // Parse --screenshot-dir, --frame-limit, --test-script, and --test-script-dir arguments
     // argh uses the params() map for named parameters
     for (auto& [name, value] : cmdl.params()) {
         LOG_INFO("Parsed param: %s = %s", name.c_str(), value.c_str());
@@ -55,9 +61,19 @@ int main(int argc, char* argv[]) {
             screenshotDir = value;
         } else if (name == "frame-limit") {
             frameLimit = std::stoi(value);
+        } else if (name == "test-script") {
+            testScriptPath = value;
+        } else if (name == "test-script-dir") {
+            testScriptDir = value;
         }
     }
     LOG_INFO("screenshotDir = %s, frameLimit = %d", screenshotDir.c_str(), frameLimit);
+    
+    // If test script or directory is specified, enable test mode
+    if (!testScriptPath.empty() || !testScriptDir.empty()) {
+        testModeEnabled = true;
+        test_input::test_mode = true;
+    }
 
     // FPS test mode - simulates scrolling and logs FPS
     bool fpsTestMode = cmdl["--fps-test"];
@@ -212,9 +228,36 @@ int main(int argc, char* argv[]) {
             LOG_WARNING("Startup time exceeds 500ms target!");
         }
     }
+    
+    // Initialize E2E script runner if script specified
+    e2e::ScriptRunner scriptRunner;
+    if (!testScriptDir.empty()) {
+        // Batch mode: load all scripts from directory
+        e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, screenshotDir);
+    } else if (!testScriptPath.empty()) {
+        // Single script mode
+        e2e::initializeRunner(scriptRunner, testScriptPath, docComp, screenshotDir);
+    }
 
     while (!raylib::WindowShouldClose()) {
         float dt = raylib::GetFrameTime();
+        
+        // Reset test input frame state
+        test_input::reset_frame();
+        
+        // Execute E2E script if active
+        if (scriptRunner.hasCommands() && !scriptRunner.isFinished()) {
+            scriptRunner.tick();
+            
+            // If script finished, print results and exit
+            if (scriptRunner.isFinished()) {
+                scriptRunner.printResults();
+                takeScreenshot(screenshotDir, "final");
+                
+                Settings::get().write_save_file();
+                return scriptRunner.hasFailed() ? 1 : 0;
+            }
+        }
 
         // FPS test mode: collect FPS data and simulate scrolling
         if (testComp.fpsTestMode && testComp.frameCount > 0) {

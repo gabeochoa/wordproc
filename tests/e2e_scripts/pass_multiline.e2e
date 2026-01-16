@@ -1,0 +1,18 @@
+# Test: Multiline text with Enter key
+# Validates newline insertion
+
+type "Line One"
+wait 2
+key ENTER
+wait 2
+type "Line Two"
+wait 2
+key ENTER
+wait 2
+type "Line Three"
+wait 2
+
+validate line_count=3
+
+screenshot 12_multiline
+

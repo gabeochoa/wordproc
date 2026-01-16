@@ -1,0 +1,26 @@
+# Test: Indentation controls (Ctrl+]/[)
+# Validates increase/decrease indent
+
+type "Indentation Test"
+wait 2
+
+# Default indent should be 0
+validate left_indent=0
+
+# Increase indent
+key CTRL+]
+wait 2
+validate left_indent=20
+
+# Increase again
+key CTRL+]
+wait 2
+validate left_indent=40
+
+# Decrease indent
+key CTRL+[
+wait 2
+validate left_indent=20
+
+screenshot 07_indentation
+

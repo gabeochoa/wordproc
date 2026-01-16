@@ -1,0 +1,19 @@
+# Test: Italic text formatting (Ctrl+I)
+# Validates that italic formatting can be toggled
+
+type "Italic Text Test"
+wait 2
+
+select_all
+wait 2
+key CTRL+I
+wait 2
+
+validate italic=true
+
+key CTRL+I
+wait 2
+validate italic=false
+
+screenshot 03_italic_formatting
+

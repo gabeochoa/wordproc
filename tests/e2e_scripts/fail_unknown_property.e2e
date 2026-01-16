@@ -1,0 +1,10 @@
+# Test: Unknown property detection
+# This test validates that unknown properties in validate commands are detected
+# Expected: FAIL (test should fail because of unknown property)
+
+type "Hello"
+wait 2
+
+# This property doesn't exist
+validate nonexistent_property_xyz=some_value
+

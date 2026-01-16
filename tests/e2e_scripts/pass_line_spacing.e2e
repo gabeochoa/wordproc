@@ -1,0 +1,26 @@
+# Test: Line spacing (Ctrl+Shift+1/5/2)
+# Validates single, 1.5x, and double line spacing
+
+type "Line Spacing Test"
+wait 2
+
+# Default should be single (1.0)
+validate line_spacing=1.000000
+
+# Set to 1.5 spacing
+key CTRL+SHIFT+5
+wait 2
+validate line_spacing=1.500000
+
+# Set to double spacing
+key CTRL+SHIFT+2
+wait 2
+validate line_spacing=2.000000
+
+# Back to single
+key CTRL+SHIFT+1
+wait 2
+validate line_spacing=1.000000
+
+screenshot 09_line_spacing
+

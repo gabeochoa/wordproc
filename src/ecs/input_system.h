@@ -6,6 +6,7 @@
 #include "../editor/document_io.h"
 #include "../input/action_map.h"
 #include "../rl.h"
+#include "../testing/input_injector.h"
 #include "component_helpers.h"
 #include "components.h"
 
@@ -323,8 +324,11 @@ struct NavigationSystem
                        const float) override {
         using input::Action;
 
-        bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
-                          raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
+        auto isKeyDownOrSynthetic = [](int key) {
+            return raylib::IsKeyDown(key) || input_injector::is_key_synthetically_down(key);
+        };
+        bool shift_down = isKeyDownOrSynthetic(raylib::KEY_LEFT_SHIFT) ||
+                          isKeyDownOrSynthetic(raylib::KEY_RIGHT_SHIFT);
 
         auto navigateWithSelection = [&](auto moveFunc) {
             CaretPosition before = doc.buffer.caret();

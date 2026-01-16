@@ -1,6 +1,6 @@
 # Testing
 
-This project uses [Catch2 v2](https://github.com/catchorg/Catch2/tree/v2.x) for unit testing and custom E2E testing with screenshot capture.
+This project uses [Catch2 v2](https://github.com/catchorg/Catch2/tree/v2.x) for unit testing and a custom E2E script system for integration testing.
 
 ## Running Tests
 
@@ -11,53 +11,179 @@ make test
 # Run tests with verbose output (shows all assertions)
 make test-verbose
 
-# Run E2E tests with screenshot capture (requires display)
-make e2e
+# Run E2E feature tests
+./tests/run_e2e_features.sh
 
-# Run interactive launch-time benchmark (requires display)
-make launch-benchmark
+# Run performance benchmarks
+./tests/run_benchmark.sh
 
-# Run sampling profile for startup (macOS `sample`)
-make profile-startup
+# Run FPS scroll test
+./tests/run_fps_scroll_test.sh
+
+# Run launch-time benchmark
+./tests/run_launch_benchmark.sh
 ```
 
-## E2E / Screenshot Testing
+## E2E Script Testing
 
-The application supports a test mode for automated E2E testing:
+The E2E test system uses `.e2e` script files to automate testing with simulated keyboard and mouse input.
+
+### Running E2E Tests
 
 ```bash
-# Run with test mode enabled
-./output/wordproc.exe --test-mode --frame-limit 10 --screenshot-dir output/screenshots
+# Run all E2E feature tests (batch mode - fast, single window)
+./tests/run_e2e_batch.sh
+
+# Run all E2E feature tests (individual mode - slower, separate window per test)
+./tests/run_e2e_features.sh
+
+# Run a single E2E test
+./output/wordproc.exe --test-mode --test-script="tests/e2e_scripts/pass_basic_typing.e2e" --screenshot-dir="output/e2e_test"
+
+# Run all tests in a directory (batch mode)
+./output/wordproc.exe --test-mode --test-script-dir="tests/e2e_scripts" --screenshot-dir="output/e2e_batch"
 ```
 
-Options:
-- `--test-mode` - Enables test mode, captures screenshots and logs startup time
-- `--frame-limit N` - Exit after N frames (0 = run forever)
-- `--screenshot-dir DIR` - Directory to save screenshots
+### E2E Script Commands
 
-Screenshots are saved at key points:
-- `01_startup.png` - First frame after startup
-- `final.png` - Last frame before exit
+| Command | Description | Example |
+|---------|-------------|---------|
+| `type "text"` | Type text characters | `type "Hello World"` |
+| `key MODIFIER+KEY` | Press keyboard shortcut | `key CTRL+B` |
+| `select_all` | Select all text (Ctrl+A) | `select_all` |
+| `click x y` | Mouse click at coordinates | `click 400 300` |
+| `double_click x y` | Double-click at coordinates | `double_click 200 150` |
+| `drag x1 y1 x2 y2` | Mouse drag between points | `drag 100 100 300 100` |
+| `mouse_move x y` | Move mouse cursor | `mouse_move 250 200` |
+| `wait N` | Wait N frames | `wait 5` |
+| `validate prop=value` | Assert document property | `validate text=Hello` |
+| `screenshot name` | Capture screenshot | `screenshot 01_test` |
+| `dump_document path` | Dump document to file | `dump_document debug.txt` |
+| `clear` | Clear document (for batch tests) | `clear` |
 
-### Manual Visual Verification
+### Supported Key Modifiers
 
-After running E2E tests, visually verify screenshots:
-```bash
-open output/screenshots/
+- `CTRL+` or `CMD+` - Control/Command key
+- `SHIFT+` - Shift key
+- `ALT+` - Alt/Option key
+
+Modifiers can be combined: `CTRL+SHIFT+S`
+
+### Validation Properties
+
+| Property | Description |
+|----------|-------------|
+| `text` | Full document text content |
+| `line_count` | Number of lines in document |
+| `caret_line` | Current line number (0-indexed) |
+| `caret_column` | Current column number |
+| `has_selection` | Whether text is selected ("true"/"false") |
+| `selected_text` | Currently selected text |
+| `is_bold` | Bold formatting state |
+| `is_italic` | Italic formatting state |
+| `is_underline` | Underline formatting state |
+| `alignment` | Text alignment ("Left"/"Center"/"Right"/"Justify") |
+| `paragraph_style` | Paragraph style ("Normal"/"Heading 1"/etc.) |
+| `indent_level` | Indentation level |
+| `list_type` | List type ("None"/"Bulleted"/"Numbered") |
+| `line_spacing` | Line spacing multiplier |
+
+### Example E2E Script
+
+```
+# Test: Bold formatting
+# Validates Ctrl+B toggles bold
+
+type "Bold Test"
+wait 2
+
+# Select all text
+select_all
+wait 2
+
+# Apply bold
+key CTRL+B
+wait 2
+
+# Validate bold is applied
+validate is_bold=true
+
+screenshot bold_test
 ```
 
-Check that:
-1. Win95-style window chrome is visible (blue title bar, gray background)
-2. Text area has sunken 3D border
-3. Status bar shows line/column info
-4. Caret is visible and positioned correctly
+### Writing New E2E Tests
 
-## Launch-Time Benchmark (Interactive)
+1. Create a new `.e2e` file in `tests/e2e_scripts/`
+2. Use the naming convention:
+   - `pass_<name>.e2e` - Test expected to pass (validates feature works)
+   - `fail_<name>.e2e` - Test expected to fail (validates error detection)
+3. Add commands to test the feature
+4. Run with `./tests/run_e2e_features.sh`
 
-The launch benchmark runs the app in test mode and measures wall-clock time:
+### Test Naming Convention
+
+| Prefix | Expected Outcome | Use Case |
+|--------|------------------|----------|
+| `pass_` | Exit code 0 | Validate features work correctly |
+| `fail_` | Exit code non-zero | Validate error handling works |
+
+Example:
+- `pass_bold_formatting.e2e` - Validates Ctrl+B applies bold (should pass)
+- `fail_unknown_command.e2e` - Validates unknown commands are detected (should fail)
+
+## Unit Tests
+
+Unit tests use Catch2 and test C++ code directly without running the application.
+
+### Test Files
+
+- `test_main.cpp` - Catch2 main entry point
+- `test_text_buffer.cpp` - TextBuffer operations
+- `test_text_layout.cpp` - Line wrapping/layout
+- `test_document_io.cpp` - Save/load functionality
+- `test_table.cpp` - Table operations
+- `test_bookmark.cpp` - Bookmark functionality
+- `test_hyperlink.cpp` - Hyperlink functionality
+- `test_spellcheck.cpp` - Spell/grammar checking
+- `test_drawing.cpp` - Shape/drawing operations
+- `test_image.cpp` - Image handling
+- `test_outline.cpp` - Outline/TOC generation
+- `test_menu_setup.cpp` - Menu configuration
+- `test_format_validator.cpp` - Format validation
+
+### Adding New Unit Tests
+
+1. Create a new `tests/test_*.cpp` file
+2. Include `"catch2/catch.hpp"`
+3. Write TEST_CASE blocks with REQUIRE/CHECK assertions
+4. The makefile will automatically pick up new test files
+
+## Performance Testing
+
+### Load-Time Benchmark
+
+Measures cold start time for loading various files:
 
 ```bash
-make launch-benchmark
+./tests/run_benchmark.sh
+```
+
+Results saved to `output/perf/load_times.csv`.
+
+### FPS Scroll Test
+
+Tests rendering performance while scrolling large files:
+
+```bash
+./tests/run_fps_scroll_test.sh
+```
+
+### Launch Benchmark
+
+Interactive launch timing with multiple iterations:
+
+```bash
+./tests/run_launch_benchmark.sh
 ```
 
 Environment overrides:
@@ -65,57 +191,35 @@ Environment overrides:
 - `ITERATIONS` - repeats per scenario (default: 3)
 - `FRAME_LIMIT` - frames to render before exit (default: 2)
 
-Results are saved to `output/perf/launch_times.csv`.
+### Startup Profiling (macOS)
 
-## Startup Sampling Profile (macOS)
-
-Capture a short sampling profile of startup using `sample`:
+Capture a sampling profile of startup:
 
 ```bash
-make profile-startup
+./tests/run_sample_profile.sh
 ```
 
-Environment overrides:
-- `DURATION_SEC` - seconds to sample (default: 5)
-- `FRAME_LIMIT` - frames to render before exit (default: 300)
-- `LOAD_FILE` - file path to load on startup (default: blank)
-- `SUDO` - set to `1` to run `sample` via sudo if needed
-
-Results are saved to `output/perf/sample_startup.txt` with app logs in
-`output/perf/sample_app.log`.
-
-If `sample` reports “Operation not permitted”, grant Developer Tools permission
-to your terminal app in System Settings > Privacy & Security > Developer Tools.
-
-## Test Structure
-
-- `tests/test_main.cpp` - Catch2 main entry point
-- `tests/test_text_buffer.cpp` - Unit tests for TextBuffer (insert, delete, caret, selection)
-- `tests/test_text_layout.cpp` - Unit tests for line wrapping/layout
-- `tests/test_document_io.cpp` - Unit tests for save/load functionality
-
-## Adding New Tests
-
-1. Create a new `tests/test_*.cpp` file
-2. Include `"catch2/catch.hpp"`
-3. Write TEST_CASE blocks with REQUIRE/CHECK assertions
-4. The makefile will automatically pick up new test files
+Results saved to `output/perf/sample_startup.txt`.
 
 ## Test Output
 
-Tests run in the terminal. A successful run shows:
+Unit tests run in the terminal. A successful run shows:
 
 ```
 ===============================================================================
 All tests passed (X assertions in Y test cases)
 ```
 
-## Coverage (Optional)
+E2E tests show:
 
-To build with coverage instrumentation:
-
-```bash
-make test COVERAGE=1
 ```
+==============================================
+           E2E Feature Test Summary           
+==============================================
 
-This enables `-fprofile-instr-generate -fcoverage-mapping` on macOS or `--coverage` on Linux.
+Tests run:    14
+Tests passed: 14
+Tests failed: 0
+
+All E2E feature tests passed!
+```

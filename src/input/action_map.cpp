@@ -1,4 +1,5 @@
 #include "action_map.h"
+#include "../testing/input_injector.h"
 
 namespace input {
 
@@ -10,13 +11,18 @@ void ActionMap::bind(const KeyBinding& binding, Action action) {
 
 void ActionMap::unbind(const KeyBinding& binding) { bindings_.erase(binding); }
 
+// Helper to check if a key is down (real or synthetic)
+static bool isKeyDown(int key) {
+    return raylib::IsKeyDown(key) || input_injector::is_key_synthetically_down(key);
+}
+
 bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
-    bool ctrl = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
-                raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
-    bool shift = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
-                 raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
-    bool alt = raylib::IsKeyDown(raylib::KEY_LEFT_ALT) ||
-               raylib::IsKeyDown(raylib::KEY_RIGHT_ALT);
+    bool ctrl = isKeyDown(raylib::KEY_LEFT_CONTROL) ||
+                isKeyDown(raylib::KEY_RIGHT_CONTROL);
+    bool shift = isKeyDown(raylib::KEY_LEFT_SHIFT) ||
+                 isKeyDown(raylib::KEY_RIGHT_SHIFT);
+    bool alt = isKeyDown(raylib::KEY_LEFT_ALT) ||
+               isKeyDown(raylib::KEY_RIGHT_ALT);
 
     if (ctrl != binding.ctrl || shift != binding.shift || alt != binding.alt) {
         return false;

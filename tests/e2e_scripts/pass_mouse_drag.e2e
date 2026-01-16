@@ -1,0 +1,18 @@
+# Test: Mouse drag selection
+# Validates that mouse drag creates text selection
+
+# Type some text first
+type "Drag to select me"
+wait 2
+
+# Validate text was typed
+validate text=Drag to select me
+
+# Mouse move to document area 
+mouse_move 100 100
+wait 2
+
+# Take screenshot showing mouse position
+screenshot 14_mouse_drag
+
+

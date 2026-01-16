@@ -1,0 +1,26 @@
+# Test: Text alignment (Ctrl+L/E/R/J)
+# Validates paragraph alignment controls
+
+type "Alignment Test"
+wait 2
+
+# Default should be left
+validate alignment=Left
+
+# Center alignment
+key CTRL+E
+wait 2
+validate alignment=Center
+
+# Right alignment
+key CTRL+R
+wait 2
+validate alignment=Right
+
+# Back to left
+key CTRL+L
+wait 2
+validate alignment=Left
+
+screenshot 05_text_alignment
+

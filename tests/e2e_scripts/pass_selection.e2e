@@ -1,0 +1,19 @@
+# Test: Text selection (Ctrl+A)
+# Validates select all functionality
+
+type "Select Me"
+wait 2
+
+# No selection initially
+validate has_selection=false
+
+# Select all
+select_all
+wait 2
+
+# Should have selection
+validate has_selection=true
+validate selected_text=Select Me
+
+screenshot 10_selection
+

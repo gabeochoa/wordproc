@@ -1,0 +1,10 @@
+# Test: Validation mismatch detection
+# This test validates that incorrect expected values are properly detected
+# Expected: FAIL (test should fail because actual != expected)
+
+type "Hello World"
+wait 2
+
+# This validation should fail - wrong expected value
+validate text=This is not the text we typed
+
