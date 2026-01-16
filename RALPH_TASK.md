@@ -161,11 +161,12 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] If `src/engine/input_injector.cpp:1-173` is test-only, move it into the testing folder. (Already in src/testing/)
 - [x] Evaluate using immutable structures for text layout in `src/editor/text_layout.h:1-107`. (Already uses SoA LayoutResult with immutable parallel arrays; further immutability deferred)
 - [x] Add tests that validate on-screen content while scrolling.
-- [ ] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
+- [x] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
 - [x] Add unsaved-changes indicator (`*`) in the UI when the document is dirty.
 - [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
 - [ ] Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
 - [ ] Ensure `.doc` import support; collect sample `.doc` files from https://file-examples.com/index.php/sample-documents-download/sample-doc-download/ for tests.
+- [ ] Add a test that loads the largest file and logs FPS while scrolling.
 
 ---
 

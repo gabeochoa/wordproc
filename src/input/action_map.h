@@ -108,7 +108,20 @@ private:
   bool isBindingPressed(const KeyBinding& binding) const;
 };
 
-// Default action map with standard bindings
+// Keyboard shortcut presets
+enum class Preset {
+  SystemDefault,  // Auto-detect based on platform
+  WindowsCtrl,    // Windows-style: Ctrl+key for commands
+  MacOSCmd        // macOS-style: Uses Ctrl as "Cmd" equivalent (since raylib doesn't expose Cmd)
+};
+
+// Get preset name for display
+const char* presetName(Preset preset);
+
+// Create action map with specified preset
+ActionMap createActionMapWithPreset(Preset preset);
+
+// Default action map with standard bindings (system default preset)
 ActionMap createDefaultActionMap();
 
 } // namespace input
