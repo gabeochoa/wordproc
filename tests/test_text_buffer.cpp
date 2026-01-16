@@ -1599,3 +1599,60 @@ TEST_CASE("Find across multiple lines", "[text_buffer][find]") {
     }
 }
 
+
+TEST_CASE("Page breaks", "[text_buffer][pagebreak]") {
+    TextBuffer buffer;
+    buffer.setText("Line one\nLine two\nLine three");
+    
+    SECTION("no page breaks initially") {
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(0));
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(1));
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(2));
+    }
+    
+    SECTION("insert page break") {
+        buffer.setCaret({1, 0});  // Start of line 2
+        buffer.insertPageBreak();
+        
+        // Should have created a new line and marked it with page break
+        REQUIRE(buffer.lines().size() == 4);  // Was 3, now 4
+        REQUIRE(buffer.hasPageBreakBefore(buffer.caret().row));
+    }
+    
+    SECTION("toggle page break") {
+        buffer.setCaret({1, 0});  // Line 2
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(1));
+        
+        buffer.togglePageBreak();
+        REQUIRE(buffer.hasPageBreakBefore(1));
+        
+        buffer.togglePageBreak();
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(1));
+    }
+    
+    SECTION("clear page break") {
+        buffer.setCaret({2, 0});  // Line 3
+        buffer.togglePageBreak();
+        REQUIRE(buffer.hasPageBreakBefore(2));
+        
+        buffer.clearPageBreak();
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(2));
+    }
+    
+    SECTION("page break on first line has no effect for toggle") {
+        buffer.setCaret({0, 0});  // First line
+        buffer.togglePageBreak();
+        // Can't have page break before first line
+        REQUIRE_FALSE(buffer.hasPageBreakBefore(0));
+    }
+    
+    SECTION("insertPageBreak creates new line with page break marker") {
+        buffer.setCaret({0, 4});  // Middle of first line
+        std::size_t originalLines = buffer.lines().size();
+        
+        buffer.insertPageBreak();
+        
+        REQUIRE(buffer.lines().size() == originalLines + 1);
+        REQUIRE(buffer.hasPageBreakBefore(buffer.caret().row));
+    }
+}
