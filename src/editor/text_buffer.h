@@ -127,6 +127,9 @@ struct LineSpan {
     ListType listType = ListType::None;  // Bullet, numbered, or none
     int listLevel = 0;                    // Nesting level for multi-level lists (0 = top level)
     int listNumber = 1;                   // Current number for numbered lists
+    
+    // Page break
+    bool hasPageBreakBefore = false;  // Insert page break before this line (Ctrl+Enter)
 };
 
 // Gap buffer for efficient text editing
@@ -390,8 +393,12 @@ class TextBuffer {
     // Renumber lists from a starting row (for numbered lists)
     void renumberListsFrom(std::size_t startRow);
 
+    // Adjust hyperlink offsets when text is inserted/deleted
+    void adjustHyperlinkOffsets(std::size_t pos, std::ptrdiff_t delta);
+
     GapBuffer chars_;                   // Contiguous character storage
     std::vector<LineSpan> line_spans_;  // SoA line metadata
+    std::vector<Hyperlink> hyperlinks_; // Hyperlinks in the document
     CaretPosition caret_;
     bool has_selection_ = false;
     CaretPosition selection_anchor_;
