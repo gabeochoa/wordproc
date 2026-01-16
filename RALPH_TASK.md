@@ -176,6 +176,7 @@ These are architectural improvements and new features for future versions. They 
 - [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
 - [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
+- [ ] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
 
 ---
 
