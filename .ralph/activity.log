@@ -2522,3 +2522,8 @@ Ralph Session Started: Thu Jan 15 22:54:18 CST 2026
 [22:54:27] 🟢 READ /Users/gabeochoa/p/wordproc/.ralph/signs.md (18 lines, ~1.7KB)
 [22:54:28] 🟢 READ /Users/gabeochoa/p/wordproc/.ralph/progress.md (1376 lines, ~134.3KB)
 [22:54:41] 🟢 SHELL make test 2>&1 | tail -50 → exit 0
+[22:54:47] 🟢 READ /Users/gabeochoa/p/wordproc/tests/test_document_io.cpp (257 lines, ~25.0KB)
+[22:54:48] 🟢 TOKENS: 46125 / 80000 (57%) [read:176KB write:0KB assist:0KB shell:0KB]
+[22:54:48] 🟡 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.cpp (563 lines, ~54.9KB)
+[22:54:55] 🔴 ROTATE: Token threshold reached (266609 >= 80000)
+[22:54:56] 🔴 TOKENS: 266609 / 80000 (333%) - rotation imminent [read:1037KB write:0KB assist:0KB shell:0KB]

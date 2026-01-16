@@ -595,6 +595,10 @@ const char* actionDisplayName(Action action) {
             return "Page Break";
         case Action::TogglePageBreak:
             return "Toggle Page Break";
+        case Action::InsertHyperlink:
+            return "Insert Hyperlink";
+        case Action::RemoveHyperlink:
+            return "Remove Hyperlink";
         case Action::COUNT:
         default:
             return "";
@@ -891,6 +895,9 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     
     // Page breaks
     addBinding(Action::InsertPageBreak, {raylib::KEY_ENTER, true, false, false});  // Ctrl+Enter
+    
+    // Hyperlinks
+    addBinding(Action::InsertHyperlink, {raylib::KEY_K, true, false, false});  // Ctrl+K
 
     return result;
 }

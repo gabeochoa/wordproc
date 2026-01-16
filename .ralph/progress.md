@@ -1373,3 +1373,23 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 ### 2026-01-15 22:54:18
 **Session 18 started** (model: opus-4.5-thinking)
+
+### Session 7 Continued - Line Numbering
+
+- Implemented line numbering for editing/review:
+  - Added showLineNumbers and lineNumberGutterWidth to LayoutComponent
+  - Modified renderTextBuffer to accept line number parameters
+  - Draw gray, right-aligned line numbers in left gutter
+  - Added "Show Line Numbers" toggle to View menu (item 7)
+  - Handler toggles layout.showLineNumbers with status message
+- Main app builds successfully
+- Marked "Add line numbering for editing/review" [x] complete
+
+**Note:** Concurrent agents added Insert menu, enhanced Table tests, and page break/hyperlink features.
+
+**Current Status:**
+- Completed tasks: 40
+- Remaining tasks: 54
+- All code compiles
+- Test environment has parallel agent interference issues (workaround: OBJ_DIR=/tmp/wordproc_objs)
+
