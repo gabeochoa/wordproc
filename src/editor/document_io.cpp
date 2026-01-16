@@ -1,5 +1,6 @@
 #include "document_io.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -7,6 +8,18 @@
 #include <nlohmann/json.hpp>
 
 bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
+  auto result = saveTextFileEx(buffer, path);
+  return result.success;
+}
+
+bool loadTextFile(TextBuffer &buffer, const std::string &path) {
+  auto result = loadTextFileEx(buffer, path);
+  return result.success;
+}
+
+DocumentResult saveTextFileEx(const TextBuffer &buffer, const std::string &path) {
+  DocumentResult result;
+  
   std::filesystem::path output_path(path);
   if (!output_path.parent_path().empty()) {
     std::filesystem::create_directories(output_path.parent_path());
@@ -14,7 +27,8 @@ bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
 
   std::ofstream ofs(output_path);
   if (!ofs.is_open()) {
-    return false;
+    result.error = "Could not open file for writing: " + path;
+    return result;
   }
 
   TextStyle style = buffer.textStyle();
@@ -29,13 +43,22 @@ bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
   };
 
   ofs << doc.dump(2);
-  return ofs.good();
+  if (!ofs.good()) {
+    result.error = "Failed to write to file: " + path;
+    return result;
+  }
+  
+  result.success = true;
+  return result;
 }
 
-bool loadTextFile(TextBuffer &buffer, const std::string &path) {
+DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
+  DocumentResult result;
+  
   std::ifstream ifs(path);
   if (!ifs.is_open()) {
-    return false;
+    result.error = "Could not open file: " + path;
+    return result;
   }
 
   std::ostringstream contents;
@@ -44,10 +67,23 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path) {
 
   try {
     nlohmann::json doc = nlohmann::json::parse(raw);
+    
+    // Check version
+    if (doc.contains("version")) {
+      int version = doc.at("version").get<int>();
+      if (version != 1) {
+        result.error = "Unsupported document version: " + std::to_string(version);
+        result.usedFallback = true;
+        // Still try to load
+      }
+    }
+    
     if (doc.contains("text")) {
       buffer.setText(doc.at("text").get<std::string>());
     } else {
+      // JSON but no text field - use raw
       buffer.setText(raw);
+      result.usedFallback = true;
     }
 
     if (doc.contains("style")) {
@@ -63,13 +99,21 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path) {
         style.font = style_json.at("font").get<std::string>();
       }
       if (style_json.contains("fontSize")) {
-        style.fontSize = style_json.at("fontSize").get<int>();
+        int fontSize = style_json.at("fontSize").get<int>();
+        // Clamp to valid range
+        style.fontSize = std::max(8, std::min(72, fontSize));
       }
       buffer.setTextStyle(style);
     }
-  } catch (...) {
+    
+    result.success = true;
+  } catch (const std::exception &e) {
+    // JSON parse failed - load as plain text
     buffer.setText(raw);
+    result.success = true;
+    result.usedFallback = true;
+    result.error = "Loaded as plain text (JSON parse error: " + std::string(e.what()) + ")";
   }
 
-  return true;
+  return result;
 }

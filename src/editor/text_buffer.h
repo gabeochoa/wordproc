@@ -67,6 +67,7 @@ private:
 class CommandHistory {
 public:
   void execute(std::unique_ptr<EditCommand> cmd, TextBuffer& buffer);
+  void record(std::unique_ptr<EditCommand> cmd);  // Record without executing
   bool canUndo() const { return !undoStack_.empty(); }
   bool canRedo() const { return !redoStack_.empty(); }
   void undo(TextBuffer& buffer);

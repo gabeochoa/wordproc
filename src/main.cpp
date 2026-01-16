@@ -414,6 +414,22 @@ int main(int argc, char *argv[]) {
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_A)) {
       buffer.selectAll();
     }
+    
+    // Ctrl+Z - Undo
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Z)) {
+      if (buffer.canUndo()) {
+        buffer.undo();
+        isDirty = true;
+      }
+    }
+    
+    // Ctrl+Y - Redo
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Y)) {
+      if (buffer.canRedo()) {
+        buffer.redo();
+        isDirty = true;
+      }
+    }
 
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);

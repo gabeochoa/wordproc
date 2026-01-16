@@ -217,6 +217,37 @@ Implemented SoA (Structure of Arrays) text storage with gap buffer:
 ### 2026-01-15 18:28:09
 **Session 5 started** (model: opus-4.5-thinking)
 
+### 2026-01-15 (Session 5 Progress)
+- Implemented Win95-styled interactive menus, buttons, and dialogs (src/ui/win95_widgets.h/.cpp)
+- Added selection deletion on typing/backspace/delete
+- Added word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown)
+- Added clipboard integration (Ctrl+C/X/V/A)
+- Created document file format specification (docs/file_format.md)
+- Populated test_files/should_fail/ and test_files/should_pass/ with test fixtures
+- Updated AfterhoursGaps.md with API review and feature requests
+- Added validator rules documentation
+- Decided: Global styles for v0.1; per-range deferred to v0.2
+
+**Completed task breakdown items:**
+- [x] Buttons, menus, dialogs styled for Win95/Mac3.1 hybrid
+- [x] Handle selection deletion on typing/backspace/delete
+- [x] Add word/line navigation
+- [x] Add clipboard integration
+- [x] Define document file format
+- [x] Populate test_files/should_fail/
+- [x] Populate test_files/should_pass/
+- [x] Review Afterhours APIs
+- [x] Define validator rules
+- [x] Decide on per-range styles vs global
+
+**Remaining 4 items:**
+- [ ] Add undo/redo with command history
+- [ ] Fix caret positioning with per-glyph metrics
+- [ ] Add load/save error reporting
+- [ ] Build format validator
+
+All 199 tests pass.
+
 ### 2026-01-15 18:34:13
 **Session 5 ended** - 🔄 Context rotation (token limit reached)
 
@@ -266,3 +297,9 @@ Implemented SoA (Structure of Arrays) text storage with gap buffer:
 
 ### 2026-01-15 18:42:44
 **Session 8 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 18:44:49
+**Session 8 ended** - 🔄 Context rotation (token limit reached)
+
+### 2026-01-15 18:44:51
+**Session 9 started** (model: opus-4.5-thinking)
