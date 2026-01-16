@@ -223,8 +223,40 @@ Implemented SoA (Structure of Arrays) text storage with gap buffer:
 ### 2026-01-15 18:34:15
 **Session 6 started** (model: opus-4.5-thinking)
 
+### Session 6 Work
+- Implemented RenderCache class for caching layout data between frames
+- Added `version()` counter to TextBuffer that increments on every modification
+- Cache invalidates when:
+  - Buffer content changes (insert, delete, backspace, setText)
+  - Font size changes
+  - Window dimensions change
+  - Line height changes
+- Added `CachedLine` struct storing pre-computed y-positions and text
+- Updated main.cpp rendering to use cached layout instead of per-frame computation
+- Added 21 new test assertions for cache invalidation behavior
+- All 199 assertions in 24 test cases pass
+- Marked "Ensure rendering uses cached glyph/layout data" criterion [x] complete
+
 ### 2026-01-15 18:40:52
 **Session 6 ended** - 🔄 Context rotation (token limit reached)
 
 ### 2026-01-15 18:40:54
 **Session 7 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 (Session 7 - Final Verification)
+- Committed pending change: version_++ in backspace/delete for render cache invalidation
+- Verified all tests pass: 199 assertions in 24 test cases
+- All 8 SUCCESS CRITERIA are marked [x] complete
+- Note: Task Breakdown sections 9/10/11 have unchecked items - these are additional features beyond the 8 core success criteria
+
+**ALL 8 SUCCESS CRITERIA VERIFIED COMPLETE:**
+1. [x] P0 testing stack (199 assertions, 24 test cases)
+2. [x] App launches with typing/caret/save/open
+3. [x] Bold/italic and font selection
+4. [x] style_guide.md with Win95/Mac3.1 design
+5. [x] AfterhoursGaps.md exists
+6. [x] Assets/config copied and integrated
+7. [x] SoA layout with measurable performance wins (5.35x line access, 1.26x wrapping)
+8. [x] Cold start performance tracked and documented
+
+**Session 7 ended** - Task COMPLETE
