@@ -24,14 +24,19 @@ inline std::vector<win95::Menu> createMenuBar() {
     // Edit menu
     win95::Menu editMenu;
     editMenu.label = "Edit";
-    editMenu.items = {{"Undo", "Ctrl+Z", true, false, nullptr},
-                      {"Redo", "Ctrl+Y", true, false, nullptr},
-                      {"", "", false, true, nullptr},  // Separator
-                      {"Cut", "Ctrl+X", true, false, nullptr},
-                      {"Copy", "Ctrl+C", true, false, nullptr},
-                      {"Paste", "Ctrl+V", true, false, nullptr},
-                      {"", "", false, true, nullptr},  // Separator
-                      {"Select All", "Ctrl+A", true, false, nullptr}};
+    editMenu.items = {{"Undo", "Ctrl+Z", true, false, nullptr},           // 0
+                      {"Redo", "Ctrl+Y", true, false, nullptr},           // 1
+                      {"", "", false, true, nullptr},                     // 2 Separator
+                      {"Cut", "Ctrl+X", true, false, nullptr},            // 3
+                      {"Copy", "Ctrl+C", true, false, nullptr},           // 4
+                      {"Paste", "Ctrl+V", true, false, nullptr},          // 5
+                      {"", "", false, true, nullptr},                     // 6 Separator
+                      {"Select All", "Ctrl+A", true, false, nullptr},     // 7
+                      {"", "", false, true, nullptr},                     // 8 Separator
+                      {"Find...", "Ctrl+F", true, false, nullptr},        // 9
+                      {"Find Next", "F3", true, false, nullptr},          // 10
+                      {"Find Previous", "Shift+F3", true, false, nullptr},// 11
+                      {"Replace...", "Ctrl+H", true, false, nullptr}};    // 12
     menus.push_back(editMenu);
 
     // View menu

@@ -1,6 +1,7 @@
 #include "text_buffer.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 
 // ============================================================================
@@ -1212,4 +1213,281 @@ void TextBuffer::insertTextAt(CaretPosition pos, const std::string& text) {
         insertCharAt(caret_, ch);
     }
     recordingHistory_ = true;
+}
+
+// ============================================================================
+// Find and Replace
+// ============================================================================
+
+// Helper to compare characters for case-insensitive matching
+static bool charEquals(char a, char b, bool caseSensitive) {
+    if (caseSensitive) return a == b;
+    return std::tolower(static_cast<unsigned char>(a)) == 
+           std::tolower(static_cast<unsigned char>(b));
+}
+
+// Helper to check if position is at a word boundary
+static bool isWordBoundary(const std::string& text, std::size_t pos, bool atStart) {
+    if (atStart) {
+        // Start of word: previous char is not alphanumeric or is at start
+        if (pos == 0) return true;
+        return !std::isalnum(static_cast<unsigned char>(text[pos - 1]));
+    } else {
+        // End of word: current char is not alphanumeric or is at end
+        if (pos >= text.size()) return true;
+        return !std::isalnum(static_cast<unsigned char>(text[pos]));
+    }
+}
+
+FindResult TextBuffer::find(const std::string& needle, const FindOptions& options) const {
+    if (needle.empty()) return {false, {0, 0}, {0, 0}};
+    
+    std::string text = getText();
+    std::size_t startOffset = positionToOffset(caret_);
+    
+    // Search forward from caret position
+    for (std::size_t i = startOffset; i + needle.length() <= text.length(); ++i) {
+        bool match = true;
+        for (std::size_t j = 0; j < needle.length() && match; ++j) {
+            if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                match = false;
+            }
+        }
+        if (match) {
+            // Check whole word if required
+            if (options.wholeWord) {
+                if (!isWordBoundary(text, i, true) || 
+                    !isWordBoundary(text, i + needle.length(), false)) {
+                    continue;
+                }
+            }
+            CaretPosition start = offsetToPosition(i);
+            CaretPosition end = offsetToPosition(i + needle.length());
+            return {true, start, end};
+        }
+    }
+    
+    // Wrap around if enabled
+    if (options.wrapAround && startOffset > 0) {
+        for (std::size_t i = 0; i < startOffset && i + needle.length() <= text.length(); ++i) {
+            bool match = true;
+            for (std::size_t j = 0; j < needle.length() && match; ++j) {
+                if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                    match = false;
+                }
+            }
+            if (match) {
+                if (options.wholeWord) {
+                    if (!isWordBoundary(text, i, true) || 
+                        !isWordBoundary(text, i + needle.length(), false)) {
+                        continue;
+                    }
+                }
+                CaretPosition start = offsetToPosition(i);
+                CaretPosition end = offsetToPosition(i + needle.length());
+                return {true, start, end};
+            }
+        }
+    }
+    
+    return {false, {0, 0}, {0, 0}};
+}
+
+FindResult TextBuffer::findNext(const std::string& needle, const FindOptions& options) const {
+    if (needle.empty()) return {false, {0, 0}, {0, 0}};
+    
+    std::string text = getText();
+    // Start after current selection/caret
+    std::size_t startOffset = positionToOffset(caret_);
+    if (hasSelection()) {
+        CaretPosition selEnd = selectionEnd();
+        startOffset = positionToOffset(selEnd);
+    }
+    
+    // Skip past current position to find next
+    if (startOffset < text.length()) {
+        startOffset++;
+    }
+    
+    // Search forward
+    for (std::size_t i = startOffset; i + needle.length() <= text.length(); ++i) {
+        bool match = true;
+        for (std::size_t j = 0; j < needle.length() && match; ++j) {
+            if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                match = false;
+            }
+        }
+        if (match) {
+            if (options.wholeWord) {
+                if (!isWordBoundary(text, i, true) || 
+                    !isWordBoundary(text, i + needle.length(), false)) {
+                    continue;
+                }
+            }
+            CaretPosition start = offsetToPosition(i);
+            CaretPosition end = offsetToPosition(i + needle.length());
+            return {true, start, end};
+        }
+    }
+    
+    // Wrap around if enabled
+    if (options.wrapAround) {
+        for (std::size_t i = 0; i + needle.length() <= text.length() && i < startOffset; ++i) {
+            bool match = true;
+            for (std::size_t j = 0; j < needle.length() && match; ++j) {
+                if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                    match = false;
+                }
+            }
+            if (match) {
+                if (options.wholeWord) {
+                    if (!isWordBoundary(text, i, true) || 
+                        !isWordBoundary(text, i + needle.length(), false)) {
+                        continue;
+                    }
+                }
+                CaretPosition start = offsetToPosition(i);
+                CaretPosition end = offsetToPosition(i + needle.length());
+                return {true, start, end};
+            }
+        }
+    }
+    
+    return {false, {0, 0}, {0, 0}};
+}
+
+FindResult TextBuffer::findPrevious(const std::string& needle, const FindOptions& options) const {
+    if (needle.empty()) return {false, {0, 0}, {0, 0}};
+    
+    std::string text = getText();
+    std::size_t endOffset = positionToOffset(caret_);
+    if (endOffset > 0) endOffset--;  // Start before current position
+    
+    // Search backward
+    for (std::size_t i = endOffset; i != static_cast<std::size_t>(-1); --i) {
+        if (i + needle.length() > text.length()) continue;
+        
+        bool match = true;
+        for (std::size_t j = 0; j < needle.length() && match; ++j) {
+            if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                match = false;
+            }
+        }
+        if (match) {
+            if (options.wholeWord) {
+                if (!isWordBoundary(text, i, true) || 
+                    !isWordBoundary(text, i + needle.length(), false)) {
+                    continue;
+                }
+            }
+            CaretPosition start = offsetToPosition(i);
+            CaretPosition end = offsetToPosition(i + needle.length());
+            return {true, start, end};
+        }
+        if (i == 0) break;
+    }
+    
+    // Wrap around if enabled
+    if (options.wrapAround && text.length() >= needle.length()) {
+        for (std::size_t i = text.length() - needle.length(); i > endOffset; --i) {
+            bool match = true;
+            for (std::size_t j = 0; j < needle.length() && match; ++j) {
+                if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                    match = false;
+                }
+            }
+            if (match) {
+                if (options.wholeWord) {
+                    if (!isWordBoundary(text, i, true) || 
+                        !isWordBoundary(text, i + needle.length(), false)) {
+                        continue;
+                    }
+                }
+                CaretPosition start = offsetToPosition(i);
+                CaretPosition end = offsetToPosition(i + needle.length());
+                return {true, start, end};
+            }
+        }
+    }
+    
+    return {false, {0, 0}, {0, 0}};
+}
+
+std::vector<FindResult> TextBuffer::findAll(const std::string& needle, const FindOptions& options) const {
+    std::vector<FindResult> results;
+    if (needle.empty()) return results;
+    
+    std::string text = getText();
+    
+    for (std::size_t i = 0; i + needle.length() <= text.length(); ++i) {
+        bool match = true;
+        for (std::size_t j = 0; j < needle.length() && match; ++j) {
+            if (!charEquals(text[i + j], needle[j], options.caseSensitive)) {
+                match = false;
+            }
+        }
+        if (match) {
+            if (options.wholeWord) {
+                if (!isWordBoundary(text, i, true) || 
+                    !isWordBoundary(text, i + needle.length(), false)) {
+                    continue;
+                }
+            }
+            CaretPosition start = offsetToPosition(i);
+            CaretPosition end = offsetToPosition(i + needle.length());
+            results.push_back({true, start, end});
+        }
+    }
+    
+    return results;
+}
+
+bool TextBuffer::replace(const std::string& needle, const std::string& replacement, 
+                         const FindOptions& options) {
+    if (!hasSelection() || needle.empty()) return false;
+    
+    // Check if selection matches needle
+    std::string selected = getSelectedText();
+    
+    bool matches = (selected.length() == needle.length());
+    if (matches) {
+        for (std::size_t i = 0; i < needle.length() && matches; ++i) {
+            if (!charEquals(selected[i], needle[i], options.caseSensitive)) {
+                matches = false;
+            }
+        }
+    }
+    
+    if (!matches) return false;
+    
+    // Delete selection and insert replacement
+    deleteSelection();
+    insertText(replacement);
+    return true;
+}
+
+std::size_t TextBuffer::replaceAll(const std::string& needle, const std::string& replacement,
+                                   const FindOptions& options) {
+    if (needle.empty()) return 0;
+    
+    std::size_t count = 0;
+    
+    // Find all occurrences first (to avoid modifying while searching)
+    std::vector<FindResult> matches = findAll(needle, options);
+    
+    // Replace from end to start to preserve positions
+    for (auto it = matches.rbegin(); it != matches.rend(); ++it) {
+        // Select the match
+        setCaret(it->start);
+        setSelectionAnchor(it->start);
+        setCaret(it->end);
+        updateSelectionToCaret();
+        
+        // Replace
+        deleteSelection();
+        insertText(replacement);
+        count++;
+    }
+    
+    return count;
 }

@@ -93,6 +93,12 @@ enum class Action {
     // Lists
     ToggleBulletedList,
     ToggleNumberedList,
+    
+    // Find and Replace
+    Find,
+    FindNext,
+    FindPrevious,
+    Replace,
 
     // Count (for iteration)
     COUNT

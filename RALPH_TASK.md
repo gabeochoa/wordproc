@@ -66,7 +66,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add equation editor and special character insertion.
 - [ ] Add hyperlink creation and editing.
 - [ ] Add bookmarks/anchors for internal navigation.
-- [ ] Add find and replace with match options.
+- [x] Add find and replace with match options. (Implemented: find/findNext/findPrevious/findAll/replace/replaceAll in TextBuffer, FindOptions with caseSensitive/wholeWord/wrapAround, Ctrl+F/G/H shortcuts, Edit menu items, 43 test assertions)
 - [ ] Add footnotes with auto-numbering.
 - [ ] Add spelling and grammar suggestions with per-word actions.
 - [ ] Add page setup controls (size, orientation, margins, page color).

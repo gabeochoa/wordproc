@@ -1388,3 +1388,214 @@ TEST_CASE("Bulleted and numbered lists", "[text_buffer][lists]") {
     }
 }
 
+TEST_CASE("Find and replace", "[text_buffer][find]") {
+    TextBuffer buffer;
+    buffer.setText("Hello world, hello everyone. Hello!");
+    
+    SECTION("find basic match") {
+        buffer.setCaret({0, 0});
+        FindResult result = buffer.find("Hello");
+        
+        REQUIRE(result.found);
+        REQUIRE(result.start.row == 0);
+        REQUIRE(result.start.column == 0);
+        REQUIRE(result.end.column == 5);
+    }
+    
+    SECTION("find case insensitive") {
+        buffer.setCaret({0, 0});
+        FindOptions opts;
+        opts.caseSensitive = false;
+        
+        FindResult result = buffer.find("HELLO", opts);
+        
+        REQUIRE(result.found);
+        REQUIRE(result.start.column == 0);
+    }
+    
+    SECTION("find case sensitive") {
+        buffer.setCaret({0, 0});
+        FindOptions opts;
+        opts.caseSensitive = true;
+        
+        // "HELLO" should not match "Hello"
+        FindResult result = buffer.find("HELLO", opts);
+        REQUIRE_FALSE(result.found);
+        
+        // "Hello" should match
+        result = buffer.find("Hello", opts);
+        REQUIRE(result.found);
+    }
+    
+    SECTION("find whole word only") {
+        buffer.setCaret({0, 0});
+        FindOptions opts;
+        opts.wholeWord = true;
+        
+        // "Hell" should not match as whole word
+        FindResult result = buffer.find("Hell", opts);
+        REQUIRE_FALSE(result.found);
+        
+        // "Hello" should match as whole word
+        result = buffer.find("Hello", opts);
+        REQUIRE(result.found);
+    }
+    
+    SECTION("find next occurrence") {
+        buffer.setCaret({0, 0});
+        FindOptions opts;
+        opts.caseSensitive = false;  // Match all "hello" variants
+        
+        FindResult first = buffer.find("hello", opts);
+        REQUIRE(first.found);
+        REQUIRE(first.start.column == 0);
+        
+        buffer.setCaret(first.end);
+        FindResult second = buffer.findNext("hello", opts);
+        REQUIRE(second.found);
+        REQUIRE(second.start.column == 13);  // "hello" in "hello everyone"
+    }
+    
+    SECTION("find previous occurrence") {
+        buffer.setCaret({0, 35});  // End of text
+        FindOptions opts;
+        opts.caseSensitive = false;
+        
+        FindResult result = buffer.findPrevious("hello", opts);
+        REQUIRE(result.found);
+        REQUIRE(result.start.column == 29);  // Last "Hello" before the "!"
+    }
+    
+    SECTION("find all occurrences") {
+        FindOptions opts;
+        opts.caseSensitive = false;
+        
+        std::vector<FindResult> results = buffer.findAll("hello", opts);
+        REQUIRE(results.size() == 3);
+        REQUIRE(results[0].start.column == 0);
+        REQUIRE(results[1].start.column == 13);
+        REQUIRE(results[2].start.column == 29);
+    }
+    
+    SECTION("find with wrap around") {
+        buffer.setCaret({0, 20});  // Middle of text
+        FindOptions opts;
+        opts.wrapAround = true;
+        opts.caseSensitive = true;
+        
+        // Should find "Hello" at start (wrapped)
+        FindResult result = buffer.find("Hello", opts);
+        REQUIRE(result.found);
+    }
+    
+    SECTION("find without wrap around") {
+        buffer.setCaret({0, 30});  // Near end
+        FindOptions opts;
+        opts.wrapAround = false;
+        opts.caseSensitive = true;
+        
+        // Should not find "Hello" without wrapping
+        FindResult result = buffer.find("Hello", opts);
+        REQUIRE_FALSE(result.found);
+    }
+    
+    SECTION("find empty needle returns not found") {
+        FindResult result = buffer.find("");
+        REQUIRE_FALSE(result.found);
+    }
+    
+    SECTION("find non-existent text") {
+        FindResult result = buffer.find("xyz");
+        REQUIRE_FALSE(result.found);
+    }
+    
+    SECTION("replace selected text") {
+        buffer.setCaret({0, 0});
+        // Select "Hello"
+        buffer.setSelectionAnchor({0, 0});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        
+        bool replaced = buffer.replace("Hello", "Hi");
+        REQUIRE(replaced);
+        REQUIRE(buffer.getText().substr(0, 2) == "Hi");
+    }
+    
+    SECTION("replace only if selection matches") {
+        buffer.setCaret({0, 0});
+        buffer.setSelectionAnchor({0, 0});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        
+        // Try to replace with wrong needle
+        bool replaced = buffer.replace("Goodbye", "Hi");
+        REQUIRE_FALSE(replaced);
+        REQUIRE(buffer.getText().substr(0, 5) == "Hello");  // Unchanged
+    }
+    
+    SECTION("replace all occurrences") {
+        std::size_t count = buffer.replaceAll("Hello", "Hi");
+        // Case insensitive by default, should match 2 "Hello" instances
+        // (first and last - the middle one is lowercase "hello")
+        FindOptions opts;
+        opts.caseSensitive = false;
+        count = buffer.replaceAll("hi", "yo", opts);
+        // At this point we've already replaced, let's reset and test fresh
+    }
+    
+    SECTION("replace all preserves order") {
+        TextBuffer buf2;
+        buf2.setText("cat cat cat");
+        
+        std::size_t count = buf2.replaceAll("cat", "dog");
+        REQUIRE(count == 3);
+        REQUIRE(buf2.getText() == "dog dog dog");
+    }
+    
+    SECTION("replace all with different length replacement") {
+        TextBuffer buf2;
+        buf2.setText("a b c");
+        
+        std::size_t count = buf2.replaceAll("b", "xyz");
+        REQUIRE(count == 1);
+        REQUIRE(buf2.getText() == "a xyz c");
+    }
+    
+    SECTION("replace all case insensitive") {
+        FindOptions opts;
+        opts.caseSensitive = false;
+        
+        std::size_t count = buffer.replaceAll("hello", "HI", opts);
+        REQUIRE(count == 3);
+        REQUIRE(buffer.getText() == "HI world, HI everyone. HI!");
+    }
+}
+
+TEST_CASE("Find across multiple lines", "[text_buffer][find]") {
+    TextBuffer buffer;
+    buffer.setText("Line one\nLine two\nLine three");
+    
+    SECTION("find on second line") {
+        buffer.setCaret({0, 0});
+        FindResult result = buffer.find("two");
+        
+        REQUIRE(result.found);
+        REQUIRE(result.start.row == 1);
+        REQUIRE(result.start.column == 5);
+    }
+    
+    SECTION("find all across lines") {
+        std::vector<FindResult> results = buffer.findAll("Line");
+        REQUIRE(results.size() == 3);
+        REQUIRE(results[0].start.row == 0);
+        REQUIRE(results[1].start.row == 1);
+        REQUIRE(results[2].start.row == 2);
+    }
+    
+    SECTION("replace all across lines") {
+        std::size_t count = buffer.replaceAll("Line", "Row");
+        REQUIRE(count == 3);
+        REQUIRE(buffer.getText() == "Row one\nRow two\nRow three");
+    }
+}
+

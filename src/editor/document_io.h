@@ -2,8 +2,11 @@
 #define WORDPROC_EDITOR_DOCUMENT_IO_H
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "document_settings.h"
+#include "table.h"
 #include "text_buffer.h"
 
 // Load/save result with error information
@@ -28,5 +31,18 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
                               const std::string &path);
 DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                               const std::string &path);
+
+// Type alias for table storage (line number -> table)
+using TableList = std::vector<std::pair<std::size_t, Table>>;
+
+// Full document save/load with tables
+DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
+                                      const DocumentSettings &settings,
+                                      const TableList &tables,
+                                      const std::string &path);
+DocumentResult loadDocumentWithTables(TextBuffer &buffer, 
+                                      DocumentSettings &settings,
+                                      TableList &tables,
+                                      const std::string &path);
 
 #endif  // WORDPROC_EDITOR_DOCUMENT_IO_H

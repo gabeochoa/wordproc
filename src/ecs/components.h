@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../editor/document_settings.h"
+#include "../editor/table.h"
 #include "../editor/text_buffer.h"
 #include "../input/action_map.h"
 #include "../ui/win95_widgets.h"
@@ -37,8 +38,48 @@ struct DocumentComponent : public afterhours::BaseComponent {
     // This includes text style, page mode, margins, etc.
     DocumentSettings docSettings;
 
+    // Tables embedded in the document (indexed by position in text)
+    // Each table is associated with a line number where it appears
+    std::vector<std::pair<std::size_t, Table>> tables;
+
     // For default doc path when saving without a name
     std::string defaultPath = "output/document.wpdoc";
+    
+    // Table helper methods
+    void insertTable(std::size_t atLine, std::size_t rows, std::size_t cols) {
+        tables.emplace_back(atLine, Table(rows, cols));
+    }
+    
+    Table* tableAtLine(std::size_t line) {
+        for (auto& [lineNum, table] : tables) {
+            if (lineNum == line) return &table;
+        }
+        return nullptr;
+    }
+    
+    const Table* tableAtLine(std::size_t line) const {
+        for (const auto& [lineNum, table] : tables) {
+            if (lineNum == line) return &table;
+        }
+        return nullptr;
+    }
+    
+    void removeTable(std::size_t atLine) {
+        tables.erase(
+            std::remove_if(tables.begin(), tables.end(),
+                [atLine](const auto& p) { return p.first == atLine; }),
+            tables.end());
+    }
+};
+
+// Component for table editing state
+struct TableEditComponent : public afterhours::BaseComponent {
+    bool isEditingTable = false;
+    std::size_t editingTableLine = 0;  // Line number of the table being edited
+    CellPosition currentCell{0, 0};     // Current cell being edited
+    bool hasSelection = false;
+    CellPosition selectionStart{0, 0};
+    CellPosition selectionEnd{0, 0};
 };
 
 // Component for status messages (pure data - logic in component_helpers.h)
@@ -54,6 +95,15 @@ struct MenuComponent : public afterhours::BaseComponent {
     bool showAboutDialog = false;
     bool showHelpWindow = false;  // Keybindings help window
     int helpScrollOffset = 0;     // Scroll position in help window
+    
+    // Find/Replace state
+    bool showFindDialog = false;
+    bool findReplaceMode = false;  // false = find only, true = find + replace
+    std::string lastSearchTerm;
+    std::string replaceTerm;
+    FindOptions findOptions;       // Case sensitive, whole word, wrap around
+    char findInputBuffer[256] = {0};
+    char replaceInputBuffer[256] = {0};
 };
 
 // PageMode is defined in document_settings.h

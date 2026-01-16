@@ -153,6 +153,14 @@ const char* ActionMap::actionName(Action action) {
             return "ToggleBulletedList";
         case Action::ToggleNumberedList:
             return "ToggleNumberedList";
+        case Action::Find:
+            return "Find";
+        case Action::FindNext:
+            return "FindNext";
+        case Action::FindPrevious:
+            return "FindPrevious";
+        case Action::Replace:
+            return "Replace";
         case Action::IncreaseSpaceBefore:
             return "IncreaseSpaceBefore";
         case Action::DecreaseSpaceBefore:
@@ -265,6 +273,14 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
     
+    // Find and Replace
+    map.bind({raylib::KEY_F, true, false, false}, Action::Find);
+    map.bind({raylib::KEY_G, true, false, false}, Action::FindNext);
+    map.bind({raylib::KEY_F3, false, false, false}, Action::FindNext);
+    map.bind({raylib::KEY_G, true, true, false}, Action::FindPrevious);
+    map.bind({raylib::KEY_F3, false, true, false}, Action::FindPrevious);
+    map.bind({raylib::KEY_H, true, false, false}, Action::Replace);
+    
     // Paragraph spacing: Ctrl+Alt+Up/Down for before, Ctrl+Shift+Alt+Up/Down for after
     map.bind({raylib::KEY_UP, true, false, true}, Action::IncreaseSpaceBefore);
     map.bind({raylib::KEY_DOWN, true, false, true}, Action::DecreaseSpaceBefore);
@@ -352,6 +368,14 @@ static void bindMacOSPreset(ActionMap& map) {
     // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
+    
+    // Find and Replace
+    map.bind({raylib::KEY_F, true, false, false}, Action::Find);
+    map.bind({raylib::KEY_G, true, false, false}, Action::FindNext);
+    map.bind({raylib::KEY_F3, false, false, false}, Action::FindNext);
+    map.bind({raylib::KEY_G, true, true, false}, Action::FindPrevious);
+    map.bind({raylib::KEY_F3, false, true, false}, Action::FindPrevious);
+    map.bind({raylib::KEY_H, true, false, false}, Action::Replace);
     
     // Paragraph spacing: Cmd+Alt+Up/Down for before, Cmd+Shift+Alt+Up/Down for after
     map.bind({raylib::KEY_UP, true, false, true}, Action::IncreaseSpaceBefore);
@@ -499,6 +523,14 @@ const char* actionDisplayName(Action action) {
             return "Toggle Bullets";
         case Action::ToggleNumberedList:
             return "Toggle Numbering";
+        case Action::Find:
+            return "Find";
+        case Action::FindNext:
+            return "Find Next";
+        case Action::FindPrevious:
+            return "Find Previous";
+        case Action::Replace:
+            return "Replace";
         case Action::IncreaseSpaceBefore:
             return "Increase Space Before";
         case Action::DecreaseSpaceBefore:
@@ -788,6 +820,12 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers (like some word processors)
     addBinding(Action::ToggleBulletedList, {raylib::KEY_EIGHT, true, true, false});
     addBinding(Action::ToggleNumberedList, {raylib::KEY_SEVEN, true, true, false});
+    
+    // Find and Replace
+    addBinding(Action::Find, {raylib::KEY_F, true, false, false});
+    addBinding(Action::FindNext, {raylib::KEY_G, true, false, false});
+    addBinding(Action::FindPrevious, {raylib::KEY_G, true, true, false});
+    addBinding(Action::Replace, {raylib::KEY_H, true, false, false});
     
     // Paragraph spacing
     addBinding(Action::IncreaseSpaceBefore, {raylib::KEY_UP, true, false, true});

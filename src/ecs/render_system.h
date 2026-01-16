@@ -690,6 +690,48 @@ struct MenuSystem
                 case 7:  // Select All
                     doc.buffer.selectAll();
                     break;
+                case 9:  // Find...
+                    menu.showFindDialog = true;
+                    menu.findReplaceMode = false;
+                    status::set(status, "Find: Ctrl+G next, Ctrl+Shift+G prev");
+                    status.expiresAt = raylib::GetTime() + 3.0;
+                    break;
+                case 10:  // Find Next
+                    if (!menu.lastSearchTerm.empty()) {
+                        FindResult result = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
+                        if (result.found) {
+                            doc.buffer.setCaret(result.start);
+                            doc.buffer.setSelectionAnchor(result.start);
+                            doc.buffer.setCaret(result.end);
+                            doc.buffer.updateSelectionToCaret();
+                            status::set(status, "Found");
+                        } else {
+                            status::set(status, "Not found");
+                        }
+                        status.expiresAt = raylib::GetTime() + 2.0;
+                    }
+                    break;
+                case 11:  // Find Previous
+                    if (!menu.lastSearchTerm.empty()) {
+                        FindResult result = doc.buffer.findPrevious(menu.lastSearchTerm, menu.findOptions);
+                        if (result.found) {
+                            doc.buffer.setCaret(result.start);
+                            doc.buffer.setSelectionAnchor(result.start);
+                            doc.buffer.setCaret(result.end);
+                            doc.buffer.updateSelectionToCaret();
+                            status::set(status, "Found");
+                        } else {
+                            status::set(status, "Not found");
+                        }
+                        status.expiresAt = raylib::GetTime() + 2.0;
+                    }
+                    break;
+                case 12:  // Replace...
+                    menu.showFindDialog = true;
+                    menu.findReplaceMode = true;
+                    status::set(status, "Replace mode");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
                 default:
                     break;
             }
