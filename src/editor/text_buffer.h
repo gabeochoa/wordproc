@@ -98,6 +98,7 @@ struct LineSpan {
     std::size_t offset = 0;  // Start offset in the character buffer
     std::size_t length = 0;  // Length of line (excluding newline)
     ParagraphStyle style = ParagraphStyle::Normal;  // Paragraph style for this line
+    TextAlignment alignment = TextAlignment::Left;  // Text alignment for this line
 };
 
 // Gap buffer for efficient text editing
@@ -187,6 +188,14 @@ class TextBuffer {
     
     // Get paragraph style for a specific line
     ParagraphStyle lineParagraphStyle(std::size_t row) const;
+    
+    // Text alignment for current line (where caret is)
+    TextAlignment currentAlignment() const;
+    void setCurrentAlignment(TextAlignment align);
+    
+    // Get text alignment for a specific line
+    TextAlignment lineAlignment(std::size_t row) const;
+    
     void backspace();
     void del();
 

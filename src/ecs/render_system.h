@@ -92,7 +92,8 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
     for (std::size_t row = startRow; row < lineCount; ++row) {
         LineSpan span = buffer.lineSpan(row);
-        int x = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
+        int baseX = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
+        int availableWidth = static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
 
         std::string line = (span.length > 0) ? buffer.lineString(row) : "";
         
@@ -106,8 +107,31 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             lineFontSize = baseFontSize;
             lineHeight = baseLineHeight;
         }
+        
+        // Calculate text width for alignment
+        int textWidth = line.empty() ? 0 : raylib::MeasureText(line.c_str(), lineFontSize);
+        
+        // Apply text alignment
+        TextAlignment alignment = buffer.lineAlignment(row);
+        int x = baseX;
+        switch (alignment) {
+            case TextAlignment::Left:
+            default:
+                x = baseX;
+                break;
+            case TextAlignment::Center:
+                x = baseX + (availableWidth - textWidth) / 2;
+                break;
+            case TextAlignment::Right:
+                x = baseX + availableWidth - textWidth;
+                break;
+            case TextAlignment::Justify:
+                // Justify is same as left for now (requires word spacing adjustments)
+                x = baseX;
+                break;
+        }
 
-        // Draw selection highlight
+        // Draw selection highlight (with alignment offset)
         if (hasSelection) {
             bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
             if (lineInSelection) {
@@ -135,7 +159,6 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         if (!line.empty()) {
             // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
-            int textWidth = raylib::MeasureText(line.c_str(), lineFontSize);
             
             // Convert TextColor to raylib::Color
             raylib::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
@@ -724,84 +747,128 @@ struct MenuSystem
                     doc.buffer.setTextStyle(style);
                     break;
                 // (14 is separator)
-                // Text colors (15-21)
-                case 15:  // Text: Black
+                // Alignment (15-18)
+                case 15:  // Align Left
+                    doc.buffer.setCurrentAlignment(TextAlignment::Left);
+                    status::set(status, "Align: Left");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 16:  // Align Center
+                    doc.buffer.setCurrentAlignment(TextAlignment::Center);
+                    status::set(status, "Align: Center");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 17:  // Align Right
+                    doc.buffer.setCurrentAlignment(TextAlignment::Right);
+                    status::set(status, "Align: Right");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 18:  // Justify
+                    doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+                    status::set(status, "Align: Justify");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                // (19 is separator)
+                // Text colors (20-26)
+                case 20:  // Text: Black
                     style.textColor = TextColors::Black;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 16:  // Text: Red
+                case 21:  // Text: Red
                     style.textColor = TextColors::Red;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 17:  // Text: Orange
+                case 22:  // Text: Orange
                     style.textColor = TextColors::Orange;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 18:  // Text: Green
+                case 23:  // Text: Green
                     style.textColor = TextColors::Green;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 19:  // Text: Blue
+                case 24:  // Text: Blue
                     style.textColor = TextColors::Blue;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 20:  // Text: Purple
+                case 25:  // Text: Purple
                     style.textColor = TextColors::Purple;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 21:  // Text: Gray
+                case 26:  // Text: Gray
                     style.textColor = TextColors::Gray;
                     doc.buffer.setTextStyle(style);
                     break;
-                // (22 is separator)
-                // Highlight colors (23-28)
-                case 23:  // Highlight: None
+                // (27 is separator)
+                // Highlight colors (28-33)
+                case 28:  // Highlight: None
                     style.highlightColor = HighlightColors::None;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 24:  // Highlight: Yellow
+                case 29:  // Highlight: Yellow
                     style.highlightColor = HighlightColors::Yellow;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 25:  // Highlight: Green
+                case 30:  // Highlight: Green
                     style.highlightColor = HighlightColors::Green;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 26:  // Highlight: Cyan
+                case 31:  // Highlight: Cyan
                     style.highlightColor = HighlightColors::Cyan;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 27:  // Highlight: Pink
+                case 32:  // Highlight: Pink
                     style.highlightColor = HighlightColors::Pink;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 28:  // Highlight: Orange
+                case 33:  // Highlight: Orange
                     style.highlightColor = HighlightColors::Orange;
                     doc.buffer.setTextStyle(style);
                     break;
-                // (29 is separator)
-                // Fonts (30-31)
-                case 30:  // Font: Gaegu
+                // (34 is separator)
+                // Fonts (35-36)
+                case 35:  // Font: Gaegu
                     style.font = "Gaegu-Bold";
                     doc.buffer.setTextStyle(style);
                     break;
-                case 31:  // Font: Garamond
+                case 36:  // Font: Garamond
                     style.font = "EBGaramond-Regular";
                     doc.buffer.setTextStyle(style);
                     break;
-                // (32 is separator)
-                // Font size (33-35)
-                case 33:  // Increase Size
+                // (37 is separator)
+                // Font size (38-40)
+                case 38:  // Increase Size
                     style.fontSize = std::min(72, style.fontSize + 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 34:  // Decrease Size
+                case 39:  // Decrease Size
                     style.fontSize = std::max(8, style.fontSize - 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 35:  // Reset Size
+                case 40:  // Reset Size
                     style.fontSize = 16;
                     doc.buffer.setTextStyle(style);
+                    break;
+                // (41 is separator)
+                // Alignment (42-45)
+                case 42:  // Align Left
+                    doc.buffer.setCurrentAlignment(TextAlignment::Left);
+                    status::set(status, "Align: Left");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 43:  // Align Center
+                    doc.buffer.setCurrentAlignment(TextAlignment::Center);
+                    status::set(status, "Align: Center");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 44:  // Align Right
+                    doc.buffer.setCurrentAlignment(TextAlignment::Right);
+                    status::set(status, "Align: Right");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 45:  // Justify
+                    doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+                    status::set(status, "Align: Justify");
+                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 default:
                     break;

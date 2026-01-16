@@ -471,6 +471,27 @@ ParagraphStyle TextBuffer::lineParagraphStyle(std::size_t row) const {
     return ParagraphStyle::Normal;
 }
 
+TextAlignment TextBuffer::currentAlignment() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].alignment;
+    }
+    return TextAlignment::Left;
+}
+
+void TextBuffer::setCurrentAlignment(TextAlignment align) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].alignment = align;
+        version_++;  // Alignment change invalidates render cache
+    }
+}
+
+TextAlignment TextBuffer::lineAlignment(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].alignment;
+    }
+    return TextAlignment::Left;
+}
+
 TextBuffer::PerfStats TextBuffer::perfStats() const {
     PerfStats stats;
     stats.total_inserts = stats_.total_inserts;

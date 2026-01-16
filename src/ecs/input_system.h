@@ -194,6 +194,20 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::StyleHeading6)) {
             doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
         }
+        
+        // Text alignment
+        if (actionMap_.isActionPressed(Action::AlignLeft)) {
+            doc.buffer.setCurrentAlignment(TextAlignment::Left);
+        }
+        if (actionMap_.isActionPressed(Action::AlignCenter)) {
+            doc.buffer.setCurrentAlignment(TextAlignment::Center);
+        }
+        if (actionMap_.isActionPressed(Action::AlignRight)) {
+            doc.buffer.setCurrentAlignment(TextAlignment::Right);
+        }
+        if (actionMap_.isActionPressed(Action::AlignJustify)) {
+            doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+        }
 
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {

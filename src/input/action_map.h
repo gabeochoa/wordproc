@@ -68,6 +68,12 @@ enum class Action {
     StyleHeading4,
     StyleHeading5,
     StyleHeading6,
+    
+    // Text alignment
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    AlignJustify,
 
     // Count (for iteration)
     COUNT

@@ -1,10 +1,62 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 // Document-specific settings saved with the document file
 // These are separate from app settings (window size, fullscreen) which
 // auto-save immediately
+
+// Language/script identifiers for lazy font loading
+// When a document uses CJK text, we record which scripts are needed
+// so we can load the appropriate fonts on demand
+enum class ScriptRequirement {
+    Latin,     // ASCII + Latin Extended (default, always loaded)
+    Korean,    // Hangul syllables and jamo
+    Japanese,  // Hiragana, Katakana, Kanji
+    Chinese,   // Simplified/Traditional Chinese
+    Arabic,    // Arabic script
+    Hebrew,    // Hebrew script
+    Cyrillic,  // Russian, etc.
+    Greek,     // Greek alphabet
+    Thai,      // Thai script
+    Count
+};
+
+// Get identifier string for script (used in file format)
+inline const char* scriptRequirementId(ScriptRequirement script) {
+    switch (script) {
+        case ScriptRequirement::Latin: return "latin";
+        case ScriptRequirement::Korean: return "korean";
+        case ScriptRequirement::Japanese: return "japanese";
+        case ScriptRequirement::Chinese: return "chinese";
+        case ScriptRequirement::Arabic: return "arabic";
+        case ScriptRequirement::Hebrew: return "hebrew";
+        case ScriptRequirement::Cyrillic: return "cyrillic";
+        case ScriptRequirement::Greek: return "greek";
+        case ScriptRequirement::Thai: return "thai";
+        default: return "latin";
+    }
+}
+
+// Parse script requirement from string
+inline ScriptRequirement parseScriptRequirement(const std::string& id) {
+    if (id == "korean") return ScriptRequirement::Korean;
+    if (id == "japanese") return ScriptRequirement::Japanese;
+    if (id == "chinese") return ScriptRequirement::Chinese;
+    if (id == "arabic") return ScriptRequirement::Arabic;
+    if (id == "hebrew") return ScriptRequirement::Hebrew;
+    if (id == "cyrillic") return ScriptRequirement::Cyrillic;
+    if (id == "greek") return ScriptRequirement::Greek;
+    if (id == "thai") return ScriptRequirement::Thai;
+    return ScriptRequirement::Latin;
+}
+
+// Font requirement for a document
+struct FontRequirement {
+    std::string fontId;  // Font identifier (e.g., "Gaegu-Bold", "NotoSansKR")
+    std::vector<ScriptRequirement> scripts;  // Which scripts this font provides
+};
 
 // Paragraph styles for document structure (H1-H6, title, etc.)
 enum class ParagraphStyle {
@@ -19,6 +71,25 @@ enum class ParagraphStyle {
     Heading6,     // H6 - smallest heading
     Count         // Number of styles (for iteration)
 };
+
+// Text alignment for paragraphs
+enum class TextAlignment {
+    Left = 0,   // Left-aligned (default)
+    Center,     // Centered
+    Right,      // Right-aligned
+    Justify     // Justified (not yet implemented in rendering)
+};
+
+// Get display name for text alignment
+inline const char* textAlignmentName(TextAlignment align) {
+    switch (align) {
+        case TextAlignment::Left: return "Left";
+        case TextAlignment::Center: return "Center";
+        case TextAlignment::Right: return "Right";
+        case TextAlignment::Justify: return "Justify";
+        default: return "Left";
+    }
+}
 
 // Get display name for a paragraph style
 inline const char* paragraphStyleName(ParagraphStyle style) {
@@ -148,6 +219,26 @@ struct PageSettings {
 struct DocumentSettings {
     TextStyle textStyle;
     PageSettings pageSettings;
+
+    // Font requirements - which fonts and scripts the document needs
+    // This enables lazy loading of CJK fonts only when needed
+    std::vector<FontRequirement> fontRequirements;
+
+    // Helper to check if a script is required by this document
+    bool requiresScript(ScriptRequirement script) const {
+        for (const auto& req : fontRequirements) {
+            for (const auto& s : req.scripts) {
+                if (s == script) return true;
+            }
+        }
+        return false;
+    }
+
+    // Helper to add a font requirement
+    void addFontRequirement(const std::string& fontId,
+                            std::vector<ScriptRequirement> scripts) {
+        fontRequirements.push_back({fontId, std::move(scripts)});
+    }
 
     // Document format version (always v0.1 for now per requirements)
     static constexpr int VERSION = 1;

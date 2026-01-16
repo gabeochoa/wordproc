@@ -22,7 +22,13 @@ Wordproc documents use JSON for structured storage with backward compatibility t
     "italic": false,
     "font": "Gaegu-Bold",
     "fontSize": 16
-  }
+  },
+  "fontRequirements": [
+    {
+      "fontId": "NotoSansKR",
+      "scripts": ["korean"]
+    }
+  ]
 }
 ```
 
@@ -37,6 +43,35 @@ Wordproc documents use JSON for structured storage with backward compatibility t
 | style.italic | boolean | No | Default: false |
 | style.font | string | No | Font name. Default: "Gaegu-Bold" |
 | style.fontSize | integer | No | Font size in pixels. Default: 16, Range: 8-72 |
+| fontRequirements | array | No | Fonts and scripts needed by document (for lazy loading) |
+| fontRequirements[].fontId | string | Yes | Font identifier (e.g., "NotoSansKR") |
+| fontRequirements[].scripts | array | Yes | Script identifiers this font provides |
+
+### Script Identifiers
+
+Scripts are identified by lowercase strings:
+
+| Script | Description | Codepoint Range |
+|--------|-------------|-----------------|
+| `latin` | ASCII + Latin Extended | 0x0020-0x024F |
+| `korean` | Hangul Syllables + Jamo | 0xAC00-0xD7AF, 0x1100-0x11FF |
+| `japanese` | Hiragana + Katakana + Kanji | 0x3040-0x30FF, 0x4E00-0x9FFF |
+| `chinese` | CJK Unified Ideographs | 0x4E00-0x9FFF |
+| `cyrillic` | Russian, Ukrainian, etc. | 0x0400-0x04FF |
+| `greek` | Greek alphabet | 0x0370-0x03FF |
+| `arabic` | Arabic script | 0x0600-0x06FF |
+| `hebrew` | Hebrew script | 0x0590-0x05FF |
+| `thai` | Thai script | 0x0E00-0x0E7F |
+
+### Lazy Font Loading
+
+CJK fonts are not loaded at startup to keep cold start fast (< 100ms target).
+When a document specifies `fontRequirements`, the app loads those fonts on demand:
+
+1. Document opens, `fontRequirements` is parsed
+2. App checks which fonts are already loaded
+3. Missing fonts are loaded with appropriate codepoint ranges
+4. Text is rendered once fonts are ready
 
 ## Fallback Behavior
 

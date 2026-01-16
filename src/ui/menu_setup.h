@@ -66,7 +66,13 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Underline", "Ctrl+U", true, false, nullptr},
         {"Strikethrough", "Ctrl+Shift+S", true, false, nullptr},
         {"", "", false, true, nullptr},  // Separator (14)
-        // Text color (15-24)
+        // Alignment (15-18)
+        {"Align Left", "Ctrl+L", true, false, nullptr},
+        {"Align Center", "Ctrl+E", true, false, nullptr},
+        {"Align Right", "Ctrl+R", true, false, nullptr},
+        {"Justify", "Ctrl+J", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator (19)
+        // Text color (20-26)
         {"Text: Black", "", true, false, nullptr},
         {"Text: Red", "", true, false, nullptr},
         {"Text: Orange", "", true, false, nullptr},
@@ -90,7 +96,13 @@ inline std::vector<win95::Menu> createMenuBar() {
         // Font size (33-35)
         {"Increase Size", "Ctrl++", true, false, nullptr},
         {"Decrease Size", "Ctrl+-", true, false, nullptr},
-        {"Reset Size", "Ctrl+0", true, false, nullptr}
+        {"Reset Size", "Ctrl+0", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator (36)
+        // Alignment (37-40)
+        {"Align Left", "Ctrl+L", true, false, nullptr},
+        {"Align Center", "Ctrl+E", true, false, nullptr},
+        {"Align Right", "Ctrl+R", true, false, nullptr},
+        {"Justify", "Ctrl+J", true, false, nullptr}
     };
     menus.push_back(formatMenu);
 

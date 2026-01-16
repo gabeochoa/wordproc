@@ -131,6 +131,14 @@ const char* ActionMap::actionName(Action action) {
             return "StyleHeading5";
         case Action::StyleHeading6:
             return "StyleHeading6";
+        case Action::AlignLeft:
+            return "AlignLeft";
+        case Action::AlignCenter:
+            return "AlignCenter";
+        case Action::AlignRight:
+            return "AlignRight";
+        case Action::AlignJustify:
+            return "AlignJustify";
         case Action::COUNT:
             return "NONE";
     }
@@ -215,6 +223,12 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_FOUR, true, false, true}, Action::StyleHeading4);
     map.bind({raylib::KEY_FIVE, true, false, true}, Action::StyleHeading5);
     map.bind({raylib::KEY_SIX, true, false, true}, Action::StyleHeading6);
+    
+    // Text alignment: Ctrl+L/E/R/J (standard Word shortcuts)
+    map.bind({raylib::KEY_L, true, false, false}, Action::AlignLeft);
+    map.bind({raylib::KEY_E, true, false, false}, Action::AlignCenter);
+    map.bind({raylib::KEY_R, true, false, false}, Action::AlignRight);
+    map.bind({raylib::KEY_J, true, false, false}, Action::AlignJustify);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
@@ -278,6 +292,12 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({raylib::KEY_FOUR, true, false, true}, Action::StyleHeading4);
     map.bind({raylib::KEY_FIVE, true, false, true}, Action::StyleHeading5);
     map.bind({raylib::KEY_SIX, true, false, true}, Action::StyleHeading6);
+    
+    // Text alignment: Cmd+L/E/R/J (same shortcuts as Windows)
+    map.bind({raylib::KEY_L, true, false, false}, Action::AlignLeft);
+    map.bind({raylib::KEY_E, true, false, false}, Action::AlignCenter);
+    map.bind({raylib::KEY_R, true, false, false}, Action::AlignRight);
+    map.bind({raylib::KEY_J, true, false, false}, Action::AlignJustify);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -397,6 +417,14 @@ const char* actionDisplayName(Action action) {
             return "Heading 5";
         case Action::StyleHeading6:
             return "Heading 6";
+        case Action::AlignLeft:
+            return "Align Left";
+        case Action::AlignCenter:
+            return "Align Center";
+        case Action::AlignRight:
+            return "Align Right";
+        case Action::AlignJustify:
+            return "Justify";
         case Action::COUNT:
             return "";
     }
@@ -659,6 +687,12 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::StyleHeading4, {raylib::KEY_FOUR, true, false, true});
     addBinding(Action::StyleHeading5, {raylib::KEY_FIVE, true, false, true});
     addBinding(Action::StyleHeading6, {raylib::KEY_SIX, true, false, true});
+    
+    // Alignment
+    addBinding(Action::AlignLeft, {raylib::KEY_L, true, false, false});
+    addBinding(Action::AlignCenter, {raylib::KEY_E, true, false, false});
+    addBinding(Action::AlignRight, {raylib::KEY_R, true, false, false});
+    addBinding(Action::AlignJustify, {raylib::KEY_J, true, false, false});
 
     return result;
 }

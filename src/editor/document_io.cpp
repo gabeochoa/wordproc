@@ -87,6 +87,23 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         {"lineWidthLimit", page.lineWidthLimit},
     };
 
+    // Font requirements - which fonts and scripts the document needs
+    // This enables lazy loading of CJK fonts only when needed
+    if (!settings.fontRequirements.empty()) {
+        nlohmann::json fonts_array = nlohmann::json::array();
+        for (const auto &req : settings.fontRequirements) {
+            nlohmann::json font_obj;
+            font_obj["fontId"] = req.fontId;
+            nlohmann::json scripts_array = nlohmann::json::array();
+            for (const auto &script : req.scripts) {
+                scripts_array.push_back(scriptRequirementId(script));
+            }
+            font_obj["scripts"] = scripts_array;
+            fonts_array.push_back(font_obj);
+        }
+        doc["fontRequirements"] = fonts_array;
+    }
+
     ofs << doc.dump(2);
     if (!ofs.good()) {
         result.error = "Failed to write to file: " + path;
@@ -200,6 +217,24 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             if (page_json.contains("lineWidthLimit")) {
                 page.lineWidthLimit =
                     page_json.at("lineWidthLimit").get<float>();
+            }
+        }
+
+        // Load font requirements (for lazy CJK font loading)
+        if (doc.contains("fontRequirements")) {
+            settings.fontRequirements.clear();
+            for (const auto &font_json : doc.at("fontRequirements")) {
+                FontRequirement req;
+                if (font_json.contains("fontId")) {
+                    req.fontId = font_json.at("fontId").get<std::string>();
+                }
+                if (font_json.contains("scripts")) {
+                    for (const auto &script_str : font_json.at("scripts")) {
+                        req.scripts.push_back(
+                            parseScriptRequirement(script_str.get<std::string>()));
+                    }
+                }
+                settings.fontRequirements.push_back(req);
             }
         }
 
