@@ -95,13 +95,12 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     auto& resProv =
         resEntity.addComponent<window_manager::ProvidesCurrentResolution>();
     resProv.current_resolution = {screenWidth, screenHeight};
-    resEntity.addComponent<
-        afterhours::SingletonComponent<window_manager::ProvidesCurrentResolution>>();
+    EntityHelper::registerSingleton<window_manager::ProvidesCurrentResolution>(resEntity);
 
     // Create UI context entity with the context component
     auto& ctxEntity = EntityHelper::createEntity();
     ctxEntity.addComponent<UIContextType>();
-    ctxEntity.addComponent<afterhours::SingletonComponent<UIContextType>>();
+    EntityHelper::registerSingleton<UIContextType>(ctxEntity);
 
     // Create the root entity for all UI elements
     auto& rootEntity = EntityHelper::createEntity();
@@ -148,6 +147,41 @@ inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
     // Compute visual focus
     manager.register_update_system(
         std::make_unique<ui::ComputeVisualFocusId<InputAction>>());
+}
+
+// Register Afterhours UI render systems with the SystemManager
+inline void registerUIRenderSystems(afterhours::SystemManager& manager) {
+    using namespace afterhours;
+
+    manager.register_render_system(
+        std::make_unique<ui::RenderImm<InputAction>>());
+}
+
+// Get the UI context for immediate-mode widget calls
+inline UIContextType& getUIContext() {
+    return *afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
+}
+
+// Get the root UIComponent for parenting UI elements
+inline afterhours::ui::UIComponent& getUIRoot() {
+    auto roots = afterhours::EntityQuery()
+                     .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
+                     .gen();
+    if (roots.empty()) {
+        throw std::runtime_error("No UI root found");
+    }
+    return roots[0].get().get<afterhours::ui::UIComponent>();
+}
+
+// Get the root entity for parenting UI elements
+inline afterhours::Entity& getUIRootEntity() {
+    auto roots = afterhours::EntityQuery()
+                     .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
+                     .gen();
+    if (roots.empty()) {
+        throw std::runtime_error("No UI root found");
+    }
+    return roots[0].get();
 }
 
 }  // namespace ui_imm
