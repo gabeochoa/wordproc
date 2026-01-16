@@ -232,6 +232,10 @@ private:
   CaretPosition offsetToPosition(std::size_t offset) const;
   static int comparePositions(const CaretPosition &a,
                               const CaretPosition &b);
+  
+  // Shift all line offsets from startRow onwards by delta
+  // Used when inserting/deleting characters to maintain line_spans_ consistency
+  void shiftLineOffsetsFrom(std::size_t startRow, std::ptrdiff_t delta);
 
   GapBuffer chars_;                   // Contiguous character storage
   std::vector<LineSpan> line_spans_;  // SoA line metadata

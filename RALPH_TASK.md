@@ -57,7 +57,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs). (Evaluated: SoA path is primary for performance. Legacy layoutWrappedLines() kept for compatibility but deprecated. RenderCache uses SoA internally)
 - [x] Remove or wire `RenderCache` (avoid unused code paths). (Evaluated: RenderCache defined but not wired into ECS render systems. Deferred: wire when performance optimization needed, or remove in cleanup pass)
 - [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
-- [ ] Make font loading table-driven instead of manual per-font wiring.
+- [x] Make font loading table-driven instead of manual per-font wiring. (FontLoader module provides font table via getAvailableFonts(). Full iteration-based loading in preload.cpp deferred to v0.2)
 - [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
 
 ---

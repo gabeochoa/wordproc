@@ -457,7 +457,15 @@ private:
         case 2: // Save
           {
             std::string savePath = doc.filePath.empty() ? doc.defaultPath : doc.filePath;
-            auto result = saveTextFileEx(doc.buffer, savePath);
+            // Sync layout settings to document settings before save
+            doc.docSettings.textStyle = doc.buffer.textStyle();
+            doc.docSettings.pageSettings.mode = layout.pageMode;
+            doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
+            doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
+            doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
+            doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
+            // Save document with all settings
+            auto result = saveDocumentEx(doc.buffer, doc.docSettings, savePath);
             if (result.success) {
               doc.isDirty = false;
               doc.filePath = savePath;

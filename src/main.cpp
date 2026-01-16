@@ -192,6 +192,31 @@ int main(int argc, char *argv[]) {
   while (!raylib::WindowShouldClose()) {
     float dt = raylib::GetFrameTime();
     
+    // FPS test mode: collect FPS data and simulate scrolling
+    if (testComp.fpsTestMode && testComp.frameCount > 0) {
+      // Skip first few frames (warm-up)
+      if (testComp.frameCount > 5) {
+        float fps = raylib::GetFPS();
+        testComp.fpsSum += fps;
+        testComp.fpsSamples++;
+        if (fps < testComp.fpsMin) testComp.fpsMin = fps;
+        if (fps > testComp.fpsMax) testComp.fpsMax = fps;
+      }
+      
+      // Simulate scroll input by directly manipulating scroll offset
+      auto& scrollComp = editorEntity.get<ecs::ScrollComponent>();
+      // Scroll down by 3 lines each frame to simulate mouse wheel
+      scrollComp.offset += 3;
+      // Clamp to max scroll
+      int lineCount = static_cast<int>(docComp.buffer.lineCount());
+      int maxScroll = lineCount - scrollComp.visibleLines;
+      if (maxScroll < 0) maxScroll = 0;
+      if (scrollComp.offset > maxScroll) {
+        // Wrap around to keep scrolling
+        scrollComp.offset = 0;
+      }
+    }
+    
     // Run all systems through the SystemManager
     systemManager.run(dt);
     
@@ -199,6 +224,19 @@ int main(int argc, char *argv[]) {
     if (testComp.enabled && testComp.frameLimit > 0 && 
         testComp.frameCount >= testComp.frameLimit) {
       takeScreenshot(testComp.screenshotDir, "final");
+      
+      // Output FPS test results
+      if (testComp.fpsTestMode && testComp.fpsSamples > 0) {
+        float avgFps = testComp.fpsSum / static_cast<float>(testComp.fpsSamples);
+        LOG_INFO("FPS Test Results:");
+        LOG_INFO("  avg_fps=%.2f", avgFps);
+        LOG_INFO("  min_fps=%.2f", testComp.fpsMin);
+        LOG_INFO("  max_fps=%.2f", testComp.fpsMax);
+        LOG_INFO("  samples=%d", testComp.fpsSamples);
+        LOG_INFO("  file=%s", loadFile.c_str());
+        LOG_INFO("  lines=%zu", docComp.buffer.lineCount());
+      }
+      
       break;
     }
   }
