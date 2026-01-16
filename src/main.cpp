@@ -46,6 +46,26 @@ int main() {
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_O)) {
       loadTextFile(buffer, doc_path);
     }
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_B)) {
+      TextStyle style = buffer.textStyle();
+      style.bold = !style.bold;
+      buffer.setTextStyle(style);
+    }
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_I)) {
+      TextStyle style = buffer.textStyle();
+      style.italic = !style.italic;
+      buffer.setTextStyle(style);
+    }
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ONE)) {
+      TextStyle style = buffer.textStyle();
+      style.font = "Gaegu-Bold";
+      buffer.setTextStyle(style);
+    }
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_TWO)) {
+      TextStyle style = buffer.textStyle();
+      style.font = "EBGaramond-Regular";
+      buffer.setTextStyle(style);
+    }
 
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);

@@ -73,3 +73,8 @@ This is how Ralph maintains continuity across iterations.
 ### 2026-01-15 17:45:10
 - Added document save/load helpers and wired Ctrl+S/Ctrl+O.
 - Marked save/open file tasks complete.
+
+### 2026-01-15 17:47:20
+- Added style metadata persistence (bold/italic/font) in document save/load.
+- Wired Ctrl+B/Ctrl+I and font hotkeys to update style metadata.
+- Marked formatting metadata persistence task complete.

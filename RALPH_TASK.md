@@ -30,12 +30,17 @@ test_command: "make test"
 Build a word processor using the vendored Afterhours library and dependencies. Style it like Windows 95 with Mac OS 3.1 accents. Start with small features first, then expand.
 
 ## Requirements
-1. Use `vendor/afterhours` library (and dependencies) for UI/app.
+1. Use `vendor/afterhours` library (and dependencies) broadly (UI, input, window, animation, etc.) so we can surface gaps in `AfterhoursGaps.md`.
+2. Proactively identify new Afterhours features and provide feedback on current items as we build the app.
 2. Prefer no library changes early; if needed, log in `AfterhoursGaps.md` with app-side workaround.
 3. P0: E2E/Jest/integration + unit testing early, including screenshot-based UI verification and manual visual checks.
 4. Copy from `wm_afterhours`: `vendor/`, `.clang-format`, `.gitignore`, `makefile`, `.cursor` rules, select `src` preload/window init items, and fonts from `resources/`.
 5. Style: Windows 95 base with Mac OS 3.1 accents.
 6. Branching: app changes on `main`; any `vendor/afterhours` changes on `wordproc` branch only.
+7. Prefer immutable data and pure functions where they simplify correctness or testing.
+8. Support rendering/import for `.doc`, `.txt`, and `.md` files (even if the native save format is custom).
+9. Track startup time from `./wordproc file.txt` to fully rendered + interactive, targeting <= 100ms cold start.
+10. Document format version is always `v0.1` for now.
 
 ## Success Criteria
 1. [ ] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
@@ -44,6 +49,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 4. [ ] `style_guide.md` created with Win95/Mac3.1 design, animation, and interaction rules.
 5. [ ] `AfterhoursGaps.md` exists and documents any required library changes with app-side workarounds.
 6. [ ] Required assets/config copied from `wm_afterhours` and integrated (vendor, makefile, .clang-format, .gitignore, .cursor rules, preload/window init, fonts).
+7. [ ] Core text storage and rendering path uses a data-oriented SoA layout with measurable performance wins.
+8. [ ] `./wordproc file.txt` to fully interactive <= 100ms cold start, measured and tracked.
 
 ## Task Breakdown (use folder-outline from `wm_afterhours`)
 
@@ -69,7 +76,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### 5) File I/O
 - [x] Save document to file.
 - [x] Open document from file.
-- [ ] Persist formatting metadata (at least bold/italic and font choice).
+- [x] Persist formatting metadata (at least bold/italic and font choice).
 
 ### 6) Formatting & Fonts
 - [ ] Bold + italic toggles.
@@ -88,10 +95,40 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add screenshot-based UI verification (automated capture during interactions).
 - [ ] Add a visible/manual test flow to "use your eyes" to confirm behavior.
 - [ ] Document how to run tests and capture screenshots.
+- [ ] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
+- [ ] Define report format (CSV preferred), include filename, size, cold-start time, ready-to-interact time, and pass/fail vs 100ms target; keep it chart-friendly.
+- [ ] Define cold-start procedure (fresh process, no warm caches, first-frame interactive signal).
+- [ ] Store a baseline report and diff against it to flag regressions.
 
-### 9) AfterhoursGaps
+### 9) Performance & Data-Oriented Architecture (SoA)
+- [ ] Replace `TextBuffer` AoS (`std::vector<std::string>`) with SoA storage (contiguous char store + line offsets/lengths or piece table).
+- [ ] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
+- [ ] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
+- [ ] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
+- [ ] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
+- [ ] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
+
+### 10) Code Review Follow-ups
+- [ ] Implement text rendering (draw buffer content + wrapped lines).
+- [ ] Draw caret and selection highlight with blink/animation timing.
+- [ ] Handle selection deletion on typing/backspace/delete.
+- [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
+- [ ] Add clipboard integration (copy/cut/paste).
+- [ ] Add undo/redo with command history.
+- [ ] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
+- [ ] Add window title + dirty-state indicator on edits.
+- [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
+- [ ] Add load/save error reporting (surface parse errors and fallback behavior).
+- [ ] Decide on per-range styles vs global style state and update model accordingly.
+- [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
+- [ ] Define validator rules (required fields, types, size limits, supported versions).
+- [ ] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
+- [ ] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
+
+### 11) AfterhoursGaps
 - [ ] Create `AfterhoursGaps.md` and log any needed library changes.
 - [ ] Provide app-side workaround for each gap while avoiding vendor changes.
+- [ ] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
 ---
 

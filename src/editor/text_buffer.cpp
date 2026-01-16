@@ -115,6 +115,10 @@ std::string TextBuffer::getText() const {
   return result;
 }
 
+TextStyle TextBuffer::textStyle() const { return style_; }
+
+void TextBuffer::setTextStyle(const TextStyle &style) { style_ = style; }
+
 void TextBuffer::backspace() {
   ensureNonEmpty();
 

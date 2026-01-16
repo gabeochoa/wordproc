@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <nlohmann/json.hpp>
+
 bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
   std::filesystem::path output_path(path);
   if (!output_path.parent_path().empty()) {
@@ -14,7 +16,18 @@ bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
   if (!ofs.is_open()) {
     return false;
   }
-  ofs << buffer.getText();
+
+  TextStyle style = buffer.textStyle();
+  nlohmann::json doc;
+  doc["version"] = 1;
+  doc["text"] = buffer.getText();
+  doc["style"] = {
+      {"bold", style.bold},
+      {"italic", style.italic},
+      {"font", style.font},
+  };
+
+  ofs << doc.dump(2);
   return ofs.good();
 }
 
@@ -26,6 +39,33 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path) {
 
   std::ostringstream contents;
   contents << ifs.rdbuf();
-  buffer.setText(contents.str());
+  std::string raw = contents.str();
+
+  try {
+    nlohmann::json doc = nlohmann::json::parse(raw);
+    if (doc.contains("text")) {
+      buffer.setText(doc.at("text").get<std::string>());
+    } else {
+      buffer.setText(raw);
+    }
+
+    if (doc.contains("style")) {
+      TextStyle style = buffer.textStyle();
+      const nlohmann::json &style_json = doc.at("style");
+      if (style_json.contains("bold")) {
+        style.bold = style_json.at("bold").get<bool>();
+      }
+      if (style_json.contains("italic")) {
+        style.italic = style_json.at("italic").get<bool>();
+      }
+      if (style_json.contains("font")) {
+        style.font = style_json.at("font").get<std::string>();
+      }
+      buffer.setTextStyle(style);
+    }
+  } catch (...) {
+    buffer.setText(raw);
+  }
+
   return true;
 }

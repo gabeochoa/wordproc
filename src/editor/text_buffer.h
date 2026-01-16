@@ -9,6 +9,12 @@ struct CaretPosition {
   std::size_t column = 0;
 };
 
+struct TextStyle {
+  bool bold = false;
+  bool italic = false;
+  std::string font = "Gaegu-Bold";
+};
+
 class TextBuffer {
 public:
   TextBuffer();
@@ -28,6 +34,8 @@ public:
   void insertText(const std::string &text);
   void setText(const std::string &text);
   std::string getText() const;
+  TextStyle textStyle() const;
+  void setTextStyle(const TextStyle &style);
   void backspace();
   void del();
 
@@ -47,4 +55,5 @@ private:
   bool has_selection_ = false;
   CaretPosition selection_anchor_;
   CaretPosition selection_end_;
+  TextStyle style_;
 };
