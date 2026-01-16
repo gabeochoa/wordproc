@@ -42,12 +42,14 @@ inline std::vector<win95::Menu> createMenuBar() {
     // View menu
     win95::Menu viewMenu;
     viewMenu.label = "View";
-    viewMenu.items = {{"Pageless Mode", "", true, false, nullptr},
-                      {"Paged Mode", "", true, false, nullptr},
-                      {"", "", false, true, nullptr},  // Separator
-                      {"Line Width: Normal", "", true, false, nullptr},
-                      {"Line Width: Narrow", "", true, false, nullptr},
-                      {"Line Width: Wide", "", true, false, nullptr}};
+    viewMenu.items = {{"Pageless Mode", "", true, false, nullptr},       // 0
+                      {"Paged Mode", "", true, false, nullptr},          // 1
+                      {"", "", false, true, nullptr},                    // 2 Separator
+                      {"Line Width: Normal", "", true, false, nullptr},  // 3
+                      {"Line Width: Narrow", "", true, false, nullptr},  // 4
+                      {"Line Width: Wide", "", true, false, nullptr},    // 5
+                      {"", "", false, true, nullptr},                    // 6 Separator
+                      {"Show Line Numbers", "", true, false, nullptr}};  // 7
     menus.push_back(viewMenu);
 
     // Format menu

@@ -74,6 +74,133 @@ inline void drawPageBackground(const LayoutComponent& layout) {
         marginColor);
 }
 
+// Render a table at a specific position
+inline void renderTable(const Table& table, float tableX, float tableY, 
+                        CellPosition currentCell, bool isEditing) {
+    if (table.isEmpty()) return;
+    
+    // Draw table cells
+    for (std::size_t row = 0; row < table.rowCount(); ++row) {
+        for (std::size_t col = 0; col < table.colCount(); ++col) {
+            const TableCell& cell = table.cell(row, col);
+            
+            // Skip cells that are part of a merge (not the parent)
+            if (cell.isMerged) continue;
+            
+            // Get cell bounds
+            Table::CellBounds bounds = table.cellBounds({row, col});
+            float cellX = tableX + bounds.x;
+            float cellY = tableY + bounds.y;
+            float cellW = bounds.width;
+            float cellH = bounds.height;
+            
+            // Draw cell background
+            raylib::Color bgColor = {cell.backgroundColor.r, cell.backgroundColor.g,
+                                     cell.backgroundColor.b, cell.backgroundColor.a};
+            raylib::DrawRectangle(static_cast<int>(cellX), static_cast<int>(cellY),
+                                 static_cast<int>(cellW), static_cast<int>(cellH), bgColor);
+            
+            // Draw cell border
+            raylib::Color borderColor = raylib::BLACK;
+            switch (cell.borders.top) {
+                case BorderStyle::Thin:
+                    raylib::DrawLine(static_cast<int>(cellX), static_cast<int>(cellY),
+                                    static_cast<int>(cellX + cellW), static_cast<int>(cellY), borderColor);
+                    break;
+                case BorderStyle::Medium:
+                    raylib::DrawLineEx({cellX, cellY}, {cellX + cellW, cellY}, 2.0f, borderColor);
+                    break;
+                case BorderStyle::Thick:
+                    raylib::DrawLineEx({cellX, cellY}, {cellX + cellW, cellY}, 3.0f, borderColor);
+                    break;
+                default:
+                    break;
+            }
+            switch (cell.borders.bottom) {
+                case BorderStyle::Thin:
+                    raylib::DrawLine(static_cast<int>(cellX), static_cast<int>(cellY + cellH),
+                                    static_cast<int>(cellX + cellW), static_cast<int>(cellY + cellH), borderColor);
+                    break;
+                case BorderStyle::Medium:
+                    raylib::DrawLineEx({cellX, cellY + cellH}, {cellX + cellW, cellY + cellH}, 2.0f, borderColor);
+                    break;
+                case BorderStyle::Thick:
+                    raylib::DrawLineEx({cellX, cellY + cellH}, {cellX + cellW, cellY + cellH}, 3.0f, borderColor);
+                    break;
+                default:
+                    break;
+            }
+            switch (cell.borders.left) {
+                case BorderStyle::Thin:
+                    raylib::DrawLine(static_cast<int>(cellX), static_cast<int>(cellY),
+                                    static_cast<int>(cellX), static_cast<int>(cellY + cellH), borderColor);
+                    break;
+                case BorderStyle::Medium:
+                    raylib::DrawLineEx({cellX, cellY}, {cellX, cellY + cellH}, 2.0f, borderColor);
+                    break;
+                case BorderStyle::Thick:
+                    raylib::DrawLineEx({cellX, cellY}, {cellX, cellY + cellH}, 3.0f, borderColor);
+                    break;
+                default:
+                    break;
+            }
+            switch (cell.borders.right) {
+                case BorderStyle::Thin:
+                    raylib::DrawLine(static_cast<int>(cellX + cellW), static_cast<int>(cellY),
+                                    static_cast<int>(cellX + cellW), static_cast<int>(cellY + cellH), borderColor);
+                    break;
+                case BorderStyle::Medium:
+                    raylib::DrawLineEx({cellX + cellW, cellY}, {cellX + cellW, cellY + cellH}, 2.0f, borderColor);
+                    break;
+                case BorderStyle::Thick:
+                    raylib::DrawLineEx({cellX + cellW, cellY}, {cellX + cellW, cellY + cellH}, 3.0f, borderColor);
+                    break;
+                default:
+                    break;
+            }
+            
+            // Draw cell content
+            if (!cell.content.empty()) {
+                int textX = static_cast<int>(cellX) + cell.paddingLeft;
+                int textY = static_cast<int>(cellY) + cell.paddingTop;
+                int fontSize = cell.textStyle.fontSize;
+                raylib::Color textColor = {cell.textStyle.textColor.r, cell.textStyle.textColor.g,
+                                          cell.textStyle.textColor.b, cell.textStyle.textColor.a};
+                raylib::DrawText(cell.content.c_str(), textX, textY, fontSize, textColor);
+            }
+            
+            // Highlight current cell if editing
+            if (isEditing && row == currentCell.row && col == currentCell.col) {
+                raylib::DrawRectangleLinesEx(
+                    {cellX, cellY, cellW, cellH}, 2.0f, 
+                    raylib::Color{0, 120, 215, 255});  // Blue highlight
+            }
+        }
+    }
+}
+
+// Render all tables in a document at their line positions
+inline void renderDocumentTables(const std::vector<std::pair<std::size_t, Table>>& tables,
+                                 const LayoutComponent::Rect& textArea,
+                                 int baseLineHeight, int scrollOffset,
+                                 std::size_t editingLine = std::numeric_limits<std::size_t>::max(),
+                                 CellPosition currentCell = {0, 0}) {
+    for (const auto& [lineNum, table] : tables) {
+        // Calculate Y position based on line number
+        if (lineNum < static_cast<std::size_t>(scrollOffset)) continue;
+        
+        int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING +
+                static_cast<int>(lineNum - scrollOffset) * baseLineHeight;
+        int x = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
+        
+        // Check if table is visible
+        if (y > static_cast<int>(textArea.y + textArea.height)) continue;
+        
+        bool isEditing = (lineNum == editingLine);
+        renderTable(table, static_cast<float>(x), static_cast<float>(y), currentCell, isEditing);
+    }
+}
+
 // Render the text buffer with caret and selection
 // Now supports per-line paragraph styles (H1-H6, Title, Subtitle)
 // showLineNumbers: if true, draws line numbers in a gutter on the left
@@ -378,7 +505,8 @@ struct EditorRenderSystem
         int lineHeight = fontSize + 4;
         LayoutComponent::Rect effectiveArea = layout::effectiveTextArea(layout);
         renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
-                         lineHeight, scroll.offset);
+                         lineHeight, scroll.offset, layout.showLineNumbers,
+                         layout.lineNumberGutterWidth);
 
         // Draw status bar
         raylib::Rectangle statusBarRect = {
@@ -785,6 +913,11 @@ struct MenuSystem
                 case 5:  // Line Width: Wide (100 chars)
                     layout::setLineWidthLimit(layout, 100.0f);
                     status::set(status, "Line width: Wide (100 chars)");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 7:  // Show Line Numbers
+                    layout.showLineNumbers = !layout.showLineNumbers;
+                    status::set(status, layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 default:
