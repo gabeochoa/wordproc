@@ -196,7 +196,7 @@ static void setupCallbacksEx(
         }
         if (prop == "table_cols") {
             if (!docComp.tables.empty()) {
-                return std::to_string(docComp.tables[0].second.columnCount());
+                return std::to_string(docComp.tables[0].second.colCount());
             }
             return "0";
         }
@@ -205,8 +205,8 @@ static void setupCallbacksEx(
             if (!docComp.tables.empty()) {
                 const auto& table = docComp.tables[0].second;
                 // Return first cell content for simplicity
-                if (table.rowCount() > 0 && table.columnCount() > 0) {
-                    return table.getCell(0, 0).content;
+                if (table.rowCount() > 0 && table.colCount() > 0) {
+                    return table.getCellContent(0, 0);
                 }
             }
             return "";
@@ -217,12 +217,13 @@ static void setupCallbacksEx(
         if (prop == "image_count") return std::to_string(docComp.images.count());
         if (prop == "image_layout") {
             if (docComp.images.count() > 0) {
-                auto images = docComp.images.getAll();
+                const auto& images = docComp.images.images();
                 if (!images.empty()) {
                     switch (images[0].layoutMode) {
                         case ImageLayoutMode::Inline: return "inline";
                         case ImageLayoutMode::WrapSquare: return "wrap";
                         case ImageLayoutMode::BreakText: return "break";
+                        default: return "inline";
                     }
                 }
             }
@@ -294,11 +295,14 @@ static void setupCallbacksEx(
             switch (docComp.docSettings.pageSettings.size) {
                 case PageSize::Letter: return "letter";
                 case PageSize::Legal: return "legal";
+                case PageSize::Tabloid: return "tabloid";
                 case PageSize::A4: return "a4";
                 case PageSize::A5: return "a5";
+                case PageSize::B5: return "b5";
+                case PageSize::Executive: return "executive";
                 case PageSize::Custom: return "custom";
+                default: return "letter";
             }
-            return "letter";
         }
         if (prop == "page_orientation") {
             return docComp.docSettings.pageSettings.orientation == PageOrientation::Portrait 
@@ -313,7 +317,7 @@ static void setupCallbacksEx(
         if (prop == "section_count") return std::to_string(buffer.sections().size());
         if (prop == "current_section_columns") {
             if (!buffer.sections().empty()) {
-                return std::to_string(buffer.sections()[0].columnCount);
+                return std::to_string(buffer.sections()[0].settings.columns);
             }
             return "1";
         }
@@ -385,16 +389,26 @@ static void setupCallbacksEx(
         
         // Header/footer properties
         if (prop == "header_content") {
-            return docComp.docSettings.headerText;
+            // Return header center text (most common location)
+            const auto& header = docComp.docSettings.header;
+            if (!header.center.text.empty()) return header.center.text;
+            if (!header.left.text.empty()) return header.left.text;
+            if (!header.right.text.empty()) return header.right.text;
+            return "";
         }
         if (prop == "has_page_number") {
-            return docComp.docSettings.showPageNumbers ? "true" : "false";
+            const auto& header = docComp.docSettings.header;
+            const auto& footer = docComp.docSettings.footer;
+            bool hasPageNum = header.left.showPageNumber || header.center.showPageNumber || 
+                             header.right.showPageNumber || footer.left.showPageNumber || 
+                             footer.center.showPageNumber || footer.right.showPageNumber;
+            return hasPageNum ? "true" : "false";
         }
         
         // Heading detection
         if (prop == "caret_at_heading") {
             auto ps = buffer.currentParagraphStyle();
-            if (ps >= ParagraphStyle::H1 && ps <= ParagraphStyle::H6) {
+            if (ps >= ParagraphStyle::Heading1 && ps <= ParagraphStyle::Heading6) {
                 return paragraphStyleName(ps);
             }
             return "false";
