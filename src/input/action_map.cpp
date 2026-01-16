@@ -344,6 +344,11 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
     map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
     
+    // Line spacing: Cmd+Shift+1/5/2 for single/1.5/double
+    map.bind({raylib::KEY_ONE, true, true, false}, Action::LineSpacingSingle);
+    map.bind({raylib::KEY_FIVE, true, true, false}, Action::LineSpacing1_5);
+    map.bind({raylib::KEY_TWO, true, true, false}, Action::LineSpacingDouble);
+    
     // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);

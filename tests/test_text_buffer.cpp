@@ -1387,3 +1387,4 @@ TEST_CASE("Bulleted and numbered lists", "[text_buffer][lists]") {
         REQUIRE(buffer.lineListType(2) == ListType::None);
     }
 }
+

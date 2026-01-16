@@ -59,7 +59,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add paragraph alignment controls (left, center, right, justify). (Implemented: TextAlignment enum, per-line alignment in LineSpan, Ctrl+L/E/R/J shortcuts, Format menu items, rendering with text offset, 36 test assertions)
 - [x] Add indentation controls (increase/decrease, first-line, hanging). (Implemented: leftIndent/firstLineIndent in LineSpan, Ctrl+]/[ shortcuts, Format menu items 47-48, rendering with indented text, 32 test assertions)
 - [x] Add line spacing and paragraph spacing (before/after). (Implemented: lineSpacing multiplier, spaceBefore/spaceAfter in LineSpan, Ctrl+Shift+1/5/2 shortcuts for single/1.5/double, rendering applies spacing, 36 test assertions)
-- [ ] Add bulleted and numbered lists (including multi-level lists).
+- [x] Add bulleted and numbered lists (including multi-level lists). (Implemented: ListType enum, list properties in LineSpan, toggleBulletedList/toggleNumberedList, increase/decreaseListLevel, list rendering with bullets/numbers, Ctrl+Shift+8/7 shortcuts, Format menu items, 26 test assertions)
 - [ ] Add table insertion and editing (add/remove rows/cols, merge/split cells).
 - [ ] Add image insertion and layout modes (inline, wrap, break text).
 - [ ] Add drawing insertion (basic shapes/lines) with inline placement.
