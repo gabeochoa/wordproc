@@ -149,10 +149,12 @@ int main(int argc, char *argv[]) {
   systemManager.register_update_system(std::make_unique<ecs::TextInputSystem>());
   systemManager.register_update_system(std::make_unique<ecs::KeyboardShortcutSystem>());
   systemManager.register_update_system(std::make_unique<ecs::NavigationSystem>());
-  systemManager.register_update_system(std::make_unique<ecs::MenuSystem>());
   
   // Render systems (run after update for drawing)
+  // EditorRenderSystem must be first - it calls BeginDrawing() in once()
   systemManager.register_render_system(std::make_unique<ecs::EditorRenderSystem>());
+  // MenuSystem draws menus and dialogs - must run after BeginDrawing()
+  systemManager.register_render_system(std::make_unique<ecs::MenuSystem>());
   systemManager.register_render_system(std::make_unique<ecs::ScreenshotSystem>());
 
   // Measure startup time

@@ -9,7 +9,7 @@ ScopedTimer::ScopedTimer(const char* n) : name(n) {
 
 ScopedTimer::~ScopedTimer() {
   double elapsed = (raylib::GetTime() - startTime) * 1000.0;
-  info("%s took %.3f ms", name, elapsed);
+  log_info("%s took %.3f ms", name, elapsed);
 }
 
 } // namespace logging
