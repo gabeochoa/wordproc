@@ -28,7 +28,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ## Remaining Tasks
 
 ### Future Work
-- [ ] Use immediate-mode UI for the UI layer.
+- [x] Use immediate-mode UI for the UI layer. (Foundation integrated: Win95 theme, UIContext, UI systems registered. Full widget conversion pending.)
 - [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
 - [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
 - [ ] Use Afterhours UI state context for test input handling.
@@ -67,6 +67,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 2. Check off completed tasks (change [ ] to [x])
 3. Run tests after changes
 4. Commit your changes frequently with **descriptive commit messages** (e.g., "Add E2E test for menu rendering", not "update" or "wip")
-5. **Go back and rewrite existing commit history** to have useful, descriptive messages using `git rebase -i`
-6. When ALL tasks are [x], output: `<ralph>COMPLETE</ralph>`
-7. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
+5. When ALL tasks are [x], output: `<ralph>COMPLETE</ralph>`
+6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
+
+### Commit Hygiene
+- [ ] Rewrite existing commit history to have useful, descriptive messages using `git rebase -i`
