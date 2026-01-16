@@ -10,7 +10,7 @@
 #include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
-#include "../testing/visible_text_registry.h"
+#include "../testing/test_input.h"
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
 #include "../util/drawing.h"

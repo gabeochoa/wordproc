@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "../testing/visible_text_registry.h"
+#include "../testing/test_input.h"
 
 namespace win95 {
 

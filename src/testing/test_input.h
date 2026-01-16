@@ -125,4 +125,59 @@ inline bool key_consumed_this_frame = false;
 inline bool char_consumed_this_frame = false;
 inline MouseState mouse_state;
 
+// Visible text registry compatibility
+inline void registerVisibleText(const std::string& text) {
+    afterhours::testing::visible_text::register_text(text);
+}
+inline void clearVisibleTextRegistry() {
+    afterhours::testing::visible_text::clear();
+}
+
+// VisibleTextRegistry class for backward compatibility
+class VisibleTextRegistry {
+public:
+    static VisibleTextRegistry& instance() {
+        static VisibleTextRegistry inst;
+        return inst;
+    }
+    void clear() { afterhours::testing::visible_text::clear(); }
+    void registerText(const std::string& t) { afterhours::testing::visible_text::register_text(t); }
+    bool containsText(const std::string& needle) const { return afterhours::testing::visible_text::contains(needle); }
+    std::string getAllText() const { return afterhours::testing::visible_text::get_all(); }
+private:
+    VisibleTextRegistry() = default;
+};
+
 }  // namespace test_input
+
+// input_injector namespace compatibility
+namespace input_injector {
+    using afterhours::testing::input_injector::set_key_down;
+    using afterhours::testing::input_injector::set_key_up;
+    using afterhours::testing::input_injector::is_key_down;
+    using afterhours::testing::input_injector::consume_press;
+    using afterhours::testing::input_injector::hold_key_for_duration;
+    using afterhours::testing::input_injector::update_key_hold;
+    using afterhours::testing::input_injector::reset_frame;
+    
+    inline bool is_key_synthetically_down(int key) { 
+        return afterhours::testing::input_injector::is_key_down(key); 
+    }
+    inline bool consume_synthetic_press(int key) {
+        return afterhours::testing::input_injector::consume_press(key);
+    }
+    inline void set_mouse_position(int x, int y) {
+        afterhours::testing::input_injector::set_mouse_position(
+            static_cast<float>(x), static_cast<float>(y));
+    }
+    inline void schedule_mouse_click_at(const raylib::Rectangle& rect) {
+        afterhours::testing::input_injector::schedule_click_at(
+            rect.x, rect.y, rect.width, rect.height);
+    }
+    inline void inject_scheduled_click() {
+        afterhours::testing::input_injector::inject_scheduled_click();
+    }
+    inline void release_scheduled_click() {
+        afterhours::testing::input_injector::release_scheduled_click();
+    }
+}

@@ -1,5 +1,5 @@
 #include "action_map.h"
-#include "../testing/input_injector.h"
+#include "../testing/test_input.h"
 
 namespace input {
 

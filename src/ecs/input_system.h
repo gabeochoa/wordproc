@@ -7,7 +7,7 @@
 #include "../editor/document_io.h"
 #include "../input/action_map.h"
 #include "../rl.h"
-#include "../testing/input_injector.h"
+#include "../testing/test_input.h"
 #include "component_helpers.h"
 #include "components.h"
 
