@@ -207,6 +207,19 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add `has_page_number` property - returns "true" if page numbers enabled
 - [ ] Add `caret_at_heading` property - returns heading text if caret is at heading
 
+### Critical UI Bug: Menu bar not rendering
+
+**ROOT CAUSE**: `MenuSystem` in `render_system.h` uses mutable `for_each_with` signature but Afterhours render systems must be const-only.
+
+**Evidence**:
+- `EditorRenderSystem::for_each_with(const Entity&, const Components&...)` → called, works
+- `MenuSystem::for_each_with(Entity&, Components&...)` → NOT called, menus don't render
+
+**Fix options**:
+- [ ] Make `MenuSystem` a const render system (move mutable logic to update systems)
+- [ ] Or register `MenuSystem` as an update system instead of render system
+- [ ] Split menu rendering (const, render phase) from menu interaction (mutable, update phase)
+
 ### E2E Core Fixes (ROOT CAUSE: raylib:: namespace bypasses test macros)
 
 The test input system uses macros like `#define GetCharPressed GetCharPressed_Test` but code using

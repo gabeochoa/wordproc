@@ -598,6 +598,9 @@ struct EditorRenderSystem
 };
 
 // System for handling menu interactions (needs mutable access)
+// BUG: This system doesn't run because Afterhours render systems must be const.
+// The mutable signature (Entity&, Components&...) is not matched by render system queries.
+// TODO: Split into const render system + update system for interactions
 struct MenuSystem
     : public afterhours::System<DocumentComponent, MenuComponent,
                                 StatusComponent, LayoutComponent> {
