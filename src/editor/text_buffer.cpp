@@ -287,7 +287,6 @@ bool TextBuffer::deleteSelection() {
   // Erase the selected range
   chars_.erase(startOffset, deleteCount);
   stats_.total_deletes += deleteCount;
-  version_++;  // Content changed - invalidate render cache
   
   // Rebuild line index since we may have deleted across lines
   rebuildLineIndex();
@@ -359,8 +358,6 @@ void TextBuffer::insertChar(char ch) {
   // Delete any selected text first
   deleteSelection();
   
-  CaretPosition insertPos = caret_;
-  
   stats_.total_inserts++;
   version_++;  // Content changed - invalidate render cache
   
@@ -383,13 +380,6 @@ void TextBuffer::insertChar(char ch) {
       }
     }
     caret_.column += 1;
-  }
-  
-  // Record command for undo
-  if (recordingHistory_) {
-    history_.undoStack_.push_back(
-        std::make_unique<InsertCharCommand>(insertPos, ch));
-    history_.redoStack_.clear();
   }
 }
 
@@ -487,7 +477,6 @@ void TextBuffer::backspace() {
   
   chars_.erase(newline_offset, 1);
   stats_.total_deletes++;
-  version_++;  // Content changed - invalidate render cache
   
   rebuildLineIndex();
   
@@ -510,7 +499,6 @@ void TextBuffer::del() {
     std::size_t offset = positionToOffset(caret_);
     chars_.erase(offset, 1);
     stats_.total_deletes++;
-    version_++;  // Content changed - invalidate render cache
     
     line_spans_[caret_.row].length -= 1;
     
@@ -529,7 +517,6 @@ void TextBuffer::del() {
   std::size_t newline_offset = span.offset + span.length;
   chars_.erase(newline_offset, 1);
   stats_.total_deletes++;
-  version_++;  // Content changed - invalidate render cache
   
   rebuildLineIndex();
 }
@@ -731,317 +718,4 @@ int TextBuffer::comparePositions(const CaretPosition &a,
     return a.column < b.column ? -1 : 1;
   }
   return 0;
-}
-
-// ============================================================================
-// Command implementations for undo/redo
-// ============================================================================
-
-void InsertCharCommand::execute(TextBuffer& buffer) {
-  buffer.setCaret(position_);
-  buffer.insertCharAt(position_, char_);
-}
-
-void InsertCharCommand::undo(TextBuffer& buffer) {
-  // After insert, caret moved right (or down for newline)
-  // To undo, we need to delete the character at position_
-  buffer.setCaret(position_);
-  if (char_ == '\n') {
-    // Move to end of the line that was at position_, delete the newline
-    buffer.setCaret({position_.row, position_.column});
-  }
-  buffer.deleteCharAt(position_);
-  buffer.setCaret(position_);
-}
-
-void DeleteCharCommand::execute(TextBuffer& buffer) {
-  buffer.setCaret(position_);
-  buffer.deleteCharAt(position_);
-}
-
-void DeleteCharCommand::undo(TextBuffer& buffer) {
-  // Re-insert the deleted character
-  buffer.insertCharAt(position_, char_);
-  if (isBackspace_) {
-    // After backspace undo, caret should be after the re-inserted char
-    if (char_ == '\n') {
-      buffer.setCaret({position_.row + 1, 0});
-    } else {
-      buffer.setCaret({position_.row, position_.column + 1});
-    }
-  } else {
-    // Delete key - caret stays at position
-    buffer.setCaret(position_);
-  }
-}
-
-void DeleteSelectionCommand::execute(TextBuffer& buffer) {
-  // The selection has already been deleted when this command was created
-  // This is called on redo
-  buffer.setCaret(start_);
-  buffer.setSelectionAnchor(start_);
-  buffer.setCaret(end_);
-  buffer.updateSelectionToCaret();
-  buffer.deleteSelection();
-}
-
-void DeleteSelectionCommand::undo(TextBuffer& buffer) {
-  // Re-insert the deleted text
-  buffer.insertTextAt(start_, deletedText_);
-  buffer.setCaret(end_);
-}
-
-// ============================================================================
-// CommandHistory implementation
-// ============================================================================
-
-void CommandHistory::execute(std::unique_ptr<EditCommand> cmd, TextBuffer& buffer) {
-  cmd->execute(buffer);
-  undoStack_.push_back(std::move(cmd));
-  redoStack_.clear();  // Clear redo stack on new action
-}
-
-void CommandHistory::undo(TextBuffer& buffer) {
-  if (undoStack_.empty()) return;
-  
-  auto cmd = std::move(undoStack_.back());
-  undoStack_.pop_back();
-  cmd->undo(buffer);
-  redoStack_.push_back(std::move(cmd));
-}
-
-void CommandHistory::redo(TextBuffer& buffer) {
-  if (redoStack_.empty()) return;
-  
-  auto cmd = std::move(redoStack_.back());
-  redoStack_.pop_back();
-  cmd->execute(buffer);
-  undoStack_.push_back(std::move(cmd));
-}
-
-// ============================================================================
-// TextBuffer undo/redo methods
-// ============================================================================
-
-void TextBuffer::undo() {
-  if (!canUndo()) return;
-  
-  recordingHistory_ = false;  // Don't record undo operations
-  history_.undo(*this);
-  recordingHistory_ = true;
-  version_++;
-}
-
-void TextBuffer::redo() {
-  if (!canRedo()) return;
-  
-  recordingHistory_ = false;  // Don't record redo operations
-  history_.redo(*this);
-  recordingHistory_ = true;
-  version_++;
-}
-
-void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
-  setCaret(pos);
-  
-  std::size_t offset = positionToOffset(pos);
-  chars_.insert(offset, ch);
-  version_++;
-  
-  if (ch == '\n') {
-    rebuildLineIndex();
-    caret_.row += 1;
-    caret_.column = 0;
-  } else {
-    if (caret_.row < line_spans_.size()) {
-      line_spans_[caret_.row].length += 1;
-      for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
-        line_spans_[i].offset += 1;
-      }
-    }
-    caret_.column += 1;
-  }
-}
-
-void TextBuffer::deleteCharAt(CaretPosition pos) {
-  if (line_spans_.empty()) return;
-  
-  setCaret(pos);
-  
-  const LineSpan& span = line_spans_[pos.row];
-  
-  if (pos.column < span.length) {
-    // Delete character at position
-    std::size_t offset = positionToOffset(pos);
-    chars_.erase(offset, 1);
-    version_++;
-    
-    line_spans_[pos.row].length -= 1;
-    for (std::size_t i = pos.row + 1; i < line_spans_.size(); ++i) {
-      line_spans_[i].offset -= 1;
-    }
-  } else if (pos.row + 1 < line_spans_.size()) {
-    // Delete newline at end of line (join with next line)
-    std::size_t offset = span.offset + span.length;
-    chars_.erase(offset, 1);
-    version_++;
-    rebuildLineIndex();
-  }
-}
-
-void TextBuffer::insertTextAt(CaretPosition pos, const std::string& text) {
-  setCaret(pos);
-  recordingHistory_ = false;  // Don't record individual chars
-  for (char ch : text) {
-    insertCharAt(caret_, ch);
-  }
-  recordingHistory_ = true;
-}
-
-// ============================================================================
-// Command implementations for undo/redo
-// ============================================================================
-
-void InsertCharCommand::execute(TextBuffer& buffer) {
-  buffer.insertCharAt(position_, char_);
-}
-
-void InsertCharCommand::undo(TextBuffer& buffer) {
-  buffer.deleteCharAt(position_);
-}
-
-void DeleteCharCommand::execute(TextBuffer& buffer) {
-  buffer.deleteCharAt(position_);
-}
-
-void DeleteCharCommand::undo(TextBuffer& buffer) {
-  buffer.insertCharAt(position_, char_);
-}
-
-void DeleteSelectionCommand::execute(TextBuffer& buffer) {
-  // The text was already deleted when command was created
-  // This is for redo: re-delete the selection
-  buffer.setCaret(start_);
-  buffer.setSelectionAnchor(start_);
-  buffer.setCaret(end_);
-  buffer.updateSelectionToCaret();
-  buffer.deleteSelection();
-}
-
-void DeleteSelectionCommand::undo(TextBuffer& buffer) {
-  // Re-insert the deleted text at start position
-  buffer.setCaret(start_);
-  buffer.clearSelection();
-  buffer.insertTextAt(start_, deletedText_);
-  // Restore selection
-  buffer.setCaret(start_);
-  buffer.setSelectionAnchor(start_);
-  buffer.setCaret(end_);
-  buffer.updateSelectionToCaret();
-}
-
-// ============================================================================
-// CommandHistory implementation
-// ============================================================================
-
-void CommandHistory::execute(std::unique_ptr<EditCommand> cmd, TextBuffer& buffer) {
-  cmd->execute(buffer);
-  undoStack_.push_back(std::move(cmd));
-  redoStack_.clear();  // Clear redo stack on new action
-}
-
-void CommandHistory::undo(TextBuffer& buffer) {
-  if (undoStack_.empty()) return;
-  
-  auto cmd = std::move(undoStack_.back());
-  undoStack_.pop_back();
-  cmd->undo(buffer);
-  redoStack_.push_back(std::move(cmd));
-}
-
-void CommandHistory::redo(TextBuffer& buffer) {
-  if (redoStack_.empty()) return;
-  
-  auto cmd = std::move(redoStack_.back());
-  redoStack_.pop_back();
-  cmd->execute(buffer);
-  undoStack_.push_back(std::move(cmd));
-}
-
-// ============================================================================
-// TextBuffer undo/redo support
-// ============================================================================
-
-void TextBuffer::undo() {
-  recordingHistory_ = false;  // Don't record the undo operation itself
-  history_.undo(*this);
-  recordingHistory_ = true;
-  version_++;
-}
-
-void TextBuffer::redo() {
-  recordingHistory_ = false;  // Don't record the redo operation itself
-  history_.redo(*this);
-  recordingHistory_ = true;
-  version_++;
-}
-
-void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
-  ensureNonEmpty();
-  setCaret(pos);
-  
-  std::size_t offset = positionToOffset(caret_);
-  chars_.insert(offset, ch);
-  stats_.total_inserts++;
-  version_++;
-  
-  if (ch == '\n') {
-    rebuildLineIndex();
-    caret_.row += 1;
-    caret_.column = 0;
-  } else {
-    if (caret_.row < line_spans_.size()) {
-      line_spans_[caret_.row].length += 1;
-      for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
-        line_spans_[i].offset += 1;
-      }
-    }
-    caret_.column += 1;
-  }
-}
-
-void TextBuffer::deleteCharAt(CaretPosition pos) {
-  ensureNonEmpty();
-  setCaret(pos);
-  
-  if (caret_.row >= line_spans_.size()) return;
-  
-  const LineSpan& span = line_spans_[caret_.row];
-  
-  if (caret_.column < span.length) {
-    std::size_t offset = positionToOffset(caret_);
-    chars_.erase(offset, 1);
-    stats_.total_deletes++;
-    version_++;
-    
-    line_spans_[caret_.row].length -= 1;
-    for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
-      line_spans_[i].offset -= 1;
-    }
-  } else if (caret_.row + 1 < line_spans_.size()) {
-    // Delete newline at end of line
-    std::size_t newline_offset = span.offset + span.length;
-    chars_.erase(newline_offset, 1);
-    stats_.total_deletes++;
-    version_++;
-    rebuildLineIndex();
-  }
-}
-
-void TextBuffer::insertTextAt(CaretPosition pos, const std::string& text) {
-  setCaret(pos);
-  clearSelection();
-  for (char ch : text) {
-    insertCharAt(caret_, ch);
-  }
 }
