@@ -223,3 +223,70 @@ cppcheck:
 
 .PHONY: count countall cppcheck
 
+# ==============================================================================
+# TESTING
+# ==============================================================================
+
+# Test source files
+TEST_SRC := $(wildcard tests/*.cpp)
+TEST_SRC += src/editor/text_buffer.cpp
+TEST_SRC += src/editor/text_layout.cpp
+TEST_SRC += src/editor/document_io.cpp
+
+# Test object files
+TEST_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/test/%.o,$(notdir $(TEST_SRC)))
+
+# Test executable
+TEST_EXE := $(OUTPUT_DIR)/run_tests$(EXT)
+
+# Test compiler flags (no raylib, no GUI)
+TEST_CXXFLAGS := $(CXXSTD) -g -Wall -Wextra -Wpedantic \
+    $(COVERAGE_CXXFLAGS) \
+    -Wno-deprecated-volatile -Wno-missing-field-initializers
+
+# Test includes
+TEST_INCLUDES := -isystem vendor/
+
+# Test link flags
+TEST_LDFLAGS := $(COVERAGE_LDFLAGS)
+
+# Create test object directory
+$(OBJ_DIR)/test:
+	@mkdir -p $(OBJ_DIR)/test
+
+# Compile test object files from tests/
+$(OBJ_DIR)/test/%.o: tests/%.cpp | $(OBJ_DIR)/test
+	@echo "Compiling test $<..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+# Compile editor sources for tests
+$(OBJ_DIR)/test/text_buffer.o: src/editor/text_buffer.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/test/text_layout.o: src/editor/text_layout.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/test/document_io.o: src/editor/document_io.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+# Link test executable
+$(TEST_EXE): $(TEST_OBJS) | $(OUTPUT_DIR)/.stamp
+	@echo "Linking $(TEST_EXE)..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_OBJS) $(TEST_LDFLAGS) -o $@
+	@echo "Built $(TEST_EXE)"
+
+# Run tests
+test: $(TEST_EXE)
+	@echo "Running tests..."
+	./$(TEST_EXE)
+
+# Run tests with verbose output
+test-verbose: $(TEST_EXE)
+	@echo "Running tests (verbose)..."
+	./$(TEST_EXE) --success
+
+.PHONY: test test-verbose
+

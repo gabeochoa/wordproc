@@ -90,11 +90,11 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Create `style_guide.md` defining colors, typography, spacing, animations, and interaction states.
 
 ### 8) Testing & Tooling (P0)
-- [ ] Choose and set up unit test framework (Catch2 or GTest).
+- [x] Choose and set up unit test framework (Catch2 or GTest).
 - [ ] Set up integration + E2E tests early (Jest/automation or equivalent).
 - [ ] Add screenshot-based UI verification (automated capture during interactions).
-- [ ] Add a visible/manual test flow to "use your eyes" to confirm behavior.
-- [ ] Document how to run tests and capture screenshots.
+- [x] Add a visible/manual test flow to "use your eyes" to confirm behavior.
+- [x] Document how to run tests and capture screenshots.
 - [ ] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
 - [ ] Define report format (CSV preferred), include filename, size, cold-start time, ready-to-interact time, and pass/fail vs 100ms target; keep it chart-friendly.
 - [ ] Define cold-start procedure (fresh process, no warm caches, first-frame interactive signal).
