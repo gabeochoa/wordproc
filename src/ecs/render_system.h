@@ -701,7 +701,7 @@ struct MenuSystem
         auto bindings = input::getBindingsList(defaultMap);
 
         // Handle scrolling
-        float wheel = raylib::GetMouseWheelMove();
+        float wheel = GetMouseWheelMove();
         if (wheel != 0.0f) {
             menu.helpScrollOffset -= static_cast<int>(wheel * 3);
             if (menu.helpScrollOffset < 0) menu.helpScrollOffset = 0;
