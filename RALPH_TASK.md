@@ -41,6 +41,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 8. Support rendering/import for `.doc`, `.txt`, and `.md` files (even if the native save format is custom).
 9. Track startup time from `./wordproc file.txt` to fully rendered + interactive, targeting <= 100ms cold start.
 10. Document format version is always `v0.1` for now.
+11. Cursor overlay must align precisely with the actual edit position (no rightward offset).
+12. Executable name is `wordproc` (not `ui_tester`).
 
 ## Success Criteria
 1. [x] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
@@ -85,7 +87,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 ### 7) UI/UX & Styling (Win95 base + Mac OS 3.1 accents)
 - [x] Implement classic window chrome (title bar, borders, menu strip).
-- [ ] Buttons, menus, dialogs styled for Win95/Mac3.1 hybrid.
+- [x] Buttons, menus, dialogs styled for Win95/Mac3.1 hybrid.
 - [x] Cursor, selection, and focus states visually clear.
 - [x] Create `style_guide.md` defining colors, typography, spacing, animations, and interaction states.
 

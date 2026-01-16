@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 OUTPUT_DIR="$PROJECT_DIR/output"
 SCREENSHOT_DIR="$OUTPUT_DIR/screenshots"
-EXECUTABLE="$OUTPUT_DIR/ui_tester.exe"
+EXECUTABLE="$OUTPUT_DIR/wordproc.exe"
 
 # Colors for output
 RED='\033[0;31m'
@@ -40,7 +40,7 @@ echo -e "Line 1\nLine 2\nLine 3" > "$OUTPUT_DIR/test_files/multiline.txt"
 echo ""
 echo "=== Test 1: Basic Startup ==="
 echo "Running app in test mode (5 frames)..."
-cd "$OUTPUT_DIR" && ./ui_tester.exe --test-mode --frame-limit 5 --screenshot-dir "$SCREENSHOT_DIR"
+cd "$OUTPUT_DIR" && ./wordproc.exe --test-mode --frame-limit 5 --screenshot-dir "$SCREENSHOT_DIR"
 
 # Check if screenshots were created
 if [ -f "$SCREENSHOT_DIR/01_startup.png" ]; then

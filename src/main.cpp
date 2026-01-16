@@ -4,6 +4,7 @@
 #include "preload.h"
 #include "rl.h"
 #include "settings.h"
+#include "ui/win95_widgets.h"
 
 #include <argh.h>
 #include <chrono>
@@ -210,6 +211,64 @@ int main(int argc, char *argv[]) {
   if (!loadFile.empty() && std::filesystem::exists(loadFile)) {
     loadTextFile(buffer, loadFile);
   }
+
+  // Setup Win95-style menus
+  std::vector<win95::Menu> menus;
+  
+  // File menu
+  win95::Menu fileMenu;
+  fileMenu.label = "File";
+  fileMenu.items = {
+    {"New", "Ctrl+N", true, false, nullptr},
+    {"Open...", "Ctrl+O", true, false, nullptr},
+    {"Save", "Ctrl+S", true, false, nullptr},
+    {"Save As...", "", true, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
+    {"Exit", "Alt+F4", true, false, nullptr}
+  };
+  menus.push_back(fileMenu);
+  
+  // Edit menu
+  win95::Menu editMenu;
+  editMenu.label = "Edit";
+  editMenu.items = {
+    {"Undo", "Ctrl+Z", false, false, nullptr},  // Not implemented yet
+    {"Redo", "Ctrl+Y", false, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
+    {"Cut", "Ctrl+X", false, false, nullptr},
+    {"Copy", "Ctrl+C", false, false, nullptr},
+    {"Paste", "Ctrl+V", false, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
+    {"Select All", "Ctrl+A", true, false, nullptr}
+  };
+  menus.push_back(editMenu);
+  
+  // Format menu
+  win95::Menu formatMenu;
+  formatMenu.label = "Format";
+  formatMenu.items = {
+    {"Bold", "Ctrl+B", true, false, nullptr},
+    {"Italic", "Ctrl+I", true, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
+    {"Font: Gaegu", "Ctrl+1", true, false, nullptr},
+    {"Font: Garamond", "Ctrl+2", true, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
+    {"Increase Size", "Ctrl++", true, false, nullptr},
+    {"Decrease Size", "Ctrl+-", true, false, nullptr},
+    {"Reset Size", "Ctrl+0", true, false, nullptr}
+  };
+  menus.push_back(formatMenu);
+  
+  // Help menu
+  win95::Menu helpMenu;
+  helpMenu.label = "Help";
+  helpMenu.items = {
+    {"About Wordproc", "", true, false, nullptr}
+  };
+  menus.push_back(helpMenu);
+  
+  // Dialog state
+  bool showAboutDialog = false;
 
   // Measure startup time
   auto readyTime = std::chrono::high_resolution_clock::now();
@@ -430,11 +489,89 @@ int main(int argc, char *argv[]) {
     }
     raylib::DrawText(title.c_str(), 4, 4, FONT_SIZE, colors::TITLE_TEXT);
 
-    // Draw menu bar
+    // Draw menu bar background
     raylib::DrawRectangleRec(menuBar, colors::WINDOW_BG);
-    raylib::DrawText("File  Edit  Format  Help", 4,
-                     TITLE_BAR_HEIGHT + 2, FONT_SIZE - 2, colors::TEXT_COLOR);
     drawRaisedBorder(menuBar);
+    
+    // Draw interactive menus (must be done before other UI to get proper z-order)
+    int menuResult = win95::DrawMenuBar(menus, TITLE_BAR_HEIGHT, MENU_BAR_HEIGHT);
+    
+    // Handle menu actions
+    if (menuResult >= 0) {
+      int menuIndex = menuResult / 100;
+      int itemIndex = menuResult % 100;
+      
+      if (menuIndex == 0) { // File menu
+        switch (itemIndex) {
+          case 0: // New
+            buffer.setText("");
+            currentFilePath.clear();
+            isDirty = false;
+            break;
+          case 1: // Open
+            if (loadTextFile(buffer, doc_path)) {
+              currentFilePath = doc_path;
+              isDirty = false;
+            }
+            break;
+          case 2: // Save
+            {
+              std::string savePath = currentFilePath.empty() ? doc_path : currentFilePath;
+              if (saveTextFile(buffer, savePath)) {
+                isDirty = false;
+                currentFilePath = savePath;
+              }
+            }
+            break;
+          case 5: // Exit
+            break; // WindowShouldClose will handle
+          default:
+            break;
+        }
+      } else if (menuIndex == 1) { // Edit menu
+        if (itemIndex == 7) { // Select All
+          buffer.selectAll();
+        }
+      } else if (menuIndex == 2) { // Format menu
+        TextStyle style = buffer.textStyle();
+        switch (itemIndex) {
+          case 0: // Bold
+            style.bold = !style.bold;
+            buffer.setTextStyle(style);
+            break;
+          case 1: // Italic
+            style.italic = !style.italic;
+            buffer.setTextStyle(style);
+            break;
+          case 3: // Font: Gaegu
+            style.font = "Gaegu-Bold";
+            buffer.setTextStyle(style);
+            break;
+          case 4: // Font: Garamond
+            style.font = "EBGaramond-Regular";
+            buffer.setTextStyle(style);
+            break;
+          case 6: // Increase Size
+            style.fontSize = std::min(72, style.fontSize + 2);
+            buffer.setTextStyle(style);
+            break;
+          case 7: // Decrease Size
+            style.fontSize = std::max(8, style.fontSize - 2);
+            buffer.setTextStyle(style);
+            break;
+          case 8: // Reset Size
+            style.fontSize = 16;
+            buffer.setTextStyle(style);
+            break;
+          default:
+            break;
+        }
+      } else if (menuIndex == 3) { // Help menu
+        if (itemIndex == 0) { // About
+          showAboutDialog = true;
+        }
+      }
+    }
 
     // Draw text area background
     raylib::DrawRectangleRec(textArea, colors::TEXT_AREA_BG);
@@ -461,6 +598,20 @@ int main(int argc, char *argv[]) {
                   style.font.c_str());
     raylib::DrawText(statusText, 4, screenHeight - STATUS_BAR_HEIGHT + 2,
                      FONT_SIZE - 2, colors::TEXT_COLOR);
+
+    // Draw About dialog if active
+    if (showAboutDialog) {
+      raylib::Rectangle dialogRect = {
+        static_cast<float>(screenWidth / 2 - 150),
+        static_cast<float>(screenHeight / 2 - 75),
+        300, 150
+      };
+      int result = win95::DrawMessageDialog(dialogRect, "About Wordproc",
+        "Wordproc v0.1\n\nA Windows 95 style word processor\nbuilt with Afterhours.", false);
+      if (result >= 0) {
+        showAboutDialog = false;
+      }
+    }
 
     raylib::EndDrawing();
 

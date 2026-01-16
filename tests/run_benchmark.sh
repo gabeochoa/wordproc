@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-WORDPROC="./output/ui_tester.exe"
+WORDPROC="./output/wordproc.exe"
 TEST_DIR="test_files/public_domain"
 OUTPUT_DIR="output/perf"
 REPORT_FILE="$OUTPUT_DIR/load_times.csv"

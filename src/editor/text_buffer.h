@@ -91,6 +91,7 @@ public:
   void clearSelection();
   void setSelectionAnchor(CaretPosition anchor);
   void updateSelectionToCaret();
+  void selectAll();
 
   void insertChar(char ch);
   void insertText(const std::string &text);

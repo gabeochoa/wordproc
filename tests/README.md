@@ -21,7 +21,7 @@ The application supports a test mode for automated E2E testing:
 
 ```bash
 # Run with test mode enabled
-./output/ui_tester.exe --test-mode --frame-limit 10 --screenshot-dir output/screenshots
+./output/wordproc.exe --test-mode --frame-limit 10 --screenshot-dir output/screenshots
 ```
 
 Options:

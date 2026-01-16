@@ -227,6 +227,23 @@ void TextBuffer::updateSelectionToCaret() {
   selection_end_ = caret_;
 }
 
+void TextBuffer::selectAll() {
+  if (line_spans_.empty()) {
+    return;
+  }
+  
+  // Set anchor to beginning
+  has_selection_ = true;
+  selection_anchor_ = {0, 0};
+  
+  // Set end to end of last line
+  std::size_t lastRow = line_spans_.size() - 1;
+  selection_end_ = {lastRow, line_spans_[lastRow].length};
+  
+  // Move caret to end
+  caret_ = selection_end_;
+}
+
 std::size_t TextBuffer::positionToOffset(const CaretPosition& pos) const {
   if (pos.row >= line_spans_.size()) {
     return chars_.size();
