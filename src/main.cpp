@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "ui/menu_setup.h"
 #include "ui/theme.h"
+#include "ui/ui_context.h"
 #include "ui/win95_widgets.h"
 #include "util/drawing.h"
 #include "util/logging.h"
@@ -94,6 +95,9 @@ int main(int argc, char *argv[]) {
   Preload::get().init("Wordproc - Untitled").make_singleton();
   Settings::get().refresh_settings();
 
+  // Initialize Afterhours immediate-mode UI context with Win95 theme
+  ui_imm::initUIContext(800, 600);
+
   // Create the editor entity with all required components
   using namespace afterhours;
   
@@ -134,6 +138,9 @@ int main(int argc, char *argv[]) {
 
   // Setup SystemManager with all systems
   SystemManager systemManager;
+  
+  // Register Afterhours UI systems (must be early in the update order)
+  ui_imm::registerUIUpdateSystems(systemManager);
   
   // Update systems (run every frame for input/logic)
   systemManager.register_update_system(std::make_unique<ecs::CaretBlinkSystem>());

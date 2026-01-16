@@ -39,7 +39,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add a test that loads the largest file and logs FPS while scrolling.
 - [ ] Add more E2E tests that actually run the program via a harness (control/profiling allowed).
 - [ ] Expand automated performance profiling to support "fastest word processor" goal.
-- [ ] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
+- [x] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
 - [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
 - [ ] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression.
 - [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.

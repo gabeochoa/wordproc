@@ -96,12 +96,12 @@ inline void initUIContext(int screenWidth, int screenHeight) {
         resEntity.addComponent<window_manager::ProvidesCurrentResolution>();
     resProv.current_resolution = {screenWidth, screenHeight};
     resEntity.addComponent<
-        SingletonComponent<window_manager::ProvidesCurrentResolution>>();
+        afterhours::SingletonComponent<window_manager::ProvidesCurrentResolution>>();
 
     // Create UI context entity with the context component
     auto& ctxEntity = EntityHelper::createEntity();
     ctxEntity.addComponent<UIContextType>();
-    ctxEntity.addComponent<SingletonComponent<UIContextType>>();
+    ctxEntity.addComponent<afterhours::SingletonComponent<UIContextType>>();
 
     // Create the root entity for all UI elements
     auto& rootEntity = EntityHelper::createEntity();
