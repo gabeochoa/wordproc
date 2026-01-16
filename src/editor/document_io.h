@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "document_settings.h"
 #include "text_buffer.h"
 
 // Load/save result with error information
@@ -18,5 +19,13 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path);
 // Extended versions with error reporting
 DocumentResult saveTextFileEx(const TextBuffer &buffer, const std::string &path);
 DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path);
+
+// Full document save/load with all settings
+DocumentResult saveDocumentEx(const TextBuffer &buffer, 
+                              const DocumentSettings &settings,
+                              const std::string &path);
+DocumentResult loadDocumentEx(TextBuffer &buffer, 
+                              DocumentSettings &settings,
+                              const std::string &path);
 
 #endif // WORDPROC_EDITOR_DOCUMENT_IO_H

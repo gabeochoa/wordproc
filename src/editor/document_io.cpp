@@ -7,6 +7,21 @@
 
 #include <nlohmann/json.hpp>
 
+// Helper to convert PageMode to string
+static std::string pageModeToString(PageMode mode) {
+  switch (mode) {
+    case PageMode::Paged: return "paged";
+    case PageMode::Pageless: 
+    default: return "pageless";
+  }
+}
+
+// Helper to parse PageMode from string
+static PageMode pageModeFromString(const std::string &str) {
+  if (str == "paged") return PageMode::Paged;
+  return PageMode::Pageless;
+}
+
 bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
   auto result = saveTextFileEx(buffer, path);
   return result.success;
@@ -18,6 +33,15 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path) {
 }
 
 DocumentResult saveTextFileEx(const TextBuffer &buffer, const std::string &path) {
+  // Use the new function with default document settings
+  DocumentSettings settings;
+  settings.textStyle = buffer.textStyle();
+  return saveDocumentEx(buffer, settings, path);
+}
+
+DocumentResult saveDocumentEx(const TextBuffer &buffer, 
+                              const DocumentSettings &settings,
+                              const std::string &path) {
   DocumentResult result;
   
   std::filesystem::path output_path(path);
@@ -31,15 +55,28 @@ DocumentResult saveTextFileEx(const TextBuffer &buffer, const std::string &path)
     return result;
   }
 
-  TextStyle style = buffer.textStyle();
+  const TextStyle &style = settings.textStyle;
+  const PageSettings &page = settings.pageSettings;
+  
   nlohmann::json doc;
-  doc["version"] = 1;
+  doc["version"] = DocumentSettings::VERSION;
   doc["text"] = buffer.getText();
+  
+  // Style settings (document-specific, saved with file)
   doc["style"] = {
       {"bold", style.bold},
       {"italic", style.italic},
       {"font", style.font},
       {"fontSize", style.fontSize},
+  };
+  
+  // Page layout settings (document-specific, saved with file)
+  doc["pageLayout"] = {
+      {"mode", pageModeToString(page.mode)},
+      {"pageWidth", page.pageWidth},
+      {"pageHeight", page.pageHeight},
+      {"pageMargin", page.pageMargin},
+      {"lineWidthLimit", page.lineWidthLimit},
   };
 
   ofs << doc.dump(2);

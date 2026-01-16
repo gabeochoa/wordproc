@@ -99,4 +99,7 @@ struct TestConfigComponent : public afterhours::BaseComponent {
   int frameCount = 0;
 };
 
+// Forward declaration - actual ActionMap in input/action_map.h
+// Component will be defined after action_map.h is included in relevant files
+
 } // namespace ecs

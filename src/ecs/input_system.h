@@ -3,6 +3,7 @@
 #include "components.h"
 #include "component_helpers.h"
 #include "../editor/document_io.h"
+#include "../input/action_map.h"
 #include "../rl.h"
 #include "../../vendor/afterhours/src/core/system.h"
 

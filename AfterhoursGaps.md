@@ -36,6 +36,17 @@ Tracking any Afterhours library changes we might need, plus app-side workarounds
   - `DrawMessageDialog` and `DrawInputDialog` for modal dialogs
 - Would benefit from Afterhours providing themeable widget primitives.
 
+### 5. .doc File Import
+- Microsoft Word .doc files use a proprietary binary format (OLE Compound Document).
+- **Complexity**: Requires parsing OLE2/CFBF container, then Word-specific binary streams.
+- **External Libraries**:
+  - `antiword` (GPL, C): Extracts text from .doc files
+  - `wv` / `wvWare` (GPL): More complete Word parsing
+  - `libole2` / `pole`: OLE container parsing
+  - Python `python-docx` (MIT, but .docx only)
+- **Workaround**: For v0.1, recommend users convert .doc to .txt or .docx before importing.
+- **Future**: Add wvWare or antiword as optional dependency for v0.2+ .doc import.
+
 ## Feature Requests / Ideas
 
 1. **Text Editing Component**: Built-in multiline text editor with selection, caret, undo/redo
