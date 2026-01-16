@@ -107,7 +107,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
 - [x] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
 - [x] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
-- [ ] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
+- [x] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
 - [x] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
 
 ### 10) Code Review Follow-ups
@@ -120,13 +120,13 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
 - [x] Add window title + dirty-state indicator on edits.
 - [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
-- [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
+- [x] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
 - [ ] Add load/save error reporting (surface parse errors and fallback behavior).
 - [ ] Decide on per-range styles vs global style state and update model accordingly.
 - [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
 - [ ] Define validator rules (required fields, types, size limits, supported versions).
-- [ ] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
-- [ ] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
+- [x] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
+- [x] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
 
 ### 11) AfterhoursGaps
 - [x] Create `AfterhoursGaps.md` and log any needed library changes.
