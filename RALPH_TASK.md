@@ -91,7 +91,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### UI Design Compliance (per design_rules.md)
 
 #### Menu System Review
-- [x] Audit all menu items for standard marks: use checkmarks for current selection, dashes for partial, ellipsis only when additional input required before execution. (Audited: Menus use ellipsis for dialogs requiring input e.g. "Open...", "Save As...", "Find...". Checkmarks not yet implemented for mode toggles - deferred to v0.2)
+- [x] Audit all menu items for standard marks: use checkmarks for current selection, dashes for partial, ellipsis only when additional input required before execution. (Implemented: MenuMark enum with Checkmark/Radio/Dash, MenuItem.mark field, menu rendering shows marks in dedicated 20px column. Ellipsis used correctly for dialogs. Mode toggles can now use checkmarks.)
 - [x] Verify icons are opt-in only and add meaning that text cannot; remove arbitrary/decorative icons. (N/A: Current Win95-style UI uses text-only menus, no icons)
 - [x] Ensure menu grouping uses dividers sparingly; related items grouped logically. (Verified: menu_setup.h groups items logically - File ops, Page Setup, Exit; Edit ops separated by function; Format has styles/text/alignment/colors grouped)
 - [x] If icons are used in menus, reserve a fixed icon column for alignment consistency. (N/A: No icons in menus - text-only Win95 style)
@@ -123,14 +123,14 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 #### Typography
 - [x] Define and document a clear type scale with consistent hierarchy in `docs/ui_style_guide.md`. (Documented in style_guide.md: Typography section with Primary Fonts, Font Sizes (16/14/8-72px), Line Height (20px))
-- [ ] Verify text is legible at small sizes; avoid effects that reduce legibility.
-- [ ] Ensure truncation/wrapping rules do not hide meaning (test with long strings).
+- [x] Verify text is legible at small sizes; avoid effects that reduce legibility. (style_guide.md specifies min 8px font with warning, 14-16px for UI. No blur/glow effects applied)
+- [x] Ensure truncation/wrapping rules do not hide meaning (test with long strings). (Text wrapping in text_layout.cpp respects word boundaries. Long filenames display in full in title bar)
 
 #### Controls & Dialogs
-- [ ] Prefer modeless UI when possible to preserve user control.
-- [ ] Ensure clear feedback for long-running actions (progress indicators, etc.).
-- [ ] Match dialog titles to their triggering menu item (minus ellipsis).
-- [ ] Use standard controls and states; avoid novel behaviors without strong user value.
+- [x] Prefer modeless UI when possible to preserve user control. (Verified: Main editor is modeless. Only About/Help dialogs are modal - appropriate for informational content. No blocking dialogs during editing.)
+- [x] Ensure clear feedback for long-running actions (progress indicators, etc.). (N/A for v0.1: No long-running operations. File save/load is synchronous and fast. Progress indicators deferred to v0.2 for large file handling.)
+- [x] Match dialog titles to their triggering menu item (minus ellipsis). (Verified: "About" menu item → "About Wordproc" dialog. "Keyboard Shortcuts..." → "Keyboard Shortcuts" window. Consistent naming.)
+- [x] Use standard controls and states; avoid novel behaviors without strong user value. (Verified: Win95 standard raised/sunken 3D borders, standard button states, familiar menu behavior. No novel UI patterns.)
 
 #### MCP/Screenshot-Based UI Verification
 - [ ] Capture baseline screenshots of all UI states: default, hovered, focused, open menus, modals, edge cases (long text, empty states).
@@ -139,7 +139,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Validate UI at multiple resolutions/aspect ratios with screenshots.
 
 #### Review Checklist (Quick Pass)
-- [ ] Menu items use only standard marks (checkmark/dash/ellipsis).
+- [x] Menu items use only standard marks (checkmark/dash/ellipsis). (Implemented: MenuMark enum in win95_widgets.h with Checkmark/Radio/Dash/None. Menu rendering reserves 20px column for marks.)
 - [ ] Icons are used only when they add meaning and are consistent across the app.
 - [ ] Actions have clear text labels; icons are not the only cue.
 - [ ] Small-size icons remain legible without micro-detail.
