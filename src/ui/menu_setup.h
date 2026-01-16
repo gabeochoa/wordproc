@@ -48,15 +48,29 @@ inline std::vector<win95::Menu> createMenuBar() {
     // Format menu
     win95::Menu formatMenu;
     formatMenu.label = "Format";
-    formatMenu.items = {{"Bold", "Ctrl+B", true, false, nullptr},
-                        {"Italic", "Ctrl+I", true, false, nullptr},
-                        {"", "", false, true, nullptr},  // Separator
-                        {"Font: Gaegu", "Ctrl+1", true, false, nullptr},
-                        {"Font: Garamond", "Ctrl+2", true, false, nullptr},
-                        {"", "", false, true, nullptr},  // Separator
-                        {"Increase Size", "Ctrl++", true, false, nullptr},
-                        {"Decrease Size", "Ctrl+-", true, false, nullptr},
-                        {"Reset Size", "Ctrl+0", true, false, nullptr}};
+    formatMenu.items = {
+        // Paragraph styles
+        {"Normal", "Ctrl+Alt+0", true, false, nullptr},
+        {"Title", "", true, false, nullptr},
+        {"Subtitle", "", true, false, nullptr},
+        {"Heading 1", "Ctrl+Alt+1", true, false, nullptr},
+        {"Heading 2", "Ctrl+Alt+2", true, false, nullptr},
+        {"Heading 3", "Ctrl+Alt+3", true, false, nullptr},
+        {"Heading 4", "Ctrl+Alt+4", true, false, nullptr},
+        {"Heading 5", "Ctrl+Alt+5", true, false, nullptr},
+        {"Heading 6", "Ctrl+Alt+6", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator
+        // Text formatting
+        {"Bold", "Ctrl+B", true, false, nullptr},
+        {"Italic", "Ctrl+I", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator
+        {"Font: Gaegu", "Ctrl+1", true, false, nullptr},
+        {"Font: Garamond", "Ctrl+2", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator
+        {"Increase Size", "Ctrl++", true, false, nullptr},
+        {"Decrease Size", "Ctrl+-", true, false, nullptr},
+        {"Reset Size", "Ctrl+0", true, false, nullptr}
+    };
     menus.push_back(formatMenu);
 
     // Help menu

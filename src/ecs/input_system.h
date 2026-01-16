@@ -152,6 +152,35 @@ struct KeyboardShortcutSystem
             doc.buffer.setTextStyle(style);
         }
 
+        // Paragraph styles
+        if (actionMap_.isActionPressed(Action::StyleNormal)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
+        }
+        if (actionMap_.isActionPressed(Action::StyleTitle)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+        }
+        if (actionMap_.isActionPressed(Action::StyleSubtitle)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+        }
+        if (actionMap_.isActionPressed(Action::StyleHeading1)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        }
+        if (actionMap_.isActionPressed(Action::StyleHeading2)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+        }
+        if (actionMap_.isActionPressed(Action::StyleHeading3)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading3);
+        }
+        if (actionMap_.isActionPressed(Action::StyleHeading4)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading4);
+        }
+        if (actionMap_.isActionPressed(Action::StyleHeading5)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading5);
+        }
+        if (actionMap_.isActionPressed(Action::StyleHeading6)) {
+            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
+        }
+
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {
             if (doc.buffer.hasSelection()) {

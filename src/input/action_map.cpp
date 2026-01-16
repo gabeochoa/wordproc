@@ -109,6 +109,24 @@ const char* ActionMap::actionName(Action action) {
             return "DecreaseFontSize";
         case Action::ResetFontSize:
             return "ResetFontSize";
+        case Action::StyleNormal:
+            return "StyleNormal";
+        case Action::StyleTitle:
+            return "StyleTitle";
+        case Action::StyleSubtitle:
+            return "StyleSubtitle";
+        case Action::StyleHeading1:
+            return "StyleHeading1";
+        case Action::StyleHeading2:
+            return "StyleHeading2";
+        case Action::StyleHeading3:
+            return "StyleHeading3";
+        case Action::StyleHeading4:
+            return "StyleHeading4";
+        case Action::StyleHeading5:
+            return "StyleHeading5";
+        case Action::StyleHeading6:
+            return "StyleHeading6";
         case Action::COUNT:
             return "NONE";
     }
@@ -182,6 +200,15 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_KP_SUBTRACT, true, false, false},
              Action::DecreaseFontSize);
     map.bind({raylib::KEY_ZERO, true, false, false}, Action::ResetFontSize);
+    
+    // Paragraph styles: Ctrl+Alt+number for headings, Ctrl+Alt+0 for normal
+    map.bind({raylib::KEY_ZERO, true, false, true}, Action::StyleNormal);
+    map.bind({raylib::KEY_ONE, true, false, true}, Action::StyleHeading1);
+    map.bind({raylib::KEY_TWO, true, false, true}, Action::StyleHeading2);
+    map.bind({raylib::KEY_THREE, true, false, true}, Action::StyleHeading3);
+    map.bind({raylib::KEY_FOUR, true, false, true}, Action::StyleHeading4);
+    map.bind({raylib::KEY_FIVE, true, false, true}, Action::StyleHeading5);
+    map.bind({raylib::KEY_SIX, true, false, true}, Action::StyleHeading6);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
@@ -234,6 +261,15 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({raylib::KEY_KP_SUBTRACT, true, false, false},
              Action::DecreaseFontSize);
     map.bind({raylib::KEY_ZERO, true, false, false}, Action::ResetFontSize);
+    
+    // Paragraph styles: Ctrl+Alt+number for headings (same as Windows)
+    map.bind({raylib::KEY_ZERO, true, false, true}, Action::StyleNormal);
+    map.bind({raylib::KEY_ONE, true, false, true}, Action::StyleHeading1);
+    map.bind({raylib::KEY_TWO, true, false, true}, Action::StyleHeading2);
+    map.bind({raylib::KEY_THREE, true, false, true}, Action::StyleHeading3);
+    map.bind({raylib::KEY_FOUR, true, false, true}, Action::StyleHeading4);
+    map.bind({raylib::KEY_FIVE, true, false, true}, Action::StyleHeading5);
+    map.bind({raylib::KEY_SIX, true, false, true}, Action::StyleHeading6);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -331,6 +367,24 @@ const char* actionDisplayName(Action action) {
             return "Decrease Font Size";
         case Action::ResetFontSize:
             return "Reset Font Size";
+        case Action::StyleNormal:
+            return "Normal Text";
+        case Action::StyleTitle:
+            return "Title";
+        case Action::StyleSubtitle:
+            return "Subtitle";
+        case Action::StyleHeading1:
+            return "Heading 1";
+        case Action::StyleHeading2:
+            return "Heading 2";
+        case Action::StyleHeading3:
+            return "Heading 3";
+        case Action::StyleHeading4:
+            return "Heading 4";
+        case Action::StyleHeading5:
+            return "Heading 5";
+        case Action::StyleHeading6:
+            return "Heading 6";
         case Action::COUNT:
             return "";
     }
@@ -582,6 +636,15 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::DecreaseFontSize,
                {raylib::KEY_MINUS, true, false, false});
     addBinding(Action::ResetFontSize, {raylib::KEY_ZERO, true, false, false});
+    
+    // Paragraph styles
+    addBinding(Action::StyleNormal, {raylib::KEY_ZERO, true, false, true});
+    addBinding(Action::StyleHeading1, {raylib::KEY_ONE, true, false, true});
+    addBinding(Action::StyleHeading2, {raylib::KEY_TWO, true, false, true});
+    addBinding(Action::StyleHeading3, {raylib::KEY_THREE, true, false, true});
+    addBinding(Action::StyleHeading4, {raylib::KEY_FOUR, true, false, true});
+    addBinding(Action::StyleHeading5, {raylib::KEY_FIVE, true, false, true});
+    addBinding(Action::StyleHeading6, {raylib::KEY_SIX, true, false, true});
 
     return result;
 }

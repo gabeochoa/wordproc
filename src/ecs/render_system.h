@@ -74,9 +74,10 @@ inline void drawPageBackground(const LayoutComponent& layout) {
 }
 
 // Render the text buffer with caret and selection
+// Now supports per-line paragraph styles (H1-H6, Title, Subtitle)
 inline void renderTextBuffer(const TextBuffer& buffer,
                              const LayoutComponent::Rect& textArea,
-                             bool caretVisible, int fontSize, int lineHeight,
+                             bool caretVisible, int baseFontSize, int baseLineHeight,
                              int scrollOffset) {
     std::size_t lineCount = buffer.lineCount();
     CaretPosition caret = buffer.caret();
@@ -94,6 +95,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int x = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
 
         std::string line = (span.length > 0) ? buffer.lineString(row) : "";
+        
+        // Get paragraph style for this line
+        ParagraphStyle paraStyle = buffer.lineParagraphStyle(row);
+        int lineFontSize = paragraphStyleFontSize(paraStyle);
+        int lineHeight = lineFontSize + 4;
+        
+        // Use base font size as minimum if paragraph style would be smaller
+        if (lineFontSize < baseFontSize && paraStyle == ParagraphStyle::Normal) {
+            lineFontSize = baseFontSize;
+            lineHeight = baseLineHeight;
+        }
 
         // Draw selection highlight
         if (hasSelection) {
@@ -110,25 +122,36 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         line.substr(startCol, endCol - startCol);
 
                     int selX =
-                        x + raylib::MeasureText(beforeSel.c_str(), fontSize);
+                        x + raylib::MeasureText(beforeSel.c_str(), lineFontSize);
                     int selWidth =
-                        raylib::MeasureText(selectedText.c_str(), fontSize);
+                        raylib::MeasureText(selectedText.c_str(), lineFontSize);
                     raylib::DrawRectangle(selX, y, selWidth, lineHeight,
                                           theme::SELECTION_BG);
                 }
             }
         }
 
-        // Draw text
+        // Draw text with paragraph style applied
         if (!line.empty()) {
-            raylib::DrawText(line.c_str(), x, y, fontSize, theme::TEXT_COLOR);
+            // For headings and titles, draw bold text (simulated by drawing twice with offset)
+            if (paragraphStyleIsBold(paraStyle)) {
+                // Draw bold effect by drawing text twice with 1px offset
+                raylib::DrawText(line.c_str(), x, y, lineFontSize, theme::TEXT_COLOR);
+                raylib::DrawText(line.c_str(), x + 1, y, lineFontSize, theme::TEXT_COLOR);
+            } else if (paragraphStyleIsItalic(paraStyle)) {
+                // For subtitle italic style, just draw normally for now
+                // (true italics would require a separate font or skewing)
+                raylib::DrawText(line.c_str(), x, y, lineFontSize, raylib::DARKGRAY);
+            } else {
+                raylib::DrawText(line.c_str(), x, y, lineFontSize, theme::TEXT_COLOR);
+            }
         }
 
         // Draw caret
         if (caretVisible && row == caret.row) {
             std::string beforeCaret =
                 line.substr(0, std::min(caret.column, line.length()));
-            int caretX = x + raylib::MeasureText(beforeCaret.c_str(), fontSize);
+            int caretX = x + raylib::MeasureText(beforeCaret.c_str(), lineFontSize);
             raylib::DrawRectangle(caretX, y, 2, lineHeight, theme::CARET_COLOR);
         }
 
@@ -254,9 +277,11 @@ struct EditorRenderSystem
                 theme::layout::FONT_SIZE - 2, msgColor);
         } else {
             CaretPosition caretPos = doc.buffer.caret();
+            ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
             std::string statusText = std::format(
-                "Ln {}, Col {} | {}{}| {}pt | {}", caretPos.row + 1,
-                caretPos.column + 1, style.bold ? "B " : "",
+                "Ln {}, Col {} | {} | {}{}| {}pt | {}", caretPos.row + 1,
+                caretPos.column + 1, paragraphStyleName(paraStyle),
+                style.bold ? "B " : "",
                 style.italic ? "I " : "", style.fontSize, style.font);
             raylib::DrawText(
                 statusText.c_str(), 4,
@@ -603,31 +628,80 @@ struct MenuSystem
         } else if (menuIndex == 3) {  // Format menu
             TextStyle style = doc.buffer.textStyle();
             switch (itemIndex) {
-                case 0:  // Bold
+                // Paragraph styles (0-8)
+                case 0:  // Normal
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
+                    status::set(status, "Style: Normal");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 1:  // Title
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+                    status::set(status, "Style: Title");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 2:  // Subtitle
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+                    status::set(status, "Style: Subtitle");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 3:  // Heading 1
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+                    status::set(status, "Style: Heading 1");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 4:  // Heading 2
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+                    status::set(status, "Style: Heading 2");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 5:  // Heading 3
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading3);
+                    status::set(status, "Style: Heading 3");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 6:  // Heading 4
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading4);
+                    status::set(status, "Style: Heading 4");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 7:  // Heading 5
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading5);
+                    status::set(status, "Style: Heading 5");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 8:  // Heading 6
+                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
+                    status::set(status, "Style: Heading 6");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                // (9 is separator)
+                case 10:  // Bold
                     style.bold = !style.bold;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 1:  // Italic
+                case 11:  // Italic
                     style.italic = !style.italic;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 3:  // Font: Gaegu
+                // (12 is separator)
+                case 13:  // Font: Gaegu
                     style.font = "Gaegu-Bold";
                     doc.buffer.setTextStyle(style);
                     break;
-                case 4:  // Font: Garamond
+                case 14:  // Font: Garamond
                     style.font = "EBGaramond-Regular";
                     doc.buffer.setTextStyle(style);
                     break;
-                case 6:  // Increase Size
+                // (15 is separator)
+                case 16:  // Increase Size
                     style.fontSize = std::min(72, style.fontSize + 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 7:  // Decrease Size
+                case 17:  // Decrease Size
                     style.fontSize = std::max(8, style.fontSize - 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 8:  // Reset Size
+                case 18:  // Reset Size
                     style.fontSize = 16;
                     doc.buffer.setTextStyle(style);
                     break;
