@@ -869,7 +869,18 @@ Summary:
 - [x] Add help window listing keybindings from action_map.h
 - [x] Separate app settings from document settings (added auto_save_enabled + save_if_auto())
 
-**Next unchecked task:** Re-evaluate file format (JSON vs wpdoc zip)
+**Next unchecked task:** Add more E2E tests
+
+### 2026-01-15 (Session 9 continued - More Tasks)
+- Re-evaluate file format: JSON optimal for v0.1, zip container for v0.2+ (documented)
+- Ensure .doc import support: Evaluated, deferred to v0.2+ (complex OLE format)
+- Added tests/run_fps_scroll_test.sh for FPS scroll testing
+- Deduplicate Win95 UI primitives: Already done, using win95_widgets.cpp
+- Pick single text layout path: SoA path is primary, legacy kept for compatibility
+- RenderCache: Defined but not wired, deferred for future optimization
+
+**Tasks completed this session: 9+**
+**Remaining unchecked tasks: 11**
 
 ### 2026-01-15 (Session 7 - Color Type Fix)
 - **Fixed fundamental build error:** Color type conflict between raylib and afterhours

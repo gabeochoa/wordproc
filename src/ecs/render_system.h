@@ -435,10 +435,17 @@ private:
           break;
         case 1: // Open
           {
-            auto result = loadTextFileEx(doc.buffer, doc.defaultPath);
+            // Load document with settings (document settings saved with file)
+            auto result = loadDocumentEx(doc.buffer, doc.docSettings, doc.defaultPath);
             if (result.success) {
               doc.filePath = doc.defaultPath;
               doc.isDirty = false;
+              // Sync loaded document settings to layout component
+              layout.pageMode = doc.docSettings.pageSettings.mode;
+              layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
+              layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
+              layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
+              layout.lineWidthLimit = doc.docSettings.pageSettings.lineWidthLimit;
               ecs::status::set(status, "Opened: " + std::filesystem::path(doc.defaultPath).filename().string());
               status.expiresAt = raylib::GetTime() + 3.0;
             } else {

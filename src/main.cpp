@@ -48,6 +48,15 @@ int main(int argc, char *argv[]) {
   cmdl("--screenshot-dir", "output/screenshots") >> screenshotDir;
   cmdl("--frame-limit", 0) >> frameLimit;
   
+  // FPS test mode - simulates scrolling and logs FPS
+  bool fpsTestMode = cmdl["--fps-test"];
+  if (fpsTestMode) {
+    testModeEnabled = true; // FPS test implies test mode
+    if (frameLimit == 0) {
+      frameLimit = 120; // Default to 120 frames for FPS test
+    }
+  }
+  
   // Headless benchmark mode - measures file load time without opening window
   bool benchmarkMode = cmdl["--benchmark"];
   
@@ -146,6 +155,7 @@ int main(int argc, char *argv[]) {
   testComp.enabled = testModeEnabled;
   testComp.screenshotDir = screenshotDir;
   testComp.frameLimit = frameLimit;
+  testComp.fpsTestMode = fpsTestMode;
 
   // Setup SystemManager with all systems
   SystemManager systemManager;
