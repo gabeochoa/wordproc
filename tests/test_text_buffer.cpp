@@ -857,3 +857,71 @@ TEST_CASE("Text emphasis formatting", "[text_buffer][emphasis]") {
         REQUIRE(updated.strikethrough == true);
     }
 }
+
+TEST_CASE("Paragraph alignment", "[text_buffer][alignment]") {
+    TextBuffer buffer;
+    buffer.setText("Line 1\nLine 2\nLine 3");
+    
+    SECTION("default alignment is left") {
+        REQUIRE(buffer.currentAlignment() == TextAlignment::Left);
+        REQUIRE(buffer.lineAlignment(0) == TextAlignment::Left);
+        REQUIRE(buffer.lineAlignment(1) == TextAlignment::Left);
+        REQUIRE(buffer.lineAlignment(2) == TextAlignment::Left);
+    }
+    
+    SECTION("set current line alignment to center") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentAlignment(TextAlignment::Center);
+        
+        REQUIRE(buffer.currentAlignment() == TextAlignment::Center);
+        REQUIRE(buffer.lineAlignment(0) == TextAlignment::Center);
+        // Other lines should still be left-aligned
+        REQUIRE(buffer.lineAlignment(1) == TextAlignment::Left);
+        REQUIRE(buffer.lineAlignment(2) == TextAlignment::Left);
+    }
+    
+    SECTION("set current line alignment to right") {
+        buffer.setCaret({1, 0});
+        buffer.setCurrentAlignment(TextAlignment::Right);
+        
+        REQUIRE(buffer.currentAlignment() == TextAlignment::Right);
+        REQUIRE(buffer.lineAlignment(1) == TextAlignment::Right);
+        // Other lines unchanged
+        REQUIRE(buffer.lineAlignment(0) == TextAlignment::Left);
+        REQUIRE(buffer.lineAlignment(2) == TextAlignment::Left);
+    }
+    
+    SECTION("set current line alignment to justify") {
+        buffer.setCaret({2, 0});
+        buffer.setCurrentAlignment(TextAlignment::Justify);
+        
+        REQUIRE(buffer.currentAlignment() == TextAlignment::Justify);
+        REQUIRE(buffer.lineAlignment(2) == TextAlignment::Justify);
+    }
+    
+    SECTION("alignment changes increment version") {
+        uint64_t versionBefore = buffer.version();
+        buffer.setCurrentAlignment(TextAlignment::Center);
+        REQUIRE(buffer.version() > versionBefore);
+    }
+    
+    SECTION("each line can have different alignment") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentAlignment(TextAlignment::Left);
+        buffer.setCaret({1, 0});
+        buffer.setCurrentAlignment(TextAlignment::Center);
+        buffer.setCaret({2, 0});
+        buffer.setCurrentAlignment(TextAlignment::Right);
+        
+        REQUIRE(buffer.lineAlignment(0) == TextAlignment::Left);
+        REQUIRE(buffer.lineAlignment(1) == TextAlignment::Center);
+        REQUIRE(buffer.lineAlignment(2) == TextAlignment::Right);
+    }
+    
+    SECTION("alignment enum names are correct") {
+        REQUIRE(std::string(textAlignmentName(TextAlignment::Left)) == "Left");
+        REQUIRE(std::string(textAlignmentName(TextAlignment::Center)) == "Center");
+        REQUIRE(std::string(textAlignmentName(TextAlignment::Right)) == "Right");
+        REQUIRE(std::string(textAlignmentName(TextAlignment::Justify)) == "Justify");
+    }
+}

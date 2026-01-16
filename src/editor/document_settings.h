@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
+#include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <vector>
 
@@ -23,33 +26,26 @@ enum class ScriptRequirement {
     Count
 };
 
-// Get identifier string for script (used in file format)
-inline const char* scriptRequirementId(ScriptRequirement script) {
-    switch (script) {
-        case ScriptRequirement::Latin: return "latin";
-        case ScriptRequirement::Korean: return "korean";
-        case ScriptRequirement::Japanese: return "japanese";
-        case ScriptRequirement::Chinese: return "chinese";
-        case ScriptRequirement::Arabic: return "arabic";
-        case ScriptRequirement::Hebrew: return "hebrew";
-        case ScriptRequirement::Cyrillic: return "cyrillic";
-        case ScriptRequirement::Greek: return "greek";
-        case ScriptRequirement::Thai: return "thai";
-        default: return "latin";
-    }
+// Get identifier string for script (used in file format) - lowercase
+inline std::string scriptRequirementId(ScriptRequirement script) {
+    auto name = std::string(magic_enum::enum_name(script));
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return name;
 }
 
-// Parse script requirement from string
+// Parse script requirement from string (case-insensitive)
 inline ScriptRequirement parseScriptRequirement(const std::string& id) {
-    if (id == "korean") return ScriptRequirement::Korean;
-    if (id == "japanese") return ScriptRequirement::Japanese;
-    if (id == "chinese") return ScriptRequirement::Chinese;
-    if (id == "arabic") return ScriptRequirement::Arabic;
-    if (id == "hebrew") return ScriptRequirement::Hebrew;
-    if (id == "cyrillic") return ScriptRequirement::Cyrillic;
-    if (id == "greek") return ScriptRequirement::Greek;
-    if (id == "thai") return ScriptRequirement::Thai;
-    return ScriptRequirement::Latin;
+    // Convert to title case for magic_enum lookup
+    std::string normalized = id;
+    if (!normalized.empty()) {
+        normalized[0] = static_cast<char>(std::toupper(normalized[0]));
+        for (size_t i = 1; i < normalized.size(); ++i) {
+            normalized[i] = static_cast<char>(std::tolower(normalized[i]));
+        }
+    }
+    auto result = magic_enum::enum_cast<ScriptRequirement>(normalized);
+    return result.value_or(ScriptRequirement::Latin);
 }
 
 // Font requirement for a document
