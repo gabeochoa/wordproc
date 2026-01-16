@@ -42,7 +42,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
 - [x] Investigate missing menu items; ensure E2E tests catch menu rendering regressions. (Fixed: MenuSystem was registered as update system but needs to run after BeginDrawing)
 - [x] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression. (Fixed: MenuSystem moved to render phase)
-- [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
+- [x] Loading is too slow: re-enable and verify load/startup timing instrumentation. (Added SCOPED_TIMER to Settings load, Preload, UI context init)
 - [x] Enforce component purity (already done: components are pure data, logic in component_helpers.h): `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
 - [ ] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.

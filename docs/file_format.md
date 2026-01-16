@@ -80,3 +80,43 @@ When validating a .wpdoc file:
 - Images and embedded content
 - Page layout settings
 - Print margins
+
+## Format Evaluation: JSON vs wpdoc Zip Container
+
+### Current Decision (v0.1): Keep JSON
+
+JSON is the correct choice for v0.1 because:
+
+| Aspect | JSON | Zip Container |
+|--------|------|---------------|
+| Simplicity | Simple to implement | Requires zip library |
+| Debuggability | Human-readable, easy to inspect | Binary, requires extraction |
+| Dependencies | None (nlohmann/json already in use) | Would need minizip or similar |
+| Text-only docs | Optimal | Overhead for small docs |
+| File size | Minimal for text-only | Compression benefits at scale |
+
+### Recommendation for v0.2+
+
+Switch to zip container when adding:
+1. **Images/media**: Base64 in JSON is inefficient (33% size overhead)
+2. **Per-range styles**: Complex style maps benefit from separate style.json
+3. **Multiple revisions**: Can include revision history as separate files
+
+### Proposed v0.2 Zip Structure
+
+```
+document.wpdoc/
+├── content.txt          # Raw text content
+├── styles.json          # Style ranges and metadata
+├── media/               # Embedded images
+│   ├── image1.png
+│   └── image2.jpg
+├── settings.json        # Page layout, margins
+└── manifest.json        # Version, file list
+```
+
+### Migration Path
+
+1. v0.1 JSON format continues to work
+2. v0.2 loader detects format by file header (ZIP magic bytes vs JSON `{`)
+3. Save-as option to convert between formats

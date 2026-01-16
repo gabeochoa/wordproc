@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "document_settings.h"
+
 struct CaretPosition {
   std::size_t row = 0;
   std::size_t column = 0;
@@ -81,12 +83,7 @@ private:
   std::vector<std::unique_ptr<EditCommand>> redoStack_;
 };
 
-struct TextStyle {
-  bool bold = false;
-  bool italic = false;
-  std::string font = "Gaegu-Bold";
-  int fontSize = 16;  // Default size in pixels
-};
+// TextStyle is now defined in document_settings.h
 
 // Line metadata for SoA layout - stores offset and length instead of copying strings
 struct LineSpan {
