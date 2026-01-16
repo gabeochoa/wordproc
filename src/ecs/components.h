@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../editor/document_settings.h"
+#include "../editor/drawing.h"
 #include "../editor/image.h"
 #include "../editor/table.h"
 #include "../editor/text_buffer.h"
@@ -125,6 +126,15 @@ struct MenuComponent : public afterhours::BaseComponent {
     FindOptions findOptions;       // Case sensitive, whole word, wrap around
     char findInputBuffer[256] = {0};
     char replaceInputBuffer[256] = {0};
+    
+    // Page Setup dialog state
+    bool showPageSetup = false;
+    PageSize selectedPageSize = PageSize::Letter;
+    PageOrientation selectedOrientation = PageOrientation::Portrait;
+    int marginTopMm = 25;     // Margins in mm for UI
+    int marginBottomMm = 25;
+    int marginLeftMm = 25;
+    int marginRightMm = 25;
 };
 
 // PageMode is defined in document_settings.h

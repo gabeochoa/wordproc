@@ -819,7 +819,12 @@ struct MenuSystem
                         status.expiresAt = raylib::GetTime() + 3.0;
                     }
                 } break;
-                case 5:  // Exit
+                case 5:  // Page Setup
+                {
+                    // Toggle the page setup dialog (for now, just toggle to Paged mode with presets)
+                    menu.showPageSetup = !menu.showPageSetup;
+                } break;
+                case 7:  // Exit
                     break;
                 default:
                     break;
@@ -1192,7 +1197,71 @@ struct MenuSystem
                 default:
                     break;
             }
-        } else if (menuIndex == 4) {  // Table menu
+        } else if (menuIndex == 4) {  // Insert menu
+            switch (itemIndex) {
+                case 0:  // Page Break
+                    doc.buffer.insertPageBreak();
+                    doc.isDirty = true;
+                    status::set(status, "Page break inserted");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 2:  // Hyperlink...
+                    // For now, just add hyperlink to selection if any
+                    if (doc.buffer.hasSelection()) {
+                        // Would need a dialog for URL input - placeholder for now
+                        if (doc.buffer.addHyperlink("https://example.com")) {
+                            doc.isDirty = true;
+                            status::set(status, "Hyperlink added (edit URL)");
+                        }
+                    } else {
+                        status::set(status, "Select text first", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 3:  // Remove Hyperlink
+                    if (doc.buffer.hyperlinkAtCaret()) {
+                        std::size_t caretOffset = doc.buffer.caret().row * 100 + doc.buffer.caret().column;
+                        if (doc.buffer.removeHyperlink(caretOffset)) {
+                            doc.isDirty = true;
+                            status::set(status, "Hyperlink removed");
+                        }
+                    } else {
+                        status::set(status, "No hyperlink at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 5:  // Table...
+                {
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    doc.insertTable(currentLine, 3, 3);
+                    doc.isDirty = true;
+                    status::set(status, "Inserted 3x3 table");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 7:  // Image...
+                {
+                    // Insert a placeholder image at the current line
+                    DocumentImage img;
+                    img.anchorLine = doc.buffer.caret().row;
+                    img.anchorColumn = doc.buffer.caret().column;
+                    img.layoutMode = ImageLayoutMode::Inline;
+                    img.displayWidth = 200.0f;
+                    img.displayHeight = 150.0f;
+                    img.originalWidth = 200.0f;
+                    img.originalHeight = 150.0f;
+                    img.altText = "Inserted image";
+                    img.filename = "placeholder.png";
+                    doc.images.addImage(img);
+                    doc.isDirty = true;
+                    status::set(status, "Image placeholder inserted");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                default:
+                    break;
+            }
+        } else if (menuIndex == 5) {  // Table menu
             switch (itemIndex) {
                 case 0: {  // Insert Table...
                     // Insert a default 3x3 table at current line
@@ -1321,7 +1390,7 @@ struct MenuSystem
                 default:
                     break;
             }
-        } else if (menuIndex == 5) {  // Help menu
+        } else if (menuIndex == 6) {  // Help menu
             if (itemIndex == 0) {     // Keyboard Shortcuts
                 menu.showHelpWindow = true;
             } else if (itemIndex == 2) {  // About (after separator)

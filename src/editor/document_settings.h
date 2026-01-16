@@ -418,10 +418,115 @@ struct PageSettings {
     }
 };
 
+// Page number format options
+enum class PageNumberFormat {
+    None,           // No page numbers
+    Arabic,         // 1, 2, 3, ...
+    RomanLower,     // i, ii, iii, ...
+    RomanUpper,     // I, II, III, ...
+    LetterLower,    // a, b, c, ...
+    LetterUpper     // A, B, C, ...
+};
+
+// Page number position within header/footer
+enum class PageNumberPosition {
+    Left,
+    Center,
+    Right
+};
+
+// Header/footer content section
+struct HeaderFooterSection {
+    std::string text;           // Static text content
+    bool showPageNumber = false;  // Include page number in this section
+    PageNumberFormat format = PageNumberFormat::Arabic;
+    bool showTotalPages = false;  // Show "Page X of Y" format
+};
+
+// Header or footer configuration
+struct HeaderFooter {
+    bool enabled = false;
+    HeaderFooterSection left;    // Left-aligned content
+    HeaderFooterSection center;  // Center-aligned content
+    HeaderFooterSection right;   // Right-aligned content
+    float height = 36.0f;        // Height in points (0.5 inch default)
+    TextStyle style;             // Font style for header/footer
+    bool differentFirstPage = false;  // Use different header/footer on first page
+    bool differentOddEven = false;    // Different headers for odd/even pages
+    
+    // Get display text for a section including page number
+    std::string getSectionText(const HeaderFooterSection& section, 
+                               int pageNum, int totalPages) const {
+        std::string result = section.text;
+        if (section.showPageNumber) {
+            std::string pageStr = formatPageNumber(pageNum, section.format);
+            if (section.showTotalPages) {
+                pageStr += " of " + std::to_string(totalPages);
+            }
+            if (!result.empty()) result += " ";
+            result += pageStr;
+        }
+        return result;
+    }
+    
+    // Format a page number according to the format setting
+    static std::string formatPageNumber(int num, PageNumberFormat format) {
+        switch (format) {
+            case PageNumberFormat::None: return "";
+            case PageNumberFormat::Arabic: return std::to_string(num);
+            case PageNumberFormat::RomanLower: return toRomanLower(num);
+            case PageNumberFormat::RomanUpper: return toRomanUpper(num);
+            case PageNumberFormat::LetterLower: return toLetterLower(num);
+            case PageNumberFormat::LetterUpper: return toLetterUpper(num);
+            default: return std::to_string(num);
+        }
+    }
+    
+    static std::string toRomanLower(int num) {
+        std::string upper = toRomanUpper(num);
+        std::string lower;
+        for (char c : upper) lower += static_cast<char>(std::tolower(c));
+        return lower;
+    }
+    
+    static std::string toRomanUpper(int num) {
+        if (num <= 0 || num > 3999) return std::to_string(num);
+        std::string result;
+        const int values[] = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
+        const char* numerals[] = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
+        for (int i = 0; i < 13; ++i) {
+            while (num >= values[i]) {
+                result += numerals[i];
+                num -= values[i];
+            }
+        }
+        return result;
+    }
+    
+    static std::string toLetterLower(int num) {
+        if (num <= 0) return std::to_string(num);
+        std::string result;
+        while (num > 0) {
+            result = static_cast<char>('a' + (num - 1) % 26) + result;
+            num = (num - 1) / 26;
+        }
+        return result;
+    }
+    
+    static std::string toLetterUpper(int num) {
+        std::string lower = toLetterLower(num);
+        std::string upper;
+        for (char c : lower) upper += static_cast<char>(std::toupper(c));
+        return upper;
+    }
+};
+
 // Combined document settings - saved/loaded with document file
 struct DocumentSettings {
     TextStyle textStyle;
     PageSettings pageSettings;
+    HeaderFooter header;    // Document header configuration
+    HeaderFooter footer;    // Document footer configuration
 
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed

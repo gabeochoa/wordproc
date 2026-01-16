@@ -237,6 +237,7 @@ TEST_SRC += src/editor/text_layout.cpp
 TEST_SRC += src/editor/document_io.cpp
 TEST_SRC += src/editor/table.cpp
 TEST_SRC += src/editor/image.cpp
+TEST_SRC += src/editor/drawing.cpp
 
 # Test object files
 TEST_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/test/%.o,$(notdir $(TEST_SRC)))
@@ -282,6 +283,10 @@ $(OBJ_DIR)/test/table.o: src/editor/table.cpp | $(OBJ_DIR)/test
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
 $(OBJ_DIR)/test/image.o: src/editor/image.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/test/drawing.o: src/editor/drawing.cpp | $(OBJ_DIR)/test
 	@echo "Compiling $< for tests..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 

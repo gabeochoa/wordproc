@@ -75,7 +75,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add manual page breaks. (Implemented: insertPageBreak/togglePageBreak/clearPageBreak in TextBuffer, hasPageBreakBefore in LineSpan, Ctrl+Enter shortcut, visual page break indicator in render system, 8 test assertions)
 - [ ] Add multi-column layout and column breaks.
 - [ ] Add table of contents generation from headings.
-- [ ] Add outline view based on heading hierarchy.
+- [x] Add outline view based on heading hierarchy. (Implemented: OutlineEntry struct, getOutline() extracts headings with text/style/level/lineNumber, goToOutlineEntry() navigation, 22 test assertions in test_outline.cpp)
 - [x] Add line numbering for editing/review. (Implemented: showLineNumbers in LayoutComponent, line number gutter rendering in renderTextBuffer, View menu toggle, gray right-aligned numbers)
 - [ ] Add watermark support (text or image).
 

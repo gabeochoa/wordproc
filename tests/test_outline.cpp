@@ -135,11 +135,11 @@ TEST_CASE("Outline navigation", "[text_buffer][outline]") {
     }
     
     SECTION("goToOutlineEntry clears selection") {
-        // Create a selection by using shift movement
+        // Create a selection using setSelectionAnchor and updateSelectionToCaret
         buffer.setCaret({0, 0});
-        buffer.startSelection();
+        buffer.setSelectionAnchor({0, 0});
         buffer.setCaret({3, 5});
-        buffer.updateSelection();
+        buffer.updateSelectionToCaret();
         REQUIRE(buffer.hasSelection());
         
         buffer.goToOutlineEntry(4);
