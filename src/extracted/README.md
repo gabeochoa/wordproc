@@ -44,6 +44,17 @@ Complete E2E testing framework with:
 
 **Gap doc**: `AfterhoursGaps/12_e2e_testing_framework.md`
 
+### `icon_registry.h`
+Centralized icon management with:
+- Map action/item IDs to icon resources
+- Fallback text symbols when icons unavailable
+- Mirrored icon pairs (undo/redo, left/right arrows)
+- Common icon presets for file/edit/view operations
+
+**Use cases**: Inventory systems, skill icons, status effects, toolbar icons
+
+**Gap doc**: `AfterhoursGaps/13_icon_registry.md`
+
 ## How to Create a PR
 
 1. Copy the relevant `.h` file to `afterhours/src/plugins/`
