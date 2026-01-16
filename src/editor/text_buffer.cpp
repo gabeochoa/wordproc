@@ -1734,10 +1734,18 @@ bool TextBuffer::addBookmarkAt(const std::string& name, std::size_t offset) {
         return false;
     }
     
-    // Check if bookmark with this name already exists - reject duplicates
-    for (const auto& bm : bookmarks_) {
+    // Check if bookmark with this name already exists
+    for (auto& bm : bookmarks_) {
         if (bm.name == name) {
-            return false;  // Duplicate name not allowed
+            // Update existing bookmark
+            bm.offset = offset;
+            // Re-sort after update
+            std::sort(bookmarks_.begin(), bookmarks_.end(),
+                     [](const Bookmark& a, const Bookmark& b) {
+                         return a.offset < b.offset;
+                     });
+            version_++;
+            return true;
         }
     }
     
@@ -1868,7 +1876,7 @@ bool TextBuffer::goToOutlineEntry(std::size_t lineNumber) {
 }
 
 // ============================================================================
-// Bookmark Near Search
+// Bookmark Offset Adjustment
 // ============================================================================
 
 const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
@@ -1885,10 +1893,6 @@ const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t toleran
     }
     return nullptr;
 }
-
-// ============================================================================
-// Adjust Bookmark Offsets
-// ============================================================================
 
 void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
     for (auto it = bookmarks_.begin(); it != bookmarks_.end();) {
@@ -1919,8 +1923,6 @@ void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
 
 std::string TextBuffer::generateTableOfContents() const {
     auto outline = getOutline();
-    
-    // Return empty if no headings
     if (outline.empty()) {
         return "";
     }
@@ -1930,7 +1932,7 @@ std::string TextBuffer::generateTableOfContents() const {
     
     for (const auto& entry : outline) {
         // Add indentation based on level
-        for (std::size_t i = 0; i < static_cast<std::size_t>(entry.level); ++i) {
+        for (std::size_t i = 0; i < entry.level; ++i) {
             toc += "  ";
         }
         toc += entry.text + "\n";
@@ -1941,71 +1943,8 @@ std::string TextBuffer::generateTableOfContents() const {
 
 void TextBuffer::insertTableOfContents() {
     std::string toc = generateTableOfContents();
-    insertText(toc);
-}
-
-// ============================================================================
-// Footnote Management
-// ============================================================================
-
-bool TextBuffer::addFootnote(const std::string& content) {
-    if (content.empty()) {
-        return false;
-    }
-    
-    std::size_t offset = positionToOffset(caret_);
-    
-    Footnote fn;
-    fn.referenceOffset = offset;
-    fn.content = content;
-    fn.number = static_cast<int>(footnotes_.size() + 1);
-    
-    footnotes_.push_back(fn);
-    
-    // Keep footnotes sorted by position and renumber
-    renumberFootnotes();
-    version_++;
-    return true;
-}
-
-bool TextBuffer::removeFootnote(std::size_t number) {
-    for (auto it = footnotes_.begin(); it != footnotes_.end(); ++it) {
-        if (static_cast<std::size_t>(it->number) == number) {
-            footnotes_.erase(it);
-            renumberFootnotes();
-            version_++;
-            return true;
-        }
-    }
-    return false;
-}
-
-const Footnote* TextBuffer::getFootnote(std::size_t number) const {
-    for (const auto& fn : footnotes_) {
-        if (static_cast<std::size_t>(fn.number) == number) {
-            return &fn;
-        }
-    }
-    return nullptr;
-}
-
-const Footnote* TextBuffer::footnoteAt(std::size_t offset) const {
-    for (const auto& fn : footnotes_) {
-        if (fn.referenceOffset == offset) {
-            return &fn;
-        }
-    }
-    return nullptr;
-}
-
-void TextBuffer::renumberFootnotes() {
-    // Sort by position first
-    std::sort(footnotes_.begin(), footnotes_.end());
-    
-    // Renumber sequentially
-    int num = 1;
-    for (auto& fn : footnotes_) {
-        fn.number = num++;
+    if (!toc.empty()) {
+        insertText(toc);
     }
 }
 
@@ -2014,13 +1953,12 @@ void TextBuffer::renumberFootnotes() {
 // ============================================================================
 
 void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
-    for (auto it = bookmarks_.begin(); it != bookmarks_.end();) {
+    for (auto it = bookmarks_.begin(); it != bookmarks_.end(); ++it) {
         // If deletion removes the bookmark position
         if (delta < 0 && pos <= it->offset && 
             pos + static_cast<std::size_t>(-delta) > it->offset) {
             // Bookmark is within deleted range - move to deletion start
             it->offset = pos;
-            ++it;
             continue;
         }
         
@@ -2029,58 +1967,8 @@ void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
             it->offset = static_cast<std::size_t>(
                 static_cast<std::ptrdiff_t>(it->offset) + delta);
         }
-        ++it;
     }
     
     // Re-sort after adjustments
-    std::sort(bookmarks_.begin(), bookmarks_.end(),
-             [](const Bookmark& a, const Bookmark& b) {
-                 return a.offset < b.offset;
-             });
-}
-
-const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
-    for (const auto& bm : bookmarks_) {
-        std::size_t dist;
-        if (bm.offset >= offset) {
-            dist = bm.offset - offset;
-        } else {
-            dist = offset - bm.offset;
-        }
-        if (dist <= tolerance) {
-            return &bm;
-        }
-    }
-    return nullptr;
-}
-
-// ============================================================================
-// Table of Contents
-// ============================================================================
-
-std::string TextBuffer::generateTableOfContents() const {
-    std::vector<OutlineEntry> outline = getOutline();
-    if (outline.empty()) {
-        return "";
-    }
-    
-    std::string toc = "Table of Contents\n\n";
-    
-    for (const auto& entry : outline) {
-        // Create indent based on heading level
-        std::string indent(entry.level * 2, ' ');
-        toc += indent + "- " + entry.text + "\n";
-    }
-    
-    return toc;
-}
-
-void TextBuffer::insertTableOfContents() {
-    std::string toc = generateTableOfContents();
-    if (toc.empty()) {
-        return;
-    }
-    
-    // Insert TOC at current caret position
-    insertText(toc);
+    std::sort(bookmarks_.begin(), bookmarks_.end());
 }

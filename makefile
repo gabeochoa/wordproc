@@ -236,6 +236,8 @@ TEST_SRC += src/editor/text_buffer.cpp
 TEST_SRC += src/editor/text_layout.cpp
 TEST_SRC += src/editor/document_io.cpp
 TEST_SRC += src/editor/table.cpp
+TEST_SRC += src/editor/image.cpp
+TEST_SRC += src/editor/drawing.cpp
 
 # Test object files
 TEST_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/test/%.o,$(notdir $(TEST_SRC)))
