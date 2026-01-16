@@ -12,7 +12,8 @@ struct Color {
     unsigned char a;
 
     constexpr Color() : r(0), g(0), b(0), a(255) {}
-    constexpr Color(unsigned char r_, unsigned char g_, unsigned char b_, unsigned char a_ = 255)
+    constexpr Color(unsigned char r_, unsigned char g_, unsigned char b_,
+                    unsigned char a_ = 255)
         : r(r_), g(g_), b(b_), a(a_) {}
 };
 
@@ -35,13 +36,14 @@ struct Rect {
     float height;
 
     constexpr Rect() : x(0), y(0), width(0), height(0) {}
-    constexpr Rect(float x_, float y_, float w_, float h_) : x(x_), y(y_), width(w_), height(h_) {}
+    constexpr Rect(float x_, float y_, float w_, float h_)
+        : x(x_), y(y_), width(w_), height(h_) {}
 };
 
 // Abstract renderer interface
 // Allows swapping raylib with other renderers (SDL, OpenGL, Vulkan, etc.)
 class IRenderer {
-public:
+   public:
     virtual ~IRenderer() = default;
 
     // Frame management
@@ -51,15 +53,20 @@ public:
 
     // Rectangle drawing
     virtual void drawRect(const Rect& rect, const Color& color) = 0;
-    virtual void drawRectLines(const Rect& rect, float thickness, const Color& color) = 0;
-    virtual void drawRectangle(int x, int y, int width, int height, const Color& color) = 0;
+    virtual void drawRectLines(const Rect& rect, float thickness,
+                               const Color& color) = 0;
+    virtual void drawRectangle(int x, int y, int width, int height,
+                               const Color& color) = 0;
 
     // Line drawing
-    virtual void drawLine(int x1, int y1, int x2, int y2, const Color& color) = 0;
+    virtual void drawLine(int x1, int y1, int x2, int y2,
+                          const Color& color) = 0;
 
     // Text drawing
-    virtual void drawText(const std::string& text, int x, int y, int fontSize, const Color& color) = 0;
-    virtual void drawText(const char* text, int x, int y, int fontSize, const Color& color) = 0;
+    virtual void drawText(const std::string& text, int x, int y, int fontSize,
+                          const Color& color) = 0;
+    virtual void drawText(const char* text, int x, int y, int fontSize,
+                          const Color& color) = 0;
 
     // Text measurement
     virtual int measureText(const std::string& text, int fontSize) = 0;

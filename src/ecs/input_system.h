@@ -1,292 +1,299 @@
 #pragma once
 
-#include "components.h"
+#include <filesystem>
+
+#include "../../vendor/afterhours/src/core/system.h"
 #include "../editor/document_io.h"
 #include "../rl.h"
-#include "../../vendor/afterhours/src/core/system.h"
-
-#include <filesystem>
+#include "components.h"
 
 namespace ecs {
 
 // System for handling text input (typing characters)
-struct TextInputSystem : public afterhours::System<DocumentComponent, CaretComponent> {
-  void for_each_with(afterhours::Entity& entity, 
-                     DocumentComponent& doc, 
-                     CaretComponent& caret, 
-                     const float) override {
-    int codepoint = raylib::GetCharPressed();
-    while (codepoint > 0) {
-      if (codepoint >= 32) {
-        doc.buffer.insertChar(static_cast<char>(codepoint));
-        doc.isDirty = true;
-        caret.resetBlink();
-      }
-      codepoint = raylib::GetCharPressed();
-    }
+struct TextInputSystem
+    : public afterhours::System<DocumentComponent, CaretComponent> {
+    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+                       CaretComponent& caret, const float) override {
+        int codepoint = raylib::GetCharPressed();
+        while (codepoint > 0) {
+            if (codepoint >= 32) {
+                doc.buffer.insertChar(static_cast<char>(codepoint));
+                doc.isDirty = true;
+                caret.resetBlink();
+            }
+            codepoint = raylib::GetCharPressed();
+        }
 
-    if (raylib::IsKeyPressed(raylib::KEY_ENTER) ||
-        raylib::IsKeyPressed(raylib::KEY_KP_ENTER)) {
-      doc.buffer.insertChar('\n');
-      doc.isDirty = true;
+        if (raylib::IsKeyPressed(raylib::KEY_ENTER) ||
+            raylib::IsKeyPressed(raylib::KEY_KP_ENTER)) {
+            doc.buffer.insertChar('\n');
+            doc.isDirty = true;
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_BACKSPACE)) {
+            doc.buffer.backspace();
+            doc.isDirty = true;
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_DELETE)) {
+            doc.buffer.del();
+            doc.isDirty = true;
+        }
     }
-    if (raylib::IsKeyPressed(raylib::KEY_BACKSPACE)) {
-      doc.buffer.backspace();
-      doc.isDirty = true;
-    }
-    if (raylib::IsKeyPressed(raylib::KEY_DELETE)) {
-      doc.buffer.del();
-      doc.isDirty = true;
-    }
-  }
 };
 
 // System for handling keyboard shortcuts
-struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, CaretComponent, StatusComponent> {
-  void for_each_with(afterhours::Entity& entity,
-                     DocumentComponent& doc,
-                     CaretComponent& caret,
-                     StatusComponent& status,
-                     const float) override {
-    bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
-                     raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
+struct KeyboardShortcutSystem
+    : public afterhours::System<DocumentComponent, CaretComponent,
+                                StatusComponent> {
+    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+                       CaretComponent& caret, StatusComponent& status,
+                       const float) override {
+        bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
+                         raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
 
-    // Save: Ctrl+S
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_S)) {
-      std::string savePath = doc.filePath.empty() ? doc.defaultPath : doc.filePath;
-      auto result = saveTextFileEx(doc.buffer, savePath);
-      if (result.success) {
-        doc.isDirty = false;
-        doc.filePath = savePath;
-        status.set("Saved: " + std::filesystem::path(savePath).filename().string());
-        status.expiresAt = raylib::GetTime() + 3.0;
-      } else {
-        status.set("Save failed: " + result.error, true);
-        status.expiresAt = raylib::GetTime() + 3.0;
-      }
-    }
-
-    // Open: Ctrl+O
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_O)) {
-      auto result = loadTextFileEx(doc.buffer, doc.defaultPath);
-      if (result.success) {
-        doc.filePath = doc.defaultPath;
-        doc.isDirty = false;
-        status.set("Opened: " + std::filesystem::path(doc.defaultPath).filename().string());
-        status.expiresAt = raylib::GetTime() + 3.0;
-      } else {
-        status.set("Open failed: " + result.error, true);
-        status.expiresAt = raylib::GetTime() + 3.0;
-      }
-    }
-
-    // Bold: Ctrl+B
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_B)) {
-      TextStyle style = doc.buffer.textStyle();
-      style.bold = !style.bold;
-      doc.buffer.setTextStyle(style);
-    }
-
-    // Italic: Ctrl+I
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_I)) {
-      TextStyle style = doc.buffer.textStyle();
-      style.italic = !style.italic;
-      doc.buffer.setTextStyle(style);
-    }
-
-    // Font selection: Ctrl+1/2
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ONE)) {
-      TextStyle style = doc.buffer.textStyle();
-      style.font = "Gaegu-Bold";
-      doc.buffer.setTextStyle(style);
-    }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_TWO)) {
-      TextStyle style = doc.buffer.textStyle();
-      style.font = "EBGaramond-Regular";
-      doc.buffer.setTextStyle(style);
-    }
-
-    // Font size: Ctrl+Plus/Minus
-    if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_EQUAL) ||
-                      raylib::IsKeyPressed(raylib::KEY_KP_ADD))) {
-      TextStyle style = doc.buffer.textStyle();
-      style.fontSize = std::min(72, style.fontSize + 2);
-      doc.buffer.setTextStyle(style);
-    }
-    if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_MINUS) ||
-                      raylib::IsKeyPressed(raylib::KEY_KP_SUBTRACT))) {
-      TextStyle style = doc.buffer.textStyle();
-      style.fontSize = std::max(8, style.fontSize - 2);
-      doc.buffer.setTextStyle(style);
-    }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ZERO)) {
-      TextStyle style = doc.buffer.textStyle();
-      style.fontSize = 16;
-      doc.buffer.setTextStyle(style);
-    }
-
-    // Clipboard: Ctrl+C/X/V/A
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_C)) {
-      if (doc.buffer.hasSelection()) {
-        std::string selected = doc.buffer.getSelectedText();
-        if (!selected.empty()) {
-          raylib::SetClipboardText(selected.c_str());
+        // Save: Ctrl+S
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_S)) {
+            std::string savePath =
+                doc.filePath.empty() ? doc.defaultPath : doc.filePath;
+            auto result = saveTextFileEx(doc.buffer, savePath);
+            if (result.success) {
+                doc.isDirty = false;
+                doc.filePath = savePath;
+                status.set("Saved: " +
+                           std::filesystem::path(savePath).filename().string());
+                status.expiresAt = raylib::GetTime() + 3.0;
+            } else {
+                status.set("Save failed: " + result.error, true);
+                status.expiresAt = raylib::GetTime() + 3.0;
+            }
         }
-      }
-    }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_X)) {
-      if (doc.buffer.hasSelection()) {
-        std::string selected = doc.buffer.getSelectedText();
-        if (!selected.empty()) {
-          raylib::SetClipboardText(selected.c_str());
-          doc.buffer.deleteSelection();
-          doc.isDirty = true;
-        }
-      }
-    }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_V)) {
-      const char* clipText = raylib::GetClipboardText();
-      if (clipText && clipText[0] != '\0') {
-        doc.buffer.insertText(clipText);
-        doc.isDirty = true;
-      }
-    }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_A)) {
-      doc.buffer.selectAll();
-    }
 
-    // Undo/Redo: Ctrl+Z/Y
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Z)) {
-      if (doc.buffer.canUndo()) {
-        doc.buffer.undo();
-        doc.isDirty = true;
-        caret.resetBlink();
-      }
+        // Open: Ctrl+O
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_O)) {
+            auto result = loadTextFileEx(doc.buffer, doc.defaultPath);
+            if (result.success) {
+                doc.filePath = doc.defaultPath;
+                doc.isDirty = false;
+                status.set(
+                    "Opened: " +
+                    std::filesystem::path(doc.defaultPath).filename().string());
+                status.expiresAt = raylib::GetTime() + 3.0;
+            } else {
+                status.set("Open failed: " + result.error, true);
+                status.expiresAt = raylib::GetTime() + 3.0;
+            }
+        }
+
+        // Bold: Ctrl+B
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_B)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.bold = !style.bold;
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Italic: Ctrl+I
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_I)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.italic = !style.italic;
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Font selection: Ctrl+1/2
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ONE)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.font = "Gaegu-Bold";
+            doc.buffer.setTextStyle(style);
+        }
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_TWO)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.font = "EBGaramond-Regular";
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Font size: Ctrl+Plus/Minus
+        if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_EQUAL) ||
+                          raylib::IsKeyPressed(raylib::KEY_KP_ADD))) {
+            TextStyle style = doc.buffer.textStyle();
+            style.fontSize = std::min(72, style.fontSize + 2);
+            doc.buffer.setTextStyle(style);
+        }
+        if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_MINUS) ||
+                          raylib::IsKeyPressed(raylib::KEY_KP_SUBTRACT))) {
+            TextStyle style = doc.buffer.textStyle();
+            style.fontSize = std::max(8, style.fontSize - 2);
+            doc.buffer.setTextStyle(style);
+        }
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ZERO)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.fontSize = 16;
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Clipboard: Ctrl+C/X/V/A
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_C)) {
+            if (doc.buffer.hasSelection()) {
+                std::string selected = doc.buffer.getSelectedText();
+                if (!selected.empty()) {
+                    raylib::SetClipboardText(selected.c_str());
+                }
+            }
+        }
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_X)) {
+            if (doc.buffer.hasSelection()) {
+                std::string selected = doc.buffer.getSelectedText();
+                if (!selected.empty()) {
+                    raylib::SetClipboardText(selected.c_str());
+                    doc.buffer.deleteSelection();
+                    doc.isDirty = true;
+                }
+            }
+        }
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_V)) {
+            const char* clipText = raylib::GetClipboardText();
+            if (clipText && clipText[0] != '\0') {
+                doc.buffer.insertText(clipText);
+                doc.isDirty = true;
+            }
+        }
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_A)) {
+            doc.buffer.selectAll();
+        }
+
+        // Undo/Redo: Ctrl+Z/Y
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Z)) {
+            if (doc.buffer.canUndo()) {
+                doc.buffer.undo();
+                doc.isDirty = true;
+                caret.resetBlink();
+            }
+        }
+        if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Y)) {
+            if (doc.buffer.canRedo()) {
+                doc.buffer.redo();
+                doc.isDirty = true;
+                caret.resetBlink();
+            }
+        }
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Y)) {
-      if (doc.buffer.canRedo()) {
-        doc.buffer.redo();
-        doc.isDirty = true;
-        caret.resetBlink();
-      }
-    }
-  }
 };
 
 // System for handling navigation keys
-struct NavigationSystem : public afterhours::System<DocumentComponent, CaretComponent, ScrollComponent> {
-  void for_each_with(afterhours::Entity& entity,
-                     DocumentComponent& doc,
-                     CaretComponent& caret,
-                     ScrollComponent& scroll,
-                     const float) override {
-    bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
-                     raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
-    bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
-                      raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
+struct NavigationSystem
+    : public afterhours::System<DocumentComponent, CaretComponent,
+                                ScrollComponent> {
+    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+                       CaretComponent& caret, ScrollComponent& scroll,
+                       const float) override {
+        bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
+                         raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
+        bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
+                          raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
 
-    auto navigateWithSelection = [&](auto moveFunc) {
-      CaretPosition before = doc.buffer.caret();
-      if (shift_down && !doc.buffer.hasSelection()) {
-        doc.buffer.setSelectionAnchor(before);
-      }
-      if (!shift_down) {
-        doc.buffer.clearSelection();
-      }
-      moveFunc();
-      if (shift_down) {
-        doc.buffer.updateSelectionToCaret();
-      }
-      caret.resetBlink();
-    };
+        auto navigateWithSelection = [&](auto moveFunc) {
+            CaretPosition before = doc.buffer.caret();
+            if (shift_down && !doc.buffer.hasSelection()) {
+                doc.buffer.setSelectionAnchor(before);
+            }
+            if (!shift_down) {
+                doc.buffer.clearSelection();
+            }
+            moveFunc();
+            if (shift_down) {
+                doc.buffer.updateSelectionToCaret();
+            }
+            caret.resetBlink();
+        };
 
-    if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveWordLeft(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveLeft(); });
-      }
-    }
-    if (raylib::IsKeyPressed(raylib::KEY_RIGHT)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveWordRight(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveRight(); });
-      }
-    }
-    if (raylib::IsKeyPressed(raylib::KEY_UP)) {
-      navigateWithSelection([&]() { doc.buffer.moveUp(); });
-    }
-    if (raylib::IsKeyPressed(raylib::KEY_DOWN)) {
-      navigateWithSelection([&]() { doc.buffer.moveDown(); });
-    }
+        if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
+            if (ctrl_down) {
+                navigateWithSelection([&]() { doc.buffer.moveWordLeft(); });
+            } else {
+                navigateWithSelection([&]() { doc.buffer.moveLeft(); });
+            }
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_RIGHT)) {
+            if (ctrl_down) {
+                navigateWithSelection([&]() { doc.buffer.moveWordRight(); });
+            } else {
+                navigateWithSelection([&]() { doc.buffer.moveRight(); });
+            }
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_UP)) {
+            navigateWithSelection([&]() { doc.buffer.moveUp(); });
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_DOWN)) {
+            navigateWithSelection([&]() { doc.buffer.moveDown(); });
+        }
 
-    // Home/End
-    if (raylib::IsKeyPressed(raylib::KEY_HOME)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveToDocumentStart(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveToLineStart(); });
-      }
-    }
-    if (raylib::IsKeyPressed(raylib::KEY_END)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveToDocumentEnd(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
-      }
-    }
+        // Home/End
+        if (raylib::IsKeyPressed(raylib::KEY_HOME)) {
+            if (ctrl_down) {
+                navigateWithSelection(
+                    [&]() { doc.buffer.moveToDocumentStart(); });
+            } else {
+                navigateWithSelection([&]() { doc.buffer.moveToLineStart(); });
+            }
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_END)) {
+            if (ctrl_down) {
+                navigateWithSelection(
+                    [&]() { doc.buffer.moveToDocumentEnd(); });
+            } else {
+                navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
+            }
+        }
 
-    // Page Up/Down
-    constexpr std::size_t LINES_PER_PAGE = 20;
-    if (raylib::IsKeyPressed(raylib::KEY_PAGE_UP)) {
-      navigateWithSelection([&]() { doc.buffer.movePageUp(LINES_PER_PAGE); });
-    }
-    if (raylib::IsKeyPressed(raylib::KEY_PAGE_DOWN)) {
-      navigateWithSelection([&]() { doc.buffer.movePageDown(LINES_PER_PAGE); });
-    }
+        // Page Up/Down
+        constexpr std::size_t LINES_PER_PAGE = 20;
+        if (raylib::IsKeyPressed(raylib::KEY_PAGE_UP)) {
+            navigateWithSelection(
+                [&]() { doc.buffer.movePageUp(LINES_PER_PAGE); });
+        }
+        if (raylib::IsKeyPressed(raylib::KEY_PAGE_DOWN)) {
+            navigateWithSelection(
+                [&]() { doc.buffer.movePageDown(LINES_PER_PAGE); });
+        }
 
-    // Mouse wheel scrolling
-    float wheelMove = raylib::GetMouseWheelMove();
-    if (wheelMove != 0.0f) {
-      int scrollLines = static_cast<int>(-wheelMove * 3);
-      scroll.offset += scrollLines;
-    }
+        // Mouse wheel scrolling
+        float wheelMove = raylib::GetMouseWheelMove();
+        if (wheelMove != 0.0f) {
+            int scrollLines = static_cast<int>(-wheelMove * 3);
+            scroll.offset += scrollLines;
+        }
 
-    // Auto-scroll to keep caret visible
-    CaretPosition caretPos = doc.buffer.caret();
-    scroll.scrollToRow(static_cast<int>(caretPos.row));
-    scroll.clamp(static_cast<int>(doc.buffer.lineCount()));
-  }
+        // Auto-scroll to keep caret visible
+        CaretPosition caretPos = doc.buffer.caret();
+        scroll.scrollToRow(static_cast<int>(caretPos.row));
+        scroll.clamp(static_cast<int>(doc.buffer.lineCount()));
+    }
 };
 
 // System for updating caret blink
 struct CaretBlinkSystem : public afterhours::System<CaretComponent> {
-  void for_each_with(afterhours::Entity& entity,
-                     CaretComponent& caret,
-                     const float dt) override {
-    caret.update(dt);
-  }
+    void for_each_with(afterhours::Entity& entity, CaretComponent& caret,
+                       const float dt) override {
+        caret.update(dt);
+    }
 };
 
 // System for updating layout calculations
-struct LayoutUpdateSystem : public afterhours::System<LayoutComponent, DocumentComponent, ScrollComponent> {
-  void for_each_with(afterhours::Entity& entity,
-                     LayoutComponent& layout,
-                     DocumentComponent& doc,
-                     ScrollComponent& scroll,
-                     const float) override {
-    int w = raylib::GetScreenWidth();
-    int h = raylib::GetScreenHeight();
-    layout.updateLayout(w, h);
-    
-    // Calculate visible lines
-    TextStyle style = doc.buffer.textStyle();
-    int lineHeight = style.fontSize + 4;
-    int visibleLines = static_cast<int>((layout.textArea.height - 2 * layout.textPadding) / lineHeight);
-    if (visibleLines < 1) visibleLines = 1;
-    scroll.visibleLines = visibleLines;
-  }
+struct LayoutUpdateSystem
+    : public afterhours::System<LayoutComponent, DocumentComponent,
+                                ScrollComponent> {
+    void for_each_with(afterhours::Entity& entity, LayoutComponent& layout,
+                       DocumentComponent& doc, ScrollComponent& scroll,
+                       const float) override {
+        int w = raylib::GetScreenWidth();
+        int h = raylib::GetScreenHeight();
+        layout.updateLayout(w, h);
+
+        // Calculate visible lines
+        TextStyle style = doc.buffer.textStyle();
+        int lineHeight = style.fontSize + 4;
+        int visibleLines = static_cast<int>(
+            (layout.textArea.height - 2 * layout.textPadding) / lineHeight);
+        if (visibleLines < 1) visibleLines = 1;
+        scroll.visibleLines = visibleLines;
+    }
 };
 
-} // namespace ecs
+}  // namespace ecs

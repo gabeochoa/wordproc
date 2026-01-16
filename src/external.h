@@ -39,45 +39,45 @@ namespace raylib {
 #endif
 
 inline bool IsMouseButtonPressed_Real(int button) {
-  return IsMouseButtonPressed(button);
+    return IsMouseButtonPressed(button);
 }
 inline bool IsMouseButtonDown_Real(int button) {
-  return IsMouseButtonDown(button);
+    return IsMouseButtonDown(button);
 }
 inline bool IsMouseButtonReleased_Real(int button) {
-  return IsMouseButtonReleased(button);
+    return IsMouseButtonReleased(button);
 }
 inline bool IsMouseButtonUp_Real(int button) { return IsMouseButtonUp(button); }
 inline int GetCharPressed_Real() { return GetCharPressed(); }
 inline bool IsKeyPressed_Real(int key) { return IsKeyPressed(key); }
 inline Vector2 GetMousePosition_Real() { return GetMousePosition(); }
 
-} // namespace raylib
+}  // namespace raylib
 
 #include "testing/test_input_fwd.h"
 
 namespace raylib {
 inline bool IsMouseButtonPressed_Test(int button) {
-  return test_input::is_mouse_button_pressed(button);
+    return test_input::is_mouse_button_pressed(button);
 }
 inline bool IsMouseButtonDown_Test(int button) {
-  return test_input::is_mouse_button_down(button);
+    return test_input::is_mouse_button_down(button);
 }
 inline bool IsMouseButtonReleased_Test(int button) {
-  return test_input::is_mouse_button_released(button);
+    return test_input::is_mouse_button_released(button);
 }
 inline bool IsMouseButtonUp_Test(int button) {
-  return test_input::is_mouse_button_up(button);
+    return test_input::is_mouse_button_up(button);
 }
 inline int GetCharPressed_Test() { return test_input::get_char_pressed(); }
 inline bool IsKeyPressed_Test(int key) {
-  return test_input::is_key_pressed(key);
+    return test_input::is_key_pressed(key);
 }
 inline Vector2 GetMousePosition_Test() {
-  auto pos = test_input::get_mouse_position_fwd();
-  return Vector2{pos.x, pos.y};
+    auto pos = test_input::get_mouse_position_fwd();
+    return Vector2{pos.x, pos.y};
 }
-} // namespace raylib
+}  // namespace raylib
 
 #define IsMouseButtonPressed IsMouseButtonPressed_Test
 #define IsMouseButtonDown IsMouseButtonDown_Test

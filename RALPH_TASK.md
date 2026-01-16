@@ -40,8 +40,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add more E2E tests that actually run the program via a harness (control/profiling allowed).
 - [ ] Expand automated performance profiling to support "fastest word processor" goal.
 - [x] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
-- [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
-- [ ] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression.
+- [x] Investigate missing menu items; ensure E2E tests catch menu rendering regressions. (Fixed: MenuSystem was wrongly registered as update system, moved to render system after BeginDrawing)
+- [x] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression. (Fixed in commit 16b9644: MenuSystem now runs during render phase)
 - [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
 - [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
