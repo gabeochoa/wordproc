@@ -378,6 +378,10 @@ class TextBuffer {
     };
     std::vector<OutlineEntry> getOutline() const;  // Extract document outline from headings
     bool goToOutlineEntry(std::size_t lineNumber);  // Navigate to an outline entry
+    
+    // Table of contents generation
+    std::string generateTableOfContents() const;  // Generate TOC text from headings
+    void insertTableOfContents();  // Insert TOC at current caret position
 
     // Performance metrics
     struct PerfStats {

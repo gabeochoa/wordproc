@@ -160,3 +160,59 @@ TEST_CASE("Outline navigation", "[text_buffer][outline]") {
         }
     }
 }
+
+TEST_CASE("Table of contents generation", "[text_buffer][outline][toc]") {
+    TextBuffer buffer;
+    
+    SECTION("empty document generates empty TOC") {
+        std::string toc = buffer.generateTableOfContents();
+        REQUIRE(toc.empty());
+    }
+    
+    SECTION("document without headings generates empty TOC") {
+        buffer.setText("Normal text\nMore normal text");
+        std::string toc = buffer.generateTableOfContents();
+        REQUIRE(toc.empty());
+    }
+    
+    SECTION("generates TOC from headings") {
+        buffer.setText("Title\nIntro\nChapter 1\nSection 1.1\nChapter 2");
+        
+        buffer.setCaret({0, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+        buffer.setCaret({1, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+        buffer.setCaret({2, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        buffer.setCaret({3, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+        buffer.setCaret({4, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        
+        std::string toc = buffer.generateTableOfContents();
+        REQUIRE(!toc.empty());
+        REQUIRE(toc.find("Table of Contents") != std::string::npos);
+        REQUIRE(toc.find("Title") != std::string::npos);
+        REQUIRE(toc.find("Intro") != std::string::npos);
+        REQUIRE(toc.find("Chapter 1") != std::string::npos);
+        REQUIRE(toc.find("Section 1.1") != std::string::npos);
+        REQUIRE(toc.find("Chapter 2") != std::string::npos);
+    }
+    
+    SECTION("insertTableOfContents adds TOC to document") {
+        buffer.setText("Title\nContent\nHeading");
+        
+        buffer.setCaret({0, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+        buffer.setCaret({2, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        
+        // Move to end and insert TOC
+        buffer.setCaret({2, buffer.lines()[2].length()});
+        buffer.insertChar('\n');
+        buffer.insertTableOfContents();
+        
+        std::string text = buffer.getText();
+        REQUIRE(text.find("Table of Contents") != std::string::npos);
+    }
+}

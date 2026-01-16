@@ -1802,6 +1802,21 @@ bool TextBuffer::hasBookmark(const std::string& name) const {
     return getBookmark(name) != nullptr;
 }
 
+const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
+    for (const auto& bm : bookmarks_) {
+        std::size_t dist;
+        if (bm.offset >= offset) {
+            dist = bm.offset - offset;
+        } else {
+            dist = offset - bm.offset;
+        }
+        if (dist <= tolerance) {
+            return &bm;
+        }
+    }
+    return nullptr;
+}
+
 // ============================================================================
 // Outline Extraction
 // ============================================================================
@@ -1873,4 +1888,145 @@ bool TextBuffer::goToOutlineEntry(std::size_t lineNumber) {
     setCaret({lineNumber, 0});
     clearSelection();
     return true;
+}
+
+// ============================================================================
+// Table of Contents Generation
+// ============================================================================
+
+std::string TextBuffer::generateTableOfContents() const {
+    auto outline = getOutline();
+    if (outline.empty()) {
+        return "";
+    }
+    
+    std::string toc;
+    toc += "Table of Contents\n";
+    toc += std::string(18, '-') + "\n\n";
+    
+    for (const auto& entry : outline) {
+        // Add indentation based on level
+        std::string indent(entry.level * 2, ' ');
+        
+        // Format: "  1. Heading Text"
+        toc += indent + "- " + entry.text + "\n";
+    }
+    
+    return toc;
+}
+
+void TextBuffer::insertTableOfContents() {
+    std::string toc = generateTableOfContents();
+    if (toc.empty()) {
+        return;
+    }
+    
+    // Insert TOC at current caret position
+    insertText(toc);
+}
+
+// ============================================================================
+// Bookmark Management
+// ============================================================================
+
+bool TextBuffer::addBookmark(const std::string& name) {
+    if (name.empty()) {
+        return false;
+    }
+    std::size_t offset = positionToOffset(caret_);
+    return addBookmarkAt(name, offset);
+}
+
+bool TextBuffer::addBookmarkAt(const std::string& name, std::size_t offset) {
+    if (name.empty() || offset > chars_.size()) {
+        return false;
+    }
+    
+    // Check if bookmark with this name already exists
+    for (const auto& bm : bookmarks_) {
+        if (bm.name == name) {
+            return false;  // Name already exists
+        }
+    }
+    
+    Bookmark bm;
+    bm.name = name;
+    bm.offset = offset;
+    bookmarks_.push_back(bm);
+    
+    // Keep bookmarks sorted by position
+    std::sort(bookmarks_.begin(), bookmarks_.end());
+    version_++;
+    return true;
+}
+
+bool TextBuffer::removeBookmark(const std::string& name) {
+    for (auto it = bookmarks_.begin(); it != bookmarks_.end(); ++it) {
+        if (it->name == name) {
+            bookmarks_.erase(it);
+            version_++;
+            return true;
+        }
+    }
+    return false;
+}
+
+const Bookmark* TextBuffer::getBookmark(const std::string& name) const {
+    for (const auto& bm : bookmarks_) {
+        if (bm.name == name) {
+            return &bm;
+        }
+    }
+    return nullptr;
+}
+
+bool TextBuffer::goToBookmark(const std::string& name) {
+    const Bookmark* bm = getBookmark(name);
+    if (!bm) {
+        return false;
+    }
+    
+    caret_ = offsetToPosition(bm->offset);
+    clampCaret();
+    clearSelection();
+    return true;
+}
+
+bool TextBuffer::hasBookmark(const std::string& name) const {
+    return getBookmark(name) != nullptr;
+}
+
+const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
+    for (const auto& bm : bookmarks_) {
+        if (bm.offset >= offset && bm.offset <= offset + tolerance) {
+            return &bm;
+        }
+        if (offset >= bm.offset && offset <= bm.offset + tolerance) {
+            return &bm;
+        }
+    }
+    return nullptr;
+}
+
+void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
+    for (auto it = bookmarks_.begin(); it != bookmarks_.end();) {
+        // If deletion removes the bookmark position
+        if (delta < 0 && pos <= it->offset && 
+            pos + static_cast<std::size_t>(-delta) > it->offset) {
+            // Bookmark is within deleted range - move to deletion start
+            it->offset = pos;
+            ++it;
+            continue;
+        }
+        
+        // Adjust offset for insertions/deletions before this bookmark
+        if (pos <= it->offset) {
+            it->offset = static_cast<std::size_t>(
+                static_cast<std::ptrdiff_t>(it->offset) + delta);
+        }
+        ++it;
+    }
+    
+    // Re-sort after adjustments
+    std::sort(bookmarks_.begin(), bookmarks_.end());
 }
