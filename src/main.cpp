@@ -32,8 +32,7 @@ constexpr raylib::Color STATUS_BAR = {192, 192, 192, 255};    // Status bar gray
 } // namespace colors
 
 // Configuration
-constexpr int FONT_SIZE = 16;
-constexpr int LINE_HEIGHT = 20;
+constexpr int FONT_SIZE = 16;  // UI font size (title, menus, status bar)
 constexpr int TITLE_BAR_HEIGHT = 24;
 constexpr int MENU_BAR_HEIGHT = 20;
 constexpr int STATUS_BAR_HEIGHT = 20;
@@ -85,12 +84,16 @@ void drawSunkenBorder(raylib::Rectangle rect) {
 
 // Render text buffer with caret and selection
 void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
-                      bool caretVisible) {
+                      bool caretVisible, int fontSize, int lineHeight) {
   const auto &lines = buffer.lines();
   CaretPosition caret = buffer.caret();
   bool hasSelection = buffer.hasSelection();
   CaretPosition selStart = buffer.selectionStart();
   CaretPosition selEnd = buffer.selectionEnd();
+
+  // Approximate character width (monospace assumption, will be refined later)
+  int charWidth = fontSize / 2;
+  if (charWidth < 4) charWidth = 4;
 
   int y = static_cast<int>(textArea.y) + TEXT_PADDING;
   
@@ -106,25 +109,25 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
         std::size_t endCol = (row == selEnd.row) ? selEnd.column : line.size();
         
         if (startCol < endCol) {
-          int selX = x + static_cast<int>(startCol) * (FONT_SIZE / 2);
-          int selWidth = static_cast<int>(endCol - startCol) * (FONT_SIZE / 2);
-          raylib::DrawRectangle(selX, y, selWidth, LINE_HEIGHT, colors::SELECTION_BG);
+          int selX = x + static_cast<int>(startCol) * charWidth;
+          int selWidth = static_cast<int>(endCol - startCol) * charWidth;
+          raylib::DrawRectangle(selX, y, selWidth, lineHeight, colors::SELECTION_BG);
         }
       }
     }
 
     // Draw text
     if (!line.empty()) {
-      raylib::DrawText(line.c_str(), x, y, FONT_SIZE, colors::TEXT_COLOR);
+      raylib::DrawText(line.c_str(), x, y, fontSize, colors::TEXT_COLOR);
     }
 
     // Draw caret on this line
     if (caretVisible && row == caret.row) {
-      int caretX = x + static_cast<int>(caret.column) * (FONT_SIZE / 2);
-      raylib::DrawRectangle(caretX, y, 2, LINE_HEIGHT, colors::CARET_COLOR);
+      int caretX = x + static_cast<int>(caret.column) * charWidth;
+      raylib::DrawRectangle(caretX, y, 2, lineHeight, colors::CARET_COLOR);
     }
 
-    y += LINE_HEIGHT;
+    y += lineHeight;
     
     // Stop if we're past the visible area
     if (y > static_cast<int>(textArea.y + textArea.height)) {
@@ -257,6 +260,25 @@ int main(int argc, char *argv[]) {
       style.font = "EBGaramond-Regular";
       buffer.setTextStyle(style);
     }
+    // Font size: Ctrl+Plus/Equal to increase, Ctrl+Minus to decrease
+    if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_EQUAL) ||
+                      raylib::IsKeyPressed(raylib::KEY_KP_ADD))) {
+      TextStyle style = buffer.textStyle();
+      style.fontSize = std::min(72, style.fontSize + 2);
+      buffer.setTextStyle(style);
+    }
+    if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_MINUS) ||
+                      raylib::IsKeyPressed(raylib::KEY_KP_SUBTRACT))) {
+      TextStyle style = buffer.textStyle();
+      style.fontSize = std::max(8, style.fontSize - 2);
+      buffer.setTextStyle(style);
+    }
+    // Reset font size: Ctrl+0
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ZERO)) {
+      TextStyle style = buffer.textStyle();
+      style.fontSize = 16;
+      buffer.setTextStyle(style);
+    }
 
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
@@ -379,21 +401,24 @@ int main(int argc, char *argv[]) {
     raylib::DrawRectangleRec(textArea, colors::TEXT_AREA_BG);
     drawSunkenBorder(textArea);
 
-    // Render text buffer
-    renderTextBuffer(buffer, textArea, caretVisible);
+    // Render text buffer with dynamic font size
+    TextStyle style = buffer.textStyle();
+    int fontSize = style.fontSize;
+    int lineHeight = fontSize + 4;  // Add some line spacing
+    renderTextBuffer(buffer, textArea, caretVisible, fontSize, lineHeight);
 
     // Draw status bar
     raylib::DrawRectangleRec(statusBar, colors::STATUS_BAR);
     drawRaisedBorder(statusBar);
     
     CaretPosition caret = buffer.caret();
-    TextStyle style = buffer.textStyle();
     char statusText[128];
     std::snprintf(statusText, sizeof(statusText), 
-                  "Ln %zu, Col %zu | %s%s%s",
+                  "Ln %zu, Col %zu | %s%s| %dpt | %s",
                   caret.row + 1, caret.column + 1,
                   style.bold ? "B " : "",
                   style.italic ? "I " : "",
+                  style.fontSize,
                   style.font.c_str());
     raylib::DrawText(statusText, 4, screenHeight - STATUS_BAR_HEIGHT + 2,
                      FONT_SIZE - 2, colors::TEXT_COLOR);

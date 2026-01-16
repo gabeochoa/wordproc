@@ -25,6 +25,7 @@ bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
       {"bold", style.bold},
       {"italic", style.italic},
       {"font", style.font},
+      {"fontSize", style.fontSize},
   };
 
   ofs << doc.dump(2);
@@ -60,6 +61,9 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path) {
       }
       if (style_json.contains("font")) {
         style.font = style_json.at("font").get<std::string>();
+      }
+      if (style_json.contains("fontSize")) {
+        style.fontSize = style_json.at("fontSize").get<int>();
       }
       buffer.setTextStyle(style);
     }

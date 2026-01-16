@@ -234,3 +234,49 @@ EOF
 [18:12:59] 🟢 TOKENS: 42573 / 80000 (53%) [read:161KB write:0KB assist:1KB shell:0KB]
 [18:13:00] 🟢 SHELL chmod +x /Users/gabeochoa/p/wordproc/tests/run_e2e.sh → exit 0
 [18:13:30] 🟢 TOKENS: 42611 / 80000 (53%) [read:161KB write:0KB assist:2KB shell:0KB]
+[18:13:34] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && git add -A && git status → exit 0
+[18:13:45] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && git commit -m "$(cat <<'EOF'
+ralph: add text rendering, Win95 UI chrome, and E2E test mode
+
+Text Rendering:
+- Add Win95-style color scheme (blue title bar, gray chrome, white text area)
+- Render text buffer with proper line spacing and positioning
+- Draw blinking caret with 0.5s interval
+- Draw selection highlight with blue background
+- Add 3D raised/sunken border helpers for classic Win95 look
+
+Window Layout:
+- Title bar showing filename and dirty state
+- Menu bar with File/Edit/Format/Help placeholders
+- Sunken text editing area with proper padding
+- Status bar showing line/column and style info (bold/italic/font)
+
+Test Mode:
+- Add --test-mode flag for automated testing
+- Add --frame-limit to exit after N frames
+- Add --screenshot-dir for screenshot output location
+- Capture screenshots at startup and exit
+- Measure and log startup time vs 100ms target
+
+Build:
+- Add 'make e2e' target to run E2E tests
+- Update tests/README.md with E2E documentation
+- Add tests/run_e2e.sh script for E2E test execution
+
+Mark completed in RALPH_TASK.md:
+- E2E/screenshot testing tasks
+- Text rendering and caret drawing tasks
+EOF
+)" → exit 0
+[18:13:48] 🟢 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (142 lines, ~13.8KB)
+[18:14:00] 🟢 TOKENS: 46192 / 80000 (57%) [read:175KB write:0KB assist:2KB shell:0KB]
+[18:15:05] 🟢 TOKENS: 46230 / 80000 (57%) [read:175KB write:0KB assist:2KB shell:0KB]
+[18:15:33] 🟡 READ /Users/gabeochoa/p/wordproc/src/main.cpp (418 lines, ~40.8KB)
+[18:15:35] 🟡 TOKENS: 56748 / 80000 (70%) [read:216KB write:0KB assist:2KB shell:0KB]
+[18:15:58] 🔴 READ /Users/gabeochoa/p/wordproc/src/main.cpp (422 lines, ~41.2KB)
+[18:16:07] 🔴 TOKENS: 67298 / 80000 (84%) - approaching limit [read:257KB write:0KB assist:2KB shell:0KB]
+[18:16:10] 🔴 READ /Users/gabeochoa/p/wordproc/src/main.cpp (441 lines, ~43.0KB)
+[18:16:10] 🔴 WARN: Approaching token limit (78323 >= 70000)
+[18:16:32] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make 2>&1 && make test 2>&1 → exit 0
+[18:16:38] 🔴 TOKENS: 78348 / 80000 (97%) - rotation imminent [read:300KB write:0KB assist:2KB shell:0KB]
+[18:16:53] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make 2>&1 | grep -v "^clang" | head -10 → exit 0

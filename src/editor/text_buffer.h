@@ -13,6 +13,7 @@ struct TextStyle {
   bool bold = false;
   bool italic = false;
   std::string font = "Gaegu-Bold";
+  int fontSize = 16;  // Default size in pixels
 };
 
 class TextBuffer {

@@ -43,12 +43,12 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 10. Document format version is always `v0.1` for now.
 
 ## Success Criteria
-1. [ ] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
-2. [ ] App launches and supports typing, caret movement, save, and open.
-3. [ ] Basic formatting (bold/italic) and font selection implemented.
-4. [ ] `style_guide.md` created with Win95/Mac3.1 design, animation, and interaction rules.
-5. [ ] `AfterhoursGaps.md` exists and documents any required library changes with app-side workarounds.
-6. [ ] Required assets/config copied from `wm_afterhours` and integrated (vendor, makefile, .clang-format, .gitignore, .cursor rules, preload/window init, fonts).
+1. [x] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
+2. [x] App launches and supports typing, caret movement, save, and open.
+3. [x] Basic formatting (bold/italic) and font selection implemented.
+4. [x] `style_guide.md` created with Win95/Mac3.1 design, animation, and interaction rules.
+5. [x] `AfterhoursGaps.md` exists and documents any required library changes with app-side workarounds.
+6. [x] Required assets/config copied from `wm_afterhours` and integrated (vendor, makefile, .clang-format, .gitignore, .cursor rules, preload/window init, fonts).
 7. [ ] Core text storage and rendering path uses a data-oriented SoA layout with measurable performance wins.
 8. [ ] `./wordproc file.txt` to fully interactive <= 100ms cold start, measured and tracked.
 
@@ -79,15 +79,15 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Persist formatting metadata (at least bold/italic and font choice).
 
 ### 6) Formatting & Fonts
-- [ ] Bold + italic toggles.
-- [ ] Font selection UI (start with a small set).
-- [ ] Font size adjustments and defaults.
+- [x] Bold + italic toggles.
+- [x] Font selection UI (start with a small set).
+- [x] Font size adjustments and defaults.
 
 ### 7) UI/UX & Styling (Win95 base + Mac OS 3.1 accents)
-- [ ] Implement classic window chrome (title bar, borders, menu strip).
+- [x] Implement classic window chrome (title bar, borders, menu strip).
 - [ ] Buttons, menus, dialogs styled for Win95/Mac3.1 hybrid.
-- [ ] Cursor, selection, and focus states visually clear.
-- [ ] Create `style_guide.md` defining colors, typography, spacing, animations, and interaction states.
+- [x] Cursor, selection, and focus states visually clear.
+- [x] Create `style_guide.md` defining colors, typography, spacing, animations, and interaction states.
 
 ### 8) Testing & Tooling (P0)
 - [x] Choose and set up unit test framework (Catch2 or GTest).
@@ -115,8 +115,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
 - [ ] Add clipboard integration (copy/cut/paste).
 - [ ] Add undo/redo with command history.
-- [ ] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
-- [ ] Add window title + dirty-state indicator on edits.
+- [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
+- [x] Add window title + dirty-state indicator on edits.
 - [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
 - [ ] Add load/save error reporting (surface parse errors and fallback behavior).
 - [ ] Decide on per-range styles vs global style state and update model accordingly.
@@ -126,8 +126,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
 
 ### 11) AfterhoursGaps
-- [ ] Create `AfterhoursGaps.md` and log any needed library changes.
-- [ ] Provide app-side workaround for each gap while avoiding vendor changes.
+- [x] Create `AfterhoursGaps.md` and log any needed library changes.
+- [x] Provide app-side workaround for each gap while avoiding vendor changes.
 - [ ] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
 ---
