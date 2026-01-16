@@ -99,7 +99,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             test_input::registerVisibleText(menuItem.label);
             
             // Each header button is absolute-positioned to avoid parent layout dependency
-            auto headerBtn = button(ctx, mk(entity, 500 + static_cast<int>(menuIdx)),
+            // Note: button result unused - immediate mode UI doesn't need it here
+            (void)button(ctx, mk(entity, 500 + static_cast<int>(menuIdx)),
                 ComponentConfig{}
                     .with_debug_name("menu_header_" + menuItem.label)
                     .with_label(menuItem.label)

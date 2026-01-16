@@ -751,6 +751,7 @@ public:
       case CommandType::MenuSelect: return "menu_select \"" + cmd.arg1 + "\"";
       case CommandType::Comment: return "# comment";
       case CommandType::Unknown: return "(unknown: " + cmd.arg1 + ")";
+      default: return "(unhandled)";
     }
   }
   
@@ -869,6 +870,10 @@ private:
         
       case CommandType::Comment:
         // Comments are ignored
+        break;
+        
+      default:
+        // Unhandled command type
         break;
     }
   }
