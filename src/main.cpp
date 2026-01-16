@@ -264,7 +264,7 @@ int main(int argc, char* argv[]) {
     while (!raylib::WindowShouldClose()) {
         float dt = raylib::GetFrameTime();
         
-        // Reset test input frame state
+        // Reset test input frame state (but keep mouse state from pending simulation)
         test_input::reset_frame();
         
         // Clear visible text registry at start of frame (for E2E tests)
@@ -298,7 +298,7 @@ int main(int argc, char* argv[]) {
         // Run all systems through the SystemManager
         systemManager.run(dt);
         
-        // Execute E2E script if active (AFTER systems run so visible text is registered)
+        // Execute E2E script AFTER systems run (visible text is now registered for validation)
         if (scriptRunner.hasCommands() && !scriptRunner.isFinished()) {
             // Update debug overlay info in TestConfigComponent
             if (scriptRunner.showDebugOverlay()) {

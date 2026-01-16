@@ -108,11 +108,11 @@ struct TestInputSystem
 
         // Override mouse position if simulated
         if (provider->mouse_position.has_value()) {
-            context.mouse_pos = provider->mouse_position.value();
+            context.mouse.pos = provider->mouse_position.value();
         }
 
         // Override mouse button state if simulated
-        context.mouseLeftDown = provider->mouse_left_down;
+        context.mouse.left_down = provider->mouse_left_down;
 
         // Inject pending action
         if (provider->pending_action.has_value()) {

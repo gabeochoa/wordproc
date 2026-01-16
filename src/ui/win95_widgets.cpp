@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstring>
 
+#include "../testing/visible_text_registry.h"
+
 namespace win95 {
 
 void DrawRaisedBorder(raylib::Rectangle rect, int thickness) {
@@ -182,6 +184,9 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
             }
         }
 
+        // Register menu label for E2E testing
+        test_input::registerVisibleText(menu.label);
+        
         // Draw menu header
         if (menu.open || hover) {
             raylib::DrawRectangleRec(menu.bounds, colors::MENU_HIGHLIGHT);
@@ -277,6 +282,9 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
         } else {
             bool hover = raylib::CheckCollisionPointRec(mousePos, itemRect) &&
                          item.enabled;
+            
+            // Register menu item text for E2E testing
+            test_input::registerVisibleText(item.label);
             
             // Reserve 20 pixels for mark column
             const int markColumnWidth = 20;

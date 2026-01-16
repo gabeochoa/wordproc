@@ -579,25 +579,18 @@ struct EditorRenderSystem
         drawTextWithRegistry(title.c_str(), 4, 4, theme::layout::FONT_SIZE,
                              theme::TITLE_TEXT);
 
-        // Draw menu bar background
+        // Draw menu bar background (menus are drawn later after text area)
         raylib::Rectangle menuBarRect = {layout.menuBar.x, layout.menuBar.y,
                                          layout.menuBar.width,
                                          layout.menuBar.height};
         raylib::DrawRectangleRec(menuBarRect, theme::WINDOW_BG);
         util::drawRaisedBorder(menuBarRect);
 
-        // Draw interactive menus (need mutable access for immediate-mode UI)
+        // Get mutable refs for later use
         auto& mutableDoc = const_cast<DocumentComponent&>(doc);
         auto& mutableMenu = const_cast<MenuComponent&>(menu);
         auto& mutableStatus = const_cast<StatusComponent&>(status);
         auto& mutableLayout = const_cast<LayoutComponent&>(layout);
-        
-        int menuResult =
-            win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
-                               theme::layout::MENU_BAR_HEIGHT);
-        if (menuResult >= 0) {
-            handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableStatus, mutableLayout);
-        }
 
         // F1 to show help window
         if (IsKeyPressed(raylib::KEY_F1)) {
@@ -662,6 +655,15 @@ struct EditorRenderSystem
                 statusText.c_str(), 4,
                 layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
                 theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
+        }
+
+        // Draw interactive menus ON TOP of everything except dialogs
+        // (drawn last so dropdowns appear above the text area)
+        int menuResult =
+            win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
+                               theme::layout::MENU_BAR_HEIGHT);
+        if (menuResult >= 0) {
+            handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableStatus, mutableLayout);
         }
 
         // Draw About dialog if active

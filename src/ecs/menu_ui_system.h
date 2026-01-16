@@ -113,28 +113,6 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             
             // Update X position for next header
             headerX += buttonWidth;
-            
-            // Handle header click - toggle menu open state
-            if (headerBtn) {
-                // Close all other menus
-                for (size_t j = 0; j < menu.menus.size(); ++j) {
-                    if (j != menuIdx) {
-                        menu.menus[j].open = false;
-                    }
-                }
-                menuItem.open = !menuItem.open;
-            }
-            
-            // If any menu is open and we hover this header, switch to it
-            bool anyMenuOpen = false;
-            for (const auto& m : menu.menus) {
-                if (m.open) anyMenuOpen = true;
-            }
-            
-            if (anyMenuOpen && !menuItem.open && ctx.is_hot(headerBtn.ent().id)) {
-                for (auto& m : menu.menus) m.open = false;
-                menuItem.open = true;
-            }
         }
         
         // Render dropdown for open menu
@@ -214,7 +192,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     test_input::registerVisibleText(item.label);
                     
                     // Menu item button - absolute positioned with explicit coordinates
-                    auto itemBtn = button(ctx, mk(entity, 2000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
+                    // Create button for Afterhours UI (not for click handling - that's done by win95::DrawDropdownMenu)
+                    button(ctx, mk(entity, 2000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
                         ComponentConfig{}
                             .with_debug_name("item_" + item.label)
                             .with_label(fullLabel)
@@ -228,15 +207,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(11));
                     
                     itemY += 20.0f;
-                    
-                    // Handle item click
-                    if (itemBtn && item.enabled) {
-                        // Store the result for the render system to process
-                        menu.lastClickedResult = static_cast<int>(menuIdx * 100 + itemIdx);
-                        
-                        // Close menu
-                        menuItem.open = false;
-                    }
+                    // Note: Click handling for menu items is done by win95::DrawDropdownMenu
                 }
             }
         }

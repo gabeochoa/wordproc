@@ -17,6 +17,7 @@ struct MouseState {
     bool left_button_held = false;
     bool left_button_pressed_this_frame = false;
     bool left_button_released_this_frame = false;
+    int frames_until_clear_press = 0;  // Counter to keep press active for full frame
     bool simulation_active = false;
 };
 

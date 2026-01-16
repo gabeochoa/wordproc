@@ -92,7 +92,14 @@ int get_char_pressed() {
 void reset_frame() {
     key_consumed_this_frame = false;
     char_consumed_this_frame = false;
-    mouse_state.left_button_pressed_this_frame = false;
+    
+    // Handle press frame counter - keep press active for specified frames
+    if (mouse_state.frames_until_clear_press > 0) {
+        mouse_state.frames_until_clear_press--;
+        // Don't clear pressed state yet
+    } else {
+        mouse_state.left_button_pressed_this_frame = false;
+    }
     mouse_state.left_button_released_this_frame = false;
     input_injector::reset_frame();
 
@@ -118,7 +125,10 @@ void set_mouse_position(vec2 pos) {
 void simulate_mouse_button_press(int button) {
     if (button == raylib::MOUSE_BUTTON_LEFT) {
         mouse_state.left_button_held = true;
+        // Set pressed state and counter to keep it active for 1 frame
+        // so systems see it after the next reset_frame (but only once!)
         mouse_state.left_button_pressed_this_frame = true;
+        mouse_state.frames_until_clear_press = 1;
         mouse_state.simulation_active = true;
 
         // Also update UIContext-integrated TestInputProvider if available
