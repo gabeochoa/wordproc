@@ -4,7 +4,6 @@
 #include "../rl.h"
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
-#include "../util/drawing.h"
 #include "../../vendor/afterhours/src/core/system.h"
 
 #include <filesystem>
@@ -185,7 +184,7 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
       layout.menuBar.width, layout.menuBar.height
     };
     raylib::DrawRectangleRec(menuBarRect, theme::WINDOW_BG);
-    util::drawRaisedBorder(menuBarRect);
+    win95::DrawRaisedBorder(menuBarRect);
 
     // Draw text area background
     raylib::Rectangle textAreaRect = {
@@ -196,13 +195,13 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
     // In paged mode, draw a gray background; in pageless mode, draw white
     if (layout.pageMode == PageMode::Paged) {
       raylib::DrawRectangleRec(textAreaRect, raylib::Color{128, 128, 128, 255});
-      util::drawSunkenBorder(textAreaRect);
+      win95::DrawSunkenBorder(textAreaRect);
       
       // Draw the page with shadow and margins
       drawPageBackground(layout);
     } else {
       raylib::DrawRectangleRec(textAreaRect, theme::TEXT_AREA_BG);
-      util::drawSunkenBorder(textAreaRect);
+      win95::DrawSunkenBorder(textAreaRect);
     }
 
     // Render text buffer using effective text area (respects page margins)
@@ -219,7 +218,7 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
       layout.statusBar.width, layout.statusBar.height
     };
     raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
-    util::drawRaisedBorder(statusBarRect);
+    win95::DrawRaisedBorder(statusBarRect);
     
     double currentTime = raylib::GetTime();
     if (status.hasMessage(currentTime)) {

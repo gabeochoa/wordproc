@@ -4,7 +4,7 @@
 #include "ecs/components.h"
 #include "ecs/input_system.h"
 #include "ecs/render_system.h"
-#include "ecs/test_systems.h"
+#include "ecs/imm_menu_system.h"
 #include "ecs/test_systems.h"
 #include "input/action_map.h"
 #include "preload.h"
@@ -14,7 +14,6 @@
 #include "ui/theme.h"
 #include "ui/ui_context.h"
 #include "ui/win95_widgets.h"
-#include "util/drawing.h"
 #include "util/logging.h"
 
 #include <argh.h>
@@ -141,8 +140,9 @@ int main(int argc, char *argv[]) {
   // Setup SystemManager with all systems
   SystemManager systemManager;
   
-  // Register Afterhours UI systems (must be early in the update order)
-  ui_imm::registerUIUpdateSystems(systemManager);
+  // Note: Afterhours UI systems are set up by Preload::make_singleton()
+  // via ui::add_singleton_components<InputAction>(). The Win95 theme
+  // is applied by ui_imm::initUIContext() above.
   
   // Update systems (run every frame for input/logic)
   systemManager.register_update_system(std::make_unique<ecs::CaretBlinkSystem>());
