@@ -235,6 +235,20 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::ToggleNumberedList)) {
             doc.buffer.toggleNumberedList();
         }
+        
+        // Paragraph spacing (increase/decrease by 6px increments)
+        if (actionMap_.isActionPressed(Action::IncreaseSpaceBefore)) {
+            doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() + 6);
+        }
+        if (actionMap_.isActionPressed(Action::DecreaseSpaceBefore)) {
+            doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() - 6);
+        }
+        if (actionMap_.isActionPressed(Action::IncreaseSpaceAfter)) {
+            doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() + 6);
+        }
+        if (actionMap_.isActionPressed(Action::DecreaseSpaceAfter)) {
+            doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
+        }
 
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {
