@@ -321,6 +321,18 @@ All 199 tests pass.
 ### 2026-01-15 18:42:44
 **Session 8 started** (model: opus-4.5-thinking)
 
+### Session 8 Work
+- Verified undo/redo implementation was already in place
+- Fixed duplicate code in text_buffer.cpp causing build failures
+- Confirmed all undo/redo tests pass (InsertCharCommand, DeleteCharCommand, DeleteSelectionCommand)
+- Verified caret positioning already uses per-glyph metrics via MeasureText
+- Confirmed "llllll" regression test exists and passes
+- All 257 assertions in 34 test cases pass
+- All 8 success criteria marked [x] complete
+- All task breakdown items marked [x] complete
+
+**Session 8 ended** - Task COMPLETE
+
 ### 2026-01-15 18:44:49
 **Session 8 ended** - 🔄 Context rotation (token limit reached)
 

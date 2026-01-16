@@ -640,3 +640,6 @@ All task breakdown items and success criteria verified complete.
 EOF
 )" → exit 0
 [18:54:53] 🔴 SHELL grep -c '^\- \[ \]' RALPH_TASK.md || echo "No unchecked items found" → exit 0
+[18:54:58] 🔴 ✅ Agent signaled COMPLETE
+[18:54:58] 🔴 SESSION END: 162596ms, ~75906 tokens used
+[18:54:58] 🔴 TOKENS: 75906 / 80000 (94%) - rotation imminent [read:291KB write:0KB assist:2KB shell:0KB]

@@ -230,7 +230,14 @@ int main(int argc, char *argv[]) {
   
   // Load file if specified
   if (!loadFile.empty() && std::filesystem::exists(loadFile)) {
-    loadTextFile(buffer, loadFile);
+    auto result = loadTextFileEx(buffer, loadFile);
+    if (result.success) {
+      if (result.usedFallback && !result.error.empty()) {
+        setStatus(result.error, false);  // Show fallback warning
+      }
+    } else {
+      setStatus("Load failed: " + result.error, true);
+    }
   }
 
   // Setup Win95-style menus
@@ -738,17 +745,28 @@ int main(int argc, char *argv[]) {
     raylib::DrawRectangleRec(statusBar, colors::STATUS_BAR);
     drawRaisedBorder(statusBar);
     
-    CaretPosition caret = buffer.caret();
-    char statusText[128];
-    std::snprintf(statusText, sizeof(statusText), 
-                  "Ln %zu, Col %zu | %s%s| %dpt | %s",
-                  caret.row + 1, caret.column + 1,
-                  style.bold ? "B " : "",
-                  style.italic ? "I " : "",
-                  style.fontSize,
-                  style.font.c_str());
-    raylib::DrawText(statusText, 4, screenHeight - STATUS_BAR_HEIGHT + 2,
-                     FONT_SIZE - 2, colors::TEXT_COLOR);
+    // Check if there's an active status message
+    double currentTime = raylib::GetTime();
+    if (!statusMsg.text.empty() && currentTime < statusMsg.expiresAt) {
+      // Display status message
+      raylib::Color msgColor = statusMsg.isError ? 
+        raylib::Color{200, 0, 0, 255} : raylib::Color{0, 100, 0, 255};
+      raylib::DrawText(statusMsg.text.c_str(), 4, screenHeight - STATUS_BAR_HEIGHT + 2,
+                       FONT_SIZE - 2, msgColor);
+    } else {
+      // Display normal status: line/col, formatting, etc.
+      CaretPosition caret = buffer.caret();
+      char statusText[128];
+      std::snprintf(statusText, sizeof(statusText), 
+                    "Ln %zu, Col %zu | %s%s| %dpt | %s",
+                    caret.row + 1, caret.column + 1,
+                    style.bold ? "B " : "",
+                    style.italic ? "I " : "",
+                    style.fontSize,
+                    style.font.c_str());
+      raylib::DrawText(statusText, 4, screenHeight - STATUS_BAR_HEIGHT + 2,
+                       FONT_SIZE - 2, colors::TEXT_COLOR);
+    }
 
     // Draw About dialog if active
     if (showAboutDialog) {
