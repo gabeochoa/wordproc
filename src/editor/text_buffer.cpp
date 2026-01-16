@@ -483,12 +483,7 @@ void TextBuffer::backspace() {
         version_++;  // Content changed - invalidate render cache
 
         line_spans_[caret_.row].length -= 1;
-
-        // Shift subsequent line offsets
-        for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
-            line_spans_[i].offset -= 1;
-        }
-
+        shiftLineOffsetsFrom(caret_.row + 1, -1);
         caret_.column -= 1;
 
         // Record for undo

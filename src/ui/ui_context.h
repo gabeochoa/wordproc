@@ -90,25 +90,42 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     // Initialize theme first
     initWin95Theme();
 
-    // Create resolution provider entity (required by RunAutoLayout)
-    auto& resEntity = EntityHelper::createEntity();
-    auto& resProv =
-        resEntity.addComponent<window_manager::ProvidesCurrentResolution>();
-    resProv.current_resolution = {screenWidth, screenHeight};
-    EntityHelper::registerSingleton<window_manager::ProvidesCurrentResolution>(
-        resEntity);
+    // Check if resolution provider already exists (may be registered by Preload)
+    auto* existingRes = EntityHelper::get_singleton_cmp<window_manager::ProvidesCurrentResolution>();
+    if (existingRes) {
+        // Just update the resolution
+        existingRes->current_resolution = {screenWidth, screenHeight};
+    } else {
+        // Create resolution provider entity (required by RunAutoLayout)
+        auto& resEntity = EntityHelper::createEntity();
+        auto& resProv =
+            resEntity.addComponent<window_manager::ProvidesCurrentResolution>();
+        resProv.current_resolution = {screenWidth, screenHeight};
+        EntityHelper::registerSingleton<window_manager::ProvidesCurrentResolution>(
+            resEntity);
+    }
 
-    // Create UI context entity with the context component
-    auto& ctxEntity = EntityHelper::createEntity();
-    ctxEntity.addComponent<UIContextType>();
-    EntityHelper::registerSingleton<UIContextType>(ctxEntity);
+    // Check if UI context already exists
+    auto* existingCtx = EntityHelper::get_singleton_cmp<UIContextType>();
+    if (!existingCtx) {
+        // Create UI context entity with the context component
+        auto& ctxEntity = EntityHelper::createEntity();
+        ctxEntity.addComponent<UIContextType>();
+        EntityHelper::registerSingleton<UIContextType>(ctxEntity);
+    }
 
-    // Create the root entity for all UI elements
-    auto& rootEntity = EntityHelper::createEntity();
-    rootEntity.addComponent<ui::AutoLayoutRoot>();
-    auto& rootCmp = rootEntity.addComponent<ui::UIComponent>(rootEntity.id);
-    rootCmp.set_desired_width(ui::percent(1.0f))
-        .set_desired_height(ui::percent(1.0f));
+    // Check if UI root already exists
+    auto roots = EntityQuery()
+                     .whereHasComponent<ui::AutoLayoutRoot>()
+                     .gen();
+    if (roots.empty()) {
+        // Create the root entity for all UI elements
+        auto& rootEntity = EntityHelper::createEntity();
+        rootEntity.addComponent<ui::AutoLayoutRoot>();
+        auto& rootCmp = rootEntity.addComponent<ui::UIComponent>(rootEntity.id);
+        rootCmp.set_desired_width(ui::percent(1.0f))
+            .set_desired_height(ui::percent(1.0f));
+    }
 }
 
 // Register all Afterhours UI update systems with the SystemManager
