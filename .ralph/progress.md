@@ -1115,3 +1115,17 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 **All criteria in RALPH_TASK.md are now marked [x] complete!**
 
+
+### 2026-01-15 (Session 11 - Document Settings Separation)
+- Implemented full separation of app settings from document settings:
+  - Created src/editor/document_settings.h with DocumentSettings struct
+  - DocumentSettings combines TextStyle + PageSettings for per-document persistence
+  - Updated document_io.cpp with saveDocumentEx/loadDocumentEx APIs
+  - Updated ECS systems (KeyboardShortcutSystem, MenuSystem) to sync settings
+  - Settings are synced between DocumentComponent.docSettings and LayoutComponent
+- Added 27 new test assertions (387 → 414) for document settings roundtrip
+- Updated RALPH_TASK.md task description with implementation details
+- All 414 tests pass across 41 test cases
+- All tasks in RALPH_TASK.md are now marked [x] complete
+
+**Session 11 ended** - TASK COMPLETE
