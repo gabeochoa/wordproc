@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "../../vendor/afterhours/src/core/system.h"
+#include "../../vendor/afterhours/src/plugins/clipboard.h"
 #include "../editor/document_io.h"
 #include "../input/action_map.h"
 #include "../rl.h"
@@ -266,7 +267,7 @@ struct KeyboardShortcutSystem
             if (doc.buffer.hasSelection()) {
                 std::string selected = doc.buffer.getSelectedText();
                 if (!selected.empty()) {
-                    raylib::SetClipboardText(selected.c_str());
+                    afterhours::clipboard::set_text(selected);
                 }
             }
         }
@@ -275,7 +276,7 @@ struct KeyboardShortcutSystem
             if (doc.buffer.hasSelection()) {
                 std::string selected = doc.buffer.getSelectedText();
                 if (!selected.empty()) {
-                    raylib::SetClipboardText(selected.c_str());
+                    afterhours::clipboard::set_text(selected);
                     doc.buffer.deleteSelection();
                     doc.isDirty = true;
                 }
@@ -283,8 +284,8 @@ struct KeyboardShortcutSystem
         }
         // Paste
         if (actionMap_.isActionPressed(Action::Paste)) {
-            const char* clipText = raylib::GetClipboardText();
-            if (clipText && clipText[0] != '\0') {
+            if (afterhours::clipboard::has_text()) {
+                std::string clipText = afterhours::clipboard::get_text();
                 doc.buffer.insertText(clipText);
                 doc.isDirty = true;
             }
