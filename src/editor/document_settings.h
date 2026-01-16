@@ -99,6 +99,7 @@ inline const char* paragraphStyleName(ParagraphStyle style) {
         case ParagraphStyle::Heading4: return "Heading 4";
         case ParagraphStyle::Heading5: return "Heading 5";
         case ParagraphStyle::Heading6: return "Heading 6";
+        case ParagraphStyle::Count:
         default: return "Normal";
     }
 }
@@ -115,6 +116,7 @@ inline int paragraphStyleFontSize(ParagraphStyle style) {
         case ParagraphStyle::Heading5: return 16;
         case ParagraphStyle::Heading6: return 14;
         case ParagraphStyle::Normal:
+        case ParagraphStyle::Count:
         default: return 16;
     }
 }
@@ -128,6 +130,11 @@ inline bool paragraphStyleIsBold(ParagraphStyle style) {
         case ParagraphStyle::Heading3:
         case ParagraphStyle::Heading4:
             return true;
+        case ParagraphStyle::Normal:
+        case ParagraphStyle::Subtitle:
+        case ParagraphStyle::Heading5:
+        case ParagraphStyle::Heading6:
+        case ParagraphStyle::Count:
         default:
             return false;
     }

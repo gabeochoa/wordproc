@@ -16,7 +16,7 @@ struct TextInputSystem
     : public afterhours::System<DocumentComponent, CaretComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
 
-    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+    void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, const float) override {
         using input::Action;
 
@@ -51,7 +51,7 @@ struct KeyboardShortcutSystem
                                 StatusComponent, LayoutComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
 
-    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+    void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, StatusComponent& status,
                        LayoutComponent& layout, const float) override {
         using input::Action;
@@ -267,7 +267,7 @@ struct NavigationSystem
                                 ScrollComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
 
-    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+    void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, ScrollComponent& scroll,
                        const float) override {
         using input::Action;
@@ -347,7 +347,7 @@ struct NavigationSystem
 
 // System for updating caret blink
 struct CaretBlinkSystem : public afterhours::System<CaretComponent> {
-    void for_each_with(afterhours::Entity& entity, CaretComponent& caret,
+    void for_each_with(afterhours::Entity& /*entity*/, CaretComponent& caret,
                        const float dt) override {
         caret.blinkTimer += static_cast<double>(dt);
         if (caret.blinkTimer >= CaretComponent::BLINK_INTERVAL) {
@@ -361,7 +361,7 @@ struct CaretBlinkSystem : public afterhours::System<CaretComponent> {
 struct LayoutUpdateSystem
     : public afterhours::System<LayoutComponent, DocumentComponent,
                                 ScrollComponent> {
-    void for_each_with(afterhours::Entity& entity, LayoutComponent& layout,
+    void for_each_with(afterhours::Entity& /*entity*/, LayoutComponent& layout,
                        DocumentComponent& doc, ScrollComponent& scroll,
                        const float) override {
         int w = raylib::GetScreenWidth();

@@ -253,7 +253,7 @@ struct EditorRenderSystem
         raylib::EndDrawing();
     }
 
-    void for_each_with(const afterhours::Entity& entity,
+    void for_each_with(const afterhours::Entity& /*entity*/,
                        const DocumentComponent& doc,
                        const CaretComponent& caret,
                        const ScrollComponent& scroll,
@@ -361,7 +361,7 @@ struct EditorRenderSystem
 struct MenuSystem
     : public afterhours::System<DocumentComponent, MenuComponent,
                                 StatusComponent, LayoutComponent> {
-    void for_each_with(afterhours::Entity& entity, DocumentComponent& doc,
+    void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        MenuComponent& menu, StatusComponent& status,
                        LayoutComponent& layout, const float) override {
         // Draw interactive menus

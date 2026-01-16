@@ -11,7 +11,7 @@ namespace ecs {
 
 // System for taking screenshots in test mode
 struct ScreenshotSystem : public afterhours::System<TestConfigComponent> {
-    void for_each_with(afterhours::Entity& entity,
+    void for_each_with(afterhours::Entity& /*entity*/,
                        TestConfigComponent& testConfig, const float) override {
         if (!testConfig.enabled) return;
 

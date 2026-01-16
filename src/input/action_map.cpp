@@ -140,9 +140,9 @@ const char* ActionMap::actionName(Action action) {
         case Action::AlignJustify:
             return "AlignJustify";
         case Action::COUNT:
+        default:
             return "NONE";
     }
-    return "UNKNOWN";
 }
 
 const char* presetName(Preset preset) {
@@ -426,9 +426,9 @@ const char* actionDisplayName(Action action) {
         case Action::AlignJustify:
             return "Justify";
         case Action::COUNT:
+        default:
             return "";
     }
-    return "";
 }
 
 std::string keyName(int keyCode) {

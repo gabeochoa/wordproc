@@ -86,7 +86,7 @@ bool RenderCache::needsRebuild(std::uint64_t buffer_version, int font_size,
 
 void RenderCache::rebuild(const TextBuffer &buffer,
                           std::uint64_t buffer_version, int font_size,
-                          int text_area_x, int text_area_y, int text_area_width,
+                          int /*text_area_x*/, int text_area_y, int text_area_width,
                           int text_area_height, int line_height,
                           int text_padding) {
     rebuild_count_++;
