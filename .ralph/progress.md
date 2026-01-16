@@ -1582,3 +1582,26 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 ### 2026-01-15 23:16:29
 **Session 4 started** (model: opus-4.5-thinking)
+
+
+### 2026-01-15 (Session 18 - Iteration 18)
+- Fixed build environment issues by using OBJ_DIR=/tmp workaround
+- Verified image feature is complete and marked in RALPH_TASK.md
+- Verified drawing feature is complete and marked in RALPH_TASK.md
+- Implemented equation editor and special character insertion:
+  - Created equation.h with DocumentEquation and EquationCollection
+  - Created equation.cpp with full implementation  
+  - Added SpecialCharacter system with 9 categories (Greek, Math, Arrows, etc.)
+  - Added LaTeX-to-Unicode conversion (lpha -> α)
+  - Added sub/superscript text conversion (x^2 -> x²)
+  - Created test_equation.cpp with comprehensive tests
+- Marked equation task [x] complete in RALPH_TASK.md
+- Test status: 95 test cases, 1171 assertions, 92 passed, 3 failed
+  - Failing tests relate to bookmark offset adjustment (pre-existing issue)
+
+**Remaining unchecked tasks: 43 items (mostly UI Design Compliance)**
+**Word Processing Features remaining: 3 items**
+  - Spelling/grammar suggestions
+  - Section breaks
+  - Multi-column layout
+

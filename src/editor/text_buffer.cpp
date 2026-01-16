@@ -355,6 +355,14 @@ CaretPosition TextBuffer::offsetToPosition(std::size_t offset) const {
 }
 
 void TextBuffer::rebuildLineIndex() {
+  // Preserve existing line styles by offset before clearing
+  std::vector<std::pair<std::size_t, ParagraphStyle>> savedStyles;
+  for (const auto& span : line_spans_) {
+    if (span.style != ParagraphStyle::Normal) {
+      savedStyles.push_back({span.offset, span.style});
+    }
+  }
+  
   line_spans_.clear();
   
   std::size_t total = chars_.size();
@@ -369,6 +377,16 @@ void TextBuffer::rebuildLineIndex() {
   
   // Add final line (may be empty)
   line_spans_.push_back({line_start, total - line_start});
+  
+  // Restore styles based on line start offsets
+  for (const auto& [offset, style] : savedStyles) {
+    for (auto& span : line_spans_) {
+      if (span.offset == offset) {
+        span.style = style;
+        break;
+      }
+    }
+  }
 }
 
 void TextBuffer::shiftLineOffsetsFrom(std::size_t startRow, std::ptrdiff_t delta) {
@@ -398,8 +416,34 @@ void TextBuffer::insertChar(char ch) {
     adjustBookmarkOffsets(offset, 1);
 
     if (ch == '\n') {
-        // Split current line
-        rebuildLineIndex();
+        // Split current line - preserve paragraph styles
+        std::size_t splitRow = caret_.row;
+        LineSpan oldSpan = line_spans_[splitRow];
+        
+        // Current line ends at caret position
+        line_spans_[splitRow].length = caret_.column;
+        
+        // New line starts after newline character
+        LineSpan newSpan;
+        newSpan.offset = offset + 1;
+        newSpan.length = (oldSpan.offset + oldSpan.length) - offset;
+        newSpan.style = ParagraphStyle::Normal;  // New line gets Normal style
+        newSpan.alignment = oldSpan.alignment;   // Inherit alignment
+        newSpan.leftIndent = oldSpan.leftIndent; // Inherit indentation
+        newSpan.firstLineIndent = oldSpan.firstLineIndent;
+        newSpan.lineSpacing = oldSpan.lineSpacing;
+        newSpan.listType = oldSpan.listType;     // Inherit list properties
+        newSpan.listLevel = oldSpan.listLevel;
+        if (oldSpan.listType != ListType::None) {
+            newSpan.listNumber = oldSpan.listNumber + 1;
+        }
+        
+        // Insert new line span
+        line_spans_.insert(line_spans_.begin() + splitRow + 1, newSpan);
+        
+        // Shift offsets of subsequent lines
+        shiftLineOffsetsFrom(splitRow + 2, 1);
+        
         caret_.row += 1;
         caret_.column = 0;
     } else {
