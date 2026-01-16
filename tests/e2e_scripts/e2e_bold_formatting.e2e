@@ -1,0 +1,23 @@
+# Test: Bold text formatting (Ctrl+B)
+# Validates that bold formatting can be toggled
+
+# Type some text
+type "Bold Text Test"
+wait 2
+
+# Select all and apply bold
+select_all
+wait 2
+key CTRL+B
+wait 2
+
+# Validate bold is enabled
+validate bold=true
+
+# Toggle bold off
+key CTRL+B
+wait 2
+validate bold=false
+
+screenshot e2e_bold_formatting
+

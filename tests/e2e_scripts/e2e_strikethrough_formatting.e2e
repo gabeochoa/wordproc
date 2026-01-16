@@ -1,0 +1,21 @@
+# Test: Strikethrough formatting (Ctrl+Shift+S)
+# Validates that strikethrough toggle applies strikethrough style to text
+
+# Type some text
+type "Test Strikethrough"
+wait 1
+
+# Select all text
+key ctrl+a
+wait 1
+
+# Apply strikethrough
+key ctrl+shift+s
+wait 1
+
+# Validate strikethrough is applied
+validate style_strikethrough=true
+
+# Take screenshot
+screenshot 05_strikethrough_formatting
+

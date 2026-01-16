@@ -1,0 +1,14 @@
+# Test: Basic typing functionality
+# Validates that text can be typed and is stored correctly
+
+# Type some text
+type "Hello World"
+wait 2
+
+# Validate the document contains the text
+validate text=Hello World
+validate line_count=1
+
+# Take a screenshot
+screenshot e2e_basic_typing
+
