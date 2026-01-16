@@ -433,3 +433,130 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
 
     return result;
 }
+
+DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
+                                      const DocumentSettings &settings,
+                                      const TableList &tables,
+                                      const std::string &path) {
+    DocumentResult result;
+
+    std::filesystem::path output_path(path);
+    if (!output_path.parent_path().empty()) {
+        std::filesystem::create_directories(output_path.parent_path());
+    }
+
+    std::ofstream ofs(output_path);
+    if (!ofs.is_open()) {
+        result.error = "Could not open file for writing: " + path;
+        return result;
+    }
+
+    const TextStyle &style = settings.textStyle;
+    const PageSettings &page = settings.pageSettings;
+
+    nlohmann::json doc;
+    doc["version"] = DocumentSettings::VERSION;
+    doc["text"] = buffer.getText();
+
+    // Style settings
+    doc["style"] = {
+        {"bold", style.bold},
+        {"italic", style.italic},
+        {"underline", style.underline},
+        {"strikethrough", style.strikethrough},
+        {"font", style.font},
+        {"fontSize", style.fontSize},
+        {"textColor", {{"r", style.textColor.r}, {"g", style.textColor.g},
+                       {"b", style.textColor.b}, {"a", style.textColor.a}}},
+        {"highlightColor", {{"r", style.highlightColor.r}, {"g", style.highlightColor.g},
+                            {"b", style.highlightColor.b}, {"a", style.highlightColor.a}}},
+    };
+
+    // Page layout settings
+    doc["pageLayout"] = {
+        {"mode", pageModeToString(page.mode)},
+        {"pageWidth", page.pageWidth},
+        {"pageHeight", page.pageHeight},
+        {"pageMargin", page.pageMargin},
+        {"lineWidthLimit", page.lineWidthLimit},
+    };
+
+    // Font requirements
+    if (!settings.fontRequirements.empty()) {
+        nlohmann::json fonts_array = nlohmann::json::array();
+        for (const auto &req : settings.fontRequirements) {
+            nlohmann::json font_obj;
+            font_obj["fontId"] = req.fontId;
+            nlohmann::json scripts_array = nlohmann::json::array();
+            for (const auto &script : req.scripts) {
+                scripts_array.push_back(scriptRequirementId(script));
+            }
+            font_obj["scripts"] = scripts_array;
+            fonts_array.push_back(font_obj);
+        }
+        doc["fontRequirements"] = fonts_array;
+    }
+
+    // Serialize tables
+    if (!tables.empty()) {
+        nlohmann::json tables_array = nlohmann::json::array();
+        for (const auto &[lineNum, table] : tables) {
+            nlohmann::json table_entry;
+            table_entry["line"] = lineNum;
+            table_entry["table"] = serializeTable(table);
+            tables_array.push_back(table_entry);
+        }
+        doc["tables"] = tables_array;
+    }
+
+    ofs << doc.dump(2);
+    if (!ofs.good()) {
+        result.error = "Failed to write to file: " + path;
+        return result;
+    }
+
+    result.success = true;
+    return result;
+}
+
+DocumentResult loadDocumentWithTables(TextBuffer &buffer, 
+                                      DocumentSettings &settings,
+                                      TableList &tables,
+                                      const std::string &path) {
+    // First load the basic document
+    DocumentResult result = loadDocumentEx(buffer, settings, path);
+    
+    if (!result.success && !result.usedFallback) {
+        return result;
+    }
+    
+    // Now try to load tables from the file
+    std::ifstream ifs(path);
+    if (!ifs.is_open()) {
+        return result;  // Return previous result
+    }
+    
+    std::ostringstream contents;
+    contents << ifs.rdbuf();
+    std::string raw = contents.str();
+    
+    try {
+        nlohmann::json doc = nlohmann::json::parse(raw);
+        
+        // Load tables
+        if (doc.contains("tables")) {
+            tables.clear();
+            for (const auto &table_entry : doc["tables"]) {
+                std::size_t lineNum = table_entry.value("line", 0);
+                if (table_entry.contains("table")) {
+                    Table table = deserializeTable(table_entry["table"]);
+                    tables.emplace_back(lineNum, std::move(table));
+                }
+            }
+        }
+    } catch (const std::exception &) {
+        // Ignore errors - tables just won't be loaded
+    }
+    
+    return result;
+}

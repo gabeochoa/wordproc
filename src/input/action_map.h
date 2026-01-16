@@ -99,6 +99,19 @@ enum class Action {
     FindNext,
     FindPrevious,
     Replace,
+    
+    // Table operations
+    InsertTable,
+    TableInsertRowAbove,
+    TableInsertRowBelow,
+    TableInsertColumnLeft,
+    TableInsertColumnRight,
+    TableDeleteRow,
+    TableDeleteColumn,
+    TableMergeCells,
+    TableSplitCell,
+    TableMoveNextCell,      // Tab in table
+    TableMovePrevCell,      // Shift+Tab in table
 
     // Count (for iteration)
     COUNT

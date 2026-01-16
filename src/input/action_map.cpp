@@ -169,6 +169,28 @@ const char* ActionMap::actionName(Action action) {
             return "IncreaseSpaceAfter";
         case Action::DecreaseSpaceAfter:
             return "DecreaseSpaceAfter";
+        case Action::InsertTable:
+            return "InsertTable";
+        case Action::TableInsertRowAbove:
+            return "TableInsertRowAbove";
+        case Action::TableInsertRowBelow:
+            return "TableInsertRowBelow";
+        case Action::TableInsertColumnLeft:
+            return "TableInsertColumnLeft";
+        case Action::TableInsertColumnRight:
+            return "TableInsertColumnRight";
+        case Action::TableDeleteRow:
+            return "TableDeleteRow";
+        case Action::TableDeleteColumn:
+            return "TableDeleteColumn";
+        case Action::TableMergeCells:
+            return "TableMergeCells";
+        case Action::TableSplitCell:
+            return "TableSplitCell";
+        case Action::TableMoveNextCell:
+            return "TableMoveNextCell";
+        case Action::TableMovePrevCell:
+            return "TableMovePrevCell";
         case Action::COUNT:
         default:
             return "NONE";
@@ -539,6 +561,28 @@ const char* actionDisplayName(Action action) {
             return "Increase Space After";
         case Action::DecreaseSpaceAfter:
             return "Decrease Space After";
+        case Action::InsertTable:
+            return "Insert Table";
+        case Action::TableInsertRowAbove:
+            return "Insert Row Above";
+        case Action::TableInsertRowBelow:
+            return "Insert Row Below";
+        case Action::TableInsertColumnLeft:
+            return "Insert Column Left";
+        case Action::TableInsertColumnRight:
+            return "Insert Column Right";
+        case Action::TableDeleteRow:
+            return "Delete Row";
+        case Action::TableDeleteColumn:
+            return "Delete Column";
+        case Action::TableMergeCells:
+            return "Merge Cells";
+        case Action::TableSplitCell:
+            return "Split Cell";
+        case Action::TableMoveNextCell:
+            return "Next Cell";
+        case Action::TableMovePrevCell:
+            return "Previous Cell";
         case Action::COUNT:
         default:
             return "";

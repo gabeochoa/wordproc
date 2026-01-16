@@ -2326,3 +2326,16 @@ Ralph Session Started: Thu Jan 15 22:39:50 CST 2026
 [22:47:00] 🔴 TOKENS: 64159 / 80000 (80%) - approaching limit [read:247KB write:0KB assist:0KB shell:0KB]
 [22:47:17] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.cpp (436 lines, ~42.5KB)
 [22:47:17] 🔴 WARN: Approaching token limit (75059 >= 70000)
+[22:47:39] 🔴 TOKENS: 75059 / 80000 (93%) - rotation imminent [read:289KB write:0KB assist:0KB shell:0KB]
+[22:47:45] 🔴 READ /Users/gabeochoa/p/wordproc/src/input/action_map.h (190 lines, ~18.5KB)
+[22:47:55] 🔴 READ /Users/gabeochoa/p/wordproc/src/input/action_map.cpp (840 lines, ~82.0KB)
+[22:47:55] 🔴 ROTATE: Token threshold reached (100809 >= 80000)
+[22:48:06] 🔴 ROTATE: Token threshold reached (100809 >= 80000)
+[22:48:14] 🔴 TOKENS: 100809 / 80000 (126%) - rotation imminent [read:390KB write:0KB assist:0KB shell:0KB]
+[22:48:14] 🔴 ROTATE: Token threshold reached (100809 >= 80000)
+
+═══════════════════════════════════════════════════════════════
+Ralph Session Started: Thu Jan 15 22:48:16 CST 2026
+═══════════════════════════════════════════════════════════════
+[22:48:17] 🔴 READ /Users/gabeochoa/p/wordproc/makefile (327 lines, ~31.9KB)
+[22:48:17] 🔴 ROTATE: Token threshold reached (108984 >= 80000)
