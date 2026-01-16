@@ -13,6 +13,9 @@ make test-verbose
 
 # Run E2E tests with screenshot capture (requires display)
 make e2e
+
+# Run interactive launch-time benchmark (requires display)
+make launch-benchmark
 ```
 
 ## E2E / Screenshot Testing
@@ -45,6 +48,21 @@ Check that:
 2. Text area has sunken 3D border
 3. Status bar shows line/column info
 4. Caret is visible and positioned correctly
+
+## Launch-Time Benchmark (Interactive)
+
+The launch benchmark runs the app in test mode and measures wall-clock time:
+
+```bash
+make launch-benchmark
+```
+
+Environment overrides:
+- `TARGET_MS` - wall-time target per run (default: 200)
+- `ITERATIONS` - repeats per scenario (default: 3)
+- `FRAME_LIMIT` - frames to render before exit (default: 2)
+
+Results are saved to `output/perf/launch_times.csv`.
 
 ## Test Structure
 

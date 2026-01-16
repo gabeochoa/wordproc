@@ -312,5 +312,10 @@ benchmark: $(MAIN_EXE)
 	@mkdir -p output/perf
 	@bash ./tests/run_benchmark.sh
 
-.PHONY: test test-verbose bench-unit e2e e2e-full benchmark
+# Launch-time benchmark (interactive, requires display)
+launch-benchmark: $(MAIN_EXE)
+	@echo "Running launch-time benchmark..."
+	@bash ./tests/run_launch_benchmark.sh
+
+.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark
 

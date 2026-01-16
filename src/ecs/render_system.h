@@ -161,15 +161,13 @@ struct EditorRenderSystem
                 testConfig.frameCount++;
                 // Take screenshot on frame 2 (frame 1 might not have rendered yet)
                 if (testConfig.frameCount == 2) {
-                    // Use absolute path for screenshot
-                    std::filesystem::path screenshotDir = std::filesystem::absolute(testConfig.screenshotDir);
-                    std::filesystem::create_directories(screenshotDir);
-                    std::filesystem::path pathObj = screenshotDir / "01_startup.png";
-                    std::string pathStr = pathObj.string();  // Store string to avoid dangling pointer
+                    // Create directory and take screenshot
+                    std::filesystem::create_directories(testConfig.screenshotDir);
+                    std::string pathStr = testConfig.screenshotDir + "/01_startup.png";
                     LOG_INFO("Taking startup screenshot: %s", pathStr.c_str());
                     raylib::TakeScreenshot(pathStr.c_str());
                     // Verify screenshot was taken
-                    if (std::filesystem::exists(pathObj)) {
+                    if (std::filesystem::exists(pathStr)) {
                         LOG_INFO("Screenshot saved successfully");
                     } else {
                         LOG_WARNING("Screenshot file not found after TakeScreenshot");

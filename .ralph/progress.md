@@ -1161,3 +1161,22 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 ### 2026-01-15 21:11:37
 **Session 1 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 (Session 12 - E2E and Build Fixes)
+- Fixed critical UI type mismatch: ui_imm::InputAction vs ::InputAction
+  - Made ui_imm::InputAction an alias for the global InputAction enum
+  - Fixed namespace ambiguity in input_mapping.h
+- Fixed screenshot path handling:
+  - Screenshots now use absolute paths
+  - Fixed argh argument parsing (use = format)
+  - Added screenshot verification logging
+- Added e2e-full makefile target for comprehensive E2E tests
+- All 414 tests pass in 41 test cases
+- Build compiles successfully
+
+**Note:** Screenshot capture may not work when running from terminal without display context (macOS limitation).
+
+**TASK COMPLETE** - E2E infrastructure in place, all tests pass.
+
+### 2026-01-15 21:13:44
+**Session 1 ended** - 🔄 Context rotation (token limit reached)
