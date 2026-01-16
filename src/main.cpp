@@ -19,7 +19,6 @@
 #include "rl.h"
 #include "settings.h"
 #include "testing/e2e_runner.h"
-#include "testing/e2e_script.h"
 #include "testing/test_input.h"
 #include "ui/menu_setup.h"
 #include "ui/theme.h"

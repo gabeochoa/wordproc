@@ -1,14 +1,17 @@
-// Wrapper that uses the extracted e2e_testing.h implementation
-// This file maintains backward compatibility with existing code.
+// E2E Runner initialization for wordproc
+// Uses the extracted e2e_testing.h implementation directly
 
 #pragma once
 
 #include <string>
 
 #include "../ecs/components.h"
-#include "e2e_script.h"
+#include "../extracted/e2e_testing.h"
 
 namespace e2e {
+
+// Use the extracted runner type directly
+using ScriptRunner = afterhours::testing::E2ERunner;
 
 // Initialize the E2E script runner with a single script
 void initializeRunner(
@@ -28,7 +31,7 @@ void initializeRunner(
     const std::string& screenshotDir
 );
 
-// Initialize the E2E script runner in batch mode (loads all scripts from directory)
+// Initialize the E2E script runner in batch mode
 void initializeRunnerBatch(
     ScriptRunner& runner,
     const std::string& scriptDir,

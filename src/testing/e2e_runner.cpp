@@ -1,15 +1,21 @@
-#include "e2e_runner.h"
+// E2E Runner initialization - app-specific callbacks for wordproc
+// Uses the extracted e2e_testing.h implementation directly
+
+#include "../extracted/e2e_testing.h"
+#include "../ecs/components.h"
+#include "../editor/document_settings.h"
+#include "../rl.h"
+#include "../util/logging.h"
 
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
 
-#include "../editor/document_settings.h"
-#include "../rl.h"
-#include "../util/logging.h"
-
 namespace e2e {
+
+// Use the extracted runner type
+using ScriptRunner = afterhours::testing::E2ERunner;
 
 // Helper to take a screenshot
 static void takeScreenshot(const std::string& dir, const std::string& name) {
@@ -26,7 +32,7 @@ static void setupCallbacks(
     const std::string& screenshotDir
 ) {
     // Set up property getter for validation
-    runner.setPropertyGetter([&docComp](const std::string& prop) -> std::string {
+    runner.set_property_getter([&docComp](const std::string& prop) -> std::string {
         const auto& buffer = docComp.buffer;
         const auto& style = buffer.textStyle();
         
@@ -55,12 +61,12 @@ static void setupCallbacks(
     });
     
     // Set up screenshot taker
-    runner.setScreenshotTaker([screenshotDir](const std::string& name) {
+    runner.set_screenshot_callback([screenshotDir](const std::string& name) {
         takeScreenshot(screenshotDir, name);
     });
     
     // Set up document dumper
-    runner.setDocumentDumper([&docComp](const std::string& path) {
+    runner.set_document_dumper([&docComp](const std::string& path) {
         std::ofstream file(path);
         if (file.is_open()) {
             file << docComp.buffer.getText();
@@ -68,7 +74,7 @@ static void setupCallbacks(
     });
     
     // Set up document clearer (for batch mode)
-    runner.setDocumentClearer([&docComp]() {
+    runner.set_clear_callback([&docComp]() {
         // Clear text content
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
@@ -93,9 +99,9 @@ void initializeRunner(
     }
     
     LOG_INFO("Loading E2E test script: %s", scriptPath.c_str());
-    runner.loadScript(scriptPath);
+    runner.load_script(scriptPath);
     
-    if (!runner.hasCommands()) {
+    if (!!runner.is_finished()) {
         LOG_WARNING("No commands found in test script: %s", scriptPath.c_str());
         return;
     }
@@ -114,9 +120,9 @@ void initializeRunnerBatch(
     }
     
     LOG_INFO("Loading E2E test scripts from directory: %s", scriptDir.c_str());
-    runner.loadScriptsFromDirectory(scriptDir);
+    runner.load_scripts_from_directory(scriptDir);
     
-    if (!runner.hasCommands()) {
+    if (!!runner.is_finished()) {
         LOG_WARNING("No scripts found in directory: %s", scriptDir.c_str());
         return;
     }
@@ -141,7 +147,7 @@ static void setupCallbacksEx(
     const std::string& screenshotDir
 ) {
     // Set up property getter for validation (extended version)
-    runner.setPropertyGetter([&docComp, &menuComp, &layoutComp](const std::string& prop) -> std::string {
+    runner.set_property_getter([&docComp, &menuComp, &layoutComp](const std::string& prop) -> std::string {
         const auto& buffer = docComp.buffer;
         const auto& style = buffer.textStyle();
         
@@ -421,12 +427,12 @@ static void setupCallbacksEx(
     });
     
     // Set up screenshot taker
-    runner.setScreenshotTaker([screenshotDir](const std::string& name) {
+    runner.set_screenshot_callback([screenshotDir](const std::string& name) {
         takeScreenshot(screenshotDir, name);
     });
     
     // Set up document dumper
-    runner.setDocumentDumper([&docComp](const std::string& path) {
+    runner.set_document_dumper([&docComp](const std::string& path) {
         std::ofstream file(path);
         if (file.is_open()) {
             file << docComp.buffer.getText();
@@ -434,7 +440,7 @@ static void setupCallbacksEx(
     });
     
     // Set up document clearer (for batch mode)
-    runner.setDocumentClearer([&docComp]() {
+    runner.set_clear_callback([&docComp]() {
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
         docComp.buffer.clearBookmarks();
@@ -449,7 +455,7 @@ static void setupCallbacksEx(
     });
     
     // Set up menu opener
-    runner.setMenuOpener([&menuComp](const std::string& menuName) -> bool {
+    runner.set_menu_opener([&menuComp](const std::string& menuName) -> bool {
         // Close any currently open menus first
         for (auto& menu : menuComp.menus) {
             menu.open = false;
@@ -465,7 +471,7 @@ static void setupCallbacksEx(
     });
     
     // Set up menu item selector
-    runner.setMenuItemSelector([&menuComp](const std::string& itemName) -> bool {
+    runner.set_menu_selector([&menuComp](const std::string& itemName) -> bool {
         for (auto& menu : menuComp.menus) {
             if (menu.open) {
                 for (std::size_t i = 0; i < menu.items.size(); ++i) {
@@ -484,7 +490,7 @@ static void setupCallbacksEx(
     });
     
     // Set up outline clicker
-    runner.setOutlineClicker([&docComp](const std::string& headingText) -> bool {
+    runner.set_outline_clicker([&docComp](const std::string& headingText) -> bool {
         auto outline = docComp.buffer.getOutline();
         for (const auto& entry : outline) {
             if (entry.text == headingText || entry.text.find(headingText) != std::string::npos) {
@@ -508,9 +514,9 @@ void initializeRunner(
     }
     
     LOG_INFO("Loading E2E test script: %s", scriptPath.c_str());
-    runner.loadScript(scriptPath);
+    runner.load_script(scriptPath);
     
-    if (!runner.hasCommands()) {
+    if (!!runner.is_finished()) {
         LOG_WARNING("No commands found in test script: %s", scriptPath.c_str());
         return;
     }
@@ -531,9 +537,9 @@ void initializeRunnerBatch(
     }
     
     LOG_INFO("Loading E2E test scripts from directory: %s", scriptDir.c_str());
-    runner.loadScriptsFromDirectory(scriptDir);
+    runner.load_scripts_from_directory(scriptDir);
     
-    if (!runner.hasCommands()) {
+    if (!!runner.is_finished()) {
         LOG_WARNING("No scripts found in directory: %s", scriptDir.c_str());
         return;
     }

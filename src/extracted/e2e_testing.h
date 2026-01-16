@@ -655,6 +655,8 @@ public:
   void set_clear_callback(std::function<void()> fn) { clear_fn_ = fn; }
   void set_menu_opener(std::function<bool(const std::string&)> fn) { menu_opener_ = fn; }
   void set_menu_selector(std::function<bool(const std::string&)> fn) { menu_selector_ = fn; }
+  void set_document_dumper(std::function<void(const std::string&)> fn) { document_dumper_ = fn; }
+  void set_outline_clicker(std::function<bool(const std::string&)> fn) { outline_clicker_ = fn; }
   
   void tick() {
     if (finished_ || commands_.empty()) return;
@@ -693,6 +695,29 @@ public:
   int frame_count() const { return frame_count_; }
   const std::vector<ValidationResult>& results() const { return results_; }
   const std::vector<ScriptError>& errors() const { return errors_; }
+  
+  // camelCase aliases for backward compatibility
+  bool isFinished() const { return is_finished(); }
+  bool hasFailed() const { return has_failed(); }
+  bool hasTimedOut() const { return has_timed_out(); }
+  int frameCount() const { return frame_count(); }
+  void printResults() const { print_results(); }
+  bool hasCommands() const { return !commands_.empty(); }
+  std::string getCurrentCommandDescription() const { return current_command_desc(); }
+  float getRemainingTimeoutSeconds() const {
+    if (timeout_ <= 0) return -1.0f;
+    int elapsed = frame_count_ - script_start_;
+    int remaining = timeout_ - elapsed;
+    return remaining > 0 ? static_cast<float>(remaining) / 60.0f : 0.0f;
+  }
+  int getRemainingTimeoutFrames() const {
+    if (timeout_ <= 0) return -1;
+    int elapsed = frame_count_ - script_start_;
+    int remaining = timeout_ - elapsed;
+    return remaining > 0 ? remaining : 0;
+  }
+  bool showDebugOverlay() const { return debug_overlay_; }
+  void setDebugOverlay(bool show) { debug_overlay_ = show; }
   
   std::string current_command_desc() const {
     if (finished_ || index_ >= commands_.size()) return "(finished)";
@@ -852,6 +877,7 @@ private:
   int timeout_ = DEFAULT_TIMEOUT;
   bool pending_release_ = false;
   bool finished_ = false, failed_ = false, timed_out_ = false;
+  bool debug_overlay_ = false;
   
   std::vector<ValidationResult> results_;
   std::vector<ScriptError> errors_;
@@ -860,6 +886,8 @@ private:
   std::function<void()> clear_fn_;
   std::function<bool(const std::string&)> menu_opener_;
   std::function<bool(const std::string&)> menu_selector_;
+  std::function<void(const std::string&)> document_dumper_;
+  std::function<bool(const std::string&)> outline_clicker_;
 };
 
 } // namespace testing
