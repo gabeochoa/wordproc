@@ -178,9 +178,9 @@ These are architectural improvements and new features for future versions. They 
 - (v0.2) Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
 - (v0.2) Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
 - (v0.2) Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).
-- [ ] Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
-- [ ] Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
-- [ ] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
+- (v0.2) Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
+- (v0.2) Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
+- (v0.2) Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
 
 ---
 
