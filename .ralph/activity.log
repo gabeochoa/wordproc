@@ -3270,3 +3270,6 @@ Ralph Session Started: Fri Jan 16 00:46:46 CST 2026
 [00:48:01] 🔴 TOKENS: 68772 / 80000 (85%) - approaching limit [read:264KB write:0KB assist:0KB shell:0KB]
 [00:48:28] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make OBJ_DIR=/tmp/wordproc_objs_final 2>&1 | tail -15 → exit 0
 [00:48:31] 🔴 TOKENS: 68789 / 80000 (85%) - approaching limit [read:264KB write:0KB assist:1KB shell:0KB]
+[00:48:41] 🔴 READ /Users/gabeochoa/p/wordproc/src/testing/e2e_runner.cpp (528 lines, ~51.5KB)
+[00:48:41] 🔴 ROTATE: Token threshold reached (82026 >= 80000)
+[00:48:52] 🔴 ROTATE: Token threshold reached (82026 >= 80000)
