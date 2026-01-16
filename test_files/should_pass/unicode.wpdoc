@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "text": "Unicode test: 日本語 한국어 中文 émojis: 😀🎉✨ symbols: © ® ™ € £ ¥",
+  "style": {
+    "bold": false,
+    "italic": false,
+    "font": "NotoSansKR",
+    "fontSize": 16
+  }
+}

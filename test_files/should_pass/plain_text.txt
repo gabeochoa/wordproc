@@ -1,0 +1,5 @@
+This is a plain text file.
+It should be loaded as plain text with default style.
+
+No JSON parsing needed.
+Multiple paragraphs work fine.

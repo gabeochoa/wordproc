@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "text": "Line one\nLine two\nLine three\n\nEmpty line above\n\tTabbed line",
+  "style": {
+    "bold": false,
+    "italic": false,
+    "font": "Gaegu-Bold",
+    "fontSize": 16
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "text": "Bold and Italic text sample",
+  "style": {
+    "bold": true,
+    "italic": true,
+    "font": "EBGaramond-Regular",
+    "fontSize": 24
+  }
+}
