@@ -74,15 +74,18 @@ Preload &Preload::init(const char *title) {
 
     raylib::SetTargetFPS(200);
 
-    {
-        SCOPED_TIMER("InitAudioDevice");
-        raylib::SetAudioStreamBufferSizeDefault(4096);
-        raylib::InitAudioDevice();
-        if (!raylib::IsAudioDeviceReady()) {
-            log_warn("audio device not ready; continuing without audio");
-        }
-        raylib::SetMasterVolume(1.f);
-    }
+    // Skip audio initialization for word processor - not needed
+    // Audio can be lazy-initialized later if sound effects are added
+    // This saves ~150-900ms on startup
+    // {
+    //     SCOPED_TIMER("InitAudioDevice");
+    //     raylib::SetAudioStreamBufferSizeDefault(4096);
+    //     raylib::InitAudioDevice();
+    //     if (!raylib::IsAudioDeviceReady()) {
+    //         log_warn("audio device not ready; continuing without audio");
+    //     }
+    //     raylib::SetMasterVolume(1.f);
+    // }
 
     raylib::SetExitKey(0);
 
@@ -101,52 +104,26 @@ Preload &Preload::make_singleton() {
         window_manager::add_singleton_components(sophie, 200);
         ui::add_singleton_components<ui_imm::InputAction>(sophie);
 
-        // Load fonts for startup (CJK fonts are lazy-loaded on demand)
+        // Load only essential fonts at startup for fast launch
+        // Other fonts are lazy-loaded on demand by FontLoader
         std::string english_font =
             files::get_resource_path("fonts", "Gaegu-Bold.ttf").string();
-        std::string rounded_font =
-            files::get_resource_path("fonts", "eqprorounded-regular.ttf")
-                .string();
         std::string garamond_font =
             files::get_resource_path("fonts", "EBGaramond-Regular.ttf")
                 .string();
-        std::string symbols_font =
-            files::get_resource_path("fonts", "SymbolsNerdFont-Regular.ttf")
-                .string();
-        std::string fredoka_font =
-            files::get_resource_path("fonts",
-                                     "Fredoka-VariableFont_wdth,wght.ttf")
-                .string();
-        std::string blackops_font =
-            files::get_resource_path("fonts", "BlackOpsOne-Regular.ttf")
-                .string();
-        std::string atkinson_font =
-            files::get_resource_path("fonts",
-                                     "AtkinsonHyperlegible-Regular.ttf")
-                .string();
 
         {
-            SCOPED_TIMER("Load English/Latin fonts");
+            SCOPED_TIMER("Load essential fonts");
             sophie
                 .get<ui::FontManager>()
                 // Default font (used when no language-specific font is set)
                 .load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str())
                 .load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str())
-                // English font (ASCII only)
+                // Primary editor fonts - these are the main fonts used
                 .load_font("Gaegu-Bold", english_font.c_str())
-                // Rounded font for cartoon/tycoon style
-                .load_font("EqProRounded", rounded_font.c_str())
-                // Garamond for elegant/cozy style
-                .load_font("Garamond", garamond_font.c_str())
-                // Symbols/icons font
-                .load_font("NerdSymbols", symbols_font.c_str())
-                // Fredoka for thick cartoon/bubble style (Tycoon, Angry Birds,
-                // Rubber Bandits)
-                .load_font("Fredoka", fredoka_font.c_str())
-                // Black Ops One for military/stencil style (Shooter HUD)
-                .load_font("BlackOpsOne", blackops_font.c_str())
-                // Atkinson Hyperlegible for accessibility
-                .load_font("Atkinson", atkinson_font.c_str());
+                .load_font("EBGaramond-Regular", garamond_font.c_str());
+            // Other fonts (EqProRounded, NerdSymbols, Fredoka, BlackOpsOne,
+            // Atkinson) are loaded on-demand by FontLoader when needed
         }
 
         // Register loaded fonts with FontLoader for P2 font listing
@@ -184,9 +161,10 @@ Preload &Preload::make_singleton() {
 }
 
 Preload::~Preload() {
-    if (raylib::IsAudioDeviceReady()) {
-        raylib::CloseAudioDevice();
-    }
+    // Audio device cleanup skipped - not initialized for word processor
+    // if (raylib::IsAudioDeviceReady()) {
+    //     raylib::CloseAudioDevice();
+    // }
     if (raylib::IsWindowReady()) {
         raylib::CloseWindow();
     }
