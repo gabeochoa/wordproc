@@ -266,7 +266,11 @@ struct CaretBlinkSystem : public afterhours::System<CaretComponent> {
   void for_each_with(afterhours::Entity& entity,
                      CaretComponent& caret,
                      const float dt) override {
-    caret::updateBlink(caret, dt);
+    caret.blinkTimer += static_cast<double>(dt);
+    if (caret.blinkTimer >= CaretComponent::BLINK_INTERVAL) {
+      caret.blinkTimer = 0.0;
+      caret.visible = !caret.visible;
+    }
   }
 };
 
