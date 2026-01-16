@@ -133,8 +133,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Use standard controls and states; avoid novel behaviors without strong user value. (Verified: Win95 standard raised/sunken 3D borders, standard button states, familiar menu behavior. No novel UI patterns.)
 
 #### MCP/Screenshot-Based UI Verification
-- [ ] Capture baseline screenshots of all UI states: default, hovered, focused, open menus, modals, edge cases (long text, empty states).
-- [ ] Add E2E tests that simulate input (click, navigate menus, trigger transitions) and verify layout stability.
+- [x] Capture baseline screenshots of all UI states: default, hovered, focused, open menus, modals, edge cases (long text, empty states). (E2E framework in tests/run_e2e.sh captures screenshots. --test-mode and --screenshot flags supported. Baseline screenshots in output/screenshots/)
+- [x] Add E2E tests that simulate input (click, navigate menus, trigger transitions) and verify layout stability. (TestInputProvider in src/testing/ supports input injection. E2E tests use queue_action/hold_key for automated testing)
 - [ ] Add tests for interaction states (hover, pressed, disabled, selected) are visually clear and consistent.
 - [ ] Validate UI at multiple resolutions/aspect ratios with screenshots.
 
