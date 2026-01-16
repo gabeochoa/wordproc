@@ -295,6 +295,9 @@ bool TextBuffer::deleteSelection() {
     chars_.erase(startOffset, deleteCount);
     stats_.total_deletes += deleteCount;
     version_++;
+    
+    // Adjust hyperlink offsets for the deleted selection
+    adjustHyperlinkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
 
     // Rebuild line index since we may have deleted across lines
     rebuildLineIndex();
@@ -388,6 +391,9 @@ void TextBuffer::insertChar(char ch) {
 
     std::size_t offset = positionToOffset(caret_);
     chars_.insert(offset, ch);
+    
+    // Adjust hyperlink offsets for the inserted character
+    adjustHyperlinkOffsets(offset, 1);
 
     if (ch == '\n') {
         // Split current line
@@ -725,6 +731,47 @@ int TextBuffer::lineListNumber(std::size_t row) const {
     return 1;
 }
 
+// Page break methods
+void TextBuffer::insertPageBreak() {
+    ensureNonEmpty();
+    
+    // Delete any selected text first
+    deleteSelection();
+    
+    // Insert a newline (creates a new line)
+    insertChar('\n');
+    
+    // Mark the new line as having a page break before it
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].hasPageBreakBefore = true;
+        version_++;  // Content changed - invalidate render cache
+    }
+}
+
+bool TextBuffer::hasPageBreakBefore(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].hasPageBreakBefore;
+    }
+    return false;
+}
+
+void TextBuffer::togglePageBreak() {
+    ensureNonEmpty();
+    if (caret_.row < line_spans_.size() && caret_.row > 0) {
+        line_spans_[caret_.row].hasPageBreakBefore = 
+            !line_spans_[caret_.row].hasPageBreakBefore;
+        version_++;  // Content changed - invalidate render cache
+    }
+}
+
+void TextBuffer::clearPageBreak() {
+    ensureNonEmpty();
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].hasPageBreakBefore = false;
+        version_++;  // Content changed - invalidate render cache
+    }
+}
+
 void TextBuffer::renumberListsFrom(std::size_t startRow) {
     // Simple renumbering: count from startRow, respecting levels
     // Each level maintains its own counter
@@ -784,6 +831,9 @@ void TextBuffer::backspace() {
         chars_.erase(offset - 1, 1);
         stats_.total_deletes++;
         version_++;  // Content changed - invalidate render cache
+        
+        // Adjust hyperlink offsets for the deleted character
+        adjustHyperlinkOffsets(offset - 1, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -810,6 +860,9 @@ void TextBuffer::backspace() {
     chars_.erase(newline_offset, 1);
     stats_.total_deletes++;
     version_++;
+    
+    // Adjust hyperlink offsets for the deleted newline
+    adjustHyperlinkOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -842,6 +895,9 @@ void TextBuffer::del() {
         chars_.erase(offset, 1);
         stats_.total_deletes++;
         version_++;
+        
+        // Adjust hyperlink offsets for the deleted character
+        adjustHyperlinkOffsets(offset, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -865,6 +921,9 @@ void TextBuffer::del() {
     chars_.erase(newline_offset, 1);
     stats_.total_deletes++;
     version_++;
+    
+    // Adjust hyperlink offsets for the deleted newline
+    adjustHyperlinkOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -1490,4 +1549,169 @@ std::size_t TextBuffer::replaceAll(const std::string& needle, const std::string&
     }
     
     return count;
+}
+
+// ============================================================================
+// Hyperlink Management
+// ============================================================================
+
+bool TextBuffer::addHyperlink(const std::string& url, const std::string& tooltip) {
+    if (!has_selection_ || url.empty()) {
+        return false;
+    }
+    
+    // Get selection offsets
+    CaretPosition startPos = selectionStart();
+    CaretPosition endPos = selectionEnd();
+    std::size_t startOffset = positionToOffset(startPos);
+    std::size_t endOffset = positionToOffset(endPos);
+    
+    return addHyperlinkAt(startOffset, endOffset, url, tooltip);
+}
+
+bool TextBuffer::addHyperlinkAt(std::size_t startOffset, std::size_t endOffset,
+                                const std::string& url, const std::string& tooltip) {
+    if (startOffset >= endOffset || url.empty()) {
+        return false;
+    }
+    
+    // Validate offsets are within document bounds
+    if (endOffset > chars_.size()) {
+        return false;
+    }
+    
+    // Check for overlapping hyperlinks - remove them first
+    for (auto it = hyperlinks_.begin(); it != hyperlinks_.end();) {
+        if (it->overlaps(startOffset, endOffset)) {
+            it = hyperlinks_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    
+    // Add the new hyperlink
+    Hyperlink link;
+    link.startOffset = startOffset;
+    link.endOffset = endOffset;
+    link.url = url;
+    link.tooltip = tooltip;
+    hyperlinks_.push_back(link);
+    
+    // Sort hyperlinks by start offset for consistent ordering
+    std::sort(hyperlinks_.begin(), hyperlinks_.end(),
+              [](const Hyperlink& a, const Hyperlink& b) {
+                  return a.startOffset < b.startOffset;
+              });
+    
+    version_++;
+    return true;
+}
+
+bool TextBuffer::editHyperlink(std::size_t offset, const std::string& newUrl,
+                               const std::string& newTooltip) {
+    for (auto& link : hyperlinks_) {
+        if (link.contains(offset)) {
+            link.url = newUrl;
+            link.tooltip = newTooltip;
+            version_++;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TextBuffer::removeHyperlink(std::size_t offset) {
+    for (auto it = hyperlinks_.begin(); it != hyperlinks_.end(); ++it) {
+        if (it->contains(offset)) {
+            hyperlinks_.erase(it);
+            version_++;
+            return true;
+        }
+    }
+    return false;
+}
+
+const Hyperlink* TextBuffer::hyperlinkAt(std::size_t offset) const {
+    for (const auto& link : hyperlinks_) {
+        if (link.contains(offset)) {
+            return &link;
+        }
+    }
+    return nullptr;
+}
+
+const Hyperlink* TextBuffer::hyperlinkAtCaret() const {
+    std::size_t offset = positionToOffset(caret_);
+    return hyperlinkAt(offset);
+}
+
+bool TextBuffer::selectionHasHyperlink() const {
+    if (!has_selection_) {
+        return false;
+    }
+    
+    CaretPosition startPos = selectionStart();
+    CaretPosition endPos = selectionEnd();
+    std::size_t startOffset = positionToOffset(startPos);
+    std::size_t endOffset = positionToOffset(endPos);
+    
+    for (const auto& link : hyperlinks_) {
+        if (link.overlaps(startOffset, endOffset)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<const Hyperlink*> TextBuffer::hyperlinksInRange(std::size_t startOffset,
+                                                             std::size_t endOffset) const {
+    std::vector<const Hyperlink*> result;
+    for (const auto& link : hyperlinks_) {
+        if (link.overlaps(startOffset, endOffset)) {
+            result.push_back(&link);
+        }
+    }
+    return result;
+}
+
+void TextBuffer::adjustHyperlinkOffsets(std::size_t pos, std::ptrdiff_t delta) {
+    for (auto it = hyperlinks_.begin(); it != hyperlinks_.end();) {
+        // If deletion removes the entire hyperlink
+        if (delta < 0 && pos <= it->startOffset && 
+            pos + static_cast<std::size_t>(-delta) >= it->endOffset) {
+            it = hyperlinks_.erase(it);
+            continue;
+        }
+        
+        // Adjust start offset
+        if (pos < it->startOffset) {
+            if (delta < 0 && it->startOffset < pos + static_cast<std::size_t>(-delta)) {
+                // Deletion starts before hyperlink and overlaps
+                it->startOffset = pos;
+            } else {
+                it->startOffset = static_cast<std::size_t>(
+                    static_cast<std::ptrdiff_t>(it->startOffset) + delta);
+            }
+        } else if (pos < it->endOffset) {
+            // Insertion/deletion within hyperlink - adjust end only
+        }
+        
+        // Adjust end offset
+        if (pos < it->endOffset) {
+            if (delta < 0 && it->endOffset <= pos + static_cast<std::size_t>(-delta)) {
+                // Deletion removes everything after pos
+                it->endOffset = pos;
+            } else {
+                it->endOffset = static_cast<std::size_t>(
+                    static_cast<std::ptrdiff_t>(it->endOffset) + delta);
+            }
+        }
+        
+        // Remove hyperlinks that have become empty
+        if (it->startOffset >= it->endOffset) {
+            it = hyperlinks_.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }

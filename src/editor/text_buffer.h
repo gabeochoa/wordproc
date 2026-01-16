@@ -271,6 +271,12 @@ class TextBuffer {
     int lineListLevel(std::size_t row) const;
     int lineListNumber(std::size_t row) const;
     
+    // Page break methods
+    void insertPageBreak();  // Insert a page break before the current line
+    bool hasPageBreakBefore(std::size_t row) const;  // Check if line has page break before it
+    void togglePageBreak();  // Toggle page break before current line
+    void clearPageBreak();   // Remove page break before current line
+    
     void backspace();
     void del();
 

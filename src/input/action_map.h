@@ -112,6 +112,10 @@ enum class Action {
     TableSplitCell,
     TableMoveNextCell,      // Tab in table
     TableMovePrevCell,      // Shift+Tab in table
+    
+    // Page breaks
+    InsertPageBreak,        // Ctrl+Enter - insert page break before current line
+    TogglePageBreak,        // Toggle page break before current line
 
     // Count (for iteration)
     COUNT
