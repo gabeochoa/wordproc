@@ -216,9 +216,9 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - `MenuSystem::for_each_with(Entity&, Components&...)` → NOT called, menus don't render
 
 **Fix options**:
-- [x] Make `MenuSystem` a const render system (move mutable logic to update systems) (MenuSystem moved to render phase)
+- [x] Make `MenuSystem` a const render system - Added const version of `for_each_with` that uses const_cast for immediate-mode UI
 - [x] Or register `MenuSystem` as an update system instead of render system (N/A - render phase works)
-- [x] Split menu rendering (const, render phase) from menu interaction (mutable, update phase) (handled via action callbacks)
+- [x] Split menu rendering (const, render phase) from menu interaction (mutable, update phase) (handled via const_cast)
 
 ### E2E Core Fixes (ROOT CAUSE: raylib:: namespace bypasses test macros)
 
@@ -237,6 +237,18 @@ The test input system uses macros like `#define GetCharPressed GetCharPressed_Te
 #### Validation fixes
 - [x] Fix case sensitivity in validation (e.g., "Left" vs "left", "None" vs "none") (toLower in e2e_runner.cpp)
 - [x] Normalize property values to lowercase in e2e_runner.cpp property getter (implemented)
+
+### TestInputProvider Singleton Bug
+
+**Issue**: `TestInputProvider` singleton is queried but never registered, causing hundreds of warnings per frame:
+```
+Singleton map is missing value for component 19 (test_input::TestInputProvider). Did you register this component previously?
+```
+
+**Fix**:
+- [ ] Register `TestInputProvider` as a singleton in ECS before any system queries it
+- [x] Or guard singleton queries with existence check to avoid warning spam (getProvider() now checks test_mode first)
+- [ ] Ensure `TestInputProvider` is only registered when in test mode (`--test-mode` or E2E)
 
 ---
 

@@ -17,7 +17,11 @@
 namespace test_input {
 
 // Helper to get TestInputProvider if available (for UIContext integration)
+// Only queries the singleton when in test mode to avoid warning spam
 static TestInputProvider* getProvider() {
+    if (!test_mode) {
+        return nullptr;  // Don't query singleton when not in test mode
+    }
     return afterhours::EntityHelper::get_singleton_cmp<TestInputProvider>();
 }
 std::queue<KeyPress> input_queue;
