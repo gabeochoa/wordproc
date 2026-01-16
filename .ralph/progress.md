@@ -852,3 +852,50 @@ Summary:
 **Current Status:**
 - Font loader module complete (P0/P1/P2 functionality)
 - Next unchecked task: Use Afterhours UI state context for test input handling
+
+### 2026-01-15 (Session 7 - Color Type Fix)
+- **Fixed fundamental build error:** Color type conflict between raylib and afterhours
+- Added `#define ColorType raylib::Color` to `src/external.h`
+- This follows existing pattern for RectangleType, Vector2Type, TextureType, FontType
+- Build now compiles main.cpp successfully (verified with isolated /tmp output)
+- Fixed namespace ambiguity in input_mapping.h (commit 4ffc134)
+- Marked menu system fix tasks as complete:
+  - [x] Investigate missing menu items (MenuSystem render order)
+  - [x] File menu is missing (MenuSystem moved to render phase)
+
+**Issues Encountered:**
+- Parallel agent interference deleting "output/" directory during compilation
+- Workaround: Build to /tmp or different directory name (build_out/ worked)
+- The "output" directory name specifically triggers cleanup by parallel agents
+
+**Commits Made:**
+- 926e1b4: Fix Color type conflict between raylib and afterhours
+
+**Tests:**
+- Unable to run full test suite due to parallel agent interference
+- main.cpp compiles successfully when isolated
+
+**Next Steps:**
+- Remaining unchecked tasks in Future Work section
+- clang-format task causes build failures (code style conflicts)
+
+
+### 2026-01-15 (Session 5 continued - Iteration 5)
+- Attempted to fix build issues:
+  - Fixed renderer_interface.h color name conflicts (WHITE->kWhite, etc.)
+  - Added ColorType define to rl.h to use raylib::Color
+  - Fixed include order in preload.cpp
+- Discovered environmental issue: directories deleted during compilation
+  - Same issue reported by previous agents
+  - Root cause: parallel Ralph agents running concurrent make processes
+  - Build works in isolation (verified in /tmp)
+- font_loader module was added by concurrent agent session
+- Committed all pending changes
+
+**Build Status:** Blocked by concurrent agent interference. Code compiles in isolation.
+
+**Next tasks (line 34 onwards in RALPH_TASK.md):**
+- [ ] Use Afterhours UI state context for test input handling
+- [ ] Add a help window listing keybindings
+- [ ] Separate app settings from document settings
+
