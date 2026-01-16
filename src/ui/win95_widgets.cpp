@@ -56,14 +56,14 @@ bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled) {
     raylib::Vector2 mousePos = raylib::GetMousePosition();
     bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
     bool pressing =
-        hover && raylib::IsMouseButtonDown(raylib::MOUSE_LEFT_BUTTON);
+        hover && IsMouseButtonDown(raylib::MOUSE_LEFT_BUTTON);
 
     if (enabled) {
         if (pressing) {
             state = ButtonState::Pressed;
         } else if (hover) {
             state = ButtonState::Hover;
-            if (raylib::IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
+            if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
                 clicked = true;
             }
         }
@@ -111,7 +111,7 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
     bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
 
     if (enabled && hover &&
-        raylib::IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
+        IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
         *checked = !*checked;
         changed = true;
     }
@@ -160,7 +160,7 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
 
         bool hover = raylib::CheckCollisionPointRec(mousePos, menu.bounds);
         bool clicked =
-            hover && raylib::IsMouseButtonPressed(raylib::MOUSE_LEFT_BUTTON);
+            hover && IsMouseButtonPressed(raylib::MOUSE_LEFT_BUTTON);
 
         // Handle menu opening/closing
         if (clicked) {
@@ -210,7 +210,7 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
     }
 
     // Close menus on click outside
-    if (raylib::IsMouseButtonPressed(raylib::MOUSE_LEFT_BUTTON) &&
+    if (IsMouseButtonPressed(raylib::MOUSE_LEFT_BUTTON) &&
         !mouseInMenuBar) {
         bool clickedInDropdown = false;
         for (const auto& menu : menus) {
@@ -311,7 +311,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                                      itemY + 3, 14, colors::TITLE_TEXT);
                 }
 
-                if (raylib::IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
+                if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
                     selectedItem = static_cast<int>(i);
                 }
             } else {
@@ -445,7 +445,7 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
     DrawSunkenBorder(inputRect, 2);
 
     // Handle text input
-    int key = raylib::GetCharPressed();
+    int key = GetCharPressed();
     int len = static_cast<int>(std::strlen(buffer));
     while (key > 0) {
         if (key >= 32 && key <= 126 && len < bufferSize - 1) {
@@ -453,21 +453,21 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
             buffer[len + 1] = '\0';
             len++;
         }
-        key = raylib::GetCharPressed();
+        key = GetCharPressed();
     }
 
     // Handle backspace
-    if (raylib::IsKeyPressed(raylib::KEY_BACKSPACE) && len > 0) {
+    if (IsKeyPressed(raylib::KEY_BACKSPACE) && len > 0) {
         buffer[len - 1] = '\0';
     }
 
     // Handle Enter for submit
-    if (raylib::IsKeyPressed(raylib::KEY_ENTER)) {
+    if (IsKeyPressed(raylib::KEY_ENTER)) {
         result = 0;
     }
 
     // Handle Escape for cancel
-    if (raylib::IsKeyPressed(raylib::KEY_ESCAPE)) {
+    if (IsKeyPressed(raylib::KEY_ESCAPE)) {
         result = 1;
     }
 

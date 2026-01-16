@@ -755,7 +755,7 @@ struct MenuSystem
                          static_cast<int>(okBtn.y + 4), 14, theme::TEXT_COLOR);
 
         // Handle OK button click
-        if (raylib::IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
+        if (IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
             raylib::Vector2 mousePos = raylib::GetMousePosition();
             if (mousePos.x >= okBtn.x && mousePos.x <= okBtn.x + okBtn.width &&
                 mousePos.y >= okBtn.y && mousePos.y <= okBtn.y + okBtn.height) {

@@ -28,7 +28,7 @@ bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
         return false;
     }
 
-    return raylib::IsKeyPressed(binding.key);
+    return IsKeyPressed(binding.key);
 }
 
 bool ActionMap::isActionPressed(Action action) const {

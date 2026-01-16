@@ -56,7 +56,7 @@ inline Vector2 GetMousePosition_Real() { return GetMousePosition(); }
 
 #include "testing/test_input_fwd.h"
 
-namespace raylib {
+// Test wrapper functions (global scope for macro compatibility)
 inline bool IsMouseButtonPressed_Test(int button) {
     return test_input::is_mouse_button_pressed(button);
 }
@@ -73,11 +73,13 @@ inline int GetCharPressed_Test() { return test_input::get_char_pressed(); }
 inline bool IsKeyPressed_Test(int key) {
     return test_input::is_key_pressed(key);
 }
-inline Vector2 GetMousePosition_Test() {
+inline raylib::Vector2 GetMousePosition_Test() {
     auto pos = test_input::get_mouse_position_fwd();
-    return Vector2{pos.x, pos.y};
+    return raylib::Vector2{pos.x, pos.y};
 }
-}  // namespace raylib
+inline float GetMouseWheelMove_Test() {
+    return test_input::get_mouse_wheel_move();
+}
 
 #define IsMouseButtonPressed IsMouseButtonPressed_Test
 #define IsMouseButtonDown IsMouseButtonDown_Test
@@ -86,6 +88,7 @@ inline Vector2 GetMousePosition_Test() {
 #define GetCharPressed GetCharPressed_Test
 #define IsKeyPressed IsKeyPressed_Test
 #define GetMousePosition GetMousePosition_Test
+#define GetMouseWheelMove GetMouseWheelMove_Test
 
 #define AFTER_HOURS_USE_RAYLIB
 #undef RectangleType

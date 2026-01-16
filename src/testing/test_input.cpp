@@ -159,6 +159,14 @@ test_input_vec2 get_mouse_position_fwd() {
     return test_input_vec2{pos.x, pos.y};
 }
 
+float get_mouse_wheel_move() {
+    // Mouse wheel not typically simulated in tests - return 0 in test mode
+    if (test_mode) {
+        return 0.0f;
+    }
+    return raylib::GetMouseWheelMove();
+}
+
 bool is_mouse_button_pressed(int button) {
     if (test_mode && mouse_state.simulation_active &&
         button == raylib::MOUSE_BUTTON_LEFT) {

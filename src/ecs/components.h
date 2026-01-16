@@ -5,6 +5,7 @@
 
 #include "../editor/document_settings.h"
 #include "../editor/drawing.h"
+#include "../editor/equation.h"
 #include "../editor/image.h"
 #include "../editor/table.h"
 #include "../editor/text_buffer.h"
@@ -95,6 +96,9 @@ struct DocumentComponent : public afterhours::BaseComponent {
     
     // Drawings/shapes embedded in the document
     DrawingCollection drawings;
+    
+    // Equations embedded in the document
+    EquationCollection equations;
     
     // Drawing helper methods
     void insertDrawing(const DocumentDrawing& drawing) {
