@@ -149,6 +149,10 @@ const char* ActionMap::actionName(Action action) {
             return "LineSpacing1_5";
         case Action::LineSpacingDouble:
             return "LineSpacingDouble";
+        case Action::ToggleBulletedList:
+            return "ToggleBulletedList";
+        case Action::ToggleNumberedList:
+            return "ToggleNumberedList";
         case Action::COUNT:
         default:
             return "NONE";

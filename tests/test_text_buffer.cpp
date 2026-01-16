@@ -1042,6 +1042,126 @@ TEST_CASE("Paragraph indentation", "[text_buffer][indentation]") {
     }
 }
 
+TEST_CASE("Line spacing and paragraph spacing", "[text_buffer][spacing]") {
+    TextBuffer buffer;
+    buffer.setText("Line 1\nLine 2\nLine 3");
+    
+    SECTION("default line spacing is 1.0") {
+        REQUIRE(buffer.currentLineSpacing() == Approx(1.0f));
+        REQUIRE(buffer.lineSpacing(0) == Approx(1.0f));
+        REQUIRE(buffer.lineSpacing(1) == Approx(1.0f));
+        REQUIRE(buffer.lineSpacing(2) == Approx(1.0f));
+    }
+    
+    SECTION("default paragraph spacing is zero") {
+        REQUIRE(buffer.currentSpaceBefore() == 0);
+        REQUIRE(buffer.currentSpaceAfter() == 0);
+        REQUIRE(buffer.lineSpaceBefore(0) == 0);
+        REQUIRE(buffer.lineSpaceAfter(0) == 0);
+    }
+    
+    SECTION("set single line spacing") {
+        buffer.setCaret({0, 0});
+        buffer.setLineSpacingSingle();
+        
+        REQUIRE(buffer.currentLineSpacing() == Approx(1.0f));
+        REQUIRE(buffer.lineSpacing(0) == Approx(1.0f));
+    }
+    
+    SECTION("set 1.5 line spacing") {
+        buffer.setCaret({1, 0});
+        buffer.setLineSpacing1_5();
+        
+        REQUIRE(buffer.currentLineSpacing() == Approx(1.5f));
+        REQUIRE(buffer.lineSpacing(1) == Approx(1.5f));
+        // Other lines unchanged
+        REQUIRE(buffer.lineSpacing(0) == Approx(1.0f));
+        REQUIRE(buffer.lineSpacing(2) == Approx(1.0f));
+    }
+    
+    SECTION("set double line spacing") {
+        buffer.setCaret({2, 0});
+        buffer.setLineSpacingDouble();
+        
+        REQUIRE(buffer.currentLineSpacing() == Approx(2.0f));
+        REQUIRE(buffer.lineSpacing(2) == Approx(2.0f));
+    }
+    
+    SECTION("set custom line spacing") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentLineSpacing(1.25f);
+        
+        REQUIRE(buffer.currentLineSpacing() == Approx(1.25f));
+    }
+    
+    SECTION("line spacing is clamped to reasonable range") {
+        buffer.setCaret({0, 0});
+        
+        // Too small - clamped to 0.5
+        buffer.setCurrentLineSpacing(0.1f);
+        REQUIRE(buffer.currentLineSpacing() == Approx(0.5f));
+        
+        // Too large - clamped to 3.0
+        buffer.setCurrentLineSpacing(5.0f);
+        REQUIRE(buffer.currentLineSpacing() == Approx(3.0f));
+    }
+    
+    SECTION("set paragraph spacing before") {
+        buffer.setCaret({1, 0});
+        buffer.setCurrentSpaceBefore(12);
+        
+        REQUIRE(buffer.currentSpaceBefore() == 12);
+        REQUIRE(buffer.lineSpaceBefore(1) == 12);
+        // Other lines unchanged
+        REQUIRE(buffer.lineSpaceBefore(0) == 0);
+        REQUIRE(buffer.lineSpaceBefore(2) == 0);
+    }
+    
+    SECTION("set paragraph spacing after") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentSpaceAfter(8);
+        
+        REQUIRE(buffer.currentSpaceAfter() == 8);
+        REQUIRE(buffer.lineSpaceAfter(0) == 8);
+    }
+    
+    SECTION("paragraph spacing cannot be negative") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentSpaceBefore(-10);
+        buffer.setCurrentSpaceAfter(-10);
+        
+        REQUIRE(buffer.currentSpaceBefore() == 0);
+        REQUIRE(buffer.currentSpaceAfter() == 0);
+    }
+    
+    SECTION("spacing changes increment version") {
+        uint64_t versionBefore = buffer.version();
+        buffer.setCurrentLineSpacing(1.5f);
+        REQUIRE(buffer.version() > versionBefore);
+        
+        versionBefore = buffer.version();
+        buffer.setCurrentSpaceBefore(10);
+        REQUIRE(buffer.version() > versionBefore);
+        
+        versionBefore = buffer.version();
+        buffer.setCurrentSpaceAfter(10);
+        REQUIRE(buffer.version() > versionBefore);
+    }
+    
+    SECTION("each line can have different spacing") {
+        buffer.setCaret({0, 0});
+        buffer.setLineSpacingSingle();
+        buffer.setCaret({1, 0});
+        buffer.setLineSpacing1_5();
+        buffer.setCaret({2, 0});
+        buffer.setLineSpacingDouble();
+        
+        REQUIRE(buffer.lineSpacing(0) == Approx(1.0f));
+        REQUIRE(buffer.lineSpacing(1) == Approx(1.5f));
+        REQUIRE(buffer.lineSpacing(2) == Approx(2.0f));
+    }
+}
+
 TEST_CASE("Line spacing", "[text_buffer][spacing]") {
     TextBuffer buffer;
     buffer.setText("Line 1\nLine 2\nLine 3");
