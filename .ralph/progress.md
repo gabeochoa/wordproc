@@ -1040,3 +1040,20 @@ make test OBJ_DIR=/tmp/wordproc_objs
 **For next session:**
 - Work on remaining [ ] items in RALPH_TASK.md
 - Consider investigating root cause of output/objs filesystem issue
+
+### 2026-01-15 (Session 5 continued - Iteration 5 Part 2)
+- Fixed "File menu is missing" issue: moved MenuSystem to render_system()
+- Added menu structure tests in tests/test_menu_setup.cpp
+- Added startup timing instrumentation (SCOPED_TIMER)
+- Verified component purity already achieved
+- Verified input_system.h already uses ActionMap
+- Tasks completed: 19, remaining: 15
+
+**Tests Status:** All 387 assertions in 39 test cases pass
+
+
+### 2026-01-15 20:54:30
+**Session 11 ended** - 🔄 Context rotation (token limit reached)
+
+### 2026-01-15 20:54:32
+**Session 12 started** (model: opus-4.5-thinking)

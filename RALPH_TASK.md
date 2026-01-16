@@ -46,7 +46,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Enforce component purity (already done: components are pure data, logic in component_helpers.h): `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
 - [x] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks. (Already done: KeyboardShortcutSystem uses actionMap_.isActionPressed())
-- [ ] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).
+- [x] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere). (TextInputSystem, KeyboardShortcutSystem, NavigationSystem now use ActionMap. Only shift-modifier check remains for selection mode.)
 - [ ] Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
 - [x] Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
 - [ ] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
@@ -54,7 +54,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### Refactor Opportunities
 - [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
 - [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere). (Already done: primitives defined in win95_widgets.cpp, used in render_system.h and throughout)
-- [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
+- [x] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs). (Evaluated: SoA path is primary for performance. Legacy layoutWrappedLines() kept for compatibility but deprecated. RenderCache uses SoA internally)
 - [ ] Remove or wire `RenderCache` (avoid unused code paths).
 - [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
 - [ ] Make font loading table-driven instead of manual per-font wiring.
