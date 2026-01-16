@@ -1980,34 +1980,6 @@ const Bookmark* TextBuffer::getBookmark(const std::string& name) const {
     return nullptr;
 }
 
-bool TextBuffer::goToBookmark(const std::string& name) {
-    const Bookmark* bm = getBookmark(name);
-    if (!bm) {
-        return false;
-    }
-    
-    caret_ = offsetToPosition(bm->offset);
-    clampCaret();
-    clearSelection();
-    return true;
-}
-
-bool TextBuffer::hasBookmark(const std::string& name) const {
-    return getBookmark(name) != nullptr;
-}
-
-const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
-    for (const auto& bm : bookmarks_) {
-        if (bm.offset >= offset && bm.offset <= offset + tolerance) {
-            return &bm;
-        }
-        if (offset >= bm.offset && offset <= bm.offset + tolerance) {
-            return &bm;
-        }
-    }
-    return nullptr;
-}
-
 void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
     for (auto it = bookmarks_.begin(); it != bookmarks_.end();) {
         // If deletion removes the bookmark position

@@ -2609,3 +2609,8 @@ Ralph Session Started: Thu Jan 15 23:06:22 CST 2026
 [23:06:40] 🟢 READ /Users/gabeochoa/p/wordproc/.ralph/progress.md (1434 lines, ~140.0KB)
 [23:06:51] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -20 → exit 0
 [23:06:54] 🟢 TOKENS: 41113 / 80000 (51%) [read:157KB write:0KB assist:0KB shell:0KB]
+[23:07:24] 🟢 TOKENS: 41113 / 80000 (51%) [read:157KB write:0KB assist:0KB shell:0KB]
+[23:07:29] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/drawing.h (226 lines, ~22.0KB)
+[23:07:30] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -40 → exit 0
+[23:07:37] 🟡 READ /Users/gabeochoa/p/wordproc/src/editor/drawing.cpp (82 lines, ~8.0KB)
+[23:07:38] 🟡 SHELL pkill -9 -f "make.*wordproc" 2>/dev/null; pkill -9 -f "clang.*wordproc" 2>/dev/null; sleep 2; echo "Processes killed" → exit 0

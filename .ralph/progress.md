@@ -1431,3 +1431,22 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 ### 2026-01-15 23:06:21
 **Session 3 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 (Session 15 - Iteration 15)
+- Added manual page breaks feature:
+  - insertPageBreak/togglePageBreak/clearPageBreak methods in TextBuffer
+  - hasPageBreakBefore property in LineSpan
+  - Ctrl+Enter shortcut
+  - Visual page break indicator in render system
+- Added table of contents generation:
+  - generateTableOfContents() method generates formatted TOC from headings
+  - insertTableOfContents() inserts TOC at caret position
+  - Tests for TOC generation added to test_outline.cpp
+- Build environment issues (parallel agent interference) - used OBJ_DIR=/tmp/wordproc_objs workaround
+- Verified 998 tests pass in 82 test cases
+
+**Completed tasks this session:**
+- [x] Add manual page breaks
+- [x] Add table of contents generation from headings
+
+**Remaining unchecked tasks:** ~47 items (mostly UI Design Compliance)
