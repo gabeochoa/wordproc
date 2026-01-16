@@ -45,7 +45,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Loading is too slow: re-enable and verify load/startup timing instrumentation. (Added SCOPED_TIMER to Settings load, Preload, UI context init)
 - [x] Enforce component purity (already done: components are pure data, logic in component_helpers.h): `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
-- [ ] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
+- [x] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks. (Already done: KeyboardShortcutSystem uses actionMap_.isActionPressed())
 - [ ] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).
 - [ ] Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
 - [x] Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
