@@ -1340,8 +1340,8 @@ make test OBJ_DIR=/tmp/wordproc_objs
 - Implemented generateTableOfContents and insertTableOfContents
 - Found root cause of TOC test failure: rebuildLineIndex() clears paragraph styles
 
-**Test Status:** 95/95 test cases pass, 1173/1173 assertions pass
-**Fixed:** rebuildLineIndex() now preserves paragraph styles by saving/restoring based on line offsets
+**Test Status:** 93/95 test cases pass, 1169/1171 assertions pass
+**Known Issue:** rebuildLineIndex() resets paragraph styles, causing 2 TOC tests to fail
 
 ### 2026-01-16 (Session 12 - Build Fixes, earlier)
 - Fixed build issues after parallel agent interference:
@@ -1473,22 +1473,16 @@ make test OBJ_DIR=/tmp/wordproc_objs
 **Session 19 Final Status:**
 - Fixed duplicate bookmark function definitions
 - Added image.cpp and drawing.cpp to TEST_SRC in makefile
-- Fixed forward declaration issues in document_settings.h (deferred HeaderFooter/Watermark fields)
-- Tests compile and run: 1156 passed, 6 failed (90/95 test cases pass)
-- Remaining failures in outline/TOC tests need investigation
-- Committed multiple fixes: dd8afec, 7ad3160, 922da11
+- Tests now compile and run: 1156 passed, 6 failed (90/95 test cases pass)
+- Remaining failures in outline/TOC tests
+- Committed changes: dd8afec
 
-**Remaining unchecked tasks: 41**
-- Major features: spelling/grammar, section breaks (data model done, rendering deferred)
+**Remaining unchecked tasks: 43**
+- Major features: spelling/grammar, section breaks, multi-column layout
 - Code style: clang-format
 - UI Design Compliance: ~30 audit/verification items
 
-**Build environment note:** Multiple parallel agents causing:
-- File conflicts during compilation
-- Clang crashes from resource exhaustion
-- Use unique /tmp directories: `make test OBJ_DIR=/tmp/wpXXX -j1`
-
-**Session 19 ended**
+**Build environment note:** Multiple parallel agents causing file conflicts. Use unique /tmp directories for builds.
 
 ### 2026-01-15 22:59:04
 **Session 19 ended** - 🔄 Context rotation (token limit reached)
@@ -1614,21 +1608,3 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 ### 2026-01-15 23:17:29
 **Session 4 ended** - 🔄 Context rotation (token limit reached)
-
-### Session 15 Final Summary
-**Tasks completed this session:**
-1. [x] Add manual page breaks (Ctrl+Enter, visual indicator)
-2. [x] Add table of contents generation from headings
-3. [x] Add footnotes with auto-numbering
-4. [x] Add watermark support (text or image)
-5. [x] Add headers and footers with page numbers (already implemented)
-6. [x] Add equation editor and special character insertion (added implementation)
-7. [x] Add section breaks with per-section layout settings
-
-**Total tasks completed this session: 7**
-**Remaining unchecked tasks: 42** (mostly UI Design Compliance)
-
-**Next session should focus on:**
-- Spelling/grammar suggestions (complex)
-- Multi-column layout (complex)
-- UI Design Compliance items (audits and tests)
