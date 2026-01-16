@@ -2762,3 +2762,13 @@ Ralph Session Started: Thu Jan 15 23:16:29 CST 2026
 [23:20:35] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/win95_widgets.cpp (468 lines, ~45.7KB)
 [23:20:35] 🔴 ROTATE: Token threshold reached (616918 >= 80000)
 [23:20:35] 🟡 TOKENS: 57325 / 80000 (71%) [read:220KB write:0KB assist:0KB shell:0KB]
+[23:20:54] 🔴 TOKENS: 616918 / 80000 (771%) - rotation imminent [read:2405KB write:0KB assist:1KB shell:0KB]
+[23:20:54] 🔴 ROTATE: Token threshold reached (616918 >= 80000)
+[23:21:06] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && rm -rf /tmp/wpo12 && mkdir -p /tmp/wpo12/test /tmp/wpo12/src && make test OBJ_DIR=/tmp/wpo12 2>&1 | tail -10 → exit 0
+[23:21:06] 🔴 ROTATE: Token threshold reached (616918 >= 80000)
+[23:21:10] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_icon_registry.cpp (121 lines, ~11.8KB)
+[23:21:10] 🔴 ROTATE: Token threshold reached (619943 >= 80000)
+[23:21:14] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/icon_registry.h (168 lines, ~16.4KB)
+[23:21:14] 🔴 ROTATE: Token threshold reached (624143 >= 80000)
+[23:21:19] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/icon_registry.h (168 lines, ~16.4KB)
+[23:21:19] 🔴 ROTATE: Token threshold reached (628343 >= 80000)

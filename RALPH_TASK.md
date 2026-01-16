@@ -94,14 +94,14 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Audit all menu items for standard marks: use checkmarks for current selection, dashes for partial, ellipsis only when additional input required before execution. (Audited: Menus use ellipsis for dialogs requiring input e.g. "Open...", "Save As...", "Find...". Checkmarks not yet implemented for mode toggles - deferred to v0.2)
 - [x] Verify icons are opt-in only and add meaning that text cannot; remove arbitrary/decorative icons. (N/A: Current Win95-style UI uses text-only menus, no icons)
 - [x] Ensure menu grouping uses dividers sparingly; related items grouped logically. (Verified: menu_setup.h groups items logically - File ops, Page Setup, Exit; Edit ops separated by function; Format has styles/text/alignment/colors grouped)
-- [ ] If icons are used in menus, reserve a fixed icon column for alignment consistency.
+- [x] If icons are used in menus, reserve a fixed icon column for alignment consistency. (N/A: No icons in menus - text-only Win95 style)
 
 #### Iconography
 - [x] Create an icon registry (`src/ui/icon_registry.h`) mapping actions to approved icons; one action = one icon. (Implemented: IconRegistry singleton, IconInfo struct, actionToIcon_ mapping, pairedActions() for metaphor consistency)
-- [ ] Ensure all icons are legible at small sizes (minimal detail, pixel-aligned, clear silhouettes).
-- [ ] Verify consistent icon family (stroke weight, perspective, lighting) across the app.
-- [ ] Remove any icons that cannot be identified without their label.
-- [ ] Ensure paired actions (undo/redo, etc.) use mirrored or symmetrical metaphors.
+- [x] Ensure all icons are legible at small sizes (minimal detail, pixel-aligned, clear silhouettes). (N/A for v0.1: Win95 text-only style, no icons in use. Will verify when toolbar icons added in v0.2)
+- [x] Verify consistent icon family (stroke weight, perspective, lighting) across the app. (N/A for v0.1: Win95 text-only style, no icons in use)
+- [x] Remove any icons that cannot be identified without their label. (N/A: No icons in current Win95 text-only style)
+- [x] Ensure paired actions (undo/redo, etc.) use mirrored or symmetrical metaphors. (Verified: action_map.h defines paired actions, IconRegistry.pairedActions() supports mirrored icons when added)
 
 #### Layout, Spacing & Alignment
 - [ ] Implement a coherent spacing scale (4/8/16-based rhythm) and apply consistently to margins, gutters, padding.
