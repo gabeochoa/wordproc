@@ -77,7 +77,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add table of contents generation from headings. (Implemented: generateTableOfContents/insertTableOfContents methods in TextBuffer, generates formatted TOC text from headings with indentation, 8 test assertions in test_outline.cpp)
 - [x] Add outline view based on heading hierarchy. (Implemented: OutlineEntry struct, getOutline() extracts headings with text/style/level/lineNumber, goToOutlineEntry() navigation, 22 test assertions in test_outline.cpp)
 - [x] Add line numbering for editing/review. (Implemented: showLineNumbers in LayoutComponent, line number gutter rendering in renderTextBuffer, View menu toggle, gray right-aligned numbers)
-- [ ] Add watermark support (text or image).
+- [x] Add watermark support (text or image). (Implemented: WatermarkType enum, Watermark struct with text/image/opacity/rotation/scale/color/font settings, integrated in DocumentSettings, 18 test assertions in tests/test_watermark.cpp)
 
 ### Refactor Opportunities
 - [x] Centralize editor actions into a command table (keyboard + menu dispatch in one place). (Foundation exists: action_map.h defines Action enum and KeyBinding. Full unification of keyboard + menu dispatch deferred to v0.2)

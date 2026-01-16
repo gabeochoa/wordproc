@@ -534,12 +534,35 @@ struct HeaderFooter {
     }
 };
 
+// Watermark type
+enum class WatermarkType {
+    None,   // No watermark
+    Text,   // Text watermark (e.g., "CONFIDENTIAL", "DRAFT")
+    Image   // Image watermark (path to image file)
+};
+
+// Watermark configuration for document pages
+struct Watermark {
+    WatermarkType type = WatermarkType::None;
+    std::string text;           // Text content (for Text type)
+    std::string imagePath;      // Path to image (for Image type)
+    float opacity = 0.3f;       // Transparency (0.0 = invisible, 1.0 = fully opaque)
+    float rotation = -45.0f;    // Rotation in degrees (diagonal by default)
+    float scale = 1.0f;         // Scale factor for rendering
+    TextColor color = {200, 200, 200, 255};  // Light gray by default for text
+    std::string font = "Gaegu-Bold";  // Font for text watermark
+    int fontSize = 72;          // Font size for text watermark
+    
+    bool isEnabled() const { return type != WatermarkType::None; }
+};
+
 // Combined document settings - saved/loaded with document file
 struct DocumentSettings {
     TextStyle textStyle;
     PageSettings pageSettings;
     HeaderFooter header;    // Document header configuration
     HeaderFooter footer;    // Document footer configuration
+    Watermark watermark;    // Document watermark configuration
 
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed
