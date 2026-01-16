@@ -456,3 +456,48 @@ TEST_CASE("TextBuffer undo/redo", "[text_buffer][undo]") {
         REQUIRE(buffer.getText().empty());
     }
 }
+
+// Regression test for caret positioning with narrow characters like 'l', 'i'
+// See: "Fix caret positioning to use per-glyph advance/metrics"
+// The rendering code (main.cpp) now uses MeasureText() for accurate positioning
+// This test ensures the buffer correctly tracks column positions for narrow chars
+TEST_CASE("Caret positioning with narrow characters", "[text_buffer][regression]") {
+    TextBuffer buffer;
+    
+    SECTION("llllll - caret column tracks correctly for narrow chars") {
+        // Insert a series of narrow characters ('l')
+        buffer.insertText("llllll");
+        
+        // Caret should be at column 6 (after 6 characters)
+        REQUIRE(buffer.caret().column == 6);
+        REQUIRE(buffer.getText() == "llllll");
+        
+        // Move left should decrease column
+        buffer.moveLeft();
+        REQUIRE(buffer.caret().column == 5);
+        
+        // Backspace should remove character and decrease column
+        buffer.backspace();
+        REQUIRE(buffer.caret().column == 4);
+        REQUIRE(buffer.getText() == "lllll");
+    }
+    
+    SECTION("mixed narrow and wide characters") {
+        // Mix of narrow ('i', 'l') and wider ('m', 'w') characters
+        buffer.insertText("iiii");
+        REQUIRE(buffer.caret().column == 4);
+        
+        buffer.insertText("mmmm");
+        REQUIRE(buffer.caret().column == 8);
+        
+        // Navigate back
+        buffer.setCaret({0, 4});  // Position between i's and m's
+        REQUIRE(buffer.caret().column == 4);
+    }
+    
+    SECTION("caret at end of narrow character line") {
+        buffer.insertText("lllllllllllllllllllllllllllllllllllllllllllllllllll");  // 51 l's
+        REQUIRE(buffer.caret().column == 51);
+        REQUIRE(buffer.getText().length() == 51);
+    }
+}

@@ -84,6 +84,7 @@ void drawSunkenBorder(raylib::Rectangle rect) {
 }
 
 // Render text buffer with caret and selection (uses SoA layout for efficiency)
+// Uses per-glyph metrics via MeasureText for accurate caret/selection positioning
 void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
                       bool caretVisible, int fontSize, int lineHeight) {
   std::size_t lineCount = buffer.lineCount();
@@ -92,40 +93,44 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
   CaretPosition selStart = buffer.selectionStart();
   CaretPosition selEnd = buffer.selectionEnd();
 
-  // Approximate character width (monospace assumption, will be refined later)
-  int charWidth = fontSize / 2;
-  if (charWidth < 4) charWidth = 4;
-
   int y = static_cast<int>(textArea.y) + TEXT_PADDING;
   
   for (std::size_t row = 0; row < lineCount; ++row) {
     LineSpan span = buffer.lineSpan(row);
     int x = static_cast<int>(textArea.x) + TEXT_PADDING;
+    
+    // Get the full line text (needed for measurements)
+    std::string line = (span.length > 0) ? buffer.lineString(row) : "";
 
-    // Draw selection highlight for this line
+    // Draw selection highlight for this line using per-glyph measurements
     if (hasSelection) {
       bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
       if (lineInSelection) {
         std::size_t startCol = (row == selStart.row) ? selStart.column : 0;
         std::size_t endCol = (row == selEnd.row) ? selEnd.column : span.length;
         
-        if (startCol < endCol) {
-          int selX = x + static_cast<int>(startCol) * charWidth;
-          int selWidth = static_cast<int>(endCol - startCol) * charWidth;
+        if (startCol < endCol && !line.empty()) {
+          // Measure text width up to startCol and endCol using per-glyph metrics
+          std::string beforeSel = line.substr(0, startCol);
+          std::string selectedText = line.substr(startCol, endCol - startCol);
+          
+          int selX = x + raylib::MeasureText(beforeSel.c_str(), fontSize);
+          int selWidth = raylib::MeasureText(selectedText.c_str(), fontSize);
           raylib::DrawRectangle(selX, y, selWidth, lineHeight, colors::SELECTION_BG);
         }
       }
     }
 
-    // Draw text (get line string for rendering - could be optimized further with direct char access)
-    if (span.length > 0) {
-      std::string line = buffer.lineString(row);
+    // Draw text
+    if (!line.empty()) {
       raylib::DrawText(line.c_str(), x, y, fontSize, colors::TEXT_COLOR);
     }
 
-    // Draw caret on this line
+    // Draw caret on this line using per-glyph measurements
     if (caretVisible && row == caret.row) {
-      int caretX = x + static_cast<int>(caret.column) * charWidth;
+      // Measure text width from start to caret position for accurate positioning
+      std::string beforeCaret = line.substr(0, std::min(caret.column, line.length()));
+      int caretX = x + raylib::MeasureText(beforeCaret.c_str(), fontSize);
       raylib::DrawRectangle(caretX, y, 2, lineHeight, colors::CARET_COLOR);
     }
 
