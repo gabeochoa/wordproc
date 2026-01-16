@@ -147,6 +147,10 @@ struct LayoutComponent : public afterhours::BaseComponent {
     float pageDisplayHeight = 0.0f;  // Scaled page height for display
     float pageScale = 1.0f;          // Scale factor for page display
     float pageOffsetX = 0.0f;        // X offset to center page in window
+    
+    // Line numbering
+    bool showLineNumbers = false;    // Toggle line number display in gutter
+    float lineNumberGutterWidth = 50.0f;  // Width of line number gutter in pixels
 };
 
 // Component for test mode configuration

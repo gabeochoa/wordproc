@@ -5,6 +5,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../editor/document_io.h"
+#include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
 #include "../ui/theme.h"
@@ -75,15 +76,20 @@ inline void drawPageBackground(const LayoutComponent& layout) {
 
 // Render the text buffer with caret and selection
 // Now supports per-line paragraph styles (H1-H6, Title, Subtitle)
+// showLineNumbers: if true, draws line numbers in a gutter on the left
 inline void renderTextBuffer(const TextBuffer& buffer,
                              const LayoutComponent::Rect& textArea,
                              bool caretVisible, int baseFontSize, int baseLineHeight,
-                             int scrollOffset) {
+                             int scrollOffset, bool showLineNumbers = false,
+                             float lineNumberGutterWidth = 50.0f) {
     std::size_t lineCount = buffer.lineCount();
     CaretPosition caret = buffer.caret();
     bool hasSelection = buffer.hasSelection();
     CaretPosition selStart = buffer.selectionStart();
     CaretPosition selEnd = buffer.selectionEnd();
+    
+    // Calculate gutter offset for text
+    int gutterOffset = showLineNumbers ? static_cast<int>(lineNumberGutterWidth) : 0;
 
     int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING;
 
@@ -92,7 +98,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
     for (std::size_t row = startRow; row < lineCount; ++row) {
         LineSpan span = buffer.lineSpan(row);
-        int baseX = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
+        int baseX = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING + gutterOffset;
         int availableWidth = static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
 
         std::string line = (span.length > 0) ? buffer.lineString(row) : "";
@@ -115,6 +121,21 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Apply paragraph spacing before
         int paragraphSpaceBefore = buffer.lineSpaceBefore(row);
         y += paragraphSpaceBefore;
+        
+        // Draw line number in gutter if enabled
+        if (showLineNumbers) {
+            int lineNum = static_cast<int>(row + 1);  // 1-based line numbers
+            char lineNumStr[16];
+            std::snprintf(lineNumStr, sizeof(lineNumStr), "%d", lineNum);
+            
+            // Measure line number text to right-align in gutter
+            int numWidth = raylib::MeasureText(lineNumStr, 14);
+            int gutterX = static_cast<int>(textArea.x) + static_cast<int>(lineNumberGutterWidth) - numWidth - 8;
+            
+            // Draw line number in gray
+            raylib::Color lineNumColor = {128, 128, 128, 255};
+            raylib::DrawText(lineNumStr, gutterX, y, 14, lineNumColor);
+        }
         
         // Apply indentation
         int leftIndent = buffer.lineLeftIndent(row);
@@ -1010,7 +1031,136 @@ struct MenuSystem
                 default:
                     break;
             }
-        } else if (menuIndex == 4) {  // Help menu
+        } else if (menuIndex == 4) {  // Table menu
+            switch (itemIndex) {
+                case 0: {  // Insert Table...
+                    // Insert a default 3x3 table at current line
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    doc.insertTable(currentLine, 3, 3);
+                    doc.isDirty = true;
+                    status::set(status, "Inserted 3x3 table");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 2: {  // Insert Row Above
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        table->insertRowAbove(table->currentCell().row);
+                        doc.isDirty = true;
+                        status::set(status, "Row inserted above");
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 3: {  // Insert Row Below
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        table->insertRowBelow(table->currentCell().row);
+                        doc.isDirty = true;
+                        status::set(status, "Row inserted below");
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 4: {  // Insert Column Left
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        table->insertColumnLeft(table->currentCell().col);
+                        doc.isDirty = true;
+                        status::set(status, "Column inserted left");
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 5: {  // Insert Column Right
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        table->insertColumnRight(table->currentCell().col);
+                        doc.isDirty = true;
+                        status::set(status, "Column inserted right");
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 7: {  // Delete Row
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        table->deleteRow(table->currentCell().row);
+                        doc.isDirty = true;
+                        status::set(status, "Row deleted");
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 8: {  // Delete Column
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        table->deleteColumn(table->currentCell().col);
+                        doc.isDirty = true;
+                        status::set(status, "Column deleted");
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 10: {  // Merge Cells
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table && table->hasSelection()) {
+                        CellPosition start = table->selectionStart();
+                        CellPosition end = table->selectionEnd();
+                        // Normalize selection
+                        CellPosition topLeft = {std::min(start.row, end.row), std::min(start.col, end.col)};
+                        CellPosition bottomRight = {std::max(start.row, end.row), std::max(start.col, end.col)};
+                        if (table->mergeCells(topLeft, bottomRight)) {
+                            doc.isDirty = true;
+                            status::set(status, "Cells merged");
+                        } else {
+                            status::set(status, "Cannot merge cells", true);
+                        }
+                    } else {
+                        status::set(status, "Select cells to merge", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 11: {  // Split Cell
+                    std::size_t currentLine = doc.buffer.caret().row;
+                    Table* table = doc.tableAtLine(currentLine);
+                    if (table) {
+                        if (table->splitCell(table->currentCell())) {
+                            doc.isDirty = true;
+                            status::set(status, "Cell split");
+                        } else {
+                            status::set(status, "Cell is not merged", true);
+                        }
+                    } else {
+                        status::set(status, "No table at cursor", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                default:
+                    break;
+            }
+        } else if (menuIndex == 5) {  // Help menu
             if (itemIndex == 0) {     // Keyboard Shortcuts
                 menu.showHelpWindow = true;
             } else if (itemIndex == 2) {  // About (after separator)
