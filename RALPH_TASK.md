@@ -113,7 +113,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### 10) Code Review Follow-ups
 - [x] Implement text rendering (draw buffer content + wrapped lines).
 - [x] Draw caret and selection highlight with blink/animation timing.
-- [ ] Handle selection deletion on typing/backspace/delete.
+- [x] Handle selection deletion on typing/backspace/delete.
 - [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
 - [ ] Add clipboard integration (copy/cut/paste).
 - [ ] Add undo/redo with command history.

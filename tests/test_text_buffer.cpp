@@ -251,3 +251,87 @@ TEST_CASE("TextBuffer text style", "[text_buffer]") {
         REQUIRE(result.font == "Arial");
     }
 }
+
+TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
+    TextBuffer buffer;
+    buffer.setText("hello world");
+    buffer.setCaret({0, 0});
+
+    SECTION("deleteSelection removes selected text") {
+        // Select "hello"
+        buffer.setSelectionAnchor({0, 0});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        
+        REQUIRE(buffer.deleteSelection());
+        REQUIRE(buffer.getText() == " world");
+        REQUIRE(buffer.caret().column == 0);
+        REQUIRE_FALSE(buffer.hasSelection());
+    }
+
+    SECTION("deleteSelection with reverse selection") {
+        // Select "world" backwards
+        buffer.setCaret({0, 11});
+        buffer.setSelectionAnchor({0, 11});
+        buffer.setCaret({0, 6});
+        buffer.updateSelectionToCaret();
+        
+        REQUIRE(buffer.deleteSelection());
+        REQUIRE(buffer.getText() == "hello ");
+        REQUIRE(buffer.caret().column == 6);
+    }
+
+    SECTION("backspace deletes selection instead of single char") {
+        // Select "llo"
+        buffer.setCaret({0, 2});
+        buffer.setSelectionAnchor({0, 2});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        
+        buffer.backspace();
+        REQUIRE(buffer.getText() == "he world");
+        REQUIRE(buffer.caret().column == 2);
+    }
+
+    SECTION("delete key deletes selection") {
+        // Select " world"
+        buffer.setCaret({0, 5});
+        buffer.setSelectionAnchor({0, 5});
+        buffer.setCaret({0, 11});
+        buffer.updateSelectionToCaret();
+        
+        buffer.del();
+        REQUIRE(buffer.getText() == "hello");
+    }
+
+    SECTION("typing replaces selection") {
+        // Select "hello"
+        buffer.setSelectionAnchor({0, 0});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        
+        buffer.insertChar('H');
+        buffer.insertChar('i');
+        REQUIRE(buffer.getText() == "Hi world");
+    }
+
+    SECTION("multiline selection deletion") {
+        buffer.setText("line one\nline two\nline three");
+        buffer.setCaret({0, 5});
+        buffer.setSelectionAnchor({0, 5});
+        buffer.setCaret({2, 5});
+        buffer.updateSelectionToCaret();
+        
+        REQUIRE(buffer.deleteSelection());
+        REQUIRE(buffer.getText() == "line three");
+    }
+
+    SECTION("selectAll and delete clears document") {
+        buffer.selectAll();
+        REQUIRE(buffer.hasSelection());
+        
+        buffer.del();
+        REQUIRE(buffer.getText().empty());
+        REQUIRE(buffer.lineCount() == 1);
+    }
+}
