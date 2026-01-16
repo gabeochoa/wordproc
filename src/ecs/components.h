@@ -86,6 +86,12 @@ struct MenuComponent : public afterhours::BaseComponent {
   bool showAboutDialog = false;
 };
 
+// Page display mode for document layout
+enum class PageMode {
+  Pageless,  // Continuous flow, no page breaks/margins
+  Paged      // Traditional page layout with margins and page breaks
+};
+
 // Component for window layout calculations
 struct LayoutComponent : public afterhours::BaseComponent {
   float titleBarHeight = 20.0f;
@@ -93,6 +99,14 @@ struct LayoutComponent : public afterhours::BaseComponent {
   float statusBarHeight = 18.0f;
   float borderWidth = 2.0f;
   float textPadding = 4.0f;
+  
+  // Page mode settings
+  PageMode pageMode = PageMode::Pageless;  // Default to pageless continuous flow
+  float pageWidth = 612.0f;    // Letter size in points (8.5" x 72)
+  float pageHeight = 792.0f;   // Letter size in points (11" x 72)
+  float pageMargin = 72.0f;    // 1 inch margins
+  float lineWidthLimit = 0.0f; // 0 = no limit, otherwise max chars per line in pageless mode
+  int linesPerPage = 50;       // Approximate lines per page for paged mode
   
   // Computed values (updated each frame based on window size)
   int screenWidth = 800;
@@ -106,6 +120,12 @@ struct LayoutComponent : public afterhours::BaseComponent {
   Rect menuBar;
   Rect statusBar;
   Rect textArea;
+  
+  // Page-specific computed values
+  float pageDisplayWidth = 0.0f;   // Scaled page width for display
+  float pageDisplayHeight = 0.0f;  // Scaled page height for display
+  float pageScale = 1.0f;          // Scale factor for page display
+  float pageOffsetX = 0.0f;        // X offset to center page in window
   
   void updateLayout(int w, int h) {
     screenWidth = w;
@@ -121,6 +141,58 @@ struct LayoutComponent : public afterhours::BaseComponent {
                        statusBarHeight - 2 * borderWidth;
     textArea = {borderWidth, textTop,
                 static_cast<float>(w) - 2 * borderWidth, textHeight};
+    
+    // Calculate page display dimensions for paged mode
+    if (pageMode == PageMode::Paged) {
+      float availableWidth = textArea.width - 20.0f;  // Margin for page shadow
+      float availableHeight = textArea.height - 20.0f;
+      
+      // Scale to fit horizontally
+      pageScale = availableWidth / pageWidth;
+      if (pageScale * pageHeight > availableHeight * 0.9f) {
+        // If page would be too tall, scale to fit vertically
+        pageScale = (availableHeight * 0.9f) / pageHeight;
+      }
+      
+      pageDisplayWidth = pageWidth * pageScale;
+      pageDisplayHeight = pageHeight * pageScale;
+      pageOffsetX = textArea.x + (textArea.width - pageDisplayWidth) / 2.0f;
+    }
+  }
+  
+  // Get effective text area (within page margins for paged mode)
+  Rect effectiveTextArea() const {
+    if (pageMode == PageMode::Pageless) {
+      // Apply line width limit if set
+      if (lineWidthLimit > 0.0f) {
+        float limitedWidth = lineWidthLimit * 8.0f;  // Approximate char width
+        if (limitedWidth < textArea.width) {
+          float offset = (textArea.width - limitedWidth) / 2.0f;
+          return {textArea.x + offset, textArea.y, limitedWidth, textArea.height};
+        }
+      }
+      return textArea;
+    }
+    
+    // Paged mode: return area within page margins
+    float marginScaled = pageMargin * pageScale;
+    return {
+      pageOffsetX + marginScaled,
+      textArea.y + 10.0f + marginScaled,  // 10px for page shadow
+      pageDisplayWidth - 2.0f * marginScaled,
+      pageDisplayHeight - 2.0f * marginScaled
+    };
+  }
+  
+  // Toggle between paged and pageless modes
+  void togglePageMode() {
+    pageMode = (pageMode == PageMode::Pageless) ? PageMode::Paged : PageMode::Pageless;
+    updateLayout(screenWidth, screenHeight);
+  }
+  
+  // Set line width limit (0 to disable)
+  void setLineWidthLimit(float chars) {
+    lineWidthLimit = chars;
   }
 };
 

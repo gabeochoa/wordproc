@@ -37,6 +37,19 @@ inline std::vector<win95::Menu> createMenuBar() {
   };
   menus.push_back(editMenu);
   
+  // View menu
+  win95::Menu viewMenu;
+  viewMenu.label = "View";
+  viewMenu.items = {
+    {"Pageless Mode", "", true, false, nullptr},
+    {"Paged Mode", "", true, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
+    {"Line Width: Normal", "", true, false, nullptr},
+    {"Line Width: Narrow", "", true, false, nullptr},
+    {"Line Width: Wide", "", true, false, nullptr}
+  };
+  menus.push_back(viewMenu);
+  
   // Format menu
   win95::Menu formatMenu;
   formatMenu.label = "Format";

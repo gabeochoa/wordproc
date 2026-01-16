@@ -12,6 +12,74 @@
 
 namespace ecs {
 
+// Draw a page background with shadow (for paged mode)
+inline void drawPageBackground(const LayoutComponent& layout) {
+  if (layout.pageMode != PageMode::Paged) return;
+  
+  float pageY = layout.textArea.y + 10.0f;  // 10px margin from top
+  
+  // Draw page shadow
+  raylib::Rectangle shadowRect = {
+    layout.pageOffsetX + 4.0f,
+    pageY + 4.0f,
+    layout.pageDisplayWidth,
+    layout.pageDisplayHeight
+  };
+  raylib::DrawRectangleRec(shadowRect, raylib::Color{100, 100, 100, 128});
+  
+  // Draw page (white background)
+  raylib::Rectangle pageRect = {
+    layout.pageOffsetX,
+    pageY,
+    layout.pageDisplayWidth,
+    layout.pageDisplayHeight
+  };
+  raylib::DrawRectangleRec(pageRect, raylib::WHITE);
+  
+  // Draw page border
+  raylib::DrawRectangleLinesEx(pageRect, 1.0f, raylib::DARKGRAY);
+  
+  // Draw margin guidelines (dotted or light lines)
+  float marginScaled = layout.pageMargin * layout.pageScale;
+  raylib::Color marginColor = raylib::Color{200, 200, 200, 100};
+  
+  // Left margin
+  raylib::DrawLine(
+    static_cast<int>(layout.pageOffsetX + marginScaled),
+    static_cast<int>(pageY),
+    static_cast<int>(layout.pageOffsetX + marginScaled),
+    static_cast<int>(pageY + layout.pageDisplayHeight),
+    marginColor
+  );
+  
+  // Right margin
+  raylib::DrawLine(
+    static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth - marginScaled),
+    static_cast<int>(pageY),
+    static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth - marginScaled),
+    static_cast<int>(pageY + layout.pageDisplayHeight),
+    marginColor
+  );
+  
+  // Top margin
+  raylib::DrawLine(
+    static_cast<int>(layout.pageOffsetX),
+    static_cast<int>(pageY + marginScaled),
+    static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth),
+    static_cast<int>(pageY + marginScaled),
+    marginColor
+  );
+  
+  // Bottom margin
+  raylib::DrawLine(
+    static_cast<int>(layout.pageOffsetX),
+    static_cast<int>(pageY + layout.pageDisplayHeight - marginScaled),
+    static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth),
+    static_cast<int>(pageY + layout.pageDisplayHeight - marginScaled),
+    marginColor
+  );
+}
+
 // Render the text buffer with caret and selection
 inline void renderTextBuffer(const TextBuffer& buffer, 
                              const LayoutComponent::Rect& textArea,
@@ -124,14 +192,25 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
       layout.textArea.x, layout.textArea.y,
       layout.textArea.width, layout.textArea.height
     };
-    raylib::DrawRectangleRec(textAreaRect, theme::TEXT_AREA_BG);
-    util::drawSunkenBorder(textAreaRect);
+    
+    // In paged mode, draw a gray background; in pageless mode, draw white
+    if (layout.pageMode == PageMode::Paged) {
+      raylib::DrawRectangleRec(textAreaRect, raylib::Color{128, 128, 128, 255});
+      util::drawSunkenBorder(textAreaRect);
+      
+      // Draw the page with shadow and margins
+      drawPageBackground(layout);
+    } else {
+      raylib::DrawRectangleRec(textAreaRect, theme::TEXT_AREA_BG);
+      util::drawSunkenBorder(textAreaRect);
+    }
 
-    // Render text buffer
+    // Render text buffer using effective text area (respects page margins)
     TextStyle style = doc.buffer.textStyle();
     int fontSize = style.fontSize;
     int lineHeight = fontSize + 4;
-    renderTextBuffer(doc.buffer, layout.textArea, caret.visible, 
+    LayoutComponent::Rect effectiveArea = layout.effectiveTextArea();
+    renderTextBuffer(doc.buffer, effectiveArea, caret.visible, 
                      fontSize, lineHeight, scroll.offset);
 
     // Draw status bar
@@ -175,11 +254,12 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
 };
 
 // System for handling menu interactions (needs mutable access)
-struct MenuSystem : public afterhours::System<DocumentComponent, MenuComponent, StatusComponent> {
+struct MenuSystem : public afterhours::System<DocumentComponent, MenuComponent, StatusComponent, LayoutComponent> {
   void for_each_with(afterhours::Entity& entity,
                      DocumentComponent& doc,
                      MenuComponent& menu,
                      StatusComponent& status,
+                     LayoutComponent& layout,
                      const float) override {
     // Draw interactive menus
     int menuResult = win95::DrawMenuBar(menu.menus, 
@@ -187,7 +267,7 @@ struct MenuSystem : public afterhours::System<DocumentComponent, MenuComponent, 
                                         theme::layout::MENU_BAR_HEIGHT);
     
     if (menuResult >= 0) {
-      handleMenuAction(menuResult, doc, menu, status);
+      handleMenuAction(menuResult, doc, menu, status, layout);
     }
     
     // Handle About dialog dismissal
@@ -207,7 +287,8 @@ struct MenuSystem : public afterhours::System<DocumentComponent, MenuComponent, 
   
 private:
   void handleMenuAction(int menuResult, DocumentComponent& doc, 
-                        MenuComponent& menu, StatusComponent& status) {
+                        MenuComponent& menu, StatusComponent& status,
+                        LayoutComponent& layout) {
     int menuIndex = menuResult / 100;
     int itemIndex = menuResult % 100;
     
@@ -299,7 +380,39 @@ private:
         default:
           break;
       }
-    } else if (menuIndex == 2) { // Format menu
+    } else if (menuIndex == 2) { // View menu
+      switch (itemIndex) {
+        case 0: // Pageless Mode
+          layout.pageMode = PageMode::Pageless;
+          layout.updateLayout(layout.screenWidth, layout.screenHeight);
+          status.set("Switched to Pageless mode");
+          status.expiresAt = raylib::GetTime() + 2.0;
+          break;
+        case 1: // Paged Mode
+          layout.pageMode = PageMode::Paged;
+          layout.updateLayout(layout.screenWidth, layout.screenHeight);
+          status.set("Switched to Paged mode");
+          status.expiresAt = raylib::GetTime() + 2.0;
+          break;
+        case 3: // Line Width: Normal (no limit)
+          layout.setLineWidthLimit(0.0f);
+          status.set("Line width: Normal");
+          status.expiresAt = raylib::GetTime() + 2.0;
+          break;
+        case 4: // Line Width: Narrow (60 chars)
+          layout.setLineWidthLimit(60.0f);
+          status.set("Line width: Narrow (60 chars)");
+          status.expiresAt = raylib::GetTime() + 2.0;
+          break;
+        case 5: // Line Width: Wide (100 chars)
+          layout.setLineWidthLimit(100.0f);
+          status.set("Line width: Wide (100 chars)");
+          status.expiresAt = raylib::GetTime() + 2.0;
+          break;
+        default:
+          break;
+      }
+    } else if (menuIndex == 3) { // Format menu
       TextStyle style = doc.buffer.textStyle();
       switch (itemIndex) {
         case 0: // Bold
@@ -333,7 +446,7 @@ private:
         default:
           break;
       }
-    } else if (menuIndex == 3) { // Help menu
+    } else if (menuIndex == 4) { // Help menu
       if (itemIndex == 0) { // About
         menu.showAboutDialog = true;
       }

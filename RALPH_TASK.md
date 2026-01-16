@@ -157,22 +157,24 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add tests that validate on-screen content while scrolling.
 - [x] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
 - [x] Add unsaved-changes indicator (`*`) in the UI when the document is dirty.
-- [ ] Add paged vs pageless mode switching for document layout (pageless = continuous flow, no page breaks/margins; optional line width control).
+- [x] Add paged vs pageless mode switching for document layout (pageless = continuous flow, no page breaks/margins; optional line width control).
 
 ## Future Work (Non-blocking v0.2+ enhancements)
 These are architectural improvements and new features for future versions. They do not block v0.1 completion.
 
 - [x] Refactor the main loop in `src/main.cpp` to use ECS system functionality instead of a single file. (Implemented: Created src/ecs/ with components.h, input_system.h, render_system.h; main.cpp now uses afterhours::SystemManager)
-- Use immediate-mode UI for the UI layer.
-- Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
-- Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
-- Use Afterhours UI state context for test input handling.
-- Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
-- Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
-- Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
-- Ensure `.doc` import support; collect sample `.doc` files for tests.
-- Add a test that loads the largest file and logs FPS while scrolling.
-- Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
+- [ ] Use immediate-mode UI for the UI layer.
+- [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
+- [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
+- [ ] Use Afterhours UI state context for test input handling.
+- [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
+- [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
+- [ ] Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
+- [ ] Ensure `.doc` import support; collect sample `.doc` files for tests.
+- [ ] Add a test that loads the largest file and logs FPS while scrolling.
+- [ ] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
+- [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
+- [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 
 ---
 
@@ -187,10 +189,10 @@ These are architectural improvements and new features for future versions. They 
 ---
 
 ## Refactor Opportunities (reduce LOC / simplify - non-blocking)
-- Centralize editor actions into a command table (keyboard + menu dispatch in one place).
-- Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
-- Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
-- Remove or wire `RenderCache` (avoid unused code paths).
-- Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
-- Make font loading table-driven instead of manual per-font wiring.
-- Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
+- [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
+- [ ] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
+- [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
+- [ ] Remove or wire `RenderCache` (avoid unused code paths).
+- [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
+- [ ] Make font loading table-driven instead of manual per-font wiring.
+- [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
