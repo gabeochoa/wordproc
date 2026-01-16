@@ -48,6 +48,11 @@ public:
   
   void clear();
   
+  // Performance tracking
+  std::size_t gapMoves() const { return gap_moves_; }
+  std::size_t reallocations() const { return reallocations_; }
+  void resetStats() { gap_moves_ = 0; reallocations_ = 0; }
+  
 private:
   void moveGapTo(std::size_t pos);
   void ensureCapacity(std::size_t needed);
@@ -55,6 +60,8 @@ private:
   std::vector<char> buffer_;
   std::size_t gap_start_ = 0;
   std::size_t gap_end_ = 0;
+  std::size_t gap_moves_ = 0;
+  std::size_t reallocations_ = 0;
 };
 
 // SoA (Structure of Arrays) text buffer using gap buffer + line spans
@@ -106,8 +113,8 @@ public:
     std::size_t gap_moves = 0;
     std::size_t buffer_reallocations = 0;
   };
-  const PerfStats& perfStats() const { return stats_; }
-  void resetPerfStats() { stats_ = {}; }
+  PerfStats perfStats() const;
+  void resetPerfStats();
 
 private:
   void ensureNonEmpty();

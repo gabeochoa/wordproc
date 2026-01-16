@@ -18,6 +18,8 @@ void GapBuffer::moveGapTo(std::size_t pos) {
     return;
   }
   
+  gap_moves_++;
+  
   if (pos < gap_start_) {
     // Move gap backwards: shift characters forward
     std::size_t shift = gap_start_ - pos;
@@ -38,6 +40,8 @@ void GapBuffer::ensureCapacity(std::size_t needed) {
   if (gap_size >= needed) {
     return;
   }
+  
+  reallocations_++;
   
   // Grow by 2x or to fit needed, whichever is larger
   std::size_t current_size = buffer_.size();
@@ -342,6 +346,20 @@ std::string TextBuffer::getText() const {
 TextStyle TextBuffer::textStyle() const { return style_; }
 
 void TextBuffer::setTextStyle(const TextStyle &style) { style_ = style; }
+
+TextBuffer::PerfStats TextBuffer::perfStats() const {
+  PerfStats stats;
+  stats.total_inserts = stats_.total_inserts;
+  stats.total_deletes = stats_.total_deletes;
+  stats.gap_moves = chars_.gapMoves();
+  stats.buffer_reallocations = chars_.reallocations();
+  return stats;
+}
+
+void TextBuffer::resetPerfStats() {
+  stats_ = {};
+  chars_.resetStats();
+}
 
 void TextBuffer::backspace() {
   ensureNonEmpty();
