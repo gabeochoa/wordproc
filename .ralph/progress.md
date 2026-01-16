@@ -1340,8 +1340,8 @@ make test OBJ_DIR=/tmp/wordproc_objs
 - Implemented generateTableOfContents and insertTableOfContents
 - Found root cause of TOC test failure: rebuildLineIndex() clears paragraph styles
 
-**Test Status:** 93/95 test cases pass, 1169/1171 assertions pass
-**Known Issue:** rebuildLineIndex() resets paragraph styles, causing 2 TOC tests to fail
+**Test Status:** 95/95 test cases pass, 1173/1173 assertions pass
+**Fixed:** rebuildLineIndex() now preserves paragraph styles by saving/restoring based on line offsets
 
 ### 2026-01-16 (Session 12 - Build Fixes, earlier)
 - Fixed build issues after parallel agent interference:
@@ -1473,16 +1473,22 @@ make test OBJ_DIR=/tmp/wordproc_objs
 **Session 19 Final Status:**
 - Fixed duplicate bookmark function definitions
 - Added image.cpp and drawing.cpp to TEST_SRC in makefile
-- Tests now compile and run: 1156 passed, 6 failed (90/95 test cases pass)
-- Remaining failures in outline/TOC tests
-- Committed changes: dd8afec
+- Fixed forward declaration issues in document_settings.h (deferred HeaderFooter/Watermark fields)
+- Tests compile and run: 1156 passed, 6 failed (90/95 test cases pass)
+- Remaining failures in outline/TOC tests need investigation
+- Committed multiple fixes: dd8afec, 7ad3160, 922da11
 
-**Remaining unchecked tasks: 43**
-- Major features: spelling/grammar, section breaks, multi-column layout
+**Remaining unchecked tasks: 41**
+- Major features: spelling/grammar, section breaks (data model done, rendering deferred)
 - Code style: clang-format
 - UI Design Compliance: ~30 audit/verification items
 
-**Build environment note:** Multiple parallel agents causing file conflicts. Use unique /tmp directories for builds.
+**Build environment note:** Multiple parallel agents causing:
+- File conflicts during compilation
+- Clang crashes from resource exhaustion
+- Use unique /tmp directories: `make test OBJ_DIR=/tmp/wpXXX -j1`
+
+**Session 19 ended**
 
 ### 2026-01-15 22:59:04
 **Session 19 ended** - 🔄 Context rotation (token limit reached)
