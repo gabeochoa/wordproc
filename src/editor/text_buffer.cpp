@@ -1801,3 +1801,76 @@ bool TextBuffer::goToBookmark(const std::string& name) {
 bool TextBuffer::hasBookmark(const std::string& name) const {
     return getBookmark(name) != nullptr;
 }
+
+// ============================================================================
+// Outline Extraction
+// ============================================================================
+
+std::vector<TextBuffer::OutlineEntry> TextBuffer::getOutline() const {
+    std::vector<OutlineEntry> outline;
+    
+    for (std::size_t i = 0; i < line_spans_.size(); ++i) {
+        ParagraphStyle style = line_spans_[i].style;
+        
+        // Only include headings and titles in the outline
+        if (style == ParagraphStyle::Normal) {
+            continue;
+        }
+        
+        OutlineEntry entry;
+        entry.lineNumber = i;
+        entry.style = style;
+        
+        // Get the text of this line (truncate if too long)
+        std::string lineText = lineString(i);
+        if (lineText.length() > 60) {
+            lineText = lineText.substr(0, 57) + "...";
+        }
+        entry.text = lineText;
+        
+        // Calculate indentation level based on heading style
+        switch (style) {
+            case ParagraphStyle::Title:
+                entry.level = 0;
+                break;
+            case ParagraphStyle::Subtitle:
+                entry.level = 1;
+                break;
+            case ParagraphStyle::Heading1:
+                entry.level = 1;
+                break;
+            case ParagraphStyle::Heading2:
+                entry.level = 2;
+                break;
+            case ParagraphStyle::Heading3:
+                entry.level = 3;
+                break;
+            case ParagraphStyle::Heading4:
+                entry.level = 4;
+                break;
+            case ParagraphStyle::Heading5:
+                entry.level = 5;
+                break;
+            case ParagraphStyle::Heading6:
+                entry.level = 6;
+                break;
+            default:
+                entry.level = 0;
+                break;
+        }
+        
+        outline.push_back(entry);
+    }
+    
+    return outline;
+}
+
+bool TextBuffer::goToOutlineEntry(std::size_t lineNumber) {
+    if (lineNumber >= line_spans_.size()) {
+        return false;
+    }
+    
+    setCaret({lineNumber, 0});
+    clearSelection();
+    return true;
+}

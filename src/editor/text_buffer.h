@@ -367,6 +367,17 @@ class TextBuffer {
     const Bookmark* bookmarkNear(std::size_t offset, std::size_t tolerance) const;  // Find nearby bookmark
     const std::vector<Bookmark>& bookmarks() const { return bookmarks_; }  // All bookmarks
     void clearBookmarks() { bookmarks_.clear(); version_++; }  // Remove all bookmarks
+    
+    // Outline extraction (for document navigation)
+    // OutlineEntry represents a heading in the document outline
+    struct OutlineEntry {
+        std::size_t lineNumber = 0;     // Line number in document
+        std::string text;                // Heading text (truncated)
+        ParagraphStyle style;            // Heading style (H1-H6, Title, Subtitle)
+        int level = 0;                   // Indentation level (0 = Title, 1 = H1, etc.)
+    };
+    std::vector<OutlineEntry> getOutline() const;  // Extract document outline from headings
+    bool goToOutlineEntry(std::size_t lineNumber);  // Navigate to an outline entry
 
     // Performance metrics
     struct PerfStats {

@@ -287,14 +287,135 @@ enum class PageMode {
     Paged      // Traditional page layout with margins and page breaks
 };
 
+// Page orientation
+enum class PageOrientation {
+    Portrait,   // Height > Width (default)
+    Landscape   // Width > Height
+};
+
+// Get display name for page orientation
+inline const char* pageOrientationName(PageOrientation orient) {
+    switch (orient) {
+        case PageOrientation::Portrait: return "Portrait";
+        case PageOrientation::Landscape: return "Landscape";
+        default: return "Portrait";
+    }
+}
+
+// Predefined page sizes (dimensions in points, 1 inch = 72 points)
+enum class PageSize {
+    Letter,     // 8.5" x 11" (US standard)
+    Legal,      // 8.5" x 14"
+    Tabloid,    // 11" x 17"
+    A4,         // 210mm x 297mm
+    A5,         // 148mm x 210mm
+    B5,         // 176mm x 250mm
+    Executive,  // 7.25" x 10.5"
+    Custom      // User-defined dimensions
+};
+
+// Get display name for page size
+inline const char* pageSizeName(PageSize size) {
+    switch (size) {
+        case PageSize::Letter: return "Letter (8.5\" x 11\")";
+        case PageSize::Legal: return "Legal (8.5\" x 14\")";
+        case PageSize::Tabloid: return "Tabloid (11\" x 17\")";
+        case PageSize::A4: return "A4 (210mm x 297mm)";
+        case PageSize::A5: return "A5 (148mm x 210mm)";
+        case PageSize::B5: return "B5 (176mm x 250mm)";
+        case PageSize::Executive: return "Executive (7.25\" x 10.5\")";
+        case PageSize::Custom: return "Custom";
+        default: return "Letter";
+    }
+}
+
+// Get page dimensions in points for a page size (portrait orientation)
+inline void getPageDimensions(PageSize size, float& width, float& height) {
+    switch (size) {
+        case PageSize::Letter:
+            width = 612.0f;   // 8.5" * 72
+            height = 792.0f;  // 11" * 72
+            break;
+        case PageSize::Legal:
+            width = 612.0f;   // 8.5" * 72
+            height = 1008.0f; // 14" * 72
+            break;
+        case PageSize::Tabloid:
+            width = 792.0f;   // 11" * 72
+            height = 1224.0f; // 17" * 72
+            break;
+        case PageSize::A4:
+            width = 595.0f;   // 210mm * 72/25.4
+            height = 842.0f;  // 297mm * 72/25.4
+            break;
+        case PageSize::A5:
+            width = 420.0f;   // 148mm * 72/25.4
+            height = 595.0f;  // 210mm * 72/25.4
+            break;
+        case PageSize::B5:
+            width = 499.0f;   // 176mm * 72/25.4
+            height = 709.0f;  // 250mm * 72/25.4
+            break;
+        case PageSize::Executive:
+            width = 522.0f;   // 7.25" * 72
+            height = 756.0f;  // 10.5" * 72
+            break;
+        case PageSize::Custom:
+        default:
+            width = 612.0f;
+            height = 792.0f;
+            break;
+    }
+}
+
 // Page layout settings
 struct PageSettings {
     PageMode mode = PageMode::Pageless;
+    PageSize size = PageSize::Letter;           // Preset page size
+    PageOrientation orientation = PageOrientation::Portrait;
     float pageWidth = 612.0f;   // Letter size in points (8.5" x 72)
     float pageHeight = 792.0f;  // Letter size in points (11" x 72)
-    float pageMargin = 72.0f;   // 1 inch margins
+    float pageMargin = 72.0f;   // 1 inch margins (all sides)
+    float marginTop = 72.0f;    // Top margin in points
+    float marginBottom = 72.0f; // Bottom margin in points
+    float marginLeft = 72.0f;   // Left margin in points
+    float marginRight = 72.0f;  // Right margin in points
     float lineWidthLimit =
         0.0f;  // 0 = no limit, otherwise max chars per line in pageless mode
+    TextColor pageColor = TextColors::White;  // Page background color
+    
+    // Apply a page size preset (updates width/height based on orientation)
+    void applyPageSize(PageSize newSize) {
+        size = newSize;
+        float w, h;
+        getPageDimensions(size, w, h);
+        if (orientation == PageOrientation::Portrait) {
+            pageWidth = w;
+            pageHeight = h;
+        } else {
+            pageWidth = h;
+            pageHeight = w;
+        }
+    }
+    
+    // Toggle orientation (swaps width/height)
+    void toggleOrientation() {
+        if (orientation == PageOrientation::Portrait) {
+            orientation = PageOrientation::Landscape;
+        } else {
+            orientation = PageOrientation::Portrait;
+        }
+        std::swap(pageWidth, pageHeight);
+    }
+    
+    // Set all margins uniformly
+    void setUniformMargins(float margin) {
+        pageMargin = margin;
+        marginTop = margin;
+        marginBottom = margin;
+        marginLeft = margin;
+        marginRight = margin;
+    }
 };
 
 // Combined document settings - saved/loaded with document file

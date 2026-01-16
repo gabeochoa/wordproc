@@ -13,12 +13,14 @@ inline std::vector<win95::Menu> createMenuBar() {
     // File menu
     win95::Menu fileMenu;
     fileMenu.label = "File";
-    fileMenu.items = {{"New", "Ctrl+N", true, false, nullptr},
-                      {"Open...", "Ctrl+O", true, false, nullptr},
-                      {"Save", "Ctrl+S", true, false, nullptr},
-                      {"Save As...", "", true, false, nullptr},
-                      {"", "", false, true, nullptr},  // Separator
-                      {"Exit", "Alt+F4", true, false, nullptr}};
+    fileMenu.items = {{"New", "Ctrl+N", true, false, nullptr},          // 0
+                      {"Open...", "Ctrl+O", true, false, nullptr},      // 1
+                      {"Save", "Ctrl+S", true, false, nullptr},         // 2
+                      {"Save As...", "", true, false, nullptr},         // 3
+                      {"", "", false, true, nullptr},                   // 4 Separator
+                      {"Page Setup...", "", true, false, nullptr},      // 5
+                      {"", "", false, true, nullptr},                   // 6 Separator
+                      {"Exit", "Alt+F4", true, false, nullptr}};        // 7
     menus.push_back(fileMenu);
 
     // Edit menu
