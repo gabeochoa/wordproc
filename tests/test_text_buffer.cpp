@@ -763,3 +763,52 @@ TEST_CASE("Font family and size selection", "[text_buffer][font]") {
         REQUIRE(updated.italic == true);
     }
 }
+
+TEST_CASE("Text emphasis formatting", "[text_buffer][emphasis]") {
+    TextBuffer buffer;
+    
+    SECTION("default emphasis is all off") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.bold == false);
+        REQUIRE(style.italic == false);
+        REQUIRE(style.underline == false);
+        REQUIRE(style.strikethrough == false);
+    }
+    
+    SECTION("toggle underline") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.underline == false);
+        
+        style.underline = true;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.underline == true);
+    }
+    
+    SECTION("toggle strikethrough") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.strikethrough == false);
+        
+        style.strikethrough = true;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.strikethrough == true);
+    }
+    
+    SECTION("all emphasis options can be combined") {
+        TextStyle style = buffer.textStyle();
+        style.bold = true;
+        style.italic = true;
+        style.underline = true;
+        style.strikethrough = true;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.bold == true);
+        REQUIRE(updated.italic == true);
+        REQUIRE(updated.underline == true);
+        REQUIRE(updated.strikethrough == true);
+    }
+}

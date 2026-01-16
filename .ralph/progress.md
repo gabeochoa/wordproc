@@ -1195,3 +1195,9 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 ### 2026-01-15 21:26:21
 **Session 4 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 21:27:54
+**Session 4 ended** - 🔄 Context rotation (token limit reached)
+
+### 2026-01-15 21:27:56
+**Session 5 started** (model: opus-4.5-thinking)

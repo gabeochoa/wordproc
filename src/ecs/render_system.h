@@ -133,17 +133,33 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
         // Draw text with paragraph style applied
         if (!line.empty()) {
+            // Get global text style for underline/strikethrough
+            TextStyle globalStyle = buffer.textStyle();
+            int textWidth = raylib::MeasureText(line.c_str(), lineFontSize);
+            
             // For headings and titles, draw bold text (simulated by drawing twice with offset)
-            if (paragraphStyleIsBold(paraStyle)) {
+            if (paragraphStyleIsBold(paraStyle) || globalStyle.bold) {
                 // Draw bold effect by drawing text twice with 1px offset
                 raylib::DrawText(line.c_str(), x, y, lineFontSize, theme::TEXT_COLOR);
                 raylib::DrawText(line.c_str(), x + 1, y, lineFontSize, theme::TEXT_COLOR);
-            } else if (paragraphStyleIsItalic(paraStyle)) {
+            } else if (paragraphStyleIsItalic(paraStyle) || globalStyle.italic) {
                 // For subtitle italic style, just draw normally for now
                 // (true italics would require a separate font or skewing)
                 raylib::DrawText(line.c_str(), x, y, lineFontSize, raylib::DARKGRAY);
             } else {
                 raylib::DrawText(line.c_str(), x, y, lineFontSize, theme::TEXT_COLOR);
+            }
+            
+            // Draw underline if enabled
+            if (globalStyle.underline) {
+                int underlineY = y + lineFontSize + 1;
+                raylib::DrawLine(x, underlineY, x + textWidth, underlineY, theme::TEXT_COLOR);
+            }
+            
+            // Draw strikethrough if enabled
+            if (globalStyle.strikethrough) {
+                int strikeY = y + lineFontSize / 2;
+                raylib::DrawLine(x, strikeY, x + textWidth, strikeY, theme::TEXT_COLOR);
             }
         }
 
@@ -279,10 +295,13 @@ struct EditorRenderSystem
             CaretPosition caretPos = doc.buffer.caret();
             ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
             std::string statusText = std::format(
-                "Ln {}, Col {} | {} | {}{}| {}pt | {}", caretPos.row + 1,
+                "Ln {}, Col {} | {} | {}{}{}{}| {}pt | {}", caretPos.row + 1,
                 caretPos.column + 1, paragraphStyleName(paraStyle),
                 style.bold ? "B " : "",
-                style.italic ? "I " : "", style.fontSize, style.font);
+                style.italic ? "I " : "",
+                style.underline ? "U " : "",
+                style.strikethrough ? "S " : "",
+                style.fontSize, style.font);
             raylib::DrawText(
                 statusText.c_str(), 4,
                 layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
@@ -683,25 +702,33 @@ struct MenuSystem
                     style.italic = !style.italic;
                     doc.buffer.setTextStyle(style);
                     break;
-                // (12 is separator)
-                case 13:  // Font: Gaegu
+                case 12:  // Underline
+                    style.underline = !style.underline;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 13:  // Strikethrough
+                    style.strikethrough = !style.strikethrough;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                // (14 is separator)
+                case 15:  // Font: Gaegu
                     style.font = "Gaegu-Bold";
                     doc.buffer.setTextStyle(style);
                     break;
-                case 14:  // Font: Garamond
+                case 16:  // Font: Garamond
                     style.font = "EBGaramond-Regular";
                     doc.buffer.setTextStyle(style);
                     break;
-                // (15 is separator)
-                case 16:  // Increase Size
+                // (17 is separator)
+                case 18:  // Increase Size
                     style.fontSize = std::min(72, style.fontSize + 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 17:  // Decrease Size
+                case 19:  // Decrease Size
                     style.fontSize = std::max(8, style.fontSize - 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 18:  // Reset Size
+                case 20:  // Reset Size
                     style.fontSize = 16;
                     doc.buffer.setTextStyle(style);
                     break;
