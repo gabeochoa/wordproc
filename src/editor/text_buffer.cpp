@@ -1734,18 +1734,10 @@ bool TextBuffer::addBookmarkAt(const std::string& name, std::size_t offset) {
         return false;
     }
     
-    // Check if bookmark with this name already exists
-    for (auto& bm : bookmarks_) {
+    // Check if bookmark with this name already exists - reject duplicates
+    for (const auto& bm : bookmarks_) {
         if (bm.name == name) {
-            // Update existing bookmark
-            bm.offset = offset;
-            // Re-sort after update
-            std::sort(bookmarks_.begin(), bookmarks_.end(),
-                     [](const Bookmark& a, const Bookmark& b) {
-                         return a.offset < b.offset;
-                     });
-            version_++;
-            return true;
+            return false;  // Duplicate name not allowed
         }
     }
     

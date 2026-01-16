@@ -1489,3 +1489,18 @@ make test OBJ_DIR=/tmp/wordproc_objs
 - [x] Add table of contents generation from headings
 
 **Remaining unchecked tasks:** ~47 items (mostly UI Design Compliance)
+
+### Session 15 (continued)
+- Added table of contents generation from headings
+- Added footnotes with auto-numbering (Footnote struct, addFootnote/removeFootnote/getFootnote)
+- Added watermark support (text and image)
+- Marked headers and footers with page numbers complete (already implemented)
+
+**Tasks completed in Session 15:**
+- [x] Add manual page breaks
+- [x] Add table of contents generation from headings  
+- [x] Add footnotes with auto-numbering
+- [x] Add watermark support (text or image)
+- [x] Add headers and footers with page numbers (already implemented)
+
+**Remaining unchecked tasks:** 44 (mostly UI Design Compliance items)
