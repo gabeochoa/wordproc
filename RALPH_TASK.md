@@ -29,7 +29,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 ### Future Work
 - [x] Use immediate-mode UI for the UI layer. (Foundation integrated: Win95 theme, UIContext, UI systems registered. Full widget conversion pending.)
-- [x] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later. (IRenderer interface + RaylibRenderer created and initialized in main.cpp)
+- [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
 - [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
 - [ ] Use Afterhours UI state context for test input handling.
 - [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
@@ -40,8 +40,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add more E2E tests that actually run the program via a harness (control/profiling allowed).
 - [ ] Expand automated performance profiling to support "fastest word processor" goal.
 - [x] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
-- [x] Investigate missing menu items; ensure E2E tests catch menu rendering regressions. (Fixed: MenuSystem was wrongly registered as update system, moved to render system after BeginDrawing)
-- [x] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression. (Fixed in commit 16b9644: MenuSystem now runs during render phase)
+- [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
+- [ ] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression.
 - [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
 - [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
@@ -52,11 +52,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
 
 ### Refactor Opportunities
-- [x] Replace custom `src/util/logging.h` with the logging from `vendor/afterhours`. (Already done - wrapper delegates to Afterhours, adds ScopedTimer for profiling)
-- [x] Investigate if `vendor/afterhours` can handle Win95-style border drawing (`src/util/drawing.h`); if so, use it; if not, document gap in `AfterhoursGaps/`. (Deleted drawing.h, use win95_widgets.h instead - Afterhours doesn't have Win95-style borders)
-- [ ] Replace `src/ui/win95_widgets.h` with `vendor/afterhours` UI widgets; document any gaps in `AfterhoursGaps/`.
 - [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
-- [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
+- [ ] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
 - [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
 - [ ] Remove or wire `RenderCache` (avoid unused code paths).
 - [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.

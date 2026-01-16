@@ -1,20 +1,20 @@
 #pragma once
 
+#include <memory>
+
 #include <afterhours/src/library.h>
 #include <afterhours/src/singleton.h>
 
-#include <memory>
-
 SINGLETON_FWD(Preload)
 struct Preload {
-    SINGLETON(Preload)
+  SINGLETON(Preload)
 
-    Preload();
-    ~Preload();
+  Preload();
+  ~Preload();
 
-    Preload(const Preload &) = delete;
-    void operator=(const Preload &) = delete;
+  Preload(const Preload &) = delete;
+  void operator=(const Preload &) = delete;
 
-    Preload &init(const char *title);
-    Preload &make_singleton();
+  Preload &init(const char *title);
+  Preload &make_singleton();
 };

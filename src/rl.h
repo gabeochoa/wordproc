@@ -22,7 +22,7 @@
 namespace raylib {
 inline Vector2 operator*(float s, Vector2 a) { return Vector2Scale(a, s); }
 inline Vector3 operator*(float s, Vector3 a) { return Vector3Scale(a, s); }
-}  // namespace raylib
+} // namespace raylib
 
 #include <GLFW/glfw3.h>
 
@@ -47,7 +47,6 @@ using vec2 = raylib::Vector2;
 #include <afterhours/src/plugins/input_system.h>
 #include <afterhours/src/plugins/texture_manager.h>
 #include <afterhours/src/plugins/window_manager.h>
-
 #include <cassert>
 
 typedef raylib::Vector2 vec2;

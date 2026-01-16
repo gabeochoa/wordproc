@@ -1,17 +1,16 @@
 #pragma once
 
-#include <filesystem>
-#include <string>
-
+#include "components.h"
 #include "../rl.h"
 #include "../../vendor/afterhours/src/core/system.h"
-#include "components.h"
+
+#include <filesystem>
 
 namespace ecs {
 
 // System for taking screenshots in test mode
 struct ScreenshotSystem : public afterhours::System<TestConfigComponent> {
-  void for_each_with(afterhours::Entity& entity,
+  void for_each_with(afterhours::Entity&,
                      TestConfigComponent& testConfig,
                      const float) override {
     if (!testConfig.enabled) return;

@@ -8,12 +8,12 @@ inline void BeginDrawing() { raylib::BeginDrawing(); }
 inline void EndDrawing() { raylib::EndDrawing(); }
 
 inline void BeginTextureMode(raylib::RenderTexture2D target) {
-    raylib::BeginTextureMode(target);
+  raylib::BeginTextureMode(target);
 }
 
 inline void EndTextureMode() { raylib::EndTextureMode(); }
 
 inline void ClearBackground(raylib::Color color) {
-    raylib::ClearBackground(color);
+  raylib::ClearBackground(color);
 }
-}  // namespace render_backend
+} // namespace render_backend

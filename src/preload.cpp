@@ -209,8 +209,10 @@ Preload &Preload::make_singleton() {
                 ui::Theme::Usage::Surface,
                 afterhours::Color{40, 40, 50,
                                   255})  // Slightly lighter than background
-            .set_theme_color(ui::Theme::Usage::Secondary, raylib::YELLOW)
-            .set_theme_color(ui::Theme::Usage::Accent, raylib::GREEN);
+            .set_theme_color(ui::Theme::Usage::Secondary,
+                             afterhours::Color{253, 249, 0, 255})  // Yellow
+            .set_theme_color(ui::Theme::Usage::Accent,
+                             afterhours::Color{0, 228, 48, 255});  // Green
 
         ui::imm::UIStylingDefaults::get().set_grid_snapping(true);
 

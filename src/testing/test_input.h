@@ -1,23 +1,22 @@
 #pragma once
 
+#include "../rl.h"
 #include <optional>
 #include <queue>
 
-#include "../rl.h"
-
 namespace test_input {
 struct KeyPress {
-    int key;
-    bool is_char = false;
-    char char_value = 0;
+  int key;
+  bool is_char = false;
+  char char_value = 0;
 };
 
 struct MouseState {
-    std::optional<vec2> position;
-    bool left_button_held = false;
-    bool left_button_pressed_this_frame = false;
-    bool left_button_released_this_frame = false;
-    bool simulation_active = false;
+  std::optional<vec2> position;
+  bool left_button_held = false;
+  bool left_button_pressed_this_frame = false;
+  bool left_button_released_this_frame = false;
+  bool simulation_active = false;
 };
 
 extern std::queue<KeyPress> input_queue;
@@ -52,4 +51,4 @@ void simulate_escape();
 
 extern bool key_consumed_this_frame;
 extern bool char_consumed_this_frame;
-}  // namespace test_input
+} // namespace test_input
