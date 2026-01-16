@@ -114,6 +114,10 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                 case BorderStyle::Thick:
                     raylib::DrawLineEx({cellX, cellY}, {cellX + cellW, cellY}, 3.0f, borderColor);
                     break;
+                case BorderStyle::None:
+                case BorderStyle::Double:
+                case BorderStyle::Dashed:
+                case BorderStyle::Dotted:
                 default:
                     break;
             }
@@ -128,6 +132,10 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                 case BorderStyle::Thick:
                     raylib::DrawLineEx({cellX, cellY + cellH}, {cellX + cellW, cellY + cellH}, 3.0f, borderColor);
                     break;
+                case BorderStyle::None:
+                case BorderStyle::Double:
+                case BorderStyle::Dashed:
+                case BorderStyle::Dotted:
                 default:
                     break;
             }
@@ -142,6 +150,10 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                 case BorderStyle::Thick:
                     raylib::DrawLineEx({cellX, cellY}, {cellX, cellY + cellH}, 3.0f, borderColor);
                     break;
+                case BorderStyle::None:
+                case BorderStyle::Double:
+                case BorderStyle::Dashed:
+                case BorderStyle::Dotted:
                 default:
                     break;
             }
@@ -156,6 +168,10 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                 case BorderStyle::Thick:
                     raylib::DrawLineEx({cellX + cellW, cellY}, {cellX + cellW, cellY + cellH}, 3.0f, borderColor);
                     break;
+                case BorderStyle::None:
+                case BorderStyle::Double:
+                case BorderStyle::Dashed:
+                case BorderStyle::Dotted:
                 default:
                     break;
             }

@@ -292,6 +292,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                         case MenuMark::Checkmark: markStr = "\xE2\x9C\x93"; break;  // ✓
                         case MenuMark::Radio: markStr = "\xE2\x80\xA2"; break;  // •
                         case MenuMark::Dash: markStr = "-"; break;
+                        case MenuMark::None:
                         default: break;
                     }
                     if (markStr) {
@@ -324,6 +325,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                         case MenuMark::Checkmark: markStr = "\xE2\x9C\x93"; break;  // ✓
                         case MenuMark::Radio: markStr = "\xE2\x80\xA2"; break;  // •
                         case MenuMark::Dash: markStr = "-"; break;
+                        case MenuMark::None:
                         default: break;
                     }
                     if (markStr) {

@@ -1923,6 +1923,8 @@ std::vector<TextBuffer::OutlineEntry> TextBuffer::getOutline() const {
             case ParagraphStyle::Heading6:
                 entry.level = 6;
                 break;
+            case ParagraphStyle::Normal:
+            case ParagraphStyle::Count:
             default:
                 entry.level = 0;
                 break;
@@ -2001,7 +2003,7 @@ std::string TextBuffer::generateTableOfContents() const {
     
     for (const auto& entry : outline) {
         // Add indentation based on level
-        for (std::size_t i = 0; i < entry.level; ++i) {
+        for (int i = 0; i < entry.level; ++i) {
             toc += "  ";
         }
         toc += entry.text + "\n";

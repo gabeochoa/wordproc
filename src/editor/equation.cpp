@@ -92,7 +92,16 @@ const std::vector<SpecialCharacter>& getSpecialCharacters(CharacterCategory cate
     switch (category) {
         case CharacterCategory::Greek: return greekLetters;
         case CharacterCategory::Mathematical: return mathSymbols;
-        default: return emptyChars;
+        case CharacterCategory::Arrows:
+        case CharacterCategory::Subscript:
+        case CharacterCategory::Superscript:
+        case CharacterCategory::Currency:
+        case CharacterCategory::Punctuation:
+        case CharacterCategory::Symbols:
+        case CharacterCategory::Fractions:
+        case CharacterCategory::Other:
+        default:
+            return emptyChars;
     }
 }
 
