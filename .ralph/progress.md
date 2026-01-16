@@ -1329,6 +1329,20 @@ make test OBJ_DIR=/tmp/wordproc_objs
 - Test count when stable: 998+ assertions in 82+ test cases
 - **RECOMMENDATION**: Only run one Ralph agent at a time to prevent conflicts
 
+### 2026-01-16 (Session 14 - Drawing, Bookmark Fixes, TOC)
+- Verified image feature complete with 63 test assertions (ImageLayoutMode, DocumentImage, ImageCollection)
+- Marked image insertion task [x] complete
+- Created drawing.h/drawing.cpp with ShapeType, DocumentDrawing, DrawingCollection
+- Created tests/test_drawing.cpp with 86 test assertions
+- Marked drawing insertion task [x] complete  
+- Fixed bookmark addBookmarkAt to reject duplicates (return false)
+- Added adjustBookmarkOffsets calls to all insert/delete operations
+- Implemented generateTableOfContents and insertTableOfContents
+- Found root cause of TOC test failure: rebuildLineIndex() clears paragraph styles
+
+**Test Status:** 93/95 test cases pass, 1169/1171 assertions pass
+**Known Issue:** rebuildLineIndex() resets paragraph styles, causing 2 TOC tests to fail
+
 ### 2026-01-16 (Session 12 - Build Fixes, earlier)
 - Fixed build issues after parallel agent interference:
   - Created src/editor/image.cpp implementing ImageCollection methods
@@ -1562,3 +1576,9 @@ make test OBJ_DIR=/tmp/wordproc_objs
 
 **Status:** Most Word Processing features complete. Remaining items are complex features and UI audit tasks.
 
+
+### 2026-01-15 23:16:27
+**Session 3 ended** - 🔄 Context rotation (token limit reached)
+
+### 2026-01-15 23:16:29
+**Session 4 started** (model: opus-4.5-thinking)

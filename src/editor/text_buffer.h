@@ -377,6 +377,14 @@ class TextBuffer {
     void renumberFootnotes();  // Renumber all footnotes after edit
     void clearFootnotes() { footnotes_.clear(); version_++; }  // Remove all footnotes
     
+    // Section break methods
+    void insertSectionBreak(SectionBreakType type = SectionBreakType::NextPage);
+    const DocumentSection* sectionAt(std::size_t line) const;
+    const SectionSettings& sectionSettingsAt(std::size_t line) const;
+    void updateSectionSettings(std::size_t line, const SectionSettings& settings);
+    const std::vector<DocumentSection>& sections() const { return sections_; }
+    void clearSections() { sections_.clear(); version_++; }
+    
     // Outline extraction (for document navigation)
     // OutlineEntry represents a heading in the document outline
     struct OutlineEntry {

@@ -901,8 +901,9 @@ void TextBuffer::del() {
         stats_.total_deletes++;
         version_++;
         
-        // Adjust hyperlink offsets for the deleted character
+        // Adjust hyperlink and bookmark offsets for the deleted character
         adjustHyperlinkOffsets(offset, -1);
+        adjustBookmarkOffsets(offset, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -927,8 +928,9 @@ void TextBuffer::del() {
     stats_.total_deletes++;
     version_++;
     
-    // Adjust hyperlink offsets for the deleted newline
+    // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
+    adjustBookmarkOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -1950,4 +1952,64 @@ void TextBuffer::insertTableOfContents() {
     if (!toc.empty()) {
         insertText(toc);
     }
+}
+
+// ============================================================================
+// Section Break Management
+// ============================================================================
+
+static SectionSettings defaultSectionSettings;
+
+void TextBuffer::insertSectionBreak(SectionBreakType type) {
+    // Insert a page break first
+    insertPageBreak();
+    
+    // Create a new section starting at the current line
+    DocumentSection section;
+    section.startLine = caret_.row;
+    section.settings.breakType = type;
+    
+    // Insert in sorted order
+    sections_.push_back(section);
+    std::sort(sections_.begin(), sections_.end());
+    
+    version_++;
+}
+
+const DocumentSection* TextBuffer::sectionAt(std::size_t line) const {
+    // Find the section that contains this line
+    const DocumentSection* result = nullptr;
+    for (const auto& section : sections_) {
+        if (section.startLine <= line) {
+            result = &section;
+        } else {
+            break;  // Sections are sorted, so we can stop
+        }
+    }
+    return result;
+}
+
+const SectionSettings& TextBuffer::sectionSettingsAt(std::size_t line) const {
+    const DocumentSection* section = sectionAt(line);
+    if (section) {
+        return section->settings;
+    }
+    return defaultSectionSettings;
+}
+
+void TextBuffer::updateSectionSettings(std::size_t line, const SectionSettings& settings) {
+    for (auto& section : sections_) {
+        if (section.startLine == line) {
+            section.settings = settings;
+            version_++;
+            return;
+        }
+    }
+    // If no section at this line, create one
+    DocumentSection section;
+    section.startLine = line;
+    section.settings = settings;
+    sections_.push_back(section);
+    std::sort(sections_.begin(), sections_.end());
+    version_++;
 }
