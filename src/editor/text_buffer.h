@@ -368,6 +368,15 @@ class TextBuffer {
     const std::vector<Bookmark>& bookmarks() const { return bookmarks_; }  // All bookmarks
     void clearBookmarks() { bookmarks_.clear(); version_++; }  // Remove all bookmarks
     
+    // Footnote methods for document footnotes with auto-numbering
+    bool addFootnote(const std::string& content);  // Add footnote at current caret, returns footnote number
+    bool removeFootnote(std::size_t number);  // Remove footnote by number
+    const Footnote* getFootnote(std::size_t number) const;  // Get footnote by number
+    const Footnote* footnoteAt(std::size_t offset) const;  // Get footnote at specific offset
+    const std::vector<Footnote>& footnotes() const { return footnotes_; }  // All footnotes
+    void renumberFootnotes();  // Renumber all footnotes after edit
+    void clearFootnotes() { footnotes_.clear(); version_++; }  // Remove all footnotes
+    
     // Outline extraction (for document navigation)
     // OutlineEntry represents a heading in the document outline
     struct OutlineEntry {
@@ -435,6 +444,7 @@ class TextBuffer {
     std::vector<LineSpan> line_spans_;  // SoA line metadata
     std::vector<Hyperlink> hyperlinks_; // Hyperlinks in the document
     std::vector<Bookmark> bookmarks_;   // Bookmarks for internal navigation
+    std::vector<Footnote> footnotes_;   // Footnotes with auto-numbering
     CaretPosition caret_;
     bool has_selection_ = false;
     CaretPosition selection_anchor_;

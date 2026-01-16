@@ -269,6 +269,19 @@ struct Bookmark {
     bool operator<(const Bookmark& other) const { return offset < other.offset; }
 };
 
+// Footnote structure for document footnotes with auto-numbering
+struct Footnote {
+    std::size_t referenceOffset = 0;  // Position of footnote marker in main text
+    std::string content;               // Footnote content/text
+    int number = 0;                    // Auto-assigned footnote number (1, 2, 3...)
+    
+    bool operator==(const Footnote& other) const {
+        return referenceOffset == other.referenceOffset && content == other.content;
+    }
+    bool operator!=(const Footnote& other) const { return !(*this == other); }
+    bool operator<(const Footnote& other) const { return referenceOffset < other.referenceOffset; }
+};
+
 // Text styling settings
 struct TextStyle {
     bool bold = false;

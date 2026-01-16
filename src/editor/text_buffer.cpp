@@ -923,8 +923,9 @@ void TextBuffer::del() {
     stats_.total_deletes++;
     version_++;
     
-    // Adjust hyperlink offsets for the deleted newline
+    // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
+    adjustBookmarkOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 

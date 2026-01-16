@@ -67,7 +67,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add hyperlink creation and editing. (Implemented: Hyperlink struct in document_settings.h, addHyperlink/editHyperlink/removeHyperlink/hyperlinkAt methods in TextBuffer, offset auto-adjustment on edit, 50 test assertions in tests/test_hyperlink.cpp)
 - [x] Add bookmarks/anchors for internal navigation. (Implemented: Bookmark struct in document_settings.h, addBookmark/addBookmarkAt/removeBookmark/getBookmark/goToBookmark/hasBookmark/bookmarkNear/clearBookmarks methods in TextBuffer, offset auto-adjustment on edit, 63 test assertions in tests/test_bookmark.cpp)
 - [x] Add find and replace with match options. (Implemented: find/findNext/findPrevious/findAll/replace/replaceAll in TextBuffer, FindOptions with caseSensitive/wholeWord/wrapAround, Ctrl+F/G/H shortcuts, Edit menu items, 43 test assertions)
-- [ ] Add footnotes with auto-numbering.
+- [x] Add footnotes with auto-numbering. (Implemented: Footnote struct in document_settings.h, addFootnote/removeFootnote/getFootnote/footnoteAt/renumberFootnotes methods in TextBuffer, auto-sorting and renumbering, 24 test assertions in tests/test_footnote.cpp)
 - [ ] Add spelling and grammar suggestions with per-word actions.
 - [x] Add page setup controls (size, orientation, margins, page color). (Implemented: PageSize enum with Letter/Legal/A4/A5/Custom, PageOrientation enum, per-side margins in PageSettings, pageColor using TextColor, applyPageSize/toggleOrientation methods, Page Setup menu item, pageMarginTop/Bottom/Left/Right fields)
 - [ ] Add headers and footers with page numbers.
