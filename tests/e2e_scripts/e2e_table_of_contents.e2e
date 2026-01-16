@@ -1,19 +1,46 @@
 # Test: Table of contents generation
 # Validates TOC generation from headings
 
-# Type headings first
-type "Chapter 1"
-key ctrl+alt+1
-key enter
-type "Section 1.1"
-key ctrl+alt+2
-key enter
-type "Body text"
-wait 1
+# Create document with headings
+type "Document Title"
+key CTRL+ALT+1  # H1
+key ENTER
+wait 2
 
-# TOC insertion is via Insert menu
-validate menu_exists=Insert
+type "Introduction"
+key CTRL+ALT+2  # H2
+key ENTER
+type "Some introduction text."
+key ENTER
+wait 2
 
-# Take screenshot
-screenshot 40_table_of_contents
+type "Methods"
+key CTRL+ALT+2  # H2
+key ENTER
+type "Description of methods."
+key ENTER
+wait 2
+
+type "Results"
+key CTRL+ALT+2  # H2
+key ENTER
+type "Our findings."
+key ENTER
+wait 2
+
+# Go to beginning to insert TOC
+key CTRL+HOME
+wait 2
+
+# Insert Table of Contents
+menu_open Insert
+wait 2
+menu_select "Table of Contents"
+wait 2
+
+# Validate TOC was generated
+validate has_toc=true
+validate toc_entries=4
+
+screenshot e2e_table_of_contents
 

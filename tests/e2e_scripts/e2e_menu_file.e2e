@@ -1,19 +1,26 @@
-# Test: File menu
+# Test: File menu validation
 # Validates File menu opens and contains expected items
 
-# Click on File menu
-click_menu File
-wait 1
+# Open File menu
+menu_open File
+wait 2
 
-# Validate File menu is open
+# Validate menu is open
 validate menu_open=File
 
-# Validate expected items exist
-validate menu_item_exists=New
-validate menu_item_exists=Open
-validate menu_item_exists=Save
-validate menu_item_exists=Exit
+# Validate expected menu items exist
+validate menu_contains=New
+validate menu_contains=Open
+validate menu_contains=Save
+validate menu_contains=Save As
+validate menu_contains=Page Setup
+validate menu_contains=Print
+validate menu_contains=Exit
 
-# Take screenshot
-screenshot 41_menu_file
+# Close menu
+key ESCAPE
+wait 2
+validate menu_open=false
+
+screenshot e2e_menu_file
 

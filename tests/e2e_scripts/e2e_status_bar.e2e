@@ -1,17 +1,37 @@
-# Test: Status bar
-# Validates status bar shows formatting state
+# Test: Status bar formatting state
+# Validates status bar shows current formatting state
 
 # Type some text
 type "Status bar test"
-wait 1
+wait 2
 
-# Apply bold
-key ctrl+b
-wait 1
-
-# Validate status bar shows formatting info
+# Validate status bar shows line/column
 validate status_bar_visible=true
+validate status_shows_line=1
+validate status_shows_column=15
 
-# Take screenshot
-screenshot 46_status_bar
+# Apply bold formatting
+select_all
+key CTRL+B
+wait 2
+
+# Validate status bar shows Bold indicator
+validate status_shows_bold=true
+
+# Apply italic
+key CTRL+I
+wait 2
+validate status_shows_italic=true
+
+# Check font size in status bar
+validate status_shows_font_size=true
+
+# Move to new line and check line number updates
+key END
+key ENTER
+type "Second line"
+wait 2
+validate status_shows_line=2
+
+screenshot e2e_status_bar
 

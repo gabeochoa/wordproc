@@ -2,12 +2,33 @@
 # Validates F1 opens help/keyboard shortcuts window
 
 # Press F1 to open help
-key f1
-wait 1
+key F1
+wait 2
 
 # Validate help window is visible
-validate help_visible=true
+validate help_window_visible=true
 
-# Take screenshot
-screenshot 45_help_window
+# Validate help window contains keyboard shortcuts
+validate help_contains=Keyboard Shortcuts
+validate help_contains=Ctrl+B
+validate help_contains=Bold
+validate help_contains=Ctrl+S
+validate help_contains=Save
+
+# Close help window
+key ESCAPE
+wait 2
+validate help_window_visible=false
+
+# Reopen via Help menu
+menu_open Help
+wait 2
+menu_select "Keyboard Shortcuts"
+wait 2
+validate help_window_visible=true
+
+key ESCAPE
+wait 2
+
+screenshot e2e_help_window
 

@@ -1,19 +1,46 @@
 # Test: Outline view from headings
-# Validates outline generation
+# Validates outline generation from heading hierarchy
 
-# Type headings
-type "Heading 1"
-key ctrl+alt+1
-key enter
-type "Heading 2"
-key ctrl+alt+2
-key enter
-type "Body text"
-wait 1
+# Create document with headings
+type "Main Title"
+key CTRL+ALT+1  # H1
+key ENTER
+wait 2
 
-# Outline view is via View menu
-validate menu_exists=View
+type "Chapter 1"
+key CTRL+ALT+2  # H2
+key ENTER
+wait 2
 
-# Take screenshot
-screenshot 39_outline_view
+type "Section 1.1"
+key CTRL+ALT+3  # H3
+key ENTER
+wait 2
+
+type "Section 1.2"
+key CTRL+ALT+3  # H3
+key ENTER
+wait 2
+
+type "Chapter 2"
+key CTRL+ALT+2  # H2
+key ENTER
+wait 2
+
+# Open outline view
+menu_open View
+wait 2
+menu_select "Outline"
+wait 2
+
+# Validate outline was generated
+validate outline_visible=true
+validate outline_items=5
+
+# Navigate using outline
+click_outline "Chapter 2"
+wait 2
+validate caret_at_heading=Chapter 2
+
+screenshot e2e_outline_view
 

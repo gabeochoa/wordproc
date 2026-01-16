@@ -1,13 +1,26 @@
-# Test: View menu
+# Test: View menu validation
 # Validates View menu opens and contains expected items
 
-# Click on View menu
-click_menu View
-wait 1
+# Open View menu
+menu_open View
+wait 2
 
-# Validate View menu is open
+# Validate menu is open
 validate menu_open=View
 
-# Take screenshot
-screenshot 44_menu_view
+# Validate expected menu items exist
+validate menu_contains=Pageless Mode
+validate menu_contains=Paged Mode
+validate menu_contains=Show Line Numbers
+validate menu_contains=Outline
+validate menu_contains=Header
+validate menu_contains=Footer
+validate menu_contains=Zoom
+
+# Close menu
+key ESCAPE
+wait 2
+validate menu_open=false
+
+screenshot e2e_menu_view
 

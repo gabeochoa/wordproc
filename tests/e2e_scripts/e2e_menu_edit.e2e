@@ -1,20 +1,27 @@
-# Test: Edit menu
+# Test: Edit menu validation
 # Validates Edit menu opens and contains expected items
 
-# Click on Edit menu
-click_menu Edit
-wait 1
+# Open Edit menu
+menu_open Edit
+wait 2
 
-# Validate Edit menu is open
+# Validate menu is open
 validate menu_open=Edit
 
-# Validate expected items exist
-validate menu_item_exists=Undo
-validate menu_item_exists=Redo
-validate menu_item_exists=Cut
-validate menu_item_exists=Copy
-validate menu_item_exists=Paste
+# Validate expected menu items exist
+validate menu_contains=Undo
+validate menu_contains=Redo
+validate menu_contains=Cut
+validate menu_contains=Copy
+validate menu_contains=Paste
+validate menu_contains=Select All
+validate menu_contains=Find
+validate menu_contains=Replace
 
-# Take screenshot
-screenshot 42_menu_edit
+# Close menu
+key ESCAPE
+wait 2
+validate menu_open=false
+
+screenshot e2e_menu_edit
 

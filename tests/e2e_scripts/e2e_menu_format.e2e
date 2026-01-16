@@ -1,18 +1,28 @@
-# Test: Format menu
+# Test: Format menu validation
 # Validates Format menu opens and contains expected items
 
-# Click on Format menu
-click_menu Format
-wait 1
+# Open Format menu
+menu_open Format
+wait 2
 
-# Validate Format menu is open
+# Validate menu is open
 validate menu_open=Format
 
-# Validate expected items exist
-validate menu_item_exists=Bold
-validate menu_item_exists=Italic
-validate menu_item_exists=Underline
+# Validate expected menu items exist
+validate menu_contains=Bold
+validate menu_contains=Italic
+validate menu_contains=Underline
+validate menu_contains=Strikethrough
+validate menu_contains=Font
+validate menu_contains=Paragraph
+validate menu_contains=Bullets and Numbering
+validate menu_contains=Text Color
+validate menu_contains=Highlight Color
 
-# Take screenshot
-screenshot 43_menu_format
+# Close menu
+key ESCAPE
+wait 2
+validate menu_open=false
+
+screenshot e2e_menu_format
 
