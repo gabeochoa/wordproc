@@ -335,3 +335,124 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         REQUIRE(buffer.lineCount() == 1);
     }
 }
+
+TEST_CASE("TextBuffer undo/redo", "[text_buffer][undo]") {
+    TextBuffer buffer;
+    
+    SECTION("undo single character insert") {
+        buffer.insertChar('a');
+        REQUIRE(buffer.getText() == "a");
+        REQUIRE(buffer.canUndo());
+        
+        buffer.undo();
+        REQUIRE(buffer.getText().empty());
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("redo single character insert") {
+        buffer.insertChar('a');
+        buffer.undo();
+        REQUIRE(buffer.canRedo());
+        
+        buffer.redo();
+        REQUIRE(buffer.getText() == "a");
+        REQUIRE(buffer.caret().column == 1);
+    }
+    
+    SECTION("undo multiple characters") {
+        buffer.insertChar('h');
+        buffer.insertChar('i');
+        buffer.insertChar('!');
+        REQUIRE(buffer.getText() == "hi!");
+        
+        buffer.undo();
+        REQUIRE(buffer.getText() == "hi");
+        
+        buffer.undo();
+        REQUIRE(buffer.getText() == "h");
+        
+        buffer.undo();
+        REQUIRE(buffer.getText().empty());
+    }
+    
+    SECTION("undo backspace restores character") {
+        buffer.insertChar('a');
+        buffer.insertChar('b');
+        buffer.backspace();
+        REQUIRE(buffer.getText() == "a");
+        
+        buffer.undo();
+        REQUIRE(buffer.getText() == "ab");
+        REQUIRE(buffer.caret().column == 2);
+    }
+    
+    SECTION("undo delete key restores character") {
+        buffer.insertChar('a');
+        buffer.insertChar('b');
+        buffer.setCaret({0, 0});
+        buffer.del();
+        REQUIRE(buffer.getText() == "b");
+        
+        buffer.undo();
+        REQUIRE(buffer.getText() == "ab");
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("undo selection deletion restores text") {
+        buffer.setText("hello world");
+        buffer.setSelectionAnchor({0, 0});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        buffer.deleteSelection();
+        REQUIRE(buffer.getText() == " world");
+        
+        buffer.undo();
+        REQUIRE(buffer.getText() == "hello world");
+    }
+    
+    SECTION("redo clears on new edit") {
+        buffer.insertChar('a');
+        buffer.undo();
+        REQUIRE(buffer.canRedo());
+        
+        buffer.insertChar('b');
+        REQUIRE_FALSE(buffer.canRedo());
+    }
+    
+    SECTION("undo newline insert") {
+        buffer.insertChar('a');
+        buffer.insertChar('\n');
+        buffer.insertChar('b');
+        REQUIRE(buffer.lineCount() == 2);
+        REQUIRE(buffer.getText() == "a\nb");
+        
+        buffer.undo();  // undo 'b'
+        REQUIRE(buffer.getText() == "a\n");
+        
+        buffer.undo();  // undo newline
+        REQUIRE(buffer.getText() == "a");
+        REQUIRE(buffer.lineCount() == 1);
+    }
+    
+    SECTION("clearHistory removes all undo/redo history") {
+        buffer.insertChar('a');
+        buffer.insertChar('b');
+        REQUIRE(buffer.canUndo());
+        
+        buffer.clearHistory();
+        REQUIRE_FALSE(buffer.canUndo());
+        REQUIRE_FALSE(buffer.canRedo());
+    }
+    
+    SECTION("cannot undo when history is empty") {
+        REQUIRE_FALSE(buffer.canUndo());
+        buffer.undo();  // Should not crash
+        REQUIRE(buffer.getText().empty());
+    }
+    
+    SECTION("cannot redo when history is empty") {
+        REQUIRE_FALSE(buffer.canRedo());
+        buffer.redo();  // Should not crash
+        REQUIRE(buffer.getText().empty());
+    }
+}

@@ -116,27 +116,17 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Handle selection deletion on typing/backspace/delete.
 - [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
 - [ ] Add clipboard integration (copy/cut/paste).
-- [ ] Add undo/redo with command history.
+- [x] Add undo/redo with command history.
 - [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
 - [x] Add window title + dirty-state indicator on edits.
 - [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
-<<<<<<< HEAD
-- [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
-- [ ] Add load/save error reporting (surface parse errors and fallback behavior).
-- [ ] Decide on per-range styles vs global style state and update model accordingly.
-- [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
-- [ ] Define validator rules (required fields, types, size limits, supported versions).
-- [ ] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
-- [ ] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
-=======
 - [x] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
 - [x] Add load/save error reporting (surface parse errors and fallback behavior).
 - [x] Decide on per-range styles vs global style state and update model accordingly. (Decision: Global style for v0.1; per-range deferred to v0.2)
-- [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
+- [x] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
 - [x] Define validator rules (required fields, types, size limits, supported versions).
 - [x] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
 - [x] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
->>>>>>> parent of 9ec95e9 (ralph: add format validator tests)
 
 ### 11) AfterhoursGaps
 - [x] Create `AfterhoursGaps.md` and log any needed library changes.
