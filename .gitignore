@@ -81,3 +81,7 @@ compile_commands.json
 
 # Ralph config (may contain API key)
 .cursor/ralph-config.json
+
+# Test screenshots (generated during E2E tests)
+*.png
+!resources/**/*.png
