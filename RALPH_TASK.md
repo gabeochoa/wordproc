@@ -70,7 +70,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add footnotes with auto-numbering. (Implemented: Footnote struct in document_settings.h, addFootnote/removeFootnote/getFootnote/footnoteAt/renumberFootnotes methods in TextBuffer, auto-sorting and renumbering, 24 test assertions in tests/test_footnote.cpp)
 - [ ] Add spelling and grammar suggestions with per-word actions.
 - [x] Add page setup controls (size, orientation, margins, page color). (Implemented: PageSize enum with Letter/Legal/A4/A5/Custom, PageOrientation enum, per-side margins in PageSettings, pageColor using TextColor, applyPageSize/toggleOrientation methods, Page Setup menu item, pageMarginTop/Bottom/Left/Right fields)
-- [ ] Add headers and footers with page numbers.
+- [x] Add headers and footers with page numbers. (Implemented: HeaderFooterSection and HeaderFooter structs with left/center/right sections, PageNumberFormat (Arabic/Roman/Letter), showTotalPages, differentFirstPage/differentOddEven options, getSectionText() with page formatting)
 - [ ] Add section breaks with per-section layout settings.
 - [x] Add manual page breaks. (Implemented: insertPageBreak/togglePageBreak/clearPageBreak in TextBuffer, hasPageBreakBefore in LineSpan, Ctrl+Enter shortcut, visual page break indicator in render system, 8 test assertions)
 - [ ] Add multi-column layout and column breaks.

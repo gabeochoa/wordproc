@@ -8,9 +8,9 @@ TEST_CASE("Watermark struct", "[document_settings][watermark]") {
         REQUIRE(wm.type == WatermarkType::None);
         REQUIRE(wm.text.empty());
         REQUIRE(wm.imagePath.empty());
-        REQUIRE(wm.opacity == Catch::Approx(0.3f));
-        REQUIRE(wm.rotation == Catch::Approx(-45.0f));
-        REQUIRE(wm.scale == Catch::Approx(1.0f));
+        REQUIRE(wm.opacity == Approx(0.3f));
+        REQUIRE(wm.rotation == Approx(-45.0f));
+        REQUIRE(wm.scale == Approx(1.0f));
         REQUIRE(wm.fontSize == 72);
     }
     
@@ -42,12 +42,12 @@ TEST_CASE("Text watermark configuration", "[document_settings][watermark]") {
     
     SECTION("can set opacity") {
         wm.opacity = 0.5f;
-        REQUIRE(wm.opacity == Catch::Approx(0.5f));
+        REQUIRE(wm.opacity == Approx(0.5f));
     }
     
     SECTION("can set rotation") {
         wm.rotation = 0.0f;  // Horizontal
-        REQUIRE(wm.rotation == Catch::Approx(0.0f));
+        REQUIRE(wm.rotation == Approx(0.0f));
     }
     
     SECTION("can set color") {
@@ -74,12 +74,12 @@ TEST_CASE("Image watermark configuration", "[document_settings][watermark]") {
     
     SECTION("can set scale") {
         wm.scale = 0.5f;  // Half size
-        REQUIRE(wm.scale == Catch::Approx(0.5f));
+        REQUIRE(wm.scale == Approx(0.5f));
     }
     
     SECTION("can set opacity for images") {
         wm.opacity = 0.2f;  // Very faint
-        REQUIRE(wm.opacity == Catch::Approx(0.2f));
+        REQUIRE(wm.opacity == Approx(0.2f));
     }
 }
 

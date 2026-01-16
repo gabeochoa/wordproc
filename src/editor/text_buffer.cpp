@@ -2010,3 +2010,79 @@ void TextBuffer::renumberFootnotes() {
         fn.number = num++;
     }
 }
+
+// ============================================================================
+// Bookmark Offset Adjustment
+// ============================================================================
+
+void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
+    for (auto it = bookmarks_.begin(); it != bookmarks_.end();) {
+        // If deletion removes the bookmark position
+        if (delta < 0 && pos <= it->offset && 
+            pos + static_cast<std::size_t>(-delta) > it->offset) {
+            // Bookmark is within deleted range - move to deletion start
+            it->offset = pos;
+            ++it;
+            continue;
+        }
+        
+        // Adjust offset for insertions/deletions before this bookmark
+        if (pos <= it->offset) {
+            it->offset = static_cast<std::size_t>(
+                static_cast<std::ptrdiff_t>(it->offset) + delta);
+        }
+        ++it;
+    }
+    
+    // Re-sort after adjustments
+    std::sort(bookmarks_.begin(), bookmarks_.end(),
+             [](const Bookmark& a, const Bookmark& b) {
+                 return a.offset < b.offset;
+             });
+}
+
+const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
+    for (const auto& bm : bookmarks_) {
+        std::size_t dist;
+        if (bm.offset >= offset) {
+            dist = bm.offset - offset;
+        } else {
+            dist = offset - bm.offset;
+        }
+        if (dist <= tolerance) {
+            return &bm;
+        }
+    }
+    return nullptr;
+}
+
+// ============================================================================
+// Table of Contents
+// ============================================================================
+
+std::string TextBuffer::generateTableOfContents() const {
+    std::vector<OutlineEntry> outline = getOutline();
+    if (outline.empty()) {
+        return "";
+    }
+    
+    std::string toc = "Table of Contents\n\n";
+    
+    for (const auto& entry : outline) {
+        // Create indent based on heading level
+        std::string indent(entry.level * 2, ' ');
+        toc += indent + "- " + entry.text + "\n";
+    }
+    
+    return toc;
+}
+
+void TextBuffer::insertTableOfContents() {
+    std::string toc = generateTableOfContents();
+    if (toc.empty()) {
+        return;
+    }
+    
+    // Insert TOC at current caret position
+    insertText(toc);
+}
