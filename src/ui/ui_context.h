@@ -115,7 +115,7 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     }
 
     // Check if UI root already exists
-    auto roots = EntityQuery()
+    auto roots = EntityQuery({.ignore_temp_warning = true})
                      .whereHasComponent<ui::AutoLayoutRoot>()
                      .gen();
     if (roots.empty()) {

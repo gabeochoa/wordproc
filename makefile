@@ -301,11 +301,16 @@ e2e: $(MAIN_EXE)
 	@echo "Running E2E tests..."
 	@./tests/run_e2e.sh
 
+# Comprehensive E2E test suite (multiple scenarios)
+e2e-full: $(MAIN_EXE)
+	@echo "Running comprehensive E2E test suite..."
+	@./tests/run_e2e_comprehensive.sh
+
 # Load-time benchmark (measures cold start for test files)
 benchmark: $(MAIN_EXE)
 	@echo "Running load-time benchmark..."
 	@mkdir -p output/perf
 	@bash ./tests/run_benchmark.sh
 
-.PHONY: test test-verbose bench-unit e2e benchmark
+.PHONY: test test-verbose bench-unit e2e e2e-full benchmark
 

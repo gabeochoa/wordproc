@@ -541,11 +541,7 @@ void TextBuffer::del() {
         version_++;
 
         line_spans_[caret_.row].length -= 1;
-
-        // Shift subsequent line offsets
-        for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
-            line_spans_[i].offset -= 1;
-        }
+        shiftLineOffsetsFrom(caret_.row + 1, -1);
 
         // Record for undo
         if (recordingHistory_) {
@@ -881,9 +877,7 @@ void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
     } else {
         if (caret_.row < line_spans_.size()) {
             line_spans_[caret_.row].length += 1;
-            for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
-                line_spans_[i].offset += 1;
-            }
+            shiftLineOffsetsFrom(caret_.row + 1, 1);
         }
         caret_.column += 1;
     }
@@ -900,9 +894,7 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
         chars_.erase(offset, 1);
         version_++;
         line_spans_[pos.row].length -= 1;
-        for (std::size_t i = pos.row + 1; i < line_spans_.size(); ++i) {
-            line_spans_[i].offset -= 1;
-        }
+        shiftLineOffsetsFrom(pos.row + 1, -1);
     } else if (pos.row + 1 < line_spans_.size()) {
         std::size_t offset = span.offset + span.length;
         chars_.erase(offset, 1);
