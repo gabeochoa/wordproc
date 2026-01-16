@@ -116,7 +116,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Handle selection deletion on typing/backspace/delete.
 - [x] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
 - [x] Add clipboard integration (copy/cut/paste).
-- [ ] Add undo/redo with command history.
+- [x] Add undo/redo with command history.
 - [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
 - [x] Add window title + dirty-state indicator on edits.
 - [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
