@@ -10,47 +10,18 @@
 
 namespace ecs {
 
-// Component for caret blinking state
+// Component for caret blinking state (pure data - logic in component_helpers.h)
 struct CaretComponent : public afterhours::BaseComponent {
   double blinkTimer = 0.0;
   bool visible = true;
   static constexpr double BLINK_INTERVAL = 0.5;
-
-  void update(float dt) {
-    blinkTimer += dt;
-    if (blinkTimer >= BLINK_INTERVAL) {
-      blinkTimer = 0.0;
-      visible = !visible;
-    }
-  }
-
-  void resetBlink() {
-    visible = true;
-    blinkTimer = 0.0;
-  }
 };
 
-// Component for scroll state
+// Component for scroll state (pure data - logic in component_helpers.h)
 struct ScrollComponent : public afterhours::BaseComponent {
   int offset = 0;       // Scroll offset in lines
   int visibleLines = 20; // Number of visible lines
   int maxScroll = 0;    // Maximum scroll value
-
-  void clamp(int lineCount) {
-    maxScroll = lineCount - visibleLines;
-    if (maxScroll < 0) maxScroll = 0;
-    if (offset < 0) offset = 0;
-    if (offset > maxScroll) offset = maxScroll;
-  }
-
-  // Auto-scroll to keep caret visible
-  void scrollToRow(int row) {
-    if (row < offset) {
-      offset = row;
-    } else if (row >= offset + visibleLines) {
-      offset = row - visibleLines + 1;
-    }
-  }
 };
 
 // Component for document state
@@ -63,27 +34,19 @@ struct DocumentComponent : public afterhours::BaseComponent {
   std::string defaultPath = "output/document.wpdoc";
 };
 
-// Component for status messages
+// Component for status messages (pure data - logic in component_helpers.h)
 struct StatusComponent : public afterhours::BaseComponent {
   std::string text;
   double expiresAt = 0.0;
   bool isError = false;
-
-  void set(const std::string& msg, bool error = false) {
-    text = msg;
-    isError = error;
-    // Note: expiresAt should be set by caller with current time + duration
-  }
-
-  bool hasMessage(double currentTime) const {
-    return !text.empty() && currentTime < expiresAt;
-  }
 };
 
 // Component for menu state
 struct MenuComponent : public afterhours::BaseComponent {
   std::vector<win95::Menu> menus;
   bool showAboutDialog = false;
+  bool showHelpWindow = false;  // Keybindings help window
+  int helpScrollOffset = 0;     // Scroll position in help window
 };
 
 // Page display mode for document layout
@@ -92,7 +55,7 @@ enum class PageMode {
   Paged      // Traditional page layout with margins and page breaks
 };
 
-// Component for window layout calculations
+// Component for window layout calculations (logic in component_helpers.h)
 struct LayoutComponent : public afterhours::BaseComponent {
   float titleBarHeight = 20.0f;
   float menuBarHeight = 20.0f;
@@ -116,84 +79,16 @@ struct LayoutComponent : public afterhours::BaseComponent {
     float x, y, width, height;
   };
   
-  Rect titleBar;
-  Rect menuBar;
-  Rect statusBar;
-  Rect textArea;
+  Rect titleBar{};
+  Rect menuBar{};
+  Rect statusBar{};
+  Rect textArea{};
   
   // Page-specific computed values
   float pageDisplayWidth = 0.0f;   // Scaled page width for display
   float pageDisplayHeight = 0.0f;  // Scaled page height for display
   float pageScale = 1.0f;          // Scale factor for page display
   float pageOffsetX = 0.0f;        // X offset to center page in window
-  
-  void updateLayout(int w, int h) {
-    screenWidth = w;
-    screenHeight = h;
-    
-    titleBar = {0, 0, static_cast<float>(w), titleBarHeight};
-    menuBar = {0, titleBarHeight, static_cast<float>(w), menuBarHeight};
-    statusBar = {0, static_cast<float>(h - statusBarHeight),
-                 static_cast<float>(w), statusBarHeight};
-    
-    float textTop = titleBarHeight + menuBarHeight + borderWidth;
-    float textHeight = static_cast<float>(h) - titleBarHeight - menuBarHeight -
-                       statusBarHeight - 2 * borderWidth;
-    textArea = {borderWidth, textTop,
-                static_cast<float>(w) - 2 * borderWidth, textHeight};
-    
-    // Calculate page display dimensions for paged mode
-    if (pageMode == PageMode::Paged) {
-      float availableWidth = textArea.width - 20.0f;  // Margin for page shadow
-      float availableHeight = textArea.height - 20.0f;
-      
-      // Scale to fit horizontally
-      pageScale = availableWidth / pageWidth;
-      if (pageScale * pageHeight > availableHeight * 0.9f) {
-        // If page would be too tall, scale to fit vertically
-        pageScale = (availableHeight * 0.9f) / pageHeight;
-      }
-      
-      pageDisplayWidth = pageWidth * pageScale;
-      pageDisplayHeight = pageHeight * pageScale;
-      pageOffsetX = textArea.x + (textArea.width - pageDisplayWidth) / 2.0f;
-    }
-  }
-  
-  // Get effective text area (within page margins for paged mode)
-  Rect effectiveTextArea() const {
-    if (pageMode == PageMode::Pageless) {
-      // Apply line width limit if set
-      if (lineWidthLimit > 0.0f) {
-        float limitedWidth = lineWidthLimit * 8.0f;  // Approximate char width
-        if (limitedWidth < textArea.width) {
-          float offset = (textArea.width - limitedWidth) / 2.0f;
-          return {textArea.x + offset, textArea.y, limitedWidth, textArea.height};
-        }
-      }
-      return textArea;
-    }
-    
-    // Paged mode: return area within page margins
-    float marginScaled = pageMargin * pageScale;
-    return {
-      pageOffsetX + marginScaled,
-      textArea.y + 10.0f + marginScaled,  // 10px for page shadow
-      pageDisplayWidth - 2.0f * marginScaled,
-      pageDisplayHeight - 2.0f * marginScaled
-    };
-  }
-  
-  // Toggle between paged and pageless modes
-  void togglePageMode() {
-    pageMode = (pageMode == PageMode::Pageless) ? PageMode::Paged : PageMode::Pageless;
-    updateLayout(screenWidth, screenHeight);
-  }
-  
-  // Set line width limit (0 to disable)
-  void setLineWidthLimit(float chars) {
-    lineWidthLimit = chars;
-  }
 };
 
 // Component for test mode configuration

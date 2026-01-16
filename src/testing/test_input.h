@@ -49,6 +49,12 @@ void simulate_arrow_key(int arrow_key);
 void simulate_enter();
 void simulate_escape();
 
+// UIContext-integrated input simulation (uses Afterhours UI state context)
+// These functions work directly with the UIContext's input state
+void queue_ui_action(int action);  // Queue a UI action (WidgetNext, WidgetPress, etc.)
+void hold_ui_action(int action);   // Hold a UI action down
+void release_ui_action(int action); // Release a held UI action
+
 extern bool key_consumed_this_frame;
 extern bool char_consumed_this_frame;
 } // namespace test_input

@@ -1,5 +1,6 @@
 #include "test_input.h"
 #include "input_injector.h"
+#include "test_input_provider.h"
 #include "../rl.h"
 #include "test_input_fwd.h"
 
@@ -13,6 +14,11 @@
 #undef GetMousePosition
 
 namespace test_input {
+
+// Helper to get TestInputProvider if available (for UIContext integration)
+static TestInputProvider* getProvider() {
+    return afterhours::EntityHelper::get_singleton_cmp<TestInputProvider>();
+}
 std::queue<KeyPress> input_queue;
 bool test_mode = false;
 bool slow_test_mode = false;
@@ -83,6 +89,11 @@ void reset_frame() {
   mouse_state.left_button_pressed_this_frame = false;
   mouse_state.left_button_released_this_frame = false;
   input_injector::reset_frame();
+
+  // Also reset UIContext-integrated TestInputProvider frame state if available
+  if (auto* provider = getProvider()) {
+    provider->resetFrame();
+  }
 }
 
 void set_mouse_position(vec2 pos) {
@@ -90,6 +101,11 @@ void set_mouse_position(vec2 pos) {
   mouse_state.simulation_active = true;
   input_injector::set_mouse_position(static_cast<int>(pos.x),
                                      static_cast<int>(pos.y));
+
+  // Also update UIContext-integrated TestInputProvider if available
+  if (auto* provider = getProvider()) {
+    provider->setMousePosition(pos.x, pos.y);
+  }
 }
 
 void simulate_mouse_button_press(int button) {
@@ -97,6 +113,11 @@ void simulate_mouse_button_press(int button) {
     mouse_state.left_button_held = true;
     mouse_state.left_button_pressed_this_frame = true;
     mouse_state.simulation_active = true;
+
+    // Also update UIContext-integrated TestInputProvider if available
+    if (auto* provider = getProvider()) {
+      provider->pressMouseLeft();
+    }
   }
 }
 
@@ -105,10 +126,22 @@ void simulate_mouse_button_release(int button) {
     mouse_state.left_button_held = false;
     mouse_state.left_button_released_this_frame = true;
     mouse_state.simulation_active = true;
+
+    // Also update UIContext-integrated TestInputProvider if available
+    if (auto* provider = getProvider()) {
+      provider->releaseMouseLeft();
+    }
   }
 }
 
-void clear_mouse_simulation() { mouse_state = MouseState{}; }
+void clear_mouse_simulation() {
+  mouse_state = MouseState{};
+
+  // Also reset UIContext-integrated TestInputProvider if available
+  if (auto* provider = getProvider()) {
+    provider->reset();
+  }
+}
 
 vec2 get_mouse_position() {
   if (test_mode && mouse_state.simulation_active &&
@@ -167,4 +200,24 @@ void simulate_arrow_key(int arrow_key) { push_key(arrow_key); }
 void simulate_enter() { push_key(raylib::KEY_ENTER); }
 
 void simulate_escape() { push_key(raylib::KEY_ESCAPE); }
+
+// UIContext-integrated input simulation functions
+void queue_ui_action(int action) {
+  if (auto* provider = getProvider()) {
+    provider->queueAction(action);
+  }
+}
+
+void hold_ui_action(int action) {
+  if (auto* provider = getProvider()) {
+    provider->holdAction(action);
+  }
+}
+
+void release_ui_action(int action) {
+  if (auto* provider = getProvider()) {
+    provider->releaseAction(action);
+  }
+}
+
 } // namespace test_input

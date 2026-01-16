@@ -1,10 +1,12 @@
 #pragma once
 
 #include "components.h"
+#include "component_helpers.h"
 #include "../rl.h"
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
 #include "../util/drawing.h"
+#include "../input/action_map.h"
 #include "../../vendor/afterhours/src/core/system.h"
 
 #include <filesystem>
@@ -209,7 +211,7 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
     TextStyle style = doc.buffer.textStyle();
     int fontSize = style.fontSize;
     int lineHeight = fontSize + 4;
-    LayoutComponent::Rect effectiveArea = layout.effectiveTextArea();
+    LayoutComponent::Rect effectiveArea = layout::effectiveTextArea(layout);
     renderTextBuffer(doc.buffer, effectiveArea, caret.visible, 
                      fontSize, lineHeight, scroll.offset);
 
@@ -222,7 +224,7 @@ struct EditorRenderSystem : public afterhours::System<DocumentComponent, CaretCo
     util::drawRaisedBorder(statusBarRect);
     
     double currentTime = raylib::GetTime();
-    if (status.hasMessage(currentTime)) {
+    if (!status.text.empty() && currentTime < status.expiresAt) {
       raylib::Color msgColor = status.isError ? theme::STATUS_ERROR : theme::STATUS_SUCCESS;
       raylib::DrawText(status.text.c_str(), 4, 
                        layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
@@ -283,6 +285,137 @@ struct MenuSystem : public afterhours::System<DocumentComponent, MenuComponent, 
         menu.showAboutDialog = false;
       }
     }
+    
+    // F1 to show help window
+    if (raylib::IsKeyPressed(raylib::KEY_F1)) {
+      menu.showHelpWindow = !menu.showHelpWindow;
+      menu.helpScrollOffset = 0;
+    }
+    
+    // Handle Help window (keybindings)
+    if (menu.showHelpWindow) {
+      drawHelpWindow(menu, layout);
+    }
+  }
+  
+  void drawHelpWindow(MenuComponent& menu, const LayoutComponent& layout) {
+    float windowWidth = 400.0f;
+    float windowHeight = 400.0f;
+    raylib::Rectangle dialogRect = {
+      static_cast<float>(layout.screenWidth / 2) - windowWidth / 2,
+      static_cast<float>(layout.screenHeight / 2) - windowHeight / 2,
+      windowWidth, windowHeight
+    };
+    
+    // Draw window background with raised border
+    raylib::DrawRectangleRec(dialogRect, theme::WINDOW_BG);
+    win95::DrawRaisedBorder(dialogRect);
+    
+    // Draw title bar
+    raylib::Rectangle titleBar = {dialogRect.x + 2, dialogRect.y + 2, windowWidth - 4, 20};
+    raylib::DrawRectangleRec(titleBar, theme::TITLE_BAR);
+    raylib::DrawText("Keyboard Shortcuts", 
+                     static_cast<int>(titleBar.x + 4), 
+                     static_cast<int>(titleBar.y + 3), 
+                     14, theme::TITLE_TEXT);
+    
+    // Draw close button
+    raylib::Rectangle closeBtn = {titleBar.x + titleBar.width - 18, titleBar.y + 2, 16, 16};
+    win95::DrawRaisedBorder(closeBtn);
+    raylib::DrawText("X", 
+                     static_cast<int>(closeBtn.x + 4), 
+                     static_cast<int>(closeBtn.y + 2), 
+                     12, theme::TEXT_COLOR);
+    
+    // Handle close button click
+    if (raylib::IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
+      raylib::Vector2 mousePos = raylib::GetMousePosition();
+      if (mousePos.x >= closeBtn.x && mousePos.x <= closeBtn.x + closeBtn.width &&
+          mousePos.y >= closeBtn.y && mousePos.y <= closeBtn.y + closeBtn.height) {
+        menu.showHelpWindow = false;
+        return;
+      }
+    }
+    
+    // Escape to close
+    if (raylib::IsKeyPressed(raylib::KEY_ESCAPE)) {
+      menu.showHelpWindow = false;
+      return;
+    }
+    
+    // Draw content area with sunken border
+    raylib::Rectangle contentArea = {
+      dialogRect.x + 8, dialogRect.y + 28,
+      windowWidth - 16, windowHeight - 64
+    };
+    raylib::DrawRectangleRec(contentArea, raylib::WHITE);
+    win95::DrawSunkenBorder(contentArea);
+    
+    // Get keybindings
+    input::ActionMap defaultMap = input::createDefaultActionMap();
+    auto bindings = input::getBindingsList(defaultMap);
+    
+    // Handle scrolling
+    float wheel = raylib::GetMouseWheelMove();
+    if (wheel != 0.0f) {
+      menu.helpScrollOffset -= static_cast<int>(wheel * 3);
+      if (menu.helpScrollOffset < 0) menu.helpScrollOffset = 0;
+      int maxScroll = static_cast<int>(bindings.size()) - 15;
+      if (maxScroll < 0) maxScroll = 0;
+      if (menu.helpScrollOffset > maxScroll) menu.helpScrollOffset = maxScroll;
+    }
+    
+    // Draw keybindings list
+    int lineHeight = 18;
+    int y = static_cast<int>(contentArea.y) + 4;
+    int visibleLines = static_cast<int>((contentArea.height - 8) / lineHeight);
+    
+    // Headers
+    raylib::DrawText("Action", static_cast<int>(contentArea.x) + 8, y, 12, raylib::DARKGRAY);
+    raylib::DrawText("Shortcut", static_cast<int>(contentArea.x) + 200, y, 12, raylib::DARKGRAY);
+    y += lineHeight;
+    
+    // Separator line
+    raylib::DrawLine(static_cast<int>(contentArea.x) + 4, y, 
+                     static_cast<int>(contentArea.x + contentArea.width) - 4, y, 
+                     raylib::LIGHTGRAY);
+    y += 4;
+    
+    // Draw bindings
+    int startIdx = menu.helpScrollOffset;
+    int endIdx = std::min(static_cast<int>(bindings.size()), startIdx + visibleLines - 2);
+    
+    for (int i = startIdx; i < endIdx; ++i) {
+      const auto& binding = bindings[static_cast<size_t>(i)];
+      raylib::DrawText(binding.actionName.c_str(), 
+                       static_cast<int>(contentArea.x) + 8, y, 
+                       12, theme::TEXT_COLOR);
+      raylib::DrawText(binding.bindingStr.c_str(), 
+                       static_cast<int>(contentArea.x) + 200, y, 
+                       12, theme::TEXT_COLOR);
+      y += lineHeight;
+    }
+    
+    // Draw OK button
+    raylib::Rectangle okBtn = {
+      dialogRect.x + windowWidth / 2 - 40,
+      dialogRect.y + windowHeight - 30,
+      80, 22
+    };
+    win95::DrawRaisedBorder(okBtn);
+    raylib::DrawText("OK", 
+                     static_cast<int>(okBtn.x + 30), 
+                     static_cast<int>(okBtn.y + 4), 
+                     14, theme::TEXT_COLOR);
+    
+    // Handle OK button click
+    if (raylib::IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
+      raylib::Vector2 mousePos = raylib::GetMousePosition();
+      if (mousePos.x >= okBtn.x && mousePos.x <= okBtn.x + okBtn.width &&
+          mousePos.y >= okBtn.y && mousePos.y <= okBtn.y + okBtn.height) {
+        menu.showHelpWindow = false;
+      }
+    }
   }
   
 private:
@@ -305,10 +438,10 @@ private:
             if (result.success) {
               doc.filePath = doc.defaultPath;
               doc.isDirty = false;
-              status.set("Opened: " + std::filesystem::path(doc.defaultPath).filename().string());
+              ecs::status::set(status, "Opened: " + std::filesystem::path(doc.defaultPath).filename().string());
               status.expiresAt = raylib::GetTime() + 3.0;
             } else {
-              status.set("Open failed: " + result.error, true);
+              ecs::status::set(status, "Open failed: " + result.error, true);
               status.expiresAt = raylib::GetTime() + 3.0;
             }
           }
@@ -320,10 +453,10 @@ private:
             if (result.success) {
               doc.isDirty = false;
               doc.filePath = savePath;
-              status.set("Saved: " + std::filesystem::path(savePath).filename().string());
+              ecs::status::set(status, "Saved: " + std::filesystem::path(savePath).filename().string());
               status.expiresAt = raylib::GetTime() + 3.0;
             } else {
-              status.set("Save failed: " + result.error, true);
+              ecs::status::set(status, "Save failed: " + result.error, true);
               status.expiresAt = raylib::GetTime() + 3.0;
             }
           }
@@ -384,29 +517,29 @@ private:
       switch (itemIndex) {
         case 0: // Pageless Mode
           layout.pageMode = PageMode::Pageless;
-          layout.updateLayout(layout.screenWidth, layout.screenHeight);
-          status.set("Switched to Pageless mode");
+          layout::updateLayout(layout, layout.screenWidth, layout.screenHeight);
+          status::set(status, "Switched to Pageless mode");
           status.expiresAt = raylib::GetTime() + 2.0;
           break;
         case 1: // Paged Mode
           layout.pageMode = PageMode::Paged;
-          layout.updateLayout(layout.screenWidth, layout.screenHeight);
-          status.set("Switched to Paged mode");
+          layout::updateLayout(layout, layout.screenWidth, layout.screenHeight);
+          status::set(status, "Switched to Paged mode");
           status.expiresAt = raylib::GetTime() + 2.0;
           break;
         case 3: // Line Width: Normal (no limit)
-          layout.setLineWidthLimit(0.0f);
-          status.set("Line width: Normal");
+          layout::setLineWidthLimit(layout, 0.0f);
+          status::set(status, "Line width: Normal");
           status.expiresAt = raylib::GetTime() + 2.0;
           break;
         case 4: // Line Width: Narrow (60 chars)
-          layout.setLineWidthLimit(60.0f);
-          status.set("Line width: Narrow (60 chars)");
+          layout::setLineWidthLimit(layout, 60.0f);
+          status::set(status, "Line width: Narrow (60 chars)");
           status.expiresAt = raylib::GetTime() + 2.0;
           break;
         case 5: // Line Width: Wide (100 chars)
-          layout.setLineWidthLimit(100.0f);
-          status.set("Line width: Wide (100 chars)");
+          layout::setLineWidthLimit(layout, 100.0f);
+          status::set(status, "Line width: Wide (100 chars)");
           status.expiresAt = raylib::GetTime() + 2.0;
           break;
         default:
@@ -447,7 +580,9 @@ private:
           break;
       }
     } else if (menuIndex == 4) { // Help menu
-      if (itemIndex == 0) { // About
+      if (itemIndex == 0) { // Keyboard Shortcuts
+        menu.showHelpWindow = true;
+      } else if (itemIndex == 2) { // About (after separator)
         menu.showAboutDialog = true;
       }
     }

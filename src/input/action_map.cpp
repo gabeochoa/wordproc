@@ -225,4 +225,208 @@ ActionMap createDefaultActionMap() {
   return createActionMapWithPreset(Preset::SystemDefault);
 }
 
+const char* actionDisplayName(Action action) {
+  switch (action) {
+    case Action::MoveLeft: return "Move Left";
+    case Action::MoveRight: return "Move Right";
+    case Action::MoveUp: return "Move Up";
+    case Action::MoveDown: return "Move Down";
+    case Action::MoveWordLeft: return "Move Word Left";
+    case Action::MoveWordRight: return "Move Word Right";
+    case Action::MoveLineStart: return "Move to Line Start";
+    case Action::MoveLineEnd: return "Move to Line End";
+    case Action::MoveDocumentStart: return "Move to Document Start";
+    case Action::MoveDocumentEnd: return "Move to Document End";
+    case Action::PageUp: return "Page Up";
+    case Action::PageDown: return "Page Down";
+    case Action::InsertNewline: return "Insert New Line";
+    case Action::Backspace: return "Backspace";
+    case Action::Delete: return "Delete";
+    case Action::SelectAll: return "Select All";
+    case Action::Copy: return "Copy";
+    case Action::Cut: return "Cut";
+    case Action::Paste: return "Paste";
+    case Action::Undo: return "Undo";
+    case Action::Redo: return "Redo";
+    case Action::New: return "New Document";
+    case Action::Open: return "Open";
+    case Action::Save: return "Save";
+    case Action::SaveAs: return "Save As";
+    case Action::ToggleBold: return "Toggle Bold";
+    case Action::ToggleItalic: return "Toggle Italic";
+    case Action::FontGaegu: return "Font: Gaegu";
+    case Action::FontGaramond: return "Font: Garamond";
+    case Action::IncreaseFontSize: return "Increase Font Size";
+    case Action::DecreaseFontSize: return "Decrease Font Size";
+    case Action::ResetFontSize: return "Reset Font Size";
+    case Action::COUNT: return "";
+  }
+  return "";
+}
+
+std::string keyName(int keyCode) {
+  switch (keyCode) {
+    // Letters
+    case raylib::KEY_A: return "A";
+    case raylib::KEY_B: return "B";
+    case raylib::KEY_C: return "C";
+    case raylib::KEY_D: return "D";
+    case raylib::KEY_E: return "E";
+    case raylib::KEY_F: return "F";
+    case raylib::KEY_G: return "G";
+    case raylib::KEY_H: return "H";
+    case raylib::KEY_I: return "I";
+    case raylib::KEY_J: return "J";
+    case raylib::KEY_K: return "K";
+    case raylib::KEY_L: return "L";
+    case raylib::KEY_M: return "M";
+    case raylib::KEY_N: return "N";
+    case raylib::KEY_O: return "O";
+    case raylib::KEY_P: return "P";
+    case raylib::KEY_Q: return "Q";
+    case raylib::KEY_R: return "R";
+    case raylib::KEY_S: return "S";
+    case raylib::KEY_T: return "T";
+    case raylib::KEY_U: return "U";
+    case raylib::KEY_V: return "V";
+    case raylib::KEY_W: return "W";
+    case raylib::KEY_X: return "X";
+    case raylib::KEY_Y: return "Y";
+    case raylib::KEY_Z: return "Z";
+    
+    // Numbers
+    case raylib::KEY_ZERO: return "0";
+    case raylib::KEY_ONE: return "1";
+    case raylib::KEY_TWO: return "2";
+    case raylib::KEY_THREE: return "3";
+    case raylib::KEY_FOUR: return "4";
+    case raylib::KEY_FIVE: return "5";
+    case raylib::KEY_SIX: return "6";
+    case raylib::KEY_SEVEN: return "7";
+    case raylib::KEY_EIGHT: return "8";
+    case raylib::KEY_NINE: return "9";
+    
+    // Function keys
+    case raylib::KEY_F1: return "F1";
+    case raylib::KEY_F2: return "F2";
+    case raylib::KEY_F3: return "F3";
+    case raylib::KEY_F4: return "F4";
+    case raylib::KEY_F5: return "F5";
+    case raylib::KEY_F6: return "F6";
+    case raylib::KEY_F7: return "F7";
+    case raylib::KEY_F8: return "F8";
+    case raylib::KEY_F9: return "F9";
+    case raylib::KEY_F10: return "F10";
+    case raylib::KEY_F11: return "F11";
+    case raylib::KEY_F12: return "F12";
+    
+    // Special keys
+    case raylib::KEY_SPACE: return "Space";
+    case raylib::KEY_ESCAPE: return "Escape";
+    case raylib::KEY_ENTER: return "Enter";
+    case raylib::KEY_TAB: return "Tab";
+    case raylib::KEY_BACKSPACE: return "Backspace";
+    case raylib::KEY_INSERT: return "Insert";
+    case raylib::KEY_DELETE: return "Delete";
+    case raylib::KEY_HOME: return "Home";
+    case raylib::KEY_END: return "End";
+    case raylib::KEY_PAGE_UP: return "Page Up";
+    case raylib::KEY_PAGE_DOWN: return "Page Down";
+    
+    // Arrow keys
+    case raylib::KEY_UP: return "Up";
+    case raylib::KEY_DOWN: return "Down";
+    case raylib::KEY_LEFT: return "Left";
+    case raylib::KEY_RIGHT: return "Right";
+    
+    // Symbols
+    case raylib::KEY_MINUS: return "-";
+    case raylib::KEY_EQUAL: return "=";
+    case raylib::KEY_COMMA: return ",";
+    case raylib::KEY_PERIOD: return ".";
+    case raylib::KEY_SLASH: return "/";
+    case raylib::KEY_SEMICOLON: return ";";
+    case raylib::KEY_APOSTROPHE: return "'";
+    case raylib::KEY_LEFT_BRACKET: return "[";
+    case raylib::KEY_RIGHT_BRACKET: return "]";
+    case raylib::KEY_BACKSLASH: return "\\";
+    case raylib::KEY_GRAVE: return "`";
+    
+    // Keypad
+    case raylib::KEY_KP_ADD: return "Num+";
+    case raylib::KEY_KP_SUBTRACT: return "Num-";
+    case raylib::KEY_KP_MULTIPLY: return "Num*";
+    case raylib::KEY_KP_DIVIDE: return "Num/";
+    case raylib::KEY_KP_ENTER: return "NumEnter";
+    
+    default: return "???";
+  }
+}
+
+std::string formatBinding(const KeyBinding& binding) {
+  std::string result;
+  if (binding.ctrl) result += "Ctrl+";
+  if (binding.alt) result += "Alt+";
+  if (binding.shift) result += "Shift+";
+  result += keyName(binding.key);
+  return result;
+}
+
+std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
+  // For now, return the default bindings since ActionMap doesn't expose its internal map
+  // In a full implementation, we'd iterate over map.bindings_
+  std::vector<BindingInfo> result;
+  
+  // Use Windows preset as reference (most common)
+  ActionMap defaultMap = createActionMapWithPreset(Preset::SystemDefault);
+  
+  // Hard-coded for now - ideally ActionMap would have a getBindings() method
+  auto addBinding = [&](Action action, KeyBinding binding) {
+    result.push_back({action, actionDisplayName(action), formatBinding(binding)});
+  };
+  
+  // Navigation
+  addBinding(Action::MoveLeft, {raylib::KEY_LEFT, false, false, false});
+  addBinding(Action::MoveRight, {raylib::KEY_RIGHT, false, false, false});
+  addBinding(Action::MoveUp, {raylib::KEY_UP, false, false, false});
+  addBinding(Action::MoveDown, {raylib::KEY_DOWN, false, false, false});
+  addBinding(Action::MoveWordLeft, {raylib::KEY_LEFT, true, false, false});
+  addBinding(Action::MoveWordRight, {raylib::KEY_RIGHT, true, false, false});
+  addBinding(Action::MoveLineStart, {raylib::KEY_HOME, false, false, false});
+  addBinding(Action::MoveLineEnd, {raylib::KEY_END, false, false, false});
+  addBinding(Action::MoveDocumentStart, {raylib::KEY_HOME, true, false, false});
+  addBinding(Action::MoveDocumentEnd, {raylib::KEY_END, true, false, false});
+  addBinding(Action::PageUp, {raylib::KEY_PAGE_UP, false, false, false});
+  addBinding(Action::PageDown, {raylib::KEY_PAGE_DOWN, false, false, false});
+  
+  // Editing
+  addBinding(Action::InsertNewline, {raylib::KEY_ENTER, false, false, false});
+  addBinding(Action::Backspace, {raylib::KEY_BACKSPACE, false, false, false});
+  addBinding(Action::Delete, {raylib::KEY_DELETE, false, false, false});
+  
+  // Clipboard
+  addBinding(Action::SelectAll, {raylib::KEY_A, true, false, false});
+  addBinding(Action::Copy, {raylib::KEY_C, true, false, false});
+  addBinding(Action::Cut, {raylib::KEY_X, true, false, false});
+  addBinding(Action::Paste, {raylib::KEY_V, true, false, false});
+  
+  // Undo/Redo
+  addBinding(Action::Undo, {raylib::KEY_Z, true, false, false});
+  addBinding(Action::Redo, {raylib::KEY_Y, true, false, false});
+  
+  // File
+  addBinding(Action::New, {raylib::KEY_N, true, false, false});
+  addBinding(Action::Open, {raylib::KEY_O, true, false, false});
+  addBinding(Action::Save, {raylib::KEY_S, true, false, false});
+  
+  // Formatting
+  addBinding(Action::ToggleBold, {raylib::KEY_B, true, false, false});
+  addBinding(Action::ToggleItalic, {raylib::KEY_I, true, false, false});
+  addBinding(Action::IncreaseFontSize, {raylib::KEY_EQUAL, true, false, false});
+  addBinding(Action::DecreaseFontSize, {raylib::KEY_MINUS, true, false, false});
+  addBinding(Action::ResetFontSize, {raylib::KEY_ZERO, true, false, false});
+  
+  return result;
+}
+
 } // namespace input

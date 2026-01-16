@@ -70,6 +70,8 @@ inline std::vector<win95::Menu> createMenuBar() {
   win95::Menu helpMenu;
   helpMenu.label = "Help";
   helpMenu.items = {
+    {"Keyboard Shortcuts...", "F1", true, false, nullptr},
+    {"", "", false, true, nullptr},  // Separator
     {"About Wordproc", "", true, false, nullptr}
   };
   menus.push_back(helpMenu);

@@ -124,4 +124,21 @@ ActionMap createActionMapWithPreset(Preset preset);
 // Default action map with standard bindings (system default preset)
 ActionMap createDefaultActionMap();
 
+// Get human-readable display name for an action
+const char* actionDisplayName(Action action);
+
+// Get human-readable key name
+std::string keyName(int keyCode);
+
+// Format a key binding as a human-readable string (e.g., "Ctrl+S")
+std::string formatBinding(const KeyBinding& binding);
+
+// Get all bindings as displayable list (action name -> binding string)
+struct BindingInfo {
+    Action action;
+    std::string actionName;
+    std::string bindingStr;
+};
+std::vector<BindingInfo> getBindingsList(const ActionMap& map);
+
 } // namespace input

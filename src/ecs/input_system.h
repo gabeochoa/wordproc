@@ -1,6 +1,7 @@
 #pragma once
 
 #include "components.h"
+#include "component_helpers.h"
 #include "../editor/document_io.h"
 #include "../rl.h"
 #include "../../vendor/afterhours/src/core/system.h"
@@ -20,7 +21,7 @@ struct TextInputSystem : public afterhours::System<DocumentComponent, CaretCompo
       if (codepoint >= 32) {
         doc.buffer.insertChar(static_cast<char>(codepoint));
         doc.isDirty = true;
-        caret.resetBlink();
+        caret::resetBlink(caret);
       }
       codepoint = raylib::GetCharPressed();
     }
@@ -58,10 +59,10 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
       if (result.success) {
         doc.isDirty = false;
         doc.filePath = savePath;
-        status.set("Saved: " + std::filesystem::path(savePath).filename().string());
+        status::set(status, "Saved: " + std::filesystem::path(savePath).filename().string());
         status.expiresAt = raylib::GetTime() + 3.0;
       } else {
-        status.set("Save failed: " + result.error, true);
+        status::set(status, "Save failed: " + result.error, true);
         status.expiresAt = raylib::GetTime() + 3.0;
       }
     }
@@ -72,10 +73,10 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
       if (result.success) {
         doc.filePath = doc.defaultPath;
         doc.isDirty = false;
-        status.set("Opened: " + std::filesystem::path(doc.defaultPath).filename().string());
+        status::set(status, "Opened: " + std::filesystem::path(doc.defaultPath).filename().string());
         status.expiresAt = raylib::GetTime() + 3.0;
       } else {
-        status.set("Open failed: " + result.error, true);
+        status::set(status, "Open failed: " + result.error, true);
         status.expiresAt = raylib::GetTime() + 3.0;
       }
     }
@@ -160,14 +161,14 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
       if (doc.buffer.canUndo()) {
         doc.buffer.undo();
         doc.isDirty = true;
-        caret.resetBlink();
+        caret::resetBlink(caret);
       }
     }
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Y)) {
       if (doc.buffer.canRedo()) {
         doc.buffer.redo();
         doc.isDirty = true;
-        caret.resetBlink();
+        caret::resetBlink(caret);
       }
     }
   }
@@ -197,7 +198,7 @@ struct NavigationSystem : public afterhours::System<DocumentComponent, CaretComp
       if (shift_down) {
         doc.buffer.updateSelectionToCaret();
       }
-      caret.resetBlink();
+      caret::resetBlink(caret);
     };
 
     if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
@@ -255,8 +256,8 @@ struct NavigationSystem : public afterhours::System<DocumentComponent, CaretComp
 
     // Auto-scroll to keep caret visible
     CaretPosition caretPos = doc.buffer.caret();
-    scroll.scrollToRow(static_cast<int>(caretPos.row));
-    scroll.clamp(static_cast<int>(doc.buffer.lineCount()));
+    scroll::scrollToRow(scroll, static_cast<int>(caretPos.row));
+    scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
   }
 };
 
@@ -265,7 +266,7 @@ struct CaretBlinkSystem : public afterhours::System<CaretComponent> {
   void for_each_with(afterhours::Entity& entity,
                      CaretComponent& caret,
                      const float dt) override {
-    caret.update(dt);
+    caret::updateBlink(caret, dt);
   }
 };
 
@@ -278,7 +279,7 @@ struct LayoutUpdateSystem : public afterhours::System<LayoutComponent, DocumentC
                      const float) override {
     int w = raylib::GetScreenWidth();
     int h = raylib::GetScreenHeight();
-    layout.updateLayout(w, h);
+    layout::updateLayout(layout, w, h);
     
     // Calculate visible lines
     TextStyle style = doc.buffer.textStyle();

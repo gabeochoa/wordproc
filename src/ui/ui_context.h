@@ -184,4 +184,29 @@ inline afterhours::Entity& getUIRootEntity() {
     return roots[0].get();
 }
 
+// Forward declaration for test input system
+namespace test_input {
+    struct TestInputProvider;
+    template <typename InputAction>
+    struct TestInputSystem;
+
+    inline void initTestInputProvider();
+
+    template <typename InputAction>
+    inline void registerTestInputSystem(afterhours::SystemManager& manager);
+}
+
+// Initialize test input provider for UI context integration
+// Call this after initUIContext() when running in test mode
+inline void initTestModeUI() {
+    test_input::initTestInputProvider();
+}
+
+// Register test input system that integrates with Afterhours UIContext
+// Call this after registerUIUpdateSystems() when running in test mode
+// The system runs after BeginUIContextManager to override input state
+inline void registerTestInputSystem(afterhours::SystemManager& manager) {
+    test_input::registerTestInputSystem<InputAction>(manager);
+}
+
 }  // namespace ui_imm
