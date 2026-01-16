@@ -1,22 +1,23 @@
 #pragma once
 
-#include "../rl.h"
 #include <optional>
 #include <queue>
 
+#include "../rl.h"
+
 namespace test_input {
 struct KeyPress {
-  int key;
-  bool is_char = false;
-  char char_value = 0;
+    int key;
+    bool is_char = false;
+    char char_value = 0;
 };
 
 struct MouseState {
-  std::optional<vec2> position;
-  bool left_button_held = false;
-  bool left_button_pressed_this_frame = false;
-  bool left_button_released_this_frame = false;
-  bool simulation_active = false;
+    std::optional<vec2> position;
+    bool left_button_held = false;
+    bool left_button_pressed_this_frame = false;
+    bool left_button_released_this_frame = false;
+    bool simulation_active = false;
 };
 
 extern std::queue<KeyPress> input_queue;
@@ -51,10 +52,11 @@ void simulate_escape();
 
 // UIContext-integrated input simulation (uses Afterhours UI state context)
 // These functions work directly with the UIContext's input state
-void queue_ui_action(int action);  // Queue a UI action (WidgetNext, WidgetPress, etc.)
-void hold_ui_action(int action);   // Hold a UI action down
-void release_ui_action(int action); // Release a held UI action
+void queue_ui_action(
+    int action);  // Queue a UI action (WidgetNext, WidgetPress, etc.)
+void hold_ui_action(int action);     // Hold a UI action down
+void release_ui_action(int action);  // Release a held UI action
 
 extern bool key_consumed_this_frame;
 extern bool char_consumed_this_frame;
-} // namespace test_input
+}  // namespace test_input

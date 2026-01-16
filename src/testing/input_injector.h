@@ -23,7 +23,4 @@ bool is_mouse_button_released(int button);
 
 void reset_frame();
 
-} // namespace input_injector
-
-
-
+}  // namespace input_injector

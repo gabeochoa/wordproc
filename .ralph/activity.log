@@ -1451,3 +1451,6 @@ Ralph Session Started: Thu Jan 15 20:54:32 CST 2026
 [20:55:12] 🟢 READ /Users/gabeochoa/p/wordproc/tests/run_e2e.sh (72 lines, ~7.0KB)
 [20:55:13] 🟢 READ /Users/gabeochoa/p/wordproc/tests/README.md (81 lines, ~7.9KB)
 [20:55:16] 🟢 READ /Users/gabeochoa/p/wordproc/tests/run_fps_scroll_test.sh (96 lines, ~9.3KB)
+[20:55:24] 🟢 READ /Users/gabeochoa/p/wordproc/src/main.cpp (247 lines, ~24.1KB)
+[20:55:27] 🟡 READ /Users/gabeochoa/p/wordproc/src/main.cpp (247 lines, ~24.1KB)
+[20:55:35] 🟡 TOKENS: 48268 / 80000 (60%) [read:185KB write:0KB assist:0KB shell:0KB]

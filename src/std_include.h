@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -16,7 +17,6 @@
 #include <iterator>
 #include <limits>
 #include <map>
-#include <math.h>
 #include <memory>
 #include <numeric>
 #include <optional>

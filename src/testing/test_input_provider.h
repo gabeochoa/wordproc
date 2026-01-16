@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../../vendor/afterhours/src/ecs.h"
-#include "../../vendor/afterhours/src/plugins/input_system.h"
-#include "../../vendor/afterhours/src/plugins/ui/context.h"
 #include <bitset>
 #include <optional>
 #include <queue>
+
+#include "../../vendor/afterhours/src/ecs.h"
+#include "../../vendor/afterhours/src/plugins/input_system.h"
+#include "../../vendor/afterhours/src/plugins/ui/context.h"
 
 namespace test_input {
 
@@ -90,15 +91,17 @@ struct TestInputProvider : afterhours::BaseComponent {
     }
 };
 
-// TestInputSystem: Runs after BeginUIContextManager to override UIContext with test input
-// This integrates the test input with Afterhours UI state context
-template <typename InputAction>
-struct TestInputSystem : afterhours::System<afterhours::ui::UIContext<InputAction>> {
+// TestInputSystem: Runs after BeginUIContextManager to override UIContext with
+// test input This integrates the test input with Afterhours UI state context
+template<typename InputAction>
+struct TestInputSystem
+    : afterhours::System<afterhours::ui::UIContext<InputAction>> {
     virtual void for_each_with(afterhours::Entity&,
                                afterhours::ui::UIContext<InputAction>& context,
                                float) override {
         // Get TestInputProvider singleton
-        auto* provider = afterhours::EntityHelper::get_singleton_cmp<TestInputProvider>();
+        auto* provider =
+            afterhours::EntityHelper::get_singleton_cmp<TestInputProvider>();
         if (!provider || !provider->simulation_active) {
             return;
         }
@@ -113,12 +116,15 @@ struct TestInputSystem : afterhours::System<afterhours::ui::UIContext<InputActio
 
         // Inject pending action
         if (provider->pending_action.has_value()) {
-            context.last_action = static_cast<InputAction>(provider->pending_action.value());
+            context.last_action =
+                static_cast<InputAction>(provider->pending_action.value());
             provider->pending_action = std::nullopt;
         }
 
         // Apply held actions to all_actions bitset
-        for (size_t i = 0; i < provider->held_actions.size() && i < context.all_actions.size(); ++i) {
+        for (size_t i = 0; i < provider->held_actions.size() &&
+                           i < context.all_actions.size();
+             ++i) {
             if (provider->held_actions[i]) {
                 context.all_actions[i] = true;
             }
@@ -139,7 +145,7 @@ inline TestInputProvider* getTestInputProvider() {
 }
 
 // Register TestInputSystem (should run after BeginUIContextManager)
-template <typename InputAction>
+template<typename InputAction>
 inline void registerTestInputSystem(afterhours::SystemManager& manager) {
     manager.register_update_system(
         std::make_unique<TestInputSystem<InputAction>>());

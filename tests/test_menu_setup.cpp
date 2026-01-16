@@ -1,12 +1,10 @@
-#include "catch2/catch.hpp"
 #include "../src/ui/menu_types.h"
+#include "catch2/catch.hpp"
 
 TEST_CASE("Menu bar creation", "[menu][e2e]") {
     auto menus = createMenuBarData();
 
-    SECTION("creates all expected menus") {
-        REQUIRE(menus.size() == 5);
-    }
+    SECTION("creates all expected menus") { REQUIRE(menus.size() == 5); }
 
     SECTION("File menu is first and has expected items") {
         REQUIRE(menus.size() >= 1);
@@ -71,9 +69,9 @@ TEST_CASE("Menu items have correct properties", "[menu]") {
 
     SECTION("Keyboard shortcuts are set correctly") {
         const auto& fileMenu = menus[0];
-        REQUIRE(fileMenu.items[0].shortcut == "Ctrl+N"); // New
-        REQUIRE(fileMenu.items[1].shortcut == "Ctrl+O"); // Open
-        REQUIRE(fileMenu.items[2].shortcut == "Ctrl+S"); // Save
+        REQUIRE(fileMenu.items[0].shortcut == "Ctrl+N");  // New
+        REQUIRE(fileMenu.items[1].shortcut == "Ctrl+O");  // Open
+        REQUIRE(fileMenu.items[2].shortcut == "Ctrl+S");  // Save
     }
 }
 
@@ -81,11 +79,11 @@ TEST_CASE("File menu specifically exists", "[menu][e2e][regression]") {
     // Regression test: File menu must always be present and first
     // This catches the bug where menus weren't rendering properly
     auto menus = createMenuBarData();
-    
+
     REQUIRE_FALSE(menus.empty());
     REQUIRE(menus[0].label == "File");
     REQUIRE_FALSE(menus[0].items.empty());
-    
+
     // Verify essential file operations are available
     bool hasNew = false, hasOpen = false, hasSave = false, hasExit = false;
     for (const auto& item : menus[0].items) {
@@ -94,7 +92,7 @@ TEST_CASE("File menu specifically exists", "[menu][e2e][regression]") {
         if (item.label == "Save") hasSave = true;
         if (item.label == "Exit") hasExit = true;
     }
-    
+
     REQUIRE(hasNew);
     REQUIRE(hasOpen);
     REQUIRE(hasSave);

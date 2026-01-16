@@ -1,5 +1,5 @@
-#include "catch2/catch.hpp"
 #include "../src/editor/text_buffer.h"
+#include "catch2/catch.hpp"
 
 TEST_CASE("TextBuffer initialization", "[text_buffer]") {
     TextBuffer buffer;
@@ -15,9 +15,7 @@ TEST_CASE("TextBuffer initialization", "[text_buffer]") {
         REQUIRE(caret.column == 0);
     }
 
-    SECTION("no selection initially") {
-        REQUIRE_FALSE(buffer.hasSelection());
-    }
+    SECTION("no selection initially") { REQUIRE_FALSE(buffer.hasSelection()); }
 }
 
 TEST_CASE("TextBuffer insert operations", "[text_buffer]") {
@@ -262,7 +260,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         buffer.setSelectionAnchor({0, 0});
         buffer.setCaret({0, 5});
         buffer.updateSelectionToCaret();
-        
+
         REQUIRE(buffer.deleteSelection());
         REQUIRE(buffer.getText() == " world");
         REQUIRE(buffer.caret().column == 0);
@@ -275,7 +273,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         buffer.setSelectionAnchor({0, 11});
         buffer.setCaret({0, 6});
         buffer.updateSelectionToCaret();
-        
+
         REQUIRE(buffer.deleteSelection());
         REQUIRE(buffer.getText() == "hello ");
         REQUIRE(buffer.caret().column == 6);
@@ -287,7 +285,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         buffer.setSelectionAnchor({0, 2});
         buffer.setCaret({0, 5});
         buffer.updateSelectionToCaret();
-        
+
         buffer.backspace();
         REQUIRE(buffer.getText() == "he world");
         REQUIRE(buffer.caret().column == 2);
@@ -299,7 +297,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         buffer.setSelectionAnchor({0, 5});
         buffer.setCaret({0, 11});
         buffer.updateSelectionToCaret();
-        
+
         buffer.del();
         REQUIRE(buffer.getText() == "hello");
     }
@@ -309,7 +307,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         buffer.setSelectionAnchor({0, 0});
         buffer.setCaret({0, 5});
         buffer.updateSelectionToCaret();
-        
+
         buffer.insertChar('H');
         buffer.insertChar('i');
         REQUIRE(buffer.getText() == "Hi world");
@@ -321,7 +319,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
         buffer.setSelectionAnchor({0, 5});
         buffer.setCaret({2, 5});
         buffer.updateSelectionToCaret();
-        
+
         REQUIRE(buffer.deleteSelection());
         REQUIRE(buffer.getText() == "line three");
     }
@@ -329,7 +327,7 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
     SECTION("selectAll and delete clears document") {
         buffer.selectAll();
         REQUIRE(buffer.hasSelection());
-        
+
         buffer.del();
         REQUIRE(buffer.getText().empty());
         REQUIRE(buffer.lineCount() == 1);
@@ -338,102 +336,102 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
 
 TEST_CASE("TextBuffer undo/redo", "[text_buffer][undo]") {
     TextBuffer buffer;
-    
+
     SECTION("undo insert char") {
         buffer.insertChar('a');
         REQUIRE(buffer.getText() == "a");
         REQUIRE(buffer.canUndo());
-        
+
         buffer.undo();
         REQUIRE(buffer.getText().empty());
         REQUIRE(buffer.canRedo());
     }
-    
+
     SECTION("redo after undo") {
         buffer.insertChar('a');
         buffer.undo();
         REQUIRE(buffer.getText().empty());
-        
+
         buffer.redo();
         REQUIRE(buffer.getText() == "a");
     }
-    
+
     SECTION("undo multiple inserts") {
         buffer.insertText("abc");
         REQUIRE(buffer.getText() == "abc");
-        
+
         buffer.undo();  // undo 'c'
         REQUIRE(buffer.getText() == "ab");
-        
+
         buffer.undo();  // undo 'b'
         REQUIRE(buffer.getText() == "a");
-        
+
         buffer.undo();  // undo 'a'
         REQUIRE(buffer.getText().empty());
     }
-    
+
     SECTION("undo backspace restores character") {
         buffer.insertText("abc");
         buffer.clearHistory();  // Clear insert history to focus on backspace
-        
+
         buffer.backspace();  // Delete 'c'
         REQUIRE(buffer.getText() == "ab");
-        
+
         buffer.undo();  // Should restore 'c'
         REQUIRE(buffer.getText() == "abc");
     }
-    
+
     SECTION("undo delete restores character") {
         buffer.insertText("abc");
         buffer.clearHistory();
         buffer.setCaret({0, 1});  // Position after 'a'
-        
+
         buffer.del();  // Delete 'b'
         REQUIRE(buffer.getText() == "ac");
-        
+
         buffer.undo();  // Should restore 'b'
         REQUIRE(buffer.getText() == "abc");
     }
-    
+
     SECTION("new action clears redo stack") {
         buffer.insertChar('a');
         buffer.undo();
         REQUIRE(buffer.canRedo());
-        
-        buffer.insertChar('b');  // New action
+
+        buffer.insertChar('b');           // New action
         REQUIRE_FALSE(buffer.canRedo());  // Redo stack cleared
         REQUIRE(buffer.getText() == "b");
     }
-    
+
     SECTION("undo newline joins lines") {
         buffer.insertText("line1");
         buffer.insertChar('\n');
         buffer.insertText("line2");
         buffer.clearHistory();
-        
+
         buffer.setCaret({1, 0});
         buffer.backspace();  // Delete newline
         REQUIRE(buffer.lineCount() == 1);
-        
+
         buffer.undo();  // Restore newline
         REQUIRE(buffer.lineCount() == 2);
     }
-    
+
     SECTION("clear history prevents undo") {
         buffer.insertChar('a');
         REQUIRE(buffer.canUndo());
-        
+
         buffer.clearHistory();
         REQUIRE_FALSE(buffer.canUndo());
         REQUIRE_FALSE(buffer.canRedo());
     }
-    
+
     SECTION("cannot undo when history is empty") {
         REQUIRE_FALSE(buffer.canUndo());
         buffer.undo();  // Should not crash
         REQUIRE(buffer.getText().empty());
     }
-    
+
     SECTION("cannot redo when history is empty") {
         REQUIRE_FALSE(buffer.canRedo());
         buffer.redo();  // Should not crash
@@ -444,43 +442,46 @@ TEST_CASE("TextBuffer undo/redo", "[text_buffer][undo]") {
 // Regression test for caret positioning with narrow characters like 'l', 'i'
 // See: "Fix caret positioning to use per-glyph advance/metrics"
 // The rendering code (main.cpp) now uses MeasureText() for accurate positioning
-// This test ensures the buffer correctly tracks column positions for narrow chars
-TEST_CASE("Caret positioning with narrow characters", "[text_buffer][regression]") {
+// This test ensures the buffer correctly tracks column positions for narrow
+// chars
+TEST_CASE("Caret positioning with narrow characters",
+          "[text_buffer][regression]") {
     TextBuffer buffer;
-    
+
     SECTION("llllll - caret column tracks correctly for narrow chars") {
         // Insert a series of narrow characters ('l')
         buffer.insertText("llllll");
-        
+
         // Caret should be at column 6 (after 6 characters)
         REQUIRE(buffer.caret().column == 6);
         REQUIRE(buffer.getText() == "llllll");
-        
+
         // Move left should decrease column
         buffer.moveLeft();
         REQUIRE(buffer.caret().column == 5);
-        
+
         // Backspace should remove character and decrease column
         buffer.backspace();
         REQUIRE(buffer.caret().column == 4);
         REQUIRE(buffer.getText() == "lllll");
     }
-    
+
     SECTION("mixed narrow and wide characters") {
         // Mix of narrow ('i', 'l') and wider ('m', 'w') characters
         buffer.insertText("iiii");
         REQUIRE(buffer.caret().column == 4);
-        
+
         buffer.insertText("mmmm");
         REQUIRE(buffer.caret().column == 8);
-        
+
         // Navigate back
         buffer.setCaret({0, 4});  // Position between i's and m's
         REQUIRE(buffer.caret().column == 4);
     }
-    
+
     SECTION("caret at end of narrow character line") {
-        buffer.insertText("lllllllllllllllllllllllllllllllllllllllllllllllllll");  // 51 l's
+        buffer.insertText(
+            "lllllllllllllllllllllllllllllllllllllllllllllllllll");  // 51 l's
         REQUIRE(buffer.caret().column == 51);
         REQUIRE(buffer.getText().length() == 51);
     }
@@ -488,104 +489,106 @@ TEST_CASE("Caret positioning with narrow characters", "[text_buffer][regression]
 
 TEST_CASE("Scroll viewport validation", "[text_buffer][scroll]") {
     TextBuffer buffer;
-    
+
     SECTION("lineSpan returns correct data for visible lines") {
         // Create a document with 50 lines
         for (int i = 0; i < 50; ++i) {
             buffer.insertText("Line " + std::to_string(i));
             if (i < 49) buffer.insertChar('\n');
         }
-        
+
         REQUIRE(buffer.lineCount() == 50);
-        
+
         // Simulate scroll: accessing lines 10-20 (visible viewport)
         int scrollOffset = 10;
         int visibleLines = 10;
-        
+
         for (int i = 0; i < visibleLines; ++i) {
             std::size_t row = static_cast<std::size_t>(scrollOffset + i);
             LineSpan span = buffer.lineSpan(row);
             std::string line = buffer.lineString(row);
-            
+
             // Each line should contain "Line X" where X is the line number
             std::string expected = "Line " + std::to_string(scrollOffset + i);
             REQUIRE(line == expected);
             REQUIRE(span.length == expected.length());
         }
     }
-    
+
     SECTION("lineSpan bounds checking at document end") {
         // Create 5 lines
         buffer.insertText("Line 0\nLine 1\nLine 2\nLine 3\nLine 4");
         REQUIRE(buffer.lineCount() == 5);
-        
+
         // Simulate scroll near end
         int scrollOffset = 3;
         int visibleLines = 5;  // Would show lines 3-7, but only 3-4 exist
-        
+
         // Should be able to access lines 3 and 4
         LineSpan span3 = buffer.lineSpan(3);
         LineSpan span4 = buffer.lineSpan(4);
         REQUIRE(buffer.lineString(3) == "Line 3");
         REQUIRE(buffer.lineString(4) == "Line 4");
-        
+
         // Lines 3-4 have correct content for scrolled view
         REQUIRE(span3.length == 6);  // "Line 3"
         REQUIRE(span4.length == 6);  // "Line 4"
     }
-    
+
     SECTION("caret visibility during scroll") {
         // Create 100 lines
         for (int i = 0; i < 100; ++i) {
             buffer.insertText("L" + std::to_string(i));
             if (i < 99) buffer.insertChar('\n');
         }
-        
+
         REQUIRE(buffer.lineCount() == 100);
-        
+
         // Move caret to line 50
         buffer.setCaret({50, 0});
         REQUIRE(buffer.caret().row == 50);
-        
+
         // Simulate scroll calculation: caret should be visible
         int visibleLines = 20;
         int scrollOffset = 40;  // Viewing lines 40-60
-        
+
         std::size_t caretRow = buffer.caret().row;
-        bool caretVisible = (caretRow >= static_cast<std::size_t>(scrollOffset) && 
-                            caretRow < static_cast<std::size_t>(scrollOffset + visibleLines));
+        bool caretVisible =
+            (caretRow >= static_cast<std::size_t>(scrollOffset) &&
+             caretRow < static_cast<std::size_t>(scrollOffset + visibleLines));
         REQUIRE(caretVisible);
-        
+
         // If we scroll past caret
         scrollOffset = 60;  // Viewing lines 60-80
-        caretVisible = (caretRow >= static_cast<std::size_t>(scrollOffset) && 
-                       caretRow < static_cast<std::size_t>(scrollOffset + visibleLines));
+        caretVisible =
+            (caretRow >= static_cast<std::size_t>(scrollOffset) &&
+             caretRow < static_cast<std::size_t>(scrollOffset + visibleLines));
         REQUIRE_FALSE(caretVisible);  // Caret at line 50 not visible
     }
-    
+
     SECTION("scroll offset clamping") {
         // Create 10 lines
         buffer.insertText("L0\nL1\nL2\nL3\nL4\nL5\nL6\nL7\nL8\nL9");
         REQUIRE(buffer.lineCount() == 10);
-        
+
         int visibleLines = 5;
         int lineCount = static_cast<int>(buffer.lineCount());
-        
+
         // Max scroll offset calculation
         int maxScroll = lineCount - visibleLines;
         REQUIRE(maxScroll == 5);  // Can scroll lines 0-5 to show lines 5-9
-        
+
         // Test various scroll offset clamping
         auto clamp = [maxScroll](int offset) {
             if (offset < 0) return 0;
             if (offset > maxScroll) return maxScroll;
             return offset;
         };
-        
-        REQUIRE(clamp(-5) == 0);    // Negative clamped to 0
-        REQUIRE(clamp(0) == 0);     // Min valid
-        REQUIRE(clamp(3) == 3);     // Mid range
-        REQUIRE(clamp(5) == 5);     // Max valid
-        REQUIRE(clamp(10) == 5);    // Over max clamped
+
+        REQUIRE(clamp(-5) == 0);  // Negative clamped to 0
+        REQUIRE(clamp(0) == 0);   // Min valid
+        REQUIRE(clamp(3) == 3);   // Mid range
+        REQUIRE(clamp(5) == 5);   // Max valid
+        REQUIRE(clamp(10) == 5);  // Over max clamped
     }
 }

@@ -95,7 +95,8 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     auto& resProv =
         resEntity.addComponent<window_manager::ProvidesCurrentResolution>();
     resProv.current_resolution = {screenWidth, screenHeight};
-    EntityHelper::registerSingleton<window_manager::ProvidesCurrentResolution>(resEntity);
+    EntityHelper::registerSingleton<window_manager::ProvidesCurrentResolution>(
+        resEntity);
 
     // Create UI context entity with the context component
     auto& ctxEntity = EntityHelper::createEntity();
@@ -105,8 +106,7 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     // Create the root entity for all UI elements
     auto& rootEntity = EntityHelper::createEntity();
     rootEntity.addComponent<ui::AutoLayoutRoot>();
-    auto& rootCmp =
-        rootEntity.addComponent<ui::UIComponent>(rootEntity.id);
+    auto& rootCmp = rootEntity.addComponent<ui::UIComponent>(rootEntity.id);
     rootCmp.set_desired_width(ui::percent(1.0f))
         .set_desired_height(ui::percent(1.0f));
 }
@@ -186,16 +186,15 @@ inline afterhours::Entity& getUIRootEntity() {
 
 }  // namespace ui_imm
 
-// Include test input provider after ui_imm is fully defined (to avoid circular deps)
+// Include test input provider after ui_imm is fully defined (to avoid circular
+// deps)
 #include "../testing/test_input_provider.h"
 
 namespace ui_imm {
 
 // Initialize test input provider for UI context integration
 // Call this after initUIContext() when running in test mode
-inline void initTestModeUI() {
-    test_input::initTestInputProvider();
-}
+inline void initTestModeUI() { test_input::initTestInputProvider(); }
 
 // Register test input system that integrates with Afterhours UIContext
 // Call this after registerUIUpdateSystems() when running in test mode

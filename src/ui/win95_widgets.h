@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../rl.h"
 #include <functional>
 #include <string>
 #include <vector>
+
+#include "../rl.h"
 
 // Win95-style color palette
 namespace win95 {
@@ -20,26 +21,26 @@ constexpr raylib::Color BORDER_DARK = {128, 128, 128, 255};
 constexpr raylib::Color BORDER_DARKER = {64, 64, 64, 255};
 constexpr raylib::Color MENU_HIGHLIGHT = {0, 0, 128, 255};
 constexpr raylib::Color BUTTON_FACE = {192, 192, 192, 255};
-} // namespace colors
+}  // namespace colors
 
 // Button state for tracking interaction
 enum class ButtonState { Normal, Hover, Pressed, Disabled };
 
 // Menu item structure
 struct MenuItem {
-  std::string label;
-  std::string shortcut;
-  bool enabled = true;
-  bool separator = false;
-  std::function<void()> action;
+    std::string label;
+    std::string shortcut;
+    bool enabled = true;
+    bool separator = false;
+    std::function<void()> action;
 };
 
 // Menu structure
 struct Menu {
-  std::string label;
-  std::vector<MenuItem> items;
-  bool open = false;
-  raylib::Rectangle bounds;
+    std::string label;
+    std::vector<MenuItem> items;
+    bool open = false;
+    raylib::Rectangle bounds;
 };
 
 // Draw a Win95-style raised border (buttons, panels)
@@ -54,7 +55,8 @@ bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled = true);
 
 // Draw a Win95-style checkbox
 // Returns true if state changed
-bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked, bool enabled = true);
+bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
+                  bool enabled = true);
 
 // Draw menu bar and handle interaction
 // Returns index of clicked menu item, or -1 if none
@@ -76,9 +78,9 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
 
 // Dialog state management
 struct DialogState {
-  bool active = false;
-  int result = -1;
-  std::string inputBuffer;
+    bool active = false;
+    int result = -1;
+    std::string inputBuffer;
 };
 
-} // namespace win95
+}  // namespace win95

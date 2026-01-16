@@ -198,7 +198,8 @@ Preload &Preload::make_singleton() {
                                        static_cast<int>(japanese_cps.size()));
 
         // Register loaded fonts with FontLoader for P2 font listing
-        fonts::FontLoader::get().loadStartupFonts(sophie.get<ui::FontManager>());
+        fonts::FontLoader::get().loadStartupFonts(
+            sophie.get<ui::FontManager>());
 
         ui::imm::ThemeDefaults::get()
             .set_theme_color(ui::Theme::Usage::Primary, colors::UI_GREEN)
