@@ -89,7 +89,8 @@ Preload &Preload::init(const char *title) {
 
     raylib::SetExitKey(0);
 
-    load_gamepad_mappings();
+    // Skip gamepad mappings - word processor doesn't need gamepad support
+    // load_gamepad_mappings();
 
     return *this;
 }
@@ -100,55 +101,53 @@ Preload &Preload::init(const char *title) {
 Preload &Preload::make_singleton() {
     auto &sophie = EntityHelper::createEntity();
     {
-        input::add_singleton_components(sophie, get_mapping());
-        window_manager::add_singleton_components(sophie, 200);
-        ui::add_singleton_components<ui_imm::InputAction>(sophie);
+        {
+            SCOPED_TIMER("Afterhours singleton setup");
+            input::add_singleton_components(sophie, get_mapping());
+            window_manager::add_singleton_components(sophie, 200);
+            ui::add_singleton_components<ui_imm::InputAction>(sophie);
+        }
 
-        // Load only essential fonts at startup for fast launch
-        // Other fonts are lazy-loaded on demand by FontLoader
+        // Load only ONE essential font at startup for fastest launch
+        // Garamond and other fonts lazy-loaded on first use
         std::string english_font =
             files::get_resource_path("fonts", "Gaegu-Bold.ttf").string();
-        std::string garamond_font =
-            files::get_resource_path("fonts", "EBGaramond-Regular.ttf")
-                .string();
 
         {
-            SCOPED_TIMER("Load essential fonts");
-            sophie
-                .get<ui::FontManager>()
-                // Default font (used when no language-specific font is set)
-                .load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str())
-                .load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str())
-                // Primary editor fonts - these are the main fonts used
-                .load_font("Gaegu-Bold", english_font.c_str())
-                .load_font("EBGaramond-Regular", garamond_font.c_str());
-            // Other fonts (EqProRounded, NerdSymbols, Fredoka, BlackOpsOne,
-            // Atkinson) are loaded on-demand by FontLoader when needed
+            SCOPED_TIMER("Load default font");
+            auto& fontMgr = sophie.get<ui::FontManager>();
+            // Single font load - used as default for everything initially
+            fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str());
+            // Alias the same font for other uses to avoid extra loads
+            fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str());
+            fontMgr.load_font("Gaegu-Bold", english_font.c_str());
+            // EBGaramond-Regular loaded lazily when user selects it
         }
 
         // Register loaded fonts with FontLoader for P2 font listing
         fonts::FontLoader::get().loadStartupFonts(
             sophie.get<ui::FontManager>());
 
-        ui::imm::ThemeDefaults::get()
-            .set_theme_color(ui::Theme::Usage::Primary, colors::UI_GREEN)
-            .set_theme_color(ui::Theme::Usage::Error, colors::UI_RED)
-            .set_theme_color(ui::Theme::Usage::Font, colors::UI_WHITE)
-            .set_theme_color(
-                ui::Theme::Usage::DarkFont,
-                afterhours::Color{30, 30, 30,
-                                  255})  // Dark text for light backgrounds
-            .set_theme_color(ui::Theme::Usage::Background, colors::UI_BLACK)
-            .set_theme_color(
-                ui::Theme::Usage::Surface,
-                afterhours::Color{40, 40, 50,
-                                  255})  // Slightly lighter than background
-            .set_theme_color(ui::Theme::Usage::Secondary,
-                             afterhours::Color{253, 249, 0, 255})  // Yellow
-            .set_theme_color(ui::Theme::Usage::Accent,
-                             afterhours::Color{0, 228, 48, 255});  // Green
+        {
+            SCOPED_TIMER("Theme setup");
+            ui::imm::ThemeDefaults::get()
+                .set_theme_color(ui::Theme::Usage::Primary, colors::UI_GREEN)
+                .set_theme_color(ui::Theme::Usage::Error, colors::UI_RED)
+                .set_theme_color(ui::Theme::Usage::Font, colors::UI_WHITE)
+                .set_theme_color(
+                    ui::Theme::Usage::DarkFont,
+                    afterhours::Color{30, 30, 30, 255})
+                .set_theme_color(ui::Theme::Usage::Background, colors::UI_BLACK)
+                .set_theme_color(
+                    ui::Theme::Usage::Surface,
+                    afterhours::Color{40, 40, 50, 255})
+                .set_theme_color(ui::Theme::Usage::Secondary,
+                                 afterhours::Color{253, 249, 0, 255})
+                .set_theme_color(ui::Theme::Usage::Accent,
+                                 afterhours::Color{0, 228, 48, 255});
 
-        ui::imm::UIStylingDefaults::get().set_grid_snapping(true);
+            ui::imm::UIStylingDefaults::get().set_grid_snapping(true);
+        }
 
         sophie.addComponent<ui::AutoLayoutRoot>();
         sophie.addComponent<ui::UIComponentDebug>("sophie");
