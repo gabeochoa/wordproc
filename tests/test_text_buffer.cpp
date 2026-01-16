@@ -1041,3 +1041,130 @@ TEST_CASE("Paragraph indentation", "[text_buffer][indentation]") {
         REQUIRE(buffer.lineLeftIndent(2) == 40);
     }
 }
+
+TEST_CASE("Line spacing", "[text_buffer][spacing]") {
+    TextBuffer buffer;
+    buffer.setText("Line 1\nLine 2\nLine 3");
+    
+    SECTION("default line spacing is 1.0 (single)") {
+        REQUIRE(buffer.currentLineSpacing() == 1.0f);
+        REQUIRE(buffer.lineSpacing(0) == 1.0f);
+        REQUIRE(buffer.lineSpacing(1) == 1.0f);
+        REQUIRE(buffer.lineSpacing(2) == 1.0f);
+    }
+    
+    SECTION("set single line spacing") {
+        buffer.setCaret({0, 0});
+        buffer.setLineSpacingSingle();
+        
+        REQUIRE(buffer.currentLineSpacing() == 1.0f);
+        REQUIRE(buffer.lineSpacing(0) == 1.0f);
+    }
+    
+    SECTION("set 1.5x line spacing") {
+        buffer.setCaret({1, 0});
+        buffer.setLineSpacing1_5();
+        
+        REQUIRE(buffer.currentLineSpacing() == 1.5f);
+        REQUIRE(buffer.lineSpacing(1) == 1.5f);
+        // Other lines unchanged
+        REQUIRE(buffer.lineSpacing(0) == 1.0f);
+        REQUIRE(buffer.lineSpacing(2) == 1.0f);
+    }
+    
+    SECTION("set double line spacing") {
+        buffer.setCaret({2, 0});
+        buffer.setLineSpacingDouble();
+        
+        REQUIRE(buffer.currentLineSpacing() == 2.0f);
+        REQUIRE(buffer.lineSpacing(2) == 2.0f);
+    }
+    
+    SECTION("set custom line spacing") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentLineSpacing(1.25f);
+        
+        REQUIRE(buffer.currentLineSpacing() == 1.25f);
+        REQUIRE(buffer.lineSpacing(0) == 1.25f);
+    }
+    
+    SECTION("line spacing clamped to valid range") {
+        buffer.setCaret({0, 0});
+        
+        // Too small
+        buffer.setCurrentLineSpacing(0.1f);
+        REQUIRE(buffer.currentLineSpacing() == 0.5f);  // Clamped to 0.5 minimum
+        
+        // Too large
+        buffer.setCurrentLineSpacing(5.0f);
+        REQUIRE(buffer.currentLineSpacing() == 3.0f);  // Clamped to 3.0 maximum
+    }
+}
+
+TEST_CASE("Paragraph spacing", "[text_buffer][spacing]") {
+    TextBuffer buffer;
+    buffer.setText("Paragraph 1\nParagraph 2\nParagraph 3");
+    
+    SECTION("default paragraph spacing is zero") {
+        REQUIRE(buffer.currentSpaceBefore() == 0);
+        REQUIRE(buffer.currentSpaceAfter() == 0);
+        REQUIRE(buffer.lineSpaceBefore(0) == 0);
+        REQUIRE(buffer.lineSpaceAfter(0) == 0);
+        REQUIRE(buffer.lineSpaceBefore(1) == 0);
+        REQUIRE(buffer.lineSpaceAfter(1) == 0);
+    }
+    
+    SECTION("set space before paragraph") {
+        buffer.setCaret({1, 0});
+        buffer.setCurrentSpaceBefore(12);
+        
+        REQUIRE(buffer.currentSpaceBefore() == 12);
+        REQUIRE(buffer.lineSpaceBefore(1) == 12);
+        // Other paragraphs unchanged
+        REQUIRE(buffer.lineSpaceBefore(0) == 0);
+        REQUIRE(buffer.lineSpaceBefore(2) == 0);
+    }
+    
+    SECTION("set space after paragraph") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentSpaceAfter(8);
+        
+        REQUIRE(buffer.currentSpaceAfter() == 8);
+        REQUIRE(buffer.lineSpaceAfter(0) == 8);
+    }
+    
+    SECTION("space before cannot be negative") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentSpaceBefore(-10);
+        
+        REQUIRE(buffer.currentSpaceBefore() == 0);  // Clamped to 0
+    }
+    
+    SECTION("space after cannot be negative") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentSpaceAfter(-5);
+        
+        REQUIRE(buffer.currentSpaceAfter() == 0);  // Clamped to 0
+    }
+    
+    SECTION("each paragraph can have different spacing") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentSpaceBefore(0);
+        buffer.setCurrentSpaceAfter(6);
+        
+        buffer.setCaret({1, 0});
+        buffer.setCurrentSpaceBefore(12);
+        buffer.setCurrentSpaceAfter(12);
+        
+        buffer.setCaret({2, 0});
+        buffer.setCurrentSpaceBefore(6);
+        buffer.setCurrentSpaceAfter(0);
+        
+        REQUIRE(buffer.lineSpaceBefore(0) == 0);
+        REQUIRE(buffer.lineSpaceAfter(0) == 6);
+        REQUIRE(buffer.lineSpaceBefore(1) == 12);
+        REQUIRE(buffer.lineSpaceAfter(1) == 12);
+        REQUIRE(buffer.lineSpaceBefore(2) == 6);
+        REQUIRE(buffer.lineSpaceAfter(2) == 0);
+    }
+}

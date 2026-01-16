@@ -900,6 +900,22 @@ struct MenuSystem
                     status::set(status, "Indent decreased");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
+                // (49 is separator)
+                case 50:  // Single Spacing
+                    doc.buffer.setLineSpacingSingle();
+                    status::set(status, "Line spacing: Single");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 51:  // 1.5 Line Spacing
+                    doc.buffer.setLineSpacing1_5();
+                    status::set(status, "Line spacing: 1.5");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 52:  // Double Spacing
+                    doc.buffer.setLineSpacingDouble();
+                    status::set(status, "Line spacing: Double");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
                 default:
                     break;
             }
