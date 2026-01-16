@@ -851,7 +851,22 @@ Summary:
 
 **Current Status:**
 - Font loader module complete (P0/P1/P2 functionality)
-- Next unchecked task: Use Afterhours UI state context for test input handling
+- Afterhours UI state context for test input: already integrated via external.h macros
+
+### 2026-01-15 (Session 9 continued - Help Window)
+- Verified Afterhours UI state context test input integration (already complete)
+- Implemented help window showing keyboard shortcuts (F1 to toggle):
+  - Added `actionDisplayName()`, `keyName()`, `formatBinding()`, `getBindingsList()` to action_map
+  - Added `showHelpWindow`, `helpScrollOffset` to MenuComponent
+  - Added `drawHelpWindow()` to MenuSystem in render_system.h
+  - Help menu already has "Keyboard Shortcuts..." with F1 shortcut
+- Marked "Use Afterhours UI state context for test input handling" [x] complete
+- Marked "Add a help window listing keybindings" [x] complete (rebinding deferred to v0.2)
+- All 321 tests pass across 36 test cases
+
+**Completed this session:**
+- [x] Use Afterhours UI state context for test input handling
+- [x] Add help window listing keybindings from action_map.h
 
 ### 2026-01-15 (Session 7 - Color Type Fix)
 - **Fixed fundamental build error:** Color type conflict between raylib and afterhours
