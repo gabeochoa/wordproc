@@ -1874,3 +1874,139 @@ bool TextBuffer::goToOutlineEntry(std::size_t lineNumber) {
     clearSelection();
     return true;
 }
+
+// ============================================================================
+// Bookmark Near Search
+// ============================================================================
+
+const Bookmark* TextBuffer::bookmarkNear(std::size_t offset, std::size_t tolerance) const {
+    for (const auto& bm : bookmarks_) {
+        std::size_t dist;
+        if (bm.offset >= offset) {
+            dist = bm.offset - offset;
+        } else {
+            dist = offset - bm.offset;
+        }
+        if (dist <= tolerance) {
+            return &bm;
+        }
+    }
+    return nullptr;
+}
+
+// ============================================================================
+// Adjust Bookmark Offsets
+// ============================================================================
+
+void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
+    for (auto it = bookmarks_.begin(); it != bookmarks_.end();) {
+        // If deletion removes the bookmark position
+        if (delta < 0 && pos <= it->offset && 
+            pos + static_cast<std::size_t>(-delta) > it->offset) {
+            // Bookmark is within deleted range - move to deletion start
+            it->offset = pos;
+            ++it;
+            continue;
+        }
+        
+        // Adjust offset for insertions/deletions before this bookmark
+        if (pos <= it->offset) {
+            it->offset = static_cast<std::size_t>(
+                static_cast<std::ptrdiff_t>(it->offset) + delta);
+        }
+        ++it;
+    }
+    
+    // Re-sort after adjustments
+    std::sort(bookmarks_.begin(), bookmarks_.end());
+}
+
+// ============================================================================
+// Table of Contents
+// ============================================================================
+
+std::string TextBuffer::generateTableOfContents() const {
+    std::string toc = "Table of Contents\n";
+    toc += "=================\n\n";
+    
+    auto outline = getOutline();
+    for (const auto& entry : outline) {
+        // Add indentation based on level
+        for (std::size_t i = 0; i < entry.level; ++i) {
+            toc += "  ";
+        }
+        toc += entry.text + "\n";
+    }
+    
+    return toc;
+}
+
+void TextBuffer::insertTableOfContents() {
+    std::string toc = generateTableOfContents();
+    insertText(toc);
+}
+
+// ============================================================================
+// Footnote Management
+// ============================================================================
+
+bool TextBuffer::addFootnote(const std::string& content) {
+    if (content.empty()) {
+        return false;
+    }
+    
+    std::size_t offset = positionToOffset(caret_);
+    
+    Footnote fn;
+    fn.referenceOffset = offset;
+    fn.content = content;
+    fn.number = static_cast<int>(footnotes_.size() + 1);
+    
+    footnotes_.push_back(fn);
+    
+    // Keep footnotes sorted by position and renumber
+    renumberFootnotes();
+    version_++;
+    return true;
+}
+
+bool TextBuffer::removeFootnote(std::size_t number) {
+    for (auto it = footnotes_.begin(); it != footnotes_.end(); ++it) {
+        if (static_cast<std::size_t>(it->number) == number) {
+            footnotes_.erase(it);
+            renumberFootnotes();
+            version_++;
+            return true;
+        }
+    }
+    return false;
+}
+
+const Footnote* TextBuffer::getFootnote(std::size_t number) const {
+    for (const auto& fn : footnotes_) {
+        if (static_cast<std::size_t>(fn.number) == number) {
+            return &fn;
+        }
+    }
+    return nullptr;
+}
+
+const Footnote* TextBuffer::footnoteAt(std::size_t offset) const {
+    for (const auto& fn : footnotes_) {
+        if (fn.referenceOffset == offset) {
+            return &fn;
+        }
+    }
+    return nullptr;
+}
+
+void TextBuffer::renumberFootnotes() {
+    // Sort by position first
+    std::sort(footnotes_.begin(), footnotes_.end());
+    
+    // Renumber sequentially
+    int num = 1;
+    for (auto& fn : footnotes_) {
+        fn.number = num++;
+    }
+}
