@@ -296,8 +296,9 @@ bool TextBuffer::deleteSelection() {
     stats_.total_deletes += deleteCount;
     version_++;
     
-    // Adjust hyperlink offsets for the deleted selection
+    // Adjust hyperlink and bookmark offsets for the deleted selection
     adjustHyperlinkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
+    adjustBookmarkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
 
     // Rebuild line index since we may have deleted across lines
     rebuildLineIndex();
@@ -392,8 +393,9 @@ void TextBuffer::insertChar(char ch) {
     std::size_t offset = positionToOffset(caret_);
     chars_.insert(offset, ch);
     
-    // Adjust hyperlink offsets for the inserted character
+    // Adjust hyperlink and bookmark offsets for the inserted character
     adjustHyperlinkOffsets(offset, 1);
+    adjustBookmarkOffsets(offset, 1);
 
     if (ch == '\n') {
         // Split current line
@@ -833,8 +835,9 @@ void TextBuffer::backspace() {
         stats_.total_deletes++;
         version_++;  // Content changed - invalidate render cache
         
-        // Adjust hyperlink offsets for the deleted character
+        // Adjust hyperlink and bookmark offsets for the deleted character
         adjustHyperlinkOffsets(offset - 1, -1);
+        adjustBookmarkOffsets(offset - 1, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -862,8 +865,9 @@ void TextBuffer::backspace() {
     stats_.total_deletes++;
     version_++;
     
-    // Adjust hyperlink offsets for the deleted newline
+    // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
+    adjustBookmarkOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -1946,29 +1950,4 @@ void TextBuffer::insertTableOfContents() {
     if (!toc.empty()) {
         insertText(toc);
     }
-}
-
-// ============================================================================
-// Bookmark Offset Adjustment
-// ============================================================================
-
-void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
-    for (auto it = bookmarks_.begin(); it != bookmarks_.end(); ++it) {
-        // If deletion removes the bookmark position
-        if (delta < 0 && pos <= it->offset && 
-            pos + static_cast<std::size_t>(-delta) > it->offset) {
-            // Bookmark is within deleted range - move to deletion start
-            it->offset = pos;
-            continue;
-        }
-        
-        // Adjust offset for insertions/deletions before this bookmark
-        if (pos <= it->offset) {
-            it->offset = static_cast<std::size_t>(
-                static_cast<std::ptrdiff_t>(it->offset) + delta);
-        }
-    }
-    
-    // Re-sort after adjustments
-    std::sort(bookmarks_.begin(), bookmarks_.end());
 }

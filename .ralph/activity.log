@@ -2697,3 +2697,9 @@ Ralph Session Started: Thu Jan 15 23:06:22 CST 2026
 [23:15:12] 🔴 SHELL wc -l /Users/gabeochoa/p/wordproc/src/editor/text_buffer.cpp && tail -5 /Users/gabeochoa/p/wordproc/src/editor/text_buffer.cpp → exit 0
 [23:15:12] 🔴 ROTATE: Token threshold reached (284871 >= 80000)
 [23:15:16] 🔴 ROTATE: Token threshold reached (284871 >= 80000)
+[23:15:54] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && rm -rf /tmp/wpo9 && mkdir -p /tmp/wpo9/test /tmp/wpo9/src && make test OBJ_DIR=/tmp/wpo9 2>&1 | tail -20 → exit 0
+[23:15:54] 🔴 ROTATE: Token threshold reached (284871 >= 80000)
+[23:15:54] 🔴 TOKENS: 284871 / 80000 (356%) - rotation imminent [read:1109KB write:0KB assist:0KB shell:0KB]
+[23:15:58] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_outline.cpp (219 lines, ~21.3KB)
+[23:15:58] 🔴 ROTATE: Token threshold reached (290346 >= 80000)
+[23:16:02] 🔴 ROTATE: Token threshold reached (290346 >= 80000)

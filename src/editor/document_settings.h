@@ -381,6 +381,56 @@ inline void getPageDimensions(PageSize size, float& width, float& height) {
     }
 }
 
+// Section break type
+enum class SectionBreakType {
+    NextPage,      // New section starts on next page
+    Continuous,    // New section continues on same page
+    EvenPage,      // New section starts on next even-numbered page
+    OddPage        // New section starts on next odd-numbered page
+};
+
+// Section configuration (each document can have multiple sections)
+// Sections allow different page settings within the same document
+struct SectionSettings {
+    // Layout settings for this section
+    float pageWidth = 612.0f;
+    float pageHeight = 792.0f;
+    float marginTop = 72.0f;
+    float marginBottom = 72.0f;
+    float marginLeft = 72.0f;
+    float marginRight = 72.0f;
+    PageOrientation orientation = PageOrientation::Portrait;
+    
+    // Column settings
+    int columns = 1;           // Number of columns (1 = single column)
+    float columnSpacing = 36.0f;  // Space between columns in points
+    
+    // Section break type (how this section starts)
+    SectionBreakType breakType = SectionBreakType::NextPage;
+    
+    // Headers/footers can be different per section
+    bool linkToPrevious = true;  // Use same header/footer as previous section
+    HeaderFooter header;
+    HeaderFooter footer;
+    
+    // Starting page number (0 = continue from previous)
+    int startingPageNumber = 0;
+    
+    // Section-specific watermark override
+    bool hasWatermarkOverride = false;
+    Watermark watermark;
+};
+
+// Section marker in document
+struct DocumentSection {
+    std::size_t startLine = 0;      // Line where section starts
+    SectionSettings settings;        // Settings for this section
+    
+    bool operator<(const DocumentSection& other) const {
+        return startLine < other.startLine;
+    }
+};
+
 // Page layout settings
 struct PageSettings {
     PageMode mode = PageMode::Pageless;

@@ -445,6 +445,7 @@ class TextBuffer {
     std::vector<Hyperlink> hyperlinks_; // Hyperlinks in the document
     std::vector<Bookmark> bookmarks_;   // Bookmarks for internal navigation
     std::vector<Footnote> footnotes_;   // Footnotes with auto-numbering
+    std::vector<DocumentSection> sections_;  // Document sections with per-section settings
     CaretPosition caret_;
     bool has_selection_ = false;
     CaretPosition selection_anchor_;
