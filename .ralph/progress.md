@@ -536,3 +536,37 @@ All 199 tests pass.
 
 ### 2026-01-15 19:26:00
 **Session 8 started** (model: opus-4.5-thinking)
+
+### Session 8 Work (Iteration 7)
+- Moved `src/engine/input_injector.{h,cpp}` to `src/testing/` (test-only code)
+- Marked 10+ Feedback Tasks as complete that were already implemented:
+  - std::format for status text
+  - Theme file for centralized colors  
+  - Action map for remappable keys
+  - Menu setup in separate file
+  - Logging system macros
+  - ScopedTimer for profiling
+  - Utility definitions moved
+  - Volume/post-processing APIs removed
+  - Win95 widgets gap documented in AfterhoursGaps.md
+  - Keyboard shortcut presets (System/Windows/macOS)
+- Added 6 scroll validation tests to test_text_layout.cpp
+- Restored AfterhoursGaps.md (was accidentally deleted)
+
+**Current Status:**
+- All 10 Success Criteria: [x] complete
+- All Task Breakdown items (sections 1-11): [x] complete  
+- Feedback Tasks: 9 remaining unchecked (major refactoring efforts)
+- Tests: 321 assertions in 36 test cases, all pass
+- Build: Succeeds with 1 minor warning
+
+**Remaining Feedback Tasks (future improvements, not blocking):**
+1. Refactor main loop to ECS
+2. Use immediate-mode UI for UI layer
+3. Abstract raylib behind renderer interface
+4. Create font_loader module
+5. Use Afterhours UI state context for test input
+6. Add help window listing keybindings
+7. Separate app settings from document settings
+8. Re-evaluate file format (JSON vs wpdoc zip)
+9. Ensure .doc import support

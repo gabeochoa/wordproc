@@ -69,7 +69,7 @@ struct StatusComponent : public afterhours::BaseComponent {
   double expiresAt = 0.0;
   bool isError = false;
 
-  void set(const std::string& msg, bool error = false, double duration = 3.0) {
+  void set(const std::string& msg, bool error = false) {
     text = msg;
     isError = error;
     // Note: expiresAt should be set by caller with current time + duration
