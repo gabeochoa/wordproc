@@ -925,3 +925,119 @@ TEST_CASE("Paragraph alignment", "[text_buffer][alignment]") {
         REQUIRE(std::string(textAlignmentName(TextAlignment::Justify)) == "Justify");
     }
 }
+
+TEST_CASE("Paragraph indentation", "[text_buffer][indentation]") {
+    TextBuffer buffer;
+    buffer.setText("Line 1\nLine 2\nLine 3");
+    
+    SECTION("default indentation is zero") {
+        REQUIRE(buffer.currentLeftIndent() == 0);
+        REQUIRE(buffer.currentFirstLineIndent() == 0);
+        REQUIRE(buffer.lineLeftIndent(0) == 0);
+        REQUIRE(buffer.lineLeftIndent(1) == 0);
+        REQUIRE(buffer.lineLeftIndent(2) == 0);
+        REQUIRE(buffer.lineFirstLineIndent(0) == 0);
+        REQUIRE(buffer.lineFirstLineIndent(1) == 0);
+        REQUIRE(buffer.lineFirstLineIndent(2) == 0);
+    }
+    
+    SECTION("increase indent adds 20px by default") {
+        buffer.setCaret({0, 0});
+        buffer.increaseIndent();
+        
+        REQUIRE(buffer.currentLeftIndent() == 20);
+        REQUIRE(buffer.lineLeftIndent(0) == 20);
+        // Other lines unchanged
+        REQUIRE(buffer.lineLeftIndent(1) == 0);
+        REQUIRE(buffer.lineLeftIndent(2) == 0);
+    }
+    
+    SECTION("decrease indent subtracts 20px") {
+        buffer.setCaret({1, 0});
+        buffer.increaseIndent();
+        buffer.increaseIndent();  // Now at 40px
+        REQUIRE(buffer.lineLeftIndent(1) == 40);
+        
+        buffer.decreaseIndent();
+        REQUIRE(buffer.lineLeftIndent(1) == 20);
+        
+        buffer.decreaseIndent();
+        REQUIRE(buffer.lineLeftIndent(1) == 0);
+    }
+    
+    SECTION("decrease indent does not go negative") {
+        buffer.setCaret({0, 0});
+        buffer.decreaseIndent();
+        
+        REQUIRE(buffer.currentLeftIndent() == 0);
+        REQUIRE(buffer.lineLeftIndent(0) == 0);
+    }
+    
+    SECTION("custom indent amount") {
+        buffer.setCaret({2, 0});
+        buffer.increaseIndent(50);
+        
+        REQUIRE(buffer.lineLeftIndent(2) == 50);
+        
+        buffer.decreaseIndent(30);
+        REQUIRE(buffer.lineLeftIndent(2) == 20);
+    }
+    
+    SECTION("set left indent directly") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentLeftIndent(100);
+        
+        REQUIRE(buffer.currentLeftIndent() == 100);
+        REQUIRE(buffer.lineLeftIndent(0) == 100);
+    }
+    
+    SECTION("set left indent cannot be negative") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentLeftIndent(-50);
+        
+        REQUIRE(buffer.currentLeftIndent() == 0);  // Clamped to 0
+    }
+    
+    SECTION("set first line indent") {
+        buffer.setCaret({1, 0});
+        buffer.setCurrentFirstLineIndent(30);
+        
+        REQUIRE(buffer.currentFirstLineIndent() == 30);
+        REQUIRE(buffer.lineFirstLineIndent(1) == 30);
+    }
+    
+    SECTION("first line indent can be negative for hanging indent") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentFirstLineIndent(-20);  // Hanging indent
+        
+        REQUIRE(buffer.currentFirstLineIndent() == -20);
+        REQUIRE(buffer.lineFirstLineIndent(0) == -20);
+    }
+    
+    SECTION("indentation changes increment version") {
+        uint64_t versionBefore = buffer.version();
+        buffer.increaseIndent();
+        REQUIRE(buffer.version() > versionBefore);
+        
+        versionBefore = buffer.version();
+        buffer.decreaseIndent();
+        REQUIRE(buffer.version() > versionBefore);
+        
+        versionBefore = buffer.version();
+        buffer.setCurrentLeftIndent(50);
+        REQUIRE(buffer.version() > versionBefore);
+    }
+    
+    SECTION("each line can have different indentation") {
+        buffer.setCaret({0, 0});
+        buffer.setCurrentLeftIndent(0);
+        buffer.setCaret({1, 0});
+        buffer.setCurrentLeftIndent(20);
+        buffer.setCaret({2, 0});
+        buffer.setCurrentLeftIndent(40);
+        
+        REQUIRE(buffer.lineLeftIndent(0) == 0);
+        REQUIRE(buffer.lineLeftIndent(1) == 20);
+        REQUIRE(buffer.lineLeftIndent(2) == 40);
+    }
+}

@@ -108,26 +108,35 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             lineHeight = baseLineHeight;
         }
         
+        // Apply indentation
+        int leftIndent = buffer.lineLeftIndent(row);
+        int firstLineIndent = buffer.lineFirstLineIndent(row);
+        // Note: firstLineIndent only applies to first line of paragraph
+        // For now, we treat each line as its own paragraph
+        int totalIndent = leftIndent + firstLineIndent;
+        int indentedBaseX = baseX + totalIndent;
+        int indentedWidth = availableWidth - totalIndent;
+        
         // Calculate text width for alignment
         int textWidth = line.empty() ? 0 : raylib::MeasureText(line.c_str(), lineFontSize);
         
-        // Apply text alignment
+        // Apply text alignment (within the indented area)
         TextAlignment alignment = buffer.lineAlignment(row);
-        int x = baseX;
+        int x = indentedBaseX;
         switch (alignment) {
             case TextAlignment::Left:
             default:
-                x = baseX;
+                x = indentedBaseX;
                 break;
             case TextAlignment::Center:
-                x = baseX + (availableWidth - textWidth) / 2;
+                x = indentedBaseX + (indentedWidth - textWidth) / 2;
                 break;
             case TextAlignment::Right:
-                x = baseX + availableWidth - textWidth;
+                x = indentedBaseX + indentedWidth - textWidth;
                 break;
             case TextAlignment::Justify:
                 // Justify is same as left for now (requires word spacing adjustments)
-                x = baseX;
+                x = indentedBaseX;
                 break;
         }
 
@@ -868,6 +877,17 @@ struct MenuSystem
                 case 45:  // Justify
                     doc.buffer.setCurrentAlignment(TextAlignment::Justify);
                     status::set(status, "Align: Justify");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                // (46 is separator)
+                case 47:  // Increase Indent
+                    doc.buffer.increaseIndent();
+                    status::set(status, "Indent increased");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 48:  // Decrease Indent
+                    doc.buffer.decreaseIndent();
+                    status::set(status, "Indent decreased");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 default:

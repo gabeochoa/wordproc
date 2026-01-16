@@ -208,6 +208,14 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::AlignJustify)) {
             doc.buffer.setCurrentAlignment(TextAlignment::Justify);
         }
+        
+        // Indentation
+        if (actionMap_.isActionPressed(Action::IndentIncrease)) {
+            doc.buffer.increaseIndent();
+        }
+        if (actionMap_.isActionPressed(Action::IndentDecrease)) {
+            doc.buffer.decreaseIndent();
+        }
 
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {

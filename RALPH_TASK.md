@@ -57,7 +57,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add basic text emphasis formatting (bold, italic, underline, strikethrough). (Implemented: TextStyle struct, Ctrl+B/I/U, Ctrl+Shift+S, Format menu items 10-13, rendering with bold double-draw, underline/strikethrough lines, status bar indicators)
 - [x] Add text color and highlight color formatting. (Implemented: TextColor struct, TextColors/HighlightColors presets, Format menu items 15-28, rendering with colored text and highlight background, 11 test assertions)
 - [x] Add paragraph alignment controls (left, center, right, justify). (Implemented: TextAlignment enum, per-line alignment in LineSpan, Ctrl+L/E/R/J shortcuts, Format menu items, rendering with text offset, 36 test assertions)
-- [ ] Add indentation controls (increase/decrease, first-line, hanging).
+- [x] Add indentation controls (increase/decrease, first-line, hanging). (Implemented: leftIndent/firstLineIndent in LineSpan, Ctrl+]/[ shortcuts, Format menu items 47-48, rendering with indented text, 32 test assertions)
 - [ ] Add line spacing and paragraph spacing (before/after).
 - [ ] Add bulleted and numbered lists (including multi-level lists).
 - [ ] Add table insertion and editing (add/remove rows/cols, merge/split cells).
