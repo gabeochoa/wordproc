@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../editor/document_settings.h"
 #include "../editor/text_buffer.h"
 #include "../input/action_map.h"
 #include "../ui/win95_widgets.h"
@@ -31,6 +32,10 @@ struct DocumentComponent : public afterhours::BaseComponent {
   std::string filePath;
   bool isDirty = false;
   
+  // Document settings (saved with the document file, not with app settings)
+  // This includes text style, page mode, margins, etc.
+  DocumentSettings docSettings;
+  
   // For default doc path when saving without a name
   std::string defaultPath = "output/document.wpdoc";
 };
@@ -50,13 +55,11 @@ struct MenuComponent : public afterhours::BaseComponent {
   int helpScrollOffset = 0;     // Scroll position in help window
 };
 
-// Page display mode for document layout
-enum class PageMode {
-  Pageless,  // Continuous flow, no page breaks/margins
-  Paged      // Traditional page layout with margins and page breaks
-};
+// PageMode is defined in document_settings.h
 
 // Component for window layout calculations (logic in component_helpers.h)
+// Note: Page mode settings here mirror DocumentComponent.docSettings.pageSettings for display
+// They are synced from DocumentSettings on load and saved back on save
 struct LayoutComponent : public afterhours::BaseComponent {
   float titleBarHeight = 20.0f;
   float menuBarHeight = 20.0f;

@@ -53,7 +53,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 ### Refactor Opportunities
 - [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
-- [ ] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
+- [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere). (Already done: primitives defined in win95_widgets.cpp, used in render_system.h and throughout)
 - [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
 - [ ] Remove or wire `RenderCache` (avoid unused code paths).
 - [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.

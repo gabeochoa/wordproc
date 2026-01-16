@@ -11,12 +11,16 @@
 
 namespace ecs {
 
-// System for handling text input (typing characters)
+// System for handling text input (typing characters) using ActionMap
 struct TextInputSystem : public afterhours::System<DocumentComponent, CaretComponent> {
+  input::ActionMap actionMap_ = input::createDefaultActionMap();
+  
   void for_each_with(afterhours::Entity& entity, 
                      DocumentComponent& doc, 
                      CaretComponent& caret, 
                      const float) override {
+    using input::Action;
+    
     int codepoint = raylib::GetCharPressed();
     while (codepoint > 0) {
       if (codepoint >= 32) {
@@ -27,16 +31,15 @@ struct TextInputSystem : public afterhours::System<DocumentComponent, CaretCompo
       codepoint = raylib::GetCharPressed();
     }
 
-    if (raylib::IsKeyPressed(raylib::KEY_ENTER) ||
-        raylib::IsKeyPressed(raylib::KEY_KP_ENTER)) {
+    if (actionMap_.isActionPressed(Action::InsertNewline)) {
       doc.buffer.insertChar('\n');
       doc.isDirty = true;
     }
-    if (raylib::IsKeyPressed(raylib::KEY_BACKSPACE)) {
+    if (actionMap_.isActionPressed(Action::Backspace)) {
       doc.buffer.backspace();
       doc.isDirty = true;
     }
-    if (raylib::IsKeyPressed(raylib::KEY_DELETE)) {
+    if (actionMap_.isActionPressed(Action::Delete)) {
       doc.buffer.del();
       doc.isDirty = true;
     }
@@ -178,15 +181,17 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
   }
 };
 
-// System for handling navigation keys
+// System for handling navigation keys using remappable ActionMap
 struct NavigationSystem : public afterhours::System<DocumentComponent, CaretComponent, ScrollComponent> {
+  input::ActionMap actionMap_ = input::createDefaultActionMap();
+  
   void for_each_with(afterhours::Entity& entity,
                      DocumentComponent& doc,
                      CaretComponent& caret,
                      ScrollComponent& scroll,
                      const float) override {
-    bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
-                     raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
+    using input::Action;
+    
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
 
@@ -205,49 +210,42 @@ struct NavigationSystem : public afterhours::System<DocumentComponent, CaretComp
       caret::resetBlink(caret);
     };
 
-    if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveWordLeft(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveLeft(); });
-      }
+    // Left/Right with Ctrl for word movement
+    if (actionMap_.isActionPressed(Action::MoveWordLeft)) {
+      navigateWithSelection([&]() { doc.buffer.moveWordLeft(); });
+    } else if (actionMap_.isActionPressed(Action::MoveLeft)) {
+      navigateWithSelection([&]() { doc.buffer.moveLeft(); });
     }
-    if (raylib::IsKeyPressed(raylib::KEY_RIGHT)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveWordRight(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveRight(); });
-      }
+    if (actionMap_.isActionPressed(Action::MoveWordRight)) {
+      navigateWithSelection([&]() { doc.buffer.moveWordRight(); });
+    } else if (actionMap_.isActionPressed(Action::MoveRight)) {
+      navigateWithSelection([&]() { doc.buffer.moveRight(); });
     }
-    if (raylib::IsKeyPressed(raylib::KEY_UP)) {
+    if (actionMap_.isActionPressed(Action::MoveUp)) {
       navigateWithSelection([&]() { doc.buffer.moveUp(); });
     }
-    if (raylib::IsKeyPressed(raylib::KEY_DOWN)) {
+    if (actionMap_.isActionPressed(Action::MoveDown)) {
       navigateWithSelection([&]() { doc.buffer.moveDown(); });
     }
 
-    // Home/End
-    if (raylib::IsKeyPressed(raylib::KEY_HOME)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveToDocumentStart(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveToLineStart(); });
-      }
+    // Home/End with Ctrl for document start/end
+    if (actionMap_.isActionPressed(Action::MoveDocumentStart)) {
+      navigateWithSelection([&]() { doc.buffer.moveToDocumentStart(); });
+    } else if (actionMap_.isActionPressed(Action::MoveLineStart)) {
+      navigateWithSelection([&]() { doc.buffer.moveToLineStart(); });
     }
-    if (raylib::IsKeyPressed(raylib::KEY_END)) {
-      if (ctrl_down) {
-        navigateWithSelection([&]() { doc.buffer.moveToDocumentEnd(); });
-      } else {
-        navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
-      }
+    if (actionMap_.isActionPressed(Action::MoveDocumentEnd)) {
+      navigateWithSelection([&]() { doc.buffer.moveToDocumentEnd(); });
+    } else if (actionMap_.isActionPressed(Action::MoveLineEnd)) {
+      navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
     }
 
     // Page Up/Down
     constexpr std::size_t LINES_PER_PAGE = 20;
-    if (raylib::IsKeyPressed(raylib::KEY_PAGE_UP)) {
+    if (actionMap_.isActionPressed(Action::PageUp)) {
       navigateWithSelection([&]() { doc.buffer.movePageUp(LINES_PER_PAGE); });
     }
-    if (raylib::IsKeyPressed(raylib::KEY_PAGE_DOWN)) {
+    if (actionMap_.isActionPressed(Action::PageDown)) {
       navigateWithSelection([&]() { doc.buffer.movePageDown(LINES_PER_PAGE); });
     }
 
