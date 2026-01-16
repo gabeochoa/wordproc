@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -110,6 +111,22 @@ public:
   void moveUp();
   void moveDown();
   
+  // Word navigation (Ctrl+Arrow)
+  void moveWordLeft();
+  void moveWordRight();
+  
+  // Line navigation (Home/End)
+  void moveToLineStart();
+  void moveToLineEnd();
+  
+  // Document navigation (Ctrl+Home/End)
+  void moveToDocumentStart();
+  void moveToDocumentEnd();
+  
+  // Page navigation
+  void movePageUp(std::size_t linesPerPage);
+  void movePageDown(std::size_t linesPerPage);
+  
   // Performance metrics
   struct PerfStats {
     std::size_t total_inserts = 0;
@@ -119,6 +136,10 @@ public:
   };
   PerfStats perfStats() const;
   void resetPerfStats();
+  
+  // Version counter - increments on every modification
+  // Used by RenderCache to detect when rebuild is needed
+  std::uint64_t version() const { return version_; }
 
 private:
   void ensureNonEmpty();
@@ -137,4 +158,5 @@ private:
   CaretPosition selection_end_;
   TextStyle style_;
   PerfStats stats_;
+  std::uint64_t version_ = 0;         // Increments on every modification
 };

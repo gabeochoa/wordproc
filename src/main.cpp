@@ -381,7 +381,8 @@ int main(int argc, char *argv[]) {
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);
 
-    if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
+    // Helper lambda for navigation with selection support
+    auto navigateWithSelection = [&](auto moveFunc) {
       CaretPosition before = buffer.caret();
       if (shift_down && !buffer.hasSelection()) {
         buffer.setSelectionAnchor(before);
@@ -389,60 +390,63 @@ int main(int argc, char *argv[]) {
       if (!shift_down) {
         buffer.clearSelection();
       }
-      buffer.moveLeft();
+      moveFunc();
       if (shift_down) {
         buffer.updateSelectionToCaret();
       }
       caretVisible = true;
       caretBlinkTimer = 0.0;
+    };
+
+    if (raylib::IsKeyPressed(raylib::KEY_LEFT)) {
+      if (ctrl_down) {
+        navigateWithSelection([&]() { buffer.moveWordLeft(); });
+      } else {
+        navigateWithSelection([&]() { buffer.moveLeft(); });
+      }
     }
 
     if (raylib::IsKeyPressed(raylib::KEY_RIGHT)) {
-      CaretPosition before = buffer.caret();
-      if (shift_down && !buffer.hasSelection()) {
-        buffer.setSelectionAnchor(before);
+      if (ctrl_down) {
+        navigateWithSelection([&]() { buffer.moveWordRight(); });
+      } else {
+        navigateWithSelection([&]() { buffer.moveRight(); });
       }
-      if (!shift_down) {
-        buffer.clearSelection();
-      }
-      buffer.moveRight();
-      if (shift_down) {
-        buffer.updateSelectionToCaret();
-      }
-      caretVisible = true;
-      caretBlinkTimer = 0.0;
     }
 
     if (raylib::IsKeyPressed(raylib::KEY_UP)) {
-      CaretPosition before = buffer.caret();
-      if (shift_down && !buffer.hasSelection()) {
-        buffer.setSelectionAnchor(before);
-      }
-      if (!shift_down) {
-        buffer.clearSelection();
-      }
-      buffer.moveUp();
-      if (shift_down) {
-        buffer.updateSelectionToCaret();
-      }
-      caretVisible = true;
-      caretBlinkTimer = 0.0;
+      navigateWithSelection([&]() { buffer.moveUp(); });
     }
 
     if (raylib::IsKeyPressed(raylib::KEY_DOWN)) {
-      CaretPosition before = buffer.caret();
-      if (shift_down && !buffer.hasSelection()) {
-        buffer.setSelectionAnchor(before);
+      navigateWithSelection([&]() { buffer.moveDown(); });
+    }
+
+    // Home/End navigation
+    if (raylib::IsKeyPressed(raylib::KEY_HOME)) {
+      if (ctrl_down) {
+        navigateWithSelection([&]() { buffer.moveToDocumentStart(); });
+      } else {
+        navigateWithSelection([&]() { buffer.moveToLineStart(); });
       }
-      if (!shift_down) {
-        buffer.clearSelection();
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_END)) {
+      if (ctrl_down) {
+        navigateWithSelection([&]() { buffer.moveToDocumentEnd(); });
+      } else {
+        navigateWithSelection([&]() { buffer.moveToLineEnd(); });
       }
-      buffer.moveDown();
-      if (shift_down) {
-        buffer.updateSelectionToCaret();
-      }
-      caretVisible = true;
-      caretBlinkTimer = 0.0;
+    }
+
+    // Page Up/Down (assuming ~20 lines per page for now)
+    constexpr std::size_t LINES_PER_PAGE = 20;
+    if (raylib::IsKeyPressed(raylib::KEY_PAGE_UP)) {
+      navigateWithSelection([&]() { buffer.movePageUp(LINES_PER_PAGE); });
+    }
+
+    if (raylib::IsKeyPressed(raylib::KEY_PAGE_DOWN)) {
+      navigateWithSelection([&]() { buffer.movePageDown(LINES_PER_PAGE); });
     }
 
     // Calculate window layout

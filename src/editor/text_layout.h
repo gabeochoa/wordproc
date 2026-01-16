@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -54,3 +55,52 @@ std::vector<WrappedLine> layoutWrappedLines(const TextBuffer &buffer,
 // New SoA API - avoids string copies, better for large documents
 LayoutResult layoutWrappedLinesSoA(const TextBuffer &buffer,
                                    std::size_t max_columns);
+
+// Cached line data for rendering - avoids per-frame allocations
+struct CachedLine {
+  std::size_t source_row = 0;
+  std::size_t start_column = 0;
+  std::string text;              // Pre-computed text (avoids per-frame alloc)
+  int y_position = 0;            // Pre-computed y position in pixels
+};
+
+// Render cache - stores pre-computed layout for efficient frame rendering
+// Invalidate when buffer changes, font size changes, or window resizes
+class RenderCache {
+public:
+  RenderCache() = default;
+  
+  // Check if cache needs rebuild based on buffer version and settings
+  bool needsRebuild(std::uint64_t buffer_version, int font_size, 
+                    int text_area_width, int text_area_height, int line_height) const;
+  
+  // Rebuild the cache from the buffer
+  void rebuild(const TextBuffer& buffer, std::uint64_t buffer_version,
+               int font_size, int text_area_x, int text_area_y,
+               int text_area_width, int text_area_height, 
+               int line_height, int text_padding);
+  
+  // Access cached lines for rendering (only visible lines)
+  const std::vector<CachedLine>& visibleLines() const { return visible_lines_; }
+  
+  // Get first visible line's source row (for scrolling calculations)
+  std::size_t firstVisibleRow() const { return first_visible_row_; }
+  std::size_t lastVisibleRow() const { return last_visible_row_; }
+  
+  // Performance stats
+  std::size_t rebuildCount() const { return rebuild_count_; }
+  std::size_t cacheHitCount() const { return cache_hit_count_; }
+  void resetStats() { rebuild_count_ = 0; cache_hit_count_ = 0; }
+  
+private:
+  std::vector<CachedLine> visible_lines_;
+  std::uint64_t cached_buffer_version_ = 0;
+  int cached_font_size_ = 0;
+  int cached_text_area_width_ = 0;
+  int cached_text_area_height_ = 0;
+  int cached_line_height_ = 0;
+  std::size_t first_visible_row_ = 0;
+  std::size_t last_visible_row_ = 0;
+  std::size_t rebuild_count_ = 0;
+  mutable std::size_t cache_hit_count_ = 0;
+};

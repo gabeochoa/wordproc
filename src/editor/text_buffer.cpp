@@ -538,6 +538,132 @@ void TextBuffer::moveDown() {
   caret_.column = std::min(caret_.column, line_spans_[caret_.row].length);
 }
 
+void TextBuffer::moveWordLeft() {
+  if (chars_.empty()) return;
+  
+  // Skip any whitespace/punctuation to the left
+  while (caret_.column > 0 || caret_.row > 0) {
+    if (caret_.column == 0) {
+      if (caret_.row == 0) break;
+      caret_.row--;
+      caret_.column = line_spans_[caret_.row].length;
+      continue;
+    }
+    
+    std::size_t offset = positionToOffset(caret_);
+    if (offset == 0) break;
+    char ch = chars_.at(offset - 1);
+    if (std::isalnum(static_cast<unsigned char>(ch))) {
+      break;
+    }
+    caret_.column--;
+  }
+  
+  // Move to start of current word
+  while (caret_.column > 0) {
+    std::size_t offset = positionToOffset(caret_);
+    if (offset == 0) break;
+    char ch = chars_.at(offset - 1);
+    if (!std::isalnum(static_cast<unsigned char>(ch))) {
+      break;
+    }
+    caret_.column--;
+  }
+}
+
+void TextBuffer::moveWordRight() {
+  if (chars_.empty()) return;
+  
+  std::size_t totalLines = line_spans_.size();
+  std::size_t totalChars = chars_.size();
+  
+  // Skip current word
+  while (caret_.row < totalLines) {
+    const LineSpan& span = line_spans_[caret_.row];
+    if (caret_.column >= span.length) {
+      // Move to next line
+      if (caret_.row + 1 < totalLines) {
+        caret_.row++;
+        caret_.column = 0;
+        continue;
+      }
+      break;
+    }
+    
+    std::size_t offset = positionToOffset(caret_);
+    if (offset >= totalChars) break;
+    char ch = chars_.at(offset);
+    if (!std::isalnum(static_cast<unsigned char>(ch))) {
+      break;
+    }
+    caret_.column++;
+  }
+  
+  // Skip whitespace/punctuation
+  while (caret_.row < totalLines) {
+    const LineSpan& span = line_spans_[caret_.row];
+    if (caret_.column >= span.length) {
+      if (caret_.row + 1 < totalLines) {
+        caret_.row++;
+        caret_.column = 0;
+        continue;
+      }
+      break;
+    }
+    
+    std::size_t offset = positionToOffset(caret_);
+    if (offset >= totalChars) break;
+    char ch = chars_.at(offset);
+    if (std::isalnum(static_cast<unsigned char>(ch))) {
+      break;
+    }
+    caret_.column++;
+  }
+}
+
+void TextBuffer::moveToLineStart() {
+  caret_.column = 0;
+}
+
+void TextBuffer::moveToLineEnd() {
+  if (caret_.row < line_spans_.size()) {
+    caret_.column = line_spans_[caret_.row].length;
+  }
+}
+
+void TextBuffer::moveToDocumentStart() {
+  caret_.row = 0;
+  caret_.column = 0;
+}
+
+void TextBuffer::moveToDocumentEnd() {
+  if (!line_spans_.empty()) {
+    caret_.row = line_spans_.size() - 1;
+    caret_.column = line_spans_[caret_.row].length;
+  }
+}
+
+void TextBuffer::movePageUp(std::size_t linesPerPage) {
+  if (line_spans_.empty()) return;
+  
+  if (caret_.row >= linesPerPage) {
+    caret_.row -= linesPerPage;
+  } else {
+    caret_.row = 0;
+  }
+  caret_.column = std::min(caret_.column, line_spans_[caret_.row].length);
+}
+
+void TextBuffer::movePageDown(std::size_t linesPerPage) {
+  if (line_spans_.empty()) return;
+  
+  caret_.row += linesPerPage;
+  if (caret_.row >= line_spans_.size()) {
+    caret_.row = line_spans_.size() - 1;
+  }
+  caret_.column = std::min(caret_.column, line_spans_[caret_.row].length);
+}
+
 void TextBuffer::ensureNonEmpty() {
   if (line_spans_.empty()) {
     line_spans_.push_back({0, 0});
