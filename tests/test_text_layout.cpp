@@ -143,6 +143,95 @@ TEST_CASE("layoutWrappedLinesSoA (SoA layout)", "[text_layout][soa]") {
     }
 }
 
+TEST_CASE("Scroll offset visible content validation", "[text_layout][scroll]") {
+    TextBuffer buffer;
+    
+    // Create a document with 10 lines
+    buffer.setText("Line0\nLine1\nLine2\nLine3\nLine4\nLine5\nLine6\nLine7\nLine8\nLine9");
+    
+    SECTION("scroll offset 0 shows first lines") {
+        auto wrapped = layoutWrappedLines(buffer, 80);
+        // Verify first 5 lines are at the top
+        REQUIRE(wrapped.size() == 10);
+        REQUIRE(wrapped[0].text == "Line0");
+        REQUIRE(wrapped[0].source_row == 0);
+        REQUIRE(wrapped[4].text == "Line4");
+        REQUIRE(wrapped[4].source_row == 4);
+    }
+    
+    SECTION("scroll offset affects visible line starting point") {
+        auto wrapped = layoutWrappedLines(buffer, 80);
+        
+        // Simulating scroll offset of 3: lines 3-9 would be visible
+        std::size_t scrollOffset = 3;
+        REQUIRE(scrollOffset < wrapped.size());
+        
+        // Line at scroll offset should be Line3
+        REQUIRE(wrapped[scrollOffset].text == "Line3");
+        REQUIRE(wrapped[scrollOffset].source_row == 3);
+    }
+    
+    SECTION("scroll offset at end shows last lines") {
+        auto wrapped = layoutWrappedLines(buffer, 80);
+        
+        // Scroll to show only last 3 lines
+        std::size_t scrollOffset = 7;
+        REQUIRE(scrollOffset < wrapped.size());
+        
+        REQUIRE(wrapped[scrollOffset].text == "Line7");
+        REQUIRE(wrapped[scrollOffset + 1].text == "Line8");
+        REQUIRE(wrapped[scrollOffset + 2].text == "Line9");
+    }
+    
+    SECTION("scroll offset clamped to valid range") {
+        auto wrapped = layoutWrappedLines(buffer, 80);
+        
+        // Scroll offset beyond content should be clamped
+        std::size_t scrollOffset = 100;
+        std::size_t clampedOffset = std::min(scrollOffset, wrapped.size() - 1);
+        
+        REQUIRE(clampedOffset == 9);  // Last valid index
+        REQUIRE(wrapped[clampedOffset].text == "Line9");
+    }
+    
+    SECTION("visible lines count with viewport height") {
+        auto wrapped = layoutWrappedLines(buffer, 80);
+        const int lineHeight = 20;
+        const int viewportHeight = 100;  // Fits 5 lines
+        
+        std::size_t visibleCount = static_cast<std::size_t>(viewportHeight / lineHeight);
+        REQUIRE(visibleCount == 5);
+        
+        // At scroll offset 2, lines 2-6 would be visible
+        std::size_t scrollOffset = 2;
+        for (std::size_t i = 0; i < visibleCount && (scrollOffset + i) < wrapped.size(); ++i) {
+            std::size_t lineIndex = scrollOffset + i;
+            std::string expectedText = "Line" + std::to_string(lineIndex);
+            REQUIRE(wrapped[lineIndex].text == expectedText);
+        }
+    }
+    
+    SECTION("scroll maintains correct source row mapping") {
+        buffer.setText("Short\nThis is a longer line that will wrap\nAnother");
+        auto wrapped = layoutWrappedLines(buffer, 10);
+        
+        // Line 0: "Short" (1 wrapped line)
+        // Line 1: "This is a longer line that will wrap" (4 wrapped lines)
+        // Line 2: "Another" (1 wrapped line)
+        
+        // Verify source row mapping is correct after wrapping
+        REQUIRE(wrapped[0].source_row == 0);
+        REQUIRE(wrapped[0].text == "Short");
+        
+        REQUIRE(wrapped[1].source_row == 1);  // First part of long line
+        REQUIRE(wrapped[2].source_row == 1);  // Second part
+        REQUIRE(wrapped[3].source_row == 1);  // Third part
+        REQUIRE(wrapped[4].source_row == 1);  // Fourth part
+        
+        REQUIRE(wrapped[5].source_row == 2);  // "Another"
+    }
+}
+
 TEST_CASE("RenderCache invalidation", "[text_layout][cache]") {
     TextBuffer buffer;
     RenderCache cache;

@@ -164,6 +164,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
 - [x] Add unsaved-changes indicator (`*`) in the UI when the document is dirty.
 - [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
+- [ ] Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
+- [ ] Ensure `.doc` import support; collect sample `.doc` files from https://file-examples.com/index.php/sample-documents-download/sample-doc-download/ for tests.
 
 ---
 
