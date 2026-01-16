@@ -148,6 +148,73 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 ---
 
+## E2E Framework Enhancements
+
+### Missing E2E Commands
+- [ ] Add `menu_open "MenuName"` command to open a menu by name
+- [ ] Add `menu_select "ItemName"` command to select an item from open menu
+- [ ] Add `click_outline "HeadingName"` command to click an outline entry
+
+### Missing E2E Validation Properties
+- [ ] Add `menu_open` property - returns name of currently open menu or "false"
+- [ ] Add `menu_contains` property - check if menu contains item (e.g., `menu_contains=Save`)
+- [ ] Add `has_table` property - returns "true" if document contains a table
+- [ ] Add `table_rows` property - returns number of rows in current table
+- [ ] Add `table_cols` property - returns number of columns in current table
+- [ ] Add `cell_content` property - returns content of current table cell
+- [ ] Add `has_image` property - returns "true" if document contains an image
+- [ ] Add `image_count` property - returns number of images in document
+- [ ] Add `image_layout` property - returns layout mode of current image
+- [ ] Add `has_footnote` property - returns "true" if document has footnotes
+- [ ] Add `has_hyperlink` property - returns "true" if selection is a hyperlink
+- [ ] Add `hyperlink_url` property - returns URL of current hyperlink
+- [ ] Add `has_drawing` property - returns "true" if document has drawings
+- [ ] Add `drawing_count` property - returns number of drawings
+- [ ] Add `has_equation` property - returns "true" if document has equations
+- [ ] Add `equation_count` property - returns number of equations
+- [ ] Add `dialog_open` property - returns name of currently open dialog
+- [ ] Add `help_window_visible` property - returns "true" if help window is open
+- [ ] Add `help_contains` property - check if help window contains text
+- [ ] Add `outline_visible` property - returns "true" if outline panel is open
+- [ ] Add `outline_items` property - returns number of outline entries
+- [ ] Add `status_bar_visible` property - returns "true" if status bar is shown
+- [ ] Add `status_shows_line` property - returns line number shown in status bar
+- [ ] Add `status_shows_column` property - returns column shown in status bar
+- [ ] Add `status_shows_bold` property - returns "true" if bold indicator is shown
+- [ ] Add `status_shows_italic` property - returns "true" if italic indicator is shown
+- [ ] Add `status_shows_font_size` property - returns "true" if font size is shown
+- [ ] Add `page_size` property - returns current page size (letter, legal, a4)
+- [ ] Add `page_orientation` property - returns "portrait" or "landscape"
+- [ ] Add `margin_left` / `margin_right` properties - return margin values
+- [ ] Add `section_count` property - returns number of document sections
+- [ ] Add `current_section_columns` property - returns column count of current section
+- [ ] Add `has_page_break` property - returns "true" if page break before caret
+- [ ] Add `page_count` property - returns total page count
+- [ ] Add `has_bookmark` property - returns "true" if bookmarks exist
+- [ ] Add `bookmark_name` property - returns name of nearest bookmark
+- [ ] Add `caret_line` property - alias for caret_row (1-indexed)
+- [ ] Add `caret_pos` property - returns absolute caret position in document
+- [ ] Add `indent_level` property - returns indentation level (0, 1, 2, ...)
+- [ ] Add `list_level` property - returns list nesting level
+- [ ] Add `selection_length` property - returns length of selected text
+- [ ] Add `text_contains` property - check if document contains substring
+- [ ] Add `text_shorter_than` property - check text length is less than value
+- [ ] Add `has_text_color` property - returns "true" if text has custom color
+- [ ] Add `has_highlight` property - returns "true" if text is highlighted
+- [ ] Add `has_toc` property - returns "true" if document has table of contents
+- [ ] Add `toc_entries` property - returns number of TOC entries
+- [ ] Add `header_content` property - returns header text content
+- [ ] Add `has_page_number` property - returns "true" if page numbers enabled
+- [ ] Add `caret_at_heading` property - returns heading text if caret is at heading
+
+### E2E Core Fixes
+- [ ] Fix `type` command not injecting text correctly (text shows as empty)
+- [ ] Fix keyboard shortcuts (Ctrl+B, Ctrl+I, etc.) not applying formatting
+- [ ] Fix selection commands (select_all, drag) not selecting text
+- [ ] Fix case sensitivity in validation (e.g., "Left" vs "left", "None" vs "none")
+
+---
+
 ## E2E Feature Validation Tests
 
 Write E2E tests (in `tests/e2e_scripts/`) to validate each Word Processing Feature exists and works correctly. Each test should use the E2E script format with `type`, `key`, `click`, `validate`, and `screenshot` commands.
