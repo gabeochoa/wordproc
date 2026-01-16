@@ -134,6 +134,22 @@ inline std::vector<win95::Menu> createMenuBar() {
     };
     menus.push_back(formatMenu);
 
+    // Insert menu
+    win95::Menu insertMenu;
+    insertMenu.label = "Insert";
+    insertMenu.items = {
+        {"Page Break", "Ctrl+Enter", true, false, nullptr},      // 0
+        {"", "", false, true, nullptr},                          // 1 Separator
+        {"Hyperlink...", "Ctrl+K", true, false, nullptr},        // 2
+        {"Remove Hyperlink", "", true, false, nullptr},          // 3
+        {"", "", false, true, nullptr},                          // 4 Separator
+        {"Table...", "", true, false, nullptr},                  // 5
+        {"", "", false, true, nullptr},                          // 6 Separator
+        {"Image...", "", true, false, nullptr},                  // 7 (placeholder)
+        {"Special Character...", "", true, false, nullptr}       // 8 (placeholder)
+    };
+    menus.push_back(insertMenu);
+
     // Table menu
     win95::Menu tableMenu;
     tableMenu.label = "Table";

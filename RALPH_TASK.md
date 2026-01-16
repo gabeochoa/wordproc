@@ -72,7 +72,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add page setup controls (size, orientation, margins, page color).
 - [ ] Add headers and footers with page numbers.
 - [ ] Add section breaks with per-section layout settings.
-- [ ] Add manual page breaks.
+- [x] Add manual page breaks. (Implemented: insertPageBreak/togglePageBreak/clearPageBreak in TextBuffer, hasPageBreakBefore in LineSpan, Ctrl+Enter shortcut, visual page break indicator in render system, 8 test assertions)
 - [ ] Add multi-column layout and column breaks.
 - [ ] Add table of contents generation from headings.
 - [ ] Add outline view based on heading hierarchy.

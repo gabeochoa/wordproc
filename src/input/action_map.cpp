@@ -195,6 +195,10 @@ const char* ActionMap::actionName(Action action) {
             return "InsertPageBreak";
         case Action::TogglePageBreak:
             return "TogglePageBreak";
+        case Action::InsertHyperlink:
+            return "InsertHyperlink";
+        case Action::RemoveHyperlink:
+            return "RemoveHyperlink";
         case Action::COUNT:
         default:
             return "NONE";

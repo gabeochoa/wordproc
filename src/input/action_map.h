@@ -116,6 +116,10 @@ enum class Action {
     // Page breaks
     InsertPageBreak,        // Ctrl+Enter - insert page break before current line
     TogglePageBreak,        // Toggle page break before current line
+    
+    // Hyperlinks
+    InsertHyperlink,        // Ctrl+K - insert/edit hyperlink on selection
+    RemoveHyperlink,        // Remove hyperlink from selection
 
     // Count (for iteration)
     COUNT
