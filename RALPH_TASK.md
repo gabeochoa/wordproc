@@ -71,7 +71,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add spelling and grammar suggestions with per-word actions.
 - [x] Add page setup controls (size, orientation, margins, page color). (Implemented: PageSize enum with Letter/Legal/A4/A5/Custom, PageOrientation enum, per-side margins in PageSettings, pageColor using TextColor, applyPageSize/toggleOrientation methods, Page Setup menu item, pageMarginTop/Bottom/Left/Right fields)
 - [x] Add headers and footers with page numbers. (Implemented: HeaderFooterSection and HeaderFooter structs with left/center/right sections, PageNumberFormat (Arabic/Roman/Letter), showTotalPages, differentFirstPage/differentOddEven options, getSectionText() with page formatting)
-- [ ] Add section breaks with per-section layout settings.
+- [x] Add section breaks with per-section layout settings. (Implemented: SectionBreakType enum, SectionSettings struct with margins/orientation/columns, DocumentSection struct, insertSectionBreak/sectionAt/sectionSettingsAt/updateSectionSettings methods in TextBuffer)
 - [x] Add manual page breaks. (Implemented: insertPageBreak/togglePageBreak/clearPageBreak in TextBuffer, hasPageBreakBefore in LineSpan, Ctrl+Enter shortcut, visual page break indicator in render system, 8 test assertions)
 - [ ] Add multi-column layout and column breaks.
 - [x] Add table of contents generation from headings. (Implemented: generateTableOfContents/insertTableOfContents methods in TextBuffer, generates formatted TOC text from headings with indentation, 8 test assertions in test_outline.cpp)

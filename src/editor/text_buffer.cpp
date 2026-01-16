@@ -1284,7 +1284,24 @@ void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
     version_++;
 
     if (ch == '\n') {
-        rebuildLineIndex();
+        // Split current line - preserve paragraph styles
+        std::size_t splitRow = caret_.row;
+        LineSpan oldSpan = line_spans_[splitRow];
+        
+        // Current line ends at caret position
+        line_spans_[splitRow].length = caret_.column;
+        
+        // New line starts after newline character
+        LineSpan newSpan;
+        newSpan.offset = offset + 1;
+        newSpan.length = (oldSpan.offset + oldSpan.length) - offset;
+        newSpan.style = ParagraphStyle::Normal;
+        newSpan.alignment = oldSpan.alignment;
+        
+        // Insert new line span
+        line_spans_.insert(line_spans_.begin() + splitRow + 1, newSpan);
+        shiftLineOffsetsFrom(splitRow + 2, 1);
+        
         caret_.row += 1;
         caret_.column = 0;
     } else {
