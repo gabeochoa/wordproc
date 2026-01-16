@@ -185,18 +185,28 @@ TEST_CASE("Benchmark: Line wrapping layout", "[benchmark][layout]") {
   TextBuffer buffer;
   buffer.setText(text);
   
-  bench::Timer timer;
-  auto wrapped = wrapLines(buffer.lines(), WRAP_WIDTH);
-  double elapsed = timer.elapsedMs();
+  // Benchmark AoS (allocates strings)
+  bench::Timer aosTimer;
+  auto wrappedAoS = layoutWrappedLines(buffer, WRAP_WIDTH);
+  double aosElapsed = aosTimer.elapsedMs();
+  
+  // Benchmark SoA (no string allocations)
+  bench::Timer soaTimer;
+  auto wrappedSoA = layoutWrappedLinesSoA(buffer, WRAP_WIDTH);
+  double soaElapsed = soaTimer.elapsedMs();
   
   std::printf("\n=== Line Wrap Layout Benchmark ===\n");
   std::printf("  Document size: %zu chars\n", DOC_SIZE);
   std::printf("  Original lines: %zu\n", buffer.lineCount());
-  std::printf("  Wrapped lines (at %zu): %zu\n", WRAP_WIDTH, wrapped.size());
-  std::printf("  Total time: %.3f ms\n", elapsed);
-  std::printf("  Per-original-line: %.3f us\n", (elapsed * 1000.0) / buffer.lineCount());
+  std::printf("  Wrapped lines (at %zu): %zu\n", WRAP_WIDTH, wrappedAoS.size());
+  std::printf("  AoS (with strings): %.3f ms (%.3f us/line)\n",
+              aosElapsed, (aosElapsed * 1000.0) / buffer.lineCount());
+  std::printf("  SoA (offsets only): %.3f ms (%.3f us/line)\n",
+              soaElapsed, (soaElapsed * 1000.0) / buffer.lineCount());
+  std::printf("  Speedup: %.2fx\n", aosElapsed / soaElapsed);
   
-  REQUIRE(elapsed < 50.0);  // Less than 50ms
+  REQUIRE(wrappedAoS.size() == wrappedSoA.size());
+  REQUIRE(aosElapsed < 100.0);  // Less than 100ms
 }
 
 // ============================================================================

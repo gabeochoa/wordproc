@@ -288,6 +288,11 @@ test-verbose: $(TEST_EXE)
 	@echo "Running tests (verbose)..."
 	./$(TEST_EXE) --success
 
+# Run just the unit benchmarks (text buffer performance)
+bench-unit: $(TEST_EXE)
+	@echo "Running unit benchmarks..."
+	./$(TEST_EXE) "[benchmark]" --success
+
 # E2E tests with screenshot capture
 e2e: $(MAIN_EXE)
 	@echo "Running E2E tests..."
@@ -296,7 +301,8 @@ e2e: $(MAIN_EXE)
 # Load-time benchmark (measures cold start for test files)
 benchmark: $(MAIN_EXE)
 	@echo "Running load-time benchmark..."
+	@mkdir -p output/perf
 	@./tests/run_benchmark.sh
 
-.PHONY: test test-verbose e2e benchmark
+.PHONY: test test-verbose bench-unit e2e benchmark
 
