@@ -142,6 +142,16 @@ struct MenuComponent : public afterhours::BaseComponent {
     bool showHelpWindow = false;  // Keybindings help window
     int helpScrollOffset = 0;     // Scroll position in help window
     
+    // Menu action result from Afterhours UI (menuIndex * 100 + itemIndex, -1 if none)
+    int lastClickedResult = -1;
+    
+    // Consume and return the last clicked result, resetting it to -1
+    int consumeClickedResult() {
+        int result = lastClickedResult;
+        lastClickedResult = -1;
+        return result;
+    }
+    
     // Find/Replace state
     bool showFindDialog = false;
     bool findReplaceMode = false;  // false = find only, true = find + replace

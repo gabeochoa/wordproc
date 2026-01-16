@@ -330,20 +330,20 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int textWidth = line.empty() ? 0 : raylib::MeasureText(line.c_str(), lineFontSize);
         
         // Apply text alignment (within the indented area)
-        TextAlignment alignment = buffer.lineAlignment(row);
+        ::TextAlignment alignment = buffer.lineAlignment(row);
         int x = indentedBaseX;
         switch (alignment) {
-            case TextAlignment::Left:
+            case ::TextAlignment::Left:
             default:
                 x = indentedBaseX;
                 break;
-            case TextAlignment::Center:
+            case ::TextAlignment::Center:
                 x = indentedBaseX + (indentedWidth - textWidth) / 2;
                 break;
-            case TextAlignment::Right:
+            case ::TextAlignment::Right:
                 x = indentedBaseX + indentedWidth - textWidth;
                 break;
-            case TextAlignment::Justify:
+            case ::TextAlignment::Justify:
                 // Justify is same as left for now (requires word spacing adjustments)
                 x = indentedBaseX;
                 break;
@@ -524,22 +524,14 @@ struct EditorRenderSystem
         raylib::DrawText(title.c_str(), 4, 4, theme::layout::FONT_SIZE,
                          theme::TITLE_TEXT);
 
-        // Draw menu bar background
-        raylib::Rectangle menuBarRect = {layout.menuBar.x, layout.menuBar.y,
-                                         layout.menuBar.width,
-                                         layout.menuBar.height};
-        raylib::DrawRectangleRec(menuBarRect, theme::WINDOW_BG);
-        util::drawRaisedBorder(menuBarRect);
-
-        // Draw interactive menus (need mutable access for immediate-mode UI)
+        // Menu bar is now rendered by MenuUISystem using Afterhours buttons
+        // Here we just consume any pending menu action result
         auto& mutableDoc = const_cast<DocumentComponent&>(doc);
         auto& mutableMenu = const_cast<MenuComponent&>(menu);
         auto& mutableStatus = const_cast<StatusComponent&>(status);
         auto& mutableLayout = const_cast<LayoutComponent&>(layout);
         
-        int menuResult =
-            win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
-                               theme::layout::MENU_BAR_HEIGHT);
+        int menuResult = mutableMenu.consumeClickedResult();
         if (menuResult >= 0) {
             handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableStatus, mutableLayout);
         }
@@ -559,13 +551,13 @@ struct EditorRenderSystem
         if (layout.pageMode == PageMode::Paged) {
             raylib::DrawRectangleRec(textAreaRect,
                                      raylib::Color{128, 128, 128, 255});
-            util::drawSunkenBorder(textAreaRect);
+            ::util::drawSunkenBorder(textAreaRect);
 
             // Draw the page with shadow and margins
             drawPageBackground(layout);
         } else {
             raylib::DrawRectangleRec(textAreaRect, theme::TEXT_AREA_BG);
-            util::drawSunkenBorder(textAreaRect);
+            ::util::drawSunkenBorder(textAreaRect);
         }
 
         // Render text buffer using effective text area (respects page margins)
@@ -582,7 +574,7 @@ struct EditorRenderSystem
             layout.statusBar.x, layout.statusBar.y, layout.statusBar.width,
             layout.statusBar.height};
         raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
-        util::drawRaisedBorder(statusBarRect);
+        ::util::drawRaisedBorder(statusBarRect);
 
         double currentTime = raylib::GetTime();
         if (!status.text.empty() && currentTime < status.expiresAt) {
@@ -659,16 +651,11 @@ struct MenuSystem
         renderMenus(doc, menu, status, layout);
     }
 
-    void renderMenus(DocumentComponent& doc, MenuComponent& menu,
-                     StatusComponent& status, LayoutComponent& layout) const {
-        // Draw interactive menus
-        int menuResult =
-            win95::DrawMenuBar(menu.menus, theme::layout::TITLE_BAR_HEIGHT,
-                               theme::layout::MENU_BAR_HEIGHT);
-
-        if (menuResult >= 0) {
-            handleMenuAction(menuResult, doc, menu, status, layout);
-        }
+    void renderMenus(DocumentComponent& /*doc*/, MenuComponent& menu,
+                     StatusComponent& /*status*/, LayoutComponent& layout) const {
+        // Menu bar is now rendered by MenuUISystem using Afterhours buttons
+        // This system only handles dialogs and help windows that are still
+        // using legacy Win95 widgets (to be converted to Afterhours later)
 
         // Handle About dialog dismissal
         if (menu.showAboutDialog) {

@@ -8,6 +8,7 @@
 
 #include "ecs/components.h"
 #include "ecs/input_system.h"
+#include "ecs/menu_ui_system.h"
 #include "ecs/render_system.h"
 #include "ecs/test_systems.h"
 #include "editor/document_io.h"
@@ -194,6 +195,10 @@ int main(int argc, char* argv[]) {
 
     // Register Afterhours UI systems (must be early in the update order)
     ui_imm::registerUIUpdateSystems(systemManager);
+
+    // Menu UI system - must run after Afterhours UI systems for button handling
+    systemManager.register_update_system(
+        std::make_unique<ecs::MenuUISystem>());
 
     // Update systems (run every frame for input/logic)
     systemManager.register_update_system(
