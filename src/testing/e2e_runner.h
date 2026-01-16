@@ -15,12 +15,32 @@ void initializeRunner(
     const std::string& screenshotDir
 );
 
+// Initialize the E2E script runner with menu support
+void initializeRunner(
+    ScriptRunner& runner,
+    const std::string& scriptPath,
+    ecs::DocumentComponent& docComp,
+    ecs::MenuComponent& menuComp,
+    ecs::LayoutComponent& layoutComp,
+    const std::string& screenshotDir
+);
+
 // Initialize the E2E script runner in batch mode (loads all scripts from directory)
 // Scripts are run in sequence with document cleared between each
 void initializeRunnerBatch(
     ScriptRunner& runner,
     const std::string& scriptDir,
     ecs::DocumentComponent& docComp,
+    const std::string& screenshotDir
+);
+
+// Initialize the E2E script runner in batch mode with menu support
+void initializeRunnerBatch(
+    ScriptRunner& runner,
+    const std::string& scriptDir,
+    ecs::DocumentComponent& docComp,
+    ecs::MenuComponent& menuComp,
+    ecs::LayoutComponent& layoutComp,
     const std::string& screenshotDir
 );
 
