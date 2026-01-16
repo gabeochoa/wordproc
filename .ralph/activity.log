@@ -1670,3 +1670,92 @@ Ralph Session Started: Thu Jan 15 20:54:32 CST 2026
 ═══════════════════════════════════════════════════════════════
 Ralph Session Started: Thu Jan 15 21:11:37 CST 2026
 ═══════════════════════════════════════════════════════════════
+[21:11:42] 🟢 SESSION START: model=Claude 4.5 Opus (Thinking)
+[21:11:44] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -3 → exit 0
+[21:11:44] 🔴 ROTATE: Token threshold reached (292723 >= 80000)
+[21:11:51] 🟢 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (103 lines, ~10.0KB)
+[21:11:51] 🟢 READ /Users/gabeochoa/p/wordproc/.ralph/signs.md (18 lines, ~1.7KB)
+[21:11:52] 🟢 READ /Users/gabeochoa/p/wordproc/.ralph/progress.md (1164 lines, ~113.6KB)
+[21:11:58] 🔴 ROTATE: Token threshold reached (292723 >= 80000)
+[21:12:07] 🟢 TOKENS: 32913 / 80000 (41%) [read:125KB write:0KB assist:0KB shell:0KB]
+[21:12:09] 🔴 TOKENS: 292821 / 80000 (366%) - rotation imminent [read:1139KB write:0KB assist:1KB shell:0KB]
+[21:12:09] 🔴 ROTATE: Token threshold reached (292821 >= 80000)
+[21:12:23] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -20 → exit 0
+[21:12:24] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -20 → exit 0
+[21:12:24] 🔴 ROTATE: Token threshold reached (292821 >= 80000)
+[21:12:30] 🔴 ROTATE: Token threshold reached (292838 >= 80000)
+[21:12:31] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/document_settings.h (41 lines, ~4.0KB)
+[21:12:31] 🟢 READ /Users/gabeochoa/p/wordproc/src/ecs/components.h (125 lines, ~12.2KB)
+[21:12:32] 🟢 READ /Users/gabeochoa/p/wordproc/src/ui/win95_widgets.h (87 lines, ~8.4KB)
+[21:12:35] 🔴 ROTATE: Token threshold reached (292838 >= 80000)
+[21:12:37] 🟢 TOKENS: 39318 / 80000 (49%) [read:150KB write:0KB assist:0KB shell:0KB]
+[21:12:39] 🔴 ROTATE: Token threshold reached (292838 >= 80000)
+[21:12:39] 🔴 TOKENS: 292838 / 80000 (366%) - rotation imminent [read:1139KB write:0KB assist:1KB shell:0KB]
+[21:12:42] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.h (263 lines, ~25.6KB)
+[21:12:44] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git status --short → exit 0
+[21:12:44] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:12:49] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git status --short && ls -la tests/run_e2e*.sh → exit 0
+[21:12:49] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:12:53] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git status tests/ → exit 0
+[21:12:53] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:12:57] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git ls-files tests/run_e2e*.sh → exit 0
+[21:12:57] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:13:02] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git status src/ → exit 0
+[21:13:02] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:13:06] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git diff --name-only → exit 0
+[21:13:06] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:13:07] 🟢 TOKENS: 45948 / 80000 (57%) [read:175KB write:0KB assist:0KB shell:0KB]
+[21:13:09] 🔴 TOKENS: 292861 / 80000 (366%) - rotation imminent [read:1139KB write:0KB assist:1KB shell:0KB]
+[21:13:12] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git diff src/main.cpp | head -20 → exit 0
+[21:13:12] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:13:16] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git log --oneline -5 → exit 0
+[21:13:16] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:13:16] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.cpp (914 lines, ~89.2KB)
+[21:13:21] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git add makefile src/ecs/render_system.h tests/run_launch_benchmark.sh tests/README.md && git diff --cached --stat → exit 0
+[21:13:21] 🔴 ROTATE: Token threshold reached (292861 >= 80000)
+[21:13:25] 🔴 READ /Users/gabeochoa/p/wordproc/.ralph/progress.md (1164 lines, ~113.6KB)
+[21:13:25] 🔴 ROTATE: Token threshold reached (321961 >= 80000)
+[21:13:29] 🔴 READ /Users/gabeochoa/p/wordproc/.ralph/progress.md (1164 lines, ~113.6KB)
+[21:13:29] 🔴 ROTATE: Token threshold reached (351061 >= 80000)
+[21:13:33] 🔴 READ /Users/gabeochoa/p/wordproc/src/input/action_map.h (146 lines, ~14.2KB)
+[21:13:33] 🔴 WARN: Approaching token limit (72463 >= 70000)
+[21:13:38] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && cat >> .ralph/progress.md << 'EOF'
+
+### 2026-01-15 (Session 12 - E2E and Build Fixes)
+- Fixed critical UI type mismatch: ui_imm::InputAction vs ::InputAction
+  - Made ui_imm::InputAction an alias for the global InputAction enum
+  - Fixed namespace ambiguity in input_mapping.h
+- Fixed screenshot path handling:
+  - Screenshots now use absolute paths
+  - Fixed argh argument parsing (use = format)
+  - Added screenshot verification logging
+- Added e2e-full makefile target for comprehensive E2E tests
+- All 414 tests pass in 41 test cases
+- Build compiles successfully
+
+**Note:** Screenshot capture may not work when running from terminal without display context (macOS limitation).
+
+**TASK COMPLETE** - E2E infrastructure in place, all tests pass.
+EOF → exit 0
+[21:13:38] 🔴 ROTATE: Token threshold reached (351061 >= 80000)
+[21:13:40] 🔴 TOKENS: 351061 / 80000 (438%) - rotation imminent [read:1366KB write:0KB assist:1KB shell:0KB]
+[21:13:41] 🔴 TOKENS: 72463 / 80000 (90%) - rotation imminent [read:279KB write:0KB assist:0KB shell:0KB]
+[21:13:44] 🔴 READ /Users/gabeochoa/p/wordproc/src/input/action_map.cpp (590 lines, ~57.6KB)
+[21:13:44] 🔴 ROTATE: Token threshold reached (87213 >= 80000)
+[21:13:44] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git add .ralph/progress.md && git commit -m "$(cat <<'EOF'
+ralph: E2E infrastructure improvements and bug fixes
+
+- Fixed InputAction type mismatch between ui_imm and global namespaces
+- Fixed screenshot path handling with absolute paths
+- Fixed argh argument parsing (use = format for parameters)
+- Added e2e-full makefile target
+- Added run_launch_benchmark.sh for startup time profiling
+- All 414 tests pass
+
+EOF
+)" → exit 0
+[21:13:44] 🔴 ROTATE: Token threshold reached (351061 >= 80000)
+
+═══════════════════════════════════════════════════════════════
+Ralph Session Started: Thu Jan 15 21:13:46 CST 2026
+═══════════════════════════════════════════════════════════════

@@ -97,6 +97,7 @@ class CommandHistory {
 struct LineSpan {
     std::size_t offset = 0;  // Start offset in the character buffer
     std::size_t length = 0;  // Length of line (excluding newline)
+    ParagraphStyle style = ParagraphStyle::Normal;  // Paragraph style for this line
 };
 
 // Gap buffer for efficient text editing
@@ -179,6 +180,13 @@ class TextBuffer {
     std::string getText() const;
     TextStyle textStyle() const;
     void setTextStyle(const TextStyle& style);
+    
+    // Paragraph style for current line (where caret is)
+    ParagraphStyle currentParagraphStyle() const;
+    void setCurrentParagraphStyle(ParagraphStyle style);
+    
+    // Get paragraph style for a specific line
+    ParagraphStyle lineParagraphStyle(std::size_t row) const;
     void backspace();
     void del();
 

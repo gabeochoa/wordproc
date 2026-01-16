@@ -450,6 +450,27 @@ TextStyle TextBuffer::textStyle() const { return style_; }
 
 void TextBuffer::setTextStyle(const TextStyle& style) { style_ = style; }
 
+ParagraphStyle TextBuffer::currentParagraphStyle() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].style;
+    }
+    return ParagraphStyle::Normal;
+}
+
+void TextBuffer::setCurrentParagraphStyle(ParagraphStyle style) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].style = style;
+        version_++;  // Style change invalidates render cache
+    }
+}
+
+ParagraphStyle TextBuffer::lineParagraphStyle(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].style;
+    }
+    return ParagraphStyle::Normal;
+}
+
 TextBuffer::PerfStats TextBuffer::perfStats() const {
     PerfStats stats;
     stats.total_inserts = stats_.total_inserts;

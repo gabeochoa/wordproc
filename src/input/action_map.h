@@ -55,6 +55,17 @@ enum class Action {
     IncreaseFontSize,
     DecreaseFontSize,
     ResetFontSize,
+    
+    // Paragraph styles
+    StyleNormal,
+    StyleTitle,
+    StyleSubtitle,
+    StyleHeading1,
+    StyleHeading2,
+    StyleHeading3,
+    StyleHeading4,
+    StyleHeading5,
+    StyleHeading6,
 
     // Count (for iteration)
     COUNT
