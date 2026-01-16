@@ -247,6 +247,10 @@ static void bindWindowsPreset(ActionMap& map) {
     // Indentation: Ctrl+] to increase, Ctrl+[ to decrease (standard Word shortcuts)
     map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
     map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
+    
+    // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers
+    map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
+    map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
@@ -320,6 +324,10 @@ static void bindMacOSPreset(ActionMap& map) {
     // Indentation: Cmd+] to increase, Cmd+[ to decrease
     map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
     map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
+    
+    // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
+    map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
+    map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -457,6 +465,10 @@ const char* actionDisplayName(Action action) {
             return "1.5 Line Spacing";
         case Action::LineSpacingDouble:
             return "Double Spacing";
+        case Action::ToggleBulletedList:
+            return "Toggle Bullets";
+        case Action::ToggleNumberedList:
+            return "Toggle Numbering";
         case Action::COUNT:
         default:
             return "";
@@ -734,6 +746,10 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::LineSpacingSingle, {raylib::KEY_ONE, true, true, false});
     addBinding(Action::LineSpacing1_5, {raylib::KEY_FIVE, true, true, false});
     addBinding(Action::LineSpacingDouble, {raylib::KEY_TWO, true, true, false});
+    
+    // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers (like some word processors)
+    addBinding(Action::ToggleBulletedList, {raylib::KEY_EIGHT, true, true, false});
+    addBinding(Action::ToggleNumberedList, {raylib::KEY_SEVEN, true, true, false});
 
     return result;
 }

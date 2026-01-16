@@ -227,6 +227,14 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::LineSpacingDouble)) {
             doc.buffer.setLineSpacingDouble();
         }
+        
+        // Lists
+        if (actionMap_.isActionPressed(Action::ToggleBulletedList)) {
+            doc.buffer.toggleBulletedList();
+        }
+        if (actionMap_.isActionPressed(Action::ToggleNumberedList)) {
+            doc.buffer.toggleNumberedList();
+        }
 
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {
