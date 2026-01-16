@@ -30,7 +30,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### Future Work
 - [x] Use immediate-mode UI for the UI layer. (Foundation integrated: Win95 theme, UIContext, UI systems registered. Full widget conversion pending.)
 - [x] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later. (IRenderer + RaylibRenderer in src/renderer/)
-- [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
+- [x] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
 - [ ] Use Afterhours UI state context for test input handling.
 - [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
 - [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
@@ -40,8 +40,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add more E2E tests that actually run the program via a harness (control/profiling allowed).
 - [ ] Expand automated performance profiling to support "fastest word processor" goal.
 - [x] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
-- [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
-- [ ] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression.
+- [x] Investigate missing menu items; ensure E2E tests catch menu rendering regressions. (Fixed: MenuSystem was registered as update system but needs to run after BeginDrawing)
+- [x] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression. (Fixed: MenuSystem moved to render phase)
 - [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
 - [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).

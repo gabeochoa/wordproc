@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WORDPROC_EDITOR_DOCUMENT_IO_H
+#define WORDPROC_EDITOR_DOCUMENT_IO_H
 
 #include <string>
 
@@ -17,3 +18,5 @@ bool loadTextFile(TextBuffer &buffer, const std::string &path);
 // Extended versions with error reporting
 DocumentResult saveTextFileEx(const TextBuffer &buffer, const std::string &path);
 DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path);
+
+#endif // WORDPROC_EDITOR_DOCUMENT_IO_H

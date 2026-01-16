@@ -1,5 +1,7 @@
 #pragma once
 
+#include "external.h"  // Must be first - defines AFTER_HOURS_USE_RAYLIB
+
 #include <memory>
 
 #include <afterhours/src/library.h>

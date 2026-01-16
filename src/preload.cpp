@@ -10,6 +10,7 @@
 #include <sstream>
 #include <vector>
 
+#include "fonts/font_loader.h"
 #include "input_mapping.h"
 #include "log.h"
 #include "rl.h"
@@ -195,6 +196,9 @@ Preload &Preload::make_singleton() {
             .load_font_with_codepoints("Sazanami", japanese_font.c_str(),
                                        japanese_cps.data(),
                                        static_cast<int>(japanese_cps.size()));
+
+        // Register loaded fonts with FontLoader for P2 font listing
+        fonts::FontLoader::get().loadStartupFonts(sophie.get<ui::FontManager>());
 
         ui::imm::ThemeDefaults::get()
             .set_theme_color(ui::Theme::Usage::Primary, colors::UI_GREEN)

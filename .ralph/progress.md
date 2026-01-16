@@ -831,3 +831,24 @@ Summary:
 - Tests passed earlier in session (321 assertions in 36 test cases)
 
 **Next task:** Create font_loader module (line 33 in RALPH_TASK.md)
+
+### 2026-01-15 20:42
+**Session 9 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 (Session 9 - Font Loader Module Complete)
+- Created `src/fonts/font_loader.h` and `src/fonts/font_loader.cpp`
+- FontLoader provides:
+  - P0: `loadStartupFonts()` - template method to track loaded fonts during startup
+  - P1: `loadFontFromFile()` - load document-specified fonts on-demand
+  - P2: `getAvailableFonts()` - returns vector of FontInfo for font picker UI
+  - `getFontInfo()`, `isFontLoaded()`, `getDefaultFontId()` helper methods
+- Added FontInfo struct with: name, internalId, filename, isDefault, supportsUnicode, languageHint
+- Integrated FontLoader into preload.cpp (include + loadStartupFonts call)
+- Updated makefile to compile src/fonts/*.cpp
+- Note: Build env issue (file watcher deleting output/objs) - compiling to /tmp as workaround
+- All 321 tests pass across 36 test cases
+- Marked "Create font_loader module" task [x] complete
+
+**Current Status:**
+- Font loader module complete (P0/P1/P2 functionality)
+- Next unchecked task: Use Afterhours UI state context for test input handling
