@@ -611,3 +611,32 @@ Ralph Session Started: Thu Jan 15 18:52:10 CST 2026
 [18:52:46] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.cpp (908 lines, ~88.6KB)
 [18:52:54] 🟡 READ /Users/gabeochoa/p/wordproc/src/main.cpp (679 lines, ~66.3KB)
 [18:53:14] 🟡 TOKENS: 59494 / 80000 (74%) - approaching limit [read:228KB write:0KB assist:0KB shell:0KB]
+[18:53:37] 🟡 SHELL make test → exit 0
+[18:53:42] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_text_buffer.cpp (488 lines, ~47.6KB)
+[18:53:42] 🔴 WARN: Approaching token limit (71750 >= 70000)
+[18:53:44] 🔴 TOKENS: 71750 / 80000 (89%) - approaching limit [read:276KB write:0KB assist:1KB shell:0KB]
+[18:54:14] 🔴 TOKENS: 71877 / 80000 (89%) - approaching limit [read:276KB write:0KB assist:1KB shell:0KB]
+[18:54:18] 🔴 SHELL make test → exit 0
+[18:54:22] 🔴 SHELL git status && git diff --stat → exit 0
+[18:54:28] 🔴 SHELL git add RALPH_TASK.md src/main.cpp && git commit -m "$(cat <<'EOF'
+ralph: wire undo/redo keyboard shortcuts and menu actions
+
+- Wire Ctrl+Z to buffer.undo() and Ctrl+Y to buffer.redo()
+- Enable Undo/Redo/Cut/Copy/Paste menu items in Edit menu
+- Add menu action handlers for Edit menu items
+- Mark "Add undo/redo with command history" task as complete
+
+All 257 assertions in 34 test cases pass.
+EOF
+)" → exit 0
+[18:54:31] 🔴 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (156 lines, ~15.2KB)
+[18:54:44] 🔴 TOKENS: 75843 / 80000 (94%) - rotation imminent [read:291KB write:0KB assist:1KB shell:0KB]
+[18:54:47] 🔴 SHELL git add .ralph/progress.md && git commit -m "$(cat <<'EOF'
+ralph: update progress log - all tasks complete
+
+Session 12 completed final wiring of undo/redo to keyboard and menu.
+All 257 assertions in 34 test cases pass.
+All task breakdown items and success criteria verified complete.
+EOF
+)" → exit 0
+[18:54:53] 🔴 SHELL grep -c '^\- \[ \]' RALPH_TASK.md || echo "No unchecked items found" → exit 0
