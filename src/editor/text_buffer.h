@@ -2,12 +2,83 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 struct CaretPosition {
   std::size_t row = 0;
   std::size_t column = 0;
+};
+
+// Forward declaration
+class TextBuffer;
+
+// Base class for undoable commands
+class EditCommand {
+public:
+  virtual ~EditCommand() = default;
+  virtual void execute(TextBuffer& buffer) = 0;
+  virtual void undo(TextBuffer& buffer) = 0;
+  virtual std::string description() const = 0;
+};
+
+// Insert a single character
+class InsertCharCommand : public EditCommand {
+public:
+  InsertCharCommand(CaretPosition pos, char ch) : position_(pos), char_(ch) {}
+  void execute(TextBuffer& buffer) override;
+  void undo(TextBuffer& buffer) override;
+  std::string description() const override { return "Insert char"; }
+private:
+  CaretPosition position_;
+  char char_;
+};
+
+// Delete a single character (backspace or delete)
+class DeleteCharCommand : public EditCommand {
+public:
+  DeleteCharCommand(CaretPosition pos, char ch, bool isBackspace)
+      : position_(pos), char_(ch), isBackspace_(isBackspace) {}
+  void execute(TextBuffer& buffer) override;
+  void undo(TextBuffer& buffer) override;
+  std::string description() const override { return "Delete char"; }
+private:
+  CaretPosition position_;
+  char char_;
+  bool isBackspace_;
+};
+
+// Delete a selection
+class DeleteSelectionCommand : public EditCommand {
+public:
+  DeleteSelectionCommand(CaretPosition start, CaretPosition end, std::string text)
+      : start_(start), end_(end), deletedText_(std::move(text)) {}
+  void execute(TextBuffer& buffer) override;
+  void undo(TextBuffer& buffer) override;
+  std::string description() const override { return "Delete selection"; }
+private:
+  CaretPosition start_;
+  CaretPosition end_;
+  std::string deletedText_;
+};
+
+// Command history for undo/redo
+class CommandHistory {
+public:
+  void execute(std::unique_ptr<EditCommand> cmd, TextBuffer& buffer);
+  void record(std::unique_ptr<EditCommand> cmd);  // Record without executing
+  bool canUndo() const { return !undoStack_.empty(); }
+  bool canRedo() const { return !redoStack_.empty(); }
+  void undo(TextBuffer& buffer);
+  void redo(TextBuffer& buffer);
+  void clear() { undoStack_.clear(); redoStack_.clear(); }
+  std::size_t undoStackSize() const { return undoStack_.size(); }
+  std::size_t redoStackSize() const { return redoStack_.size(); }
+  
+private:
+  std::vector<std::unique_ptr<EditCommand>> undoStack_;
+  std::vector<std::unique_ptr<EditCommand>> redoStack_;
 };
 
 struct TextStyle {
@@ -143,6 +214,18 @@ public:
   // Version counter - increments on every modification
   // Used by RenderCache to detect when rebuild is needed
   std::uint64_t version() const { return version_; }
+  
+  // Undo/Redo support
+  bool canUndo() const { return history_.canUndo(); }
+  bool canRedo() const { return history_.canRedo(); }
+  void undo();
+  void redo();
+  void clearHistory() { history_.clear(); }
+  
+  // Low-level insert/delete for command execution (no history recording)
+  void insertCharAt(CaretPosition pos, char ch);
+  void deleteCharAt(CaretPosition pos);
+  void insertTextAt(CaretPosition pos, const std::string& text);
 
 private:
   void ensureNonEmpty();
@@ -162,4 +245,6 @@ private:
   TextStyle style_;
   PerfStats stats_;
   std::uint64_t version_ = 0;         // Increments on every modification
+  mutable CommandHistory history_;    // Undo/redo command history
+  bool recordingHistory_ = true;      // Whether to record commands for undo
 };

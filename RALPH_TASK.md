@@ -107,19 +107,28 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
 - [x] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
 - [x] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
-- [x] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
+- [ ] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
 - [x] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
 
 ### 10) Code Review Follow-ups
 - [x] Implement text rendering (draw buffer content + wrapped lines).
 - [x] Draw caret and selection highlight with blink/animation timing.
 - [x] Handle selection deletion on typing/backspace/delete.
-- [x] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
-- [x] Add clipboard integration (copy/cut/paste).
+- [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
+- [ ] Add clipboard integration (copy/cut/paste).
 - [ ] Add undo/redo with command history.
 - [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
 - [x] Add window title + dirty-state indicator on edits.
 - [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
+<<<<<<< HEAD
+- [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
+- [ ] Add load/save error reporting (surface parse errors and fallback behavior).
+- [ ] Decide on per-range styles vs global style state and update model accordingly.
+- [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
+- [ ] Define validator rules (required fields, types, size limits, supported versions).
+- [ ] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
+- [ ] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
+=======
 - [x] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
 - [x] Add load/save error reporting (surface parse errors and fallback behavior).
 - [x] Decide on per-range styles vs global style state and update model accordingly. (Decision: Global style for v0.1; per-range deferred to v0.2)
@@ -127,11 +136,12 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Define validator rules (required fields, types, size limits, supported versions).
 - [x] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
 - [x] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
+>>>>>>> parent of 9ec95e9 (ralph: add format validator tests)
 
 ### 11) AfterhoursGaps
 - [x] Create `AfterhoursGaps.md` and log any needed library changes.
 - [x] Provide app-side workaround for each gap while avoiding vendor changes.
-- [x] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
+- [ ] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
 ---
 
@@ -142,3 +152,14 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 4. Commit your changes frequently
 5. When ALL criteria are [x], output: `<ralph>COMPLETE</ralph>`
 6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
+
+---
+
+## Refactor Opportunities (reduce LOC / simplify)
+- Centralize editor actions into a command table (keyboard + menu dispatch in one place).
+- Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
+- Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
+- Remove or wire `RenderCache` (avoid unused code paths).
+- Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
+- Make font loading table-driven instead of manual per-font wiring.
+- Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
