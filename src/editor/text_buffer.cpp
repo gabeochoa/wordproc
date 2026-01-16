@@ -244,6 +244,42 @@ void TextBuffer::selectAll() {
   caret_ = selection_end_;
 }
 
+bool TextBuffer::deleteSelection() {
+  if (!has_selection_) {
+    return false;
+  }
+  
+  CaretPosition start = selectionStart();
+  CaretPosition end = selectionEnd();
+  
+  // Convert positions to offsets
+  std::size_t startOffset = positionToOffset(start);
+  std::size_t endOffset = positionToOffset(end);
+  
+  if (endOffset <= startOffset) {
+    clearSelection();
+    return false;
+  }
+  
+  std::size_t deleteCount = endOffset - startOffset;
+  
+  // Erase the selected range
+  chars_.erase(startOffset, deleteCount);
+  stats_.total_deletes += deleteCount;
+  
+  // Rebuild line index since we may have deleted across lines
+  rebuildLineIndex();
+  
+  // Move caret to start of deleted region
+  caret_ = start;
+  clampCaret();
+  
+  // Clear selection
+  clearSelection();
+  
+  return true;
+}
+
 std::size_t TextBuffer::positionToOffset(const CaretPosition& pos) const {
   if (pos.row >= line_spans_.size()) {
     return chars_.size();
@@ -297,6 +333,10 @@ void TextBuffer::rebuildLineIndex() {
 
 void TextBuffer::insertChar(char ch) {
   ensureNonEmpty();
+  
+  // Delete any selected text first
+  deleteSelection();
+  
   stats_.total_inserts++;
   
   std::size_t offset = positionToOffset(caret_);
@@ -381,6 +421,11 @@ void TextBuffer::resetPerfStats() {
 void TextBuffer::backspace() {
   ensureNonEmpty();
   
+  // If there's a selection, delete it instead of single char
+  if (deleteSelection()) {
+    return;
+  }
+  
   if (caret_.column > 0) {
     // Delete character before caret on same line
     std::size_t offset = positionToOffset(caret_);
@@ -417,6 +462,11 @@ void TextBuffer::backspace() {
 
 void TextBuffer::del() {
   ensureNonEmpty();
+  
+  // If there's a selection, delete it instead of single char
+  if (deleteSelection()) {
+    return;
+  }
   
   const LineSpan& span = line_spans_[caret_.row];
   

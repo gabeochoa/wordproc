@@ -101,6 +101,9 @@ public:
   void setTextStyle(const TextStyle &style);
   void backspace();
   void del();
+  
+  // Delete selected text and return true if there was a selection
+  bool deleteSelection();
 
   void moveLeft();
   void moveRight();

@@ -119,6 +119,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add undo/redo with command history.
 - [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
 - [x] Add window title + dirty-state indicator on edits.
+- [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
 - [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
 - [ ] Add load/save error reporting (surface parse errors and fallback behavior).
 - [ ] Decide on per-range styles vs global style state and update model accordingly.

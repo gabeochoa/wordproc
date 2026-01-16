@@ -431,3 +431,29 @@ Ralph Session Started: Thu Jan 15 18:28:09 CST 2026
 [18:32:21] 🔴 READ /Users/gabeochoa/p/wordproc/src/main.cpp (629 lines, ~61.4KB)
 [18:32:54] 🔴 SHELL make && make test → exit 0
 [18:32:54] 🔴 TOKENS: 67018 / 80000 (83%) - approaching limit [read:257KB write:0KB assist:1KB shell:0KB]
+[18:33:07] 🔴 SHELL git add -A && git commit -m "$(cat <<'EOF'
+ralph: implement Win95-styled interactive menus, buttons, and dialogs
+
+- Add src/ui/win95_widgets.h and .cpp with reusable Win95-style components:
+  - DrawRaisedBorder/DrawSunkenBorder for 3D effects
+  - DrawButton with hover/pressed states
+  - DrawCheckbox with proper styling
+  - DrawMenuBar with dropdown menus
+  - DrawMessageDialog and DrawInputDialog
+- Update main.cpp to use interactive File/Edit/Format/Help menus
+- Add About dialog accessible from Help menu
+- Add selectAll() method to TextBuffer
+- All 162 tests pass
+EOF
+)" → exit 0
+[18:33:25] 🔴 TOKENS: 67097 / 80000 (83%) - approaching limit [read:257KB write:0KB assist:1KB shell:0KB]
+[18:33:29] 🔴 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (144 lines, ~14.0KB)
+[18:33:29] 🔴 WARN: Approaching token limit (70697 >= 70000)
+[18:33:57] 🔴 TOKENS: 70723 / 80000 (88%) - approaching limit [read:271KB write:0KB assist:1KB shell:0KB]
+[18:34:10] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_text_buffer.cpp (254 lines, ~24.8KB)
+[18:34:13] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_text_buffer.cpp (254 lines, ~24.8KB)
+[18:34:13] 🔴 ROTATE: Token threshold reached (83433 >= 80000)
+
+═══════════════════════════════════════════════════════════════
+Ralph Session Started: Thu Jan 15 18:34:15 CST 2026
+═══════════════════════════════════════════════════════════════
