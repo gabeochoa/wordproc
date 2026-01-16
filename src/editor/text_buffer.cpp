@@ -359,6 +359,7 @@ void TextBuffer::insertChar(char ch) {
   deleteSelection();
   
   stats_.total_inserts++;
+  version_++;  // Content changed - invalidate render cache
   
   std::size_t offset = positionToOffset(caret_);
   chars_.insert(offset, ch);
@@ -391,6 +392,7 @@ void TextBuffer::insertText(const std::string &text) {
 void TextBuffer::setText(const std::string &text) {
   chars_.clear();
   line_spans_.clear();
+  version_++;  // Content changed - invalidate render cache
   
   if (!text.empty()) {
     // Remove \r from CRLF line endings
@@ -452,6 +454,7 @@ void TextBuffer::backspace() {
     std::size_t offset = positionToOffset(caret_);
     chars_.erase(offset - 1, 1);
     stats_.total_deletes++;
+    version_++;  // Content changed - invalidate render cache
     
     line_spans_[caret_.row].length -= 1;
     

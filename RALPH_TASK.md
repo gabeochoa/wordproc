@@ -115,7 +115,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Draw caret and selection highlight with blink/animation timing.
 - [x] Handle selection deletion on typing/backspace/delete.
 - [x] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
-- [ ] Add clipboard integration (copy/cut/paste).
+- [x] Add clipboard integration (copy/cut/paste).
 - [ ] Add undo/redo with command history.
 - [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
 - [x] Add window title + dirty-state indicator on edits.
