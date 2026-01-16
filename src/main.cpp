@@ -1,14 +1,19 @@
 #include "editor/document_io.h"
 #include "editor/text_buffer.h"
 #include "editor/text_layout.h"
+#include "input/action_map.h"
 #include "preload.h"
 #include "rl.h"
 #include "settings.h"
+#include "ui/menu_setup.h"
+#include "ui/theme.h"
 #include "ui/win95_widgets.h"
+#include "util/drawing.h"
+#include "util/logging.h"
 
 #include <argh.h>
 #include <chrono>
-#include <cstdio>
+#include <format>
 #include <filesystem>
 #include <string>
 
@@ -17,21 +22,6 @@ bool g_mcp_mode = false;
 int g_saved_stdout_fd = -1;
 #endif
 
-// Win95-style colors
-namespace colors {
-constexpr raylib::Color WINDOW_BG = {192, 192, 192, 255};     // Win95 gray
-constexpr raylib::Color TITLE_BAR = {0, 0, 128, 255};         // Win95 blue
-constexpr raylib::Color TITLE_TEXT = {255, 255, 255, 255};    // White
-constexpr raylib::Color TEXT_AREA_BG = {255, 255, 255, 255};  // White
-constexpr raylib::Color TEXT_COLOR = {0, 0, 0, 255};          // Black
-constexpr raylib::Color CARET_COLOR = {0, 0, 0, 255};         // Black
-constexpr raylib::Color SELECTION_BG = {0, 0, 128, 255};      // Blue highlight
-// constexpr raylib::Color SELECTION_TEXT = {255, 255, 255, 255};// White text on selection (TODO: use for styled selection text)
-constexpr raylib::Color BORDER_LIGHT = {255, 255, 255, 255};  // 3D border light
-constexpr raylib::Color BORDER_DARK = {128, 128, 128, 255};   // 3D border dark
-constexpr raylib::Color STATUS_BAR = {192, 192, 192, 255};    // Status bar gray
-} // namespace colors
-
 // Status message for error/success reporting
 struct StatusMessage {
   std::string text;
@@ -39,57 +29,12 @@ struct StatusMessage {
   bool isError = false;
 };
 
-// Configuration
-constexpr int FONT_SIZE = 16;  // UI font size (title, menus, status bar)
-constexpr double STATUS_MESSAGE_DURATION = 3.0;  // Seconds to show status messages
-constexpr int TITLE_BAR_HEIGHT = 24;
-constexpr int MENU_BAR_HEIGHT = 20;
-constexpr int STATUS_BAR_HEIGHT = 20;
-constexpr int TEXT_PADDING = 8;
-constexpr int BORDER_WIDTH = 3;
-
 // Test mode configuration
 struct TestConfig {
   bool enabled = false;
   std::string screenshot_dir = "output/screenshots";
   int frame_limit = 0; // 0 = run forever
 };
-
-// Draw Win95-style 3D border (raised effect)
-void drawRaisedBorder(raylib::Rectangle rect) {
-  // Top and left (light)
-  raylib::DrawLine(static_cast<int>(rect.x), static_cast<int>(rect.y),
-                   static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y),
-                   colors::BORDER_LIGHT);
-  raylib::DrawLine(static_cast<int>(rect.x), static_cast<int>(rect.y),
-                   static_cast<int>(rect.x), static_cast<int>(rect.y + rect.height),
-                   colors::BORDER_LIGHT);
-  // Bottom and right (dark)
-  raylib::DrawLine(static_cast<int>(rect.x), static_cast<int>(rect.y + rect.height),
-                   static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y + rect.height),
-                   colors::BORDER_DARK);
-  raylib::DrawLine(static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y),
-                   static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y + rect.height),
-                   colors::BORDER_DARK);
-}
-
-// Draw Win95-style 3D border (sunken effect for text area)
-void drawSunkenBorder(raylib::Rectangle rect) {
-  // Top and left (dark)
-  raylib::DrawLine(static_cast<int>(rect.x), static_cast<int>(rect.y),
-                   static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y),
-                   colors::BORDER_DARK);
-  raylib::DrawLine(static_cast<int>(rect.x), static_cast<int>(rect.y),
-                   static_cast<int>(rect.x), static_cast<int>(rect.y + rect.height),
-                   colors::BORDER_DARK);
-  // Bottom and right (light)
-  raylib::DrawLine(static_cast<int>(rect.x), static_cast<int>(rect.y + rect.height),
-                   static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y + rect.height),
-                   colors::BORDER_LIGHT);
-  raylib::DrawLine(static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y),
-                   static_cast<int>(rect.x + rect.width), static_cast<int>(rect.y + rect.height),
-                   colors::BORDER_LIGHT);
-}
 
 // Render text buffer with caret and selection (uses SoA layout for efficiency)
 // Uses per-glyph metrics via MeasureText for accurate caret/selection positioning
@@ -102,7 +47,7 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
   CaretPosition selStart = buffer.selectionStart();
   CaretPosition selEnd = buffer.selectionEnd();
 
-  int y = static_cast<int>(textArea.y) + TEXT_PADDING;
+  int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING;
   
   // Skip lines above the scroll offset
   std::size_t startRow = static_cast<std::size_t>(scrollOffset);
@@ -111,7 +56,7 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
   // Adjust starting y position for visible lines
   for (std::size_t row = startRow; row < lineCount; ++row) {
     LineSpan span = buffer.lineSpan(row);
-    int x = static_cast<int>(textArea.x) + TEXT_PADDING;
+    int x = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
     
     // Get the full line text (needed for measurements)
     std::string line = (span.length > 0) ? buffer.lineString(row) : "";
@@ -130,14 +75,14 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
           
           int selX = x + raylib::MeasureText(beforeSel.c_str(), fontSize);
           int selWidth = raylib::MeasureText(selectedText.c_str(), fontSize);
-          raylib::DrawRectangle(selX, y, selWidth, lineHeight, colors::SELECTION_BG);
+          raylib::DrawRectangle(selX, y, selWidth, lineHeight, theme::SELECTION_BG);
         }
       }
     }
 
     // Draw text
     if (!line.empty()) {
-      raylib::DrawText(line.c_str(), x, y, fontSize, colors::TEXT_COLOR);
+      raylib::DrawText(line.c_str(), x, y, fontSize, theme::TEXT_COLOR);
     }
 
     // Draw caret on this line using per-glyph measurements
@@ -145,7 +90,7 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
       // Measure text width from start to caret position for accurate positioning
       std::string beforeCaret = line.substr(0, std::min(caret.column, line.length()));
       int caretX = x + raylib::MeasureText(beforeCaret.c_str(), fontSize);
-      raylib::DrawRectangle(caretX, y, 2, lineHeight, colors::CARET_COLOR);
+      raylib::DrawRectangle(caretX, y, 2, lineHeight, theme::CARET_COLOR);
     }
 
     y += lineHeight;
@@ -203,15 +148,15 @@ int main(int argc, char *argv[]) {
       fileSize = std::filesystem::file_size(loadFile);
     }
     
-    // Output CSV-friendly format
-    std::printf("file=%s,size=%zu,lines=%zu,chars=%zu,load_ms=%.3f,total_ms=%.3f,target=100,pass=%s\n",
-                loadFile.c_str(),
-                fileSize,
-                buffer.lineCount(),
-                buffer.getText().size(),
-                loadMs,
-                totalMs,
-                totalMs <= 100.0 ? "true" : "false");
+    // Output CSV-friendly format using logging
+    LOG_INFO("file=%s,size=%zu,lines=%zu,chars=%zu,load_ms=%.3f,total_ms=%.3f,target=100,pass=%s",
+             loadFile.c_str(),
+             fileSize,
+             buffer.lineCount(),
+             buffer.getText().size(),
+             loadMs,
+             totalMs,
+             totalMs <= 100.0 ? "true" : "false");
     
     return totalMs <= 100.0 ? 0 : 1;
   }
@@ -246,60 +191,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Setup Win95-style menus
-  std::vector<win95::Menu> menus;
-  
-  // File menu
-  win95::Menu fileMenu;
-  fileMenu.label = "File";
-  fileMenu.items = {
-    {"New", "Ctrl+N", true, false, nullptr},
-    {"Open...", "Ctrl+O", true, false, nullptr},
-    {"Save", "Ctrl+S", true, false, nullptr},
-    {"Save As...", "", true, false, nullptr},
-    {"", "", false, true, nullptr},  // Separator
-    {"Exit", "Alt+F4", true, false, nullptr}
-  };
-  menus.push_back(fileMenu);
-  
-  // Edit menu
-  win95::Menu editMenu;
-  editMenu.label = "Edit";
-  editMenu.items = {
-    {"Undo", "Ctrl+Z", true, false, nullptr},
-    {"Redo", "Ctrl+Y", true, false, nullptr},
-    {"", "", false, true, nullptr},  // Separator
-    {"Cut", "Ctrl+X", true, false, nullptr},
-    {"Copy", "Ctrl+C", true, false, nullptr},
-    {"Paste", "Ctrl+V", true, false, nullptr},
-    {"", "", false, true, nullptr},  // Separator
-    {"Select All", "Ctrl+A", true, false, nullptr}
-  };
-  menus.push_back(editMenu);
-  
-  // Format menu
-  win95::Menu formatMenu;
-  formatMenu.label = "Format";
-  formatMenu.items = {
-    {"Bold", "Ctrl+B", true, false, nullptr},
-    {"Italic", "Ctrl+I", true, false, nullptr},
-    {"", "", false, true, nullptr},  // Separator
-    {"Font: Gaegu", "Ctrl+1", true, false, nullptr},
-    {"Font: Garamond", "Ctrl+2", true, false, nullptr},
-    {"", "", false, true, nullptr},  // Separator
-    {"Increase Size", "Ctrl++", true, false, nullptr},
-    {"Decrease Size", "Ctrl+-", true, false, nullptr},
-    {"Reset Size", "Ctrl+0", true, false, nullptr}
-  };
-  menus.push_back(formatMenu);
-  
-  // Help menu
-  win95::Menu helpMenu;
-  helpMenu.label = "Help";
-  helpMenu.items = {
-    {"About Wordproc", "", true, false, nullptr}
-  };
-  menus.push_back(helpMenu);
+  // Setup Win95-style menus using centralized menu setup
+  std::vector<win95::Menu> menus = menu_setup::createMenuBar();
   
   // Dialog state
   bool showAboutDialog = false;
@@ -310,9 +203,9 @@ int main(int argc, char *argv[]) {
       readyTime - startTime).count();
   
   if (testConfig.enabled) {
-    std::printf("Startup time: %lld ms\n", static_cast<long long>(startupMs));
+    LOG_INFO("Startup time: %lld ms", static_cast<long long>(startupMs));
     if (startupMs > 100) {
-      std::printf("WARNING: Startup time exceeds 100ms target!\n");
+      LOG_WARNING("Startup time exceeds 100ms target!");
     }
   }
 

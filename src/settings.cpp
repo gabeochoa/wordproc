@@ -33,12 +33,7 @@ struct S_Data {
       .height = 720,
   };
 
-  Pct master_volume = 0.1f;
-  Pct music_volume = 0.1f;
-  Pct sfx_volume = 0.1f;
-
   bool fullscreen_enabled = false;
-  bool post_processing_enabled = true;
 
   std::filesystem::path loaded_from;
 };
@@ -61,29 +56,13 @@ void to_json(nlohmann::json &j, const S_Data &data) {
   nlohmann::json rez_j;
   to_json(rez_j, data.resolution);
   j["resolution"] = rez_j;
-
-  nlohmann::json audio_j;
-  audio_j["master_volume"] = data.master_volume.str();
-  audio_j["music_volume"] = data.music_volume.str();
-  audio_j["sfx_volume"] = data.sfx_volume.str();
-  j["audio"] = audio_j;
-
   j["fullscreen_enabled"] = data.fullscreen_enabled;
-  j["post_processing_enabled"] = data.post_processing_enabled;
 }
 
 void from_json(const nlohmann::json &j, S_Data &data) {
   from_json(j.at("resolution"), data.resolution);
-
-  nlohmann::json audio_j = j.at("audio");
-  data.master_volume.set(audio_j.at("master_volume"));
-  data.music_volume.set(audio_j.at("music_volume"));
-  data.sfx_volume.set(audio_j.at("sfx_volume"));
-
-  data.fullscreen_enabled = j.at("fullscreen_enabled");
-
-  if (j.contains("post_processing_enabled")) {
-    data.post_processing_enabled = j.at("post_processing_enabled");
+  if (j.contains("fullscreen_enabled")) {
+    data.fullscreen_enabled = j.at("fullscreen_enabled");
   }
 }
 
@@ -98,21 +77,9 @@ void Settings::reset() {
 
 int Settings::get_screen_width() const { return data->resolution.width; }
 int Settings::get_screen_height() const { return data->resolution.height; }
-float Settings::get_music_volume() const { return data->music_volume; }
-float Settings::get_sfx_volume() const { return data->sfx_volume; }
-float Settings::get_master_volume() const { return data->master_volume; }
 
 void Settings::update_resolution(afterhours::window_manager::Resolution rez) {
   data->resolution = rez;
-}
-
-void Settings::update_music_volume(float vol) { data->music_volume = vol; }
-
-void Settings::update_sfx_volume(float vol) { data->sfx_volume = vol; }
-
-void Settings::update_master_volume(float vol) {
-  raylib::SetMasterVolume(vol);
-  data->master_volume = vol;
 }
 
 void match_fullscreen_to_setting(bool fs_enabled) {
@@ -124,9 +91,6 @@ void match_fullscreen_to_setting(bool fs_enabled) {
 }
 
 void Settings::refresh_settings() {
-  update_music_volume(data->music_volume);
-  update_sfx_volume(data->sfx_volume);
-  update_master_volume(data->master_volume);
   match_fullscreen_to_setting(data->fullscreen_enabled);
 }
 
@@ -136,14 +100,6 @@ void Settings::toggle_fullscreen() {
 }
 
 bool &Settings::get_fullscreen_enabled() { return data->fullscreen_enabled; }
-
-bool &Settings::get_post_processing_enabled() {
-  return data->post_processing_enabled;
-}
-
-void Settings::toggle_post_processing() {
-  data->post_processing_enabled = !data->post_processing_enabled;
-}
 
 bool Settings::load_save_file(int width, int height) {
   this->data->resolution.width = width;

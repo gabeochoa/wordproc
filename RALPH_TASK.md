@@ -150,6 +150,17 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add a timing header around `src/main.cpp:188-199` for easier profiling without full setup.
 - [ ] Move the utility definitions in `src/main.cpp:15-165` (colors, config structs, drawing helpers, etc.) into separate files.
 - [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2), refactoring `src/preload.cpp:84-220`.
+- [ ] Review `src/settings.cpp:1-217` for improved setup; consider zpp-bits serialization (from pharmasea) if it simplifies settings I/O.
+- [ ] Remove volume-related APIs from `src/settings.h:33-41`.
+- [ ] Remove post-processing APIs from `src/settings.h:44-46`.
+- [ ] Review `src/settings.h:1-48` and add any missing settings needed for the app.
+- [ ] Replace custom Win95 widgets in `src/ui/win95_widgets.h:1-85` with vendor/afterhours UI library usage; document gaps in `AfterhoursGaps.md`.
+- [ ] Use Afterhours UI state context for test input handling in `src/testing/test_input.h:1-55`.
+- [ ] Review `src/testing/test_input.cpp:5-13` macro undefines and decide whether to keep/replace them.
+- [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
+- [ ] If `src/engine/input_injector.cpp:1-173` is test-only, move it into the testing folder.
+- [ ] Evaluate using immutable structures for text layout in `src/editor/text_layout.h:1-107`.
+- [ ] Add tests that validate on-screen content while scrolling.
 
 ---
 

@@ -30,18 +30,6 @@ struct Settings {
   int get_screen_height() const;
   void update_resolution(afterhours::window_manager::Resolution);
 
-  float get_music_volume() const;
-  void update_music_volume(float);
-
-  float get_sfx_volume() const;
-  void update_sfx_volume(float);
-
-  float get_master_volume() const;
-  void update_master_volume(float);
-
   bool &get_fullscreen_enabled();
   void toggle_fullscreen();
-
-  bool &get_post_processing_enabled();
-  void toggle_post_processing();
 };
