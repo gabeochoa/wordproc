@@ -45,16 +45,16 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 12. Executable name is `wordproc` (not `ui_tester`).
 
 ## Success Criteria
-1. [ ] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
-2. [ ] App launches and supports typing, caret movement, save, and open.
-3. [ ] Basic formatting (bold/italic) and font selection implemented.
-4. [ ] `style_guide.md` created with Win95/Mac3.1 design, animation, and interaction rules.
-5. [ ] `AfterhoursGaps.md` exists and documents any required library changes with app-side workarounds.
-6. [ ] Required assets/config copied from `wm_afterhours` and integrated (vendor, makefile, .clang-format, .gitignore, .cursor rules, preload/window init, fonts).
-7. [ ] Core text storage and rendering path uses a data-oriented SoA layout with measurable performance wins.
-8. [ ] `./wordproc file.txt` to fully interactive <= 100ms cold start, measured and tracked.
-9. [ ] Document view supports scrolling (keyboard + mouse wheel/trackpad).
-10. [ ] Menu buttons trigger real actions (no-op buttons removed or wired).
+1. [x] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
+2. [x] App launches and supports typing, caret movement, save, and open.
+3. [x] Basic formatting (bold/italic) and font selection implemented.
+4. [x] `style_guide.md` created with Win95/Mac3.1 design, animation, and interaction rules.
+5. [x] `AfterhoursGaps.md` exists and documents any required library changes with app-side workarounds.
+6. [x] Required assets/config copied from `wm_afterhours` and integrated (vendor, makefile, .clang-format, .gitignore, .cursor rules, preload/window init, fonts).
+7. [x] Core text storage and rendering path uses a data-oriented SoA layout with measurable performance wins.
+8. [x] `./wordproc file.txt` to fully interactive <= 100ms cold start, measured and tracked.
+9. [x] Document view supports scrolling (keyboard + mouse wheel/trackpad).
+10. [x] Menu buttons trigger real actions (no-op buttons removed or wired).
 
 ## Task Breakdown (use folder-outline from `wm_afterhours`)
 

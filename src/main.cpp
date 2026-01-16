@@ -94,7 +94,8 @@ void drawSunkenBorder(raylib::Rectangle rect) {
 // Render text buffer with caret and selection (uses SoA layout for efficiency)
 // Uses per-glyph metrics via MeasureText for accurate caret/selection positioning
 void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
-                      bool caretVisible, int fontSize, int lineHeight) {
+                      bool caretVisible, int fontSize, int lineHeight,
+                      int scrollOffset = 0) {
   std::size_t lineCount = buffer.lineCount();
   CaretPosition caret = buffer.caret();
   bool hasSelection = buffer.hasSelection();
@@ -103,7 +104,12 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
 
   int y = static_cast<int>(textArea.y) + TEXT_PADDING;
   
-  for (std::size_t row = 0; row < lineCount; ++row) {
+  // Skip lines above the scroll offset
+  std::size_t startRow = static_cast<std::size_t>(scrollOffset);
+  if (startRow >= lineCount) startRow = lineCount > 0 ? lineCount - 1 : 0;
+  
+  // Adjust starting y position for visible lines
+  for (std::size_t row = startRow; row < lineCount; ++row) {
     LineSpan span = buffer.lineSpan(row);
     int x = static_cast<int>(textArea.x) + TEXT_PADDING;
     
@@ -313,6 +319,7 @@ int main(int argc, char *argv[]) {
   int frameCount = 0;
   double caretBlinkTimer = 0.0;
   bool caretVisible = true;
+  int scrollOffset = 0;  // Scroll offset in lines
 
   while (!raylib::WindowShouldClose()) {
     float dt = raylib::GetFrameTime();
@@ -546,6 +553,14 @@ int main(int argc, char *argv[]) {
       navigateWithSelection([&]() { buffer.movePageDown(LINES_PER_PAGE); });
     }
 
+    // Mouse wheel / trackpad scrolling
+    float wheelMove = raylib::GetMouseWheelMove();
+    if (wheelMove != 0.0f) {
+      // Scroll 3 lines per wheel notch
+      int scrollLines = static_cast<int>(-wheelMove * 3);
+      scrollOffset += scrollLines;
+    }
+
     // Calculate window layout
     int screenWidth = raylib::GetScreenWidth();
     int screenHeight = raylib::GetScreenHeight();
@@ -572,6 +587,27 @@ int main(int argc, char *argv[]) {
     raylib::Rectangle textArea = {static_cast<float>(BORDER_WIDTH), textAreaTop,
                                    static_cast<float>(screenWidth - 2 * BORDER_WIDTH),
                                    textAreaHeight};
+    
+    // Calculate visible lines for auto-scroll
+    TextStyle currentStyle = buffer.textStyle();
+    int currentLineHeight = currentStyle.fontSize + 4;
+    int visibleLines = static_cast<int>((textAreaHeight - 2 * TEXT_PADDING) / currentLineHeight);
+    if (visibleLines < 1) visibleLines = 1;
+    
+    // Auto-scroll to keep caret visible
+    CaretPosition caretPos = buffer.caret();
+    int caretRow = static_cast<int>(caretPos.row);
+    if (caretRow < scrollOffset) {
+      scrollOffset = caretRow;
+    } else if (caretRow >= scrollOffset + visibleLines) {
+      scrollOffset = caretRow - visibleLines + 1;
+    }
+    
+    // Clamp scroll offset
+    int maxScroll = static_cast<int>(buffer.lineCount()) - visibleLines;
+    if (maxScroll < 0) maxScroll = 0;
+    if (scrollOffset < 0) scrollOffset = 0;
+    if (scrollOffset > maxScroll) scrollOffset = maxScroll;
 
     // === DRAWING ===
     raylib::BeginDrawing();
@@ -739,7 +775,7 @@ int main(int argc, char *argv[]) {
     TextStyle style = buffer.textStyle();
     int fontSize = style.fontSize;
     int lineHeight = fontSize + 4;  // Add some line spacing
-    renderTextBuffer(buffer, textArea, caretVisible, fontSize, lineHeight);
+    renderTextBuffer(buffer, textArea, caretVisible, fontSize, lineHeight, scrollOffset);
 
     // Draw status bar
     raylib::DrawRectangleRec(statusBar, colors::STATUS_BAR);
