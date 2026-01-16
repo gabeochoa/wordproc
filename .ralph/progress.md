@@ -918,15 +918,32 @@ Summary:
 - [ ] Separate app settings from document settings
 
 ### 2026-01-15 20:45
-**Session 8 (Iteration 8)**
-- Verified all 321 tests pass in 36 test cases
+**Session 8 (Iteration 8) - Final**
+- All 387 tests pass in 39 test cases
 - Fixed color type conflicts (raylib::YELLOW/GREEN -> afterhours::Color)
 - Fixed color name conflicts in renderer_interface.h (WHITE/RED -> kWhite/kRed)
-- Confirmed renderer abstraction and font_loader are already complete
-- Build environment issue persists (temp file renames fail in workspace dir)
-- Workaround: build in /tmp, link to output/
+- Confirmed renderer abstraction, font_loader, and component purity already complete
+- Build environment issue persists (workaround: build in /tmp, link to output/)
+- Verified file format evaluation complete (JSON for v0.1, zip for v0.2+)
 
-**Completed tasks:**
+**Remaining unchecked tasks (17 items in Future Work/Refactor Opportunities):**
+- Most are complex features deferred to v0.2+
+- .doc import, E2E tests, performance profiling
+- Action map usage across all systems
+- Input queueing, render cache wiring
+- UI primitives deduplication, font loading table
+
+**Build workaround documented:**
+```bash
+# Compile in /tmp to avoid workspace file interference
+for src in src/*.cpp ...; do
+    clang++ ... -o /tmp/wp_build/$base.o
+done
+# Link back to output/
+clang++ /tmp/wp_build/*.o -o output/wordproc
+```
+
+**Completed tasks this iteration:**
 - [x] Abstract raylib dependencies behind renderer interface
 - [x] Create font_loader module
 - [x] Fix color type and name conflicts
