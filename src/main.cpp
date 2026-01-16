@@ -32,8 +32,16 @@ constexpr raylib::Color BORDER_DARK = {128, 128, 128, 255};   // 3D border dark
 constexpr raylib::Color STATUS_BAR = {192, 192, 192, 255};    // Status bar gray
 } // namespace colors
 
+// Status message for error/success reporting
+struct StatusMessage {
+  std::string text;
+  double expiresAt = 0.0;  // Time when message expires
+  bool isError = false;
+};
+
 // Configuration
 constexpr int FONT_SIZE = 16;  // UI font size (title, menus, status bar)
+constexpr double STATUS_MESSAGE_DURATION = 3.0;  // Seconds to show status messages
 constexpr int TITLE_BAR_HEIGHT = 24;
 constexpr int MENU_BAR_HEIGHT = 20;
 constexpr int STATUS_BAR_HEIGHT = 20;
@@ -211,6 +219,14 @@ int main(int argc, char *argv[]) {
   const std::string doc_path = "output/document.wpdoc";
   std::string currentFilePath = loadFile;
   bool isDirty = false;
+  StatusMessage statusMsg;
+  
+  // Helper to set status message
+  auto setStatus = [&statusMsg](const std::string& msg, bool isError = false) {
+    statusMsg.text = msg;
+    statusMsg.isError = isError;
+    statusMsg.expiresAt = raylib::GetTime() + STATUS_MESSAGE_DURATION;
+  };
   
   // Load file if specified
   if (!loadFile.empty() && std::filesystem::exists(loadFile)) {
@@ -595,8 +611,51 @@ int main(int argc, char *argv[]) {
             break;
         }
       } else if (menuIndex == 1) { // Edit menu
-        if (itemIndex == 7) { // Select All
-          buffer.selectAll();
+        switch (itemIndex) {
+          case 0: // Undo
+            if (buffer.canUndo()) {
+              buffer.undo();
+              isDirty = true;
+            }
+            break;
+          case 1: // Redo
+            if (buffer.canRedo()) {
+              buffer.redo();
+              isDirty = true;
+            }
+            break;
+          case 3: // Cut
+            if (buffer.hasSelection()) {
+              std::string selected = buffer.getSelectedText();
+              if (!selected.empty()) {
+                raylib::SetClipboardText(selected.c_str());
+                buffer.deleteSelection();
+                isDirty = true;
+              }
+            }
+            break;
+          case 4: // Copy
+            if (buffer.hasSelection()) {
+              std::string selected = buffer.getSelectedText();
+              if (!selected.empty()) {
+                raylib::SetClipboardText(selected.c_str());
+              }
+            }
+            break;
+          case 5: // Paste
+            {
+              const char* clipText = raylib::GetClipboardText();
+              if (clipText && clipText[0] != '\0') {
+                buffer.insertText(clipText);
+                isDirty = true;
+              }
+            }
+            break;
+          case 7: // Select All
+            buffer.selectAll();
+            break;
+          default:
+            break;
         }
       } else if (menuIndex == 2) { // Format menu
         TextStyle style = buffer.textStyle();
