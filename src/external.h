@@ -92,10 +92,12 @@ inline Vector2 GetMousePosition_Test() {
 #undef Vector2Type
 #undef TextureType
 #undef FontType
+#undef ColorType
 #define RectangleType raylib::Rectangle
 #define Vector2Type raylib::Vector2
 #define TextureType raylib::Texture2D
 #define FontType raylib::Font
+#define ColorType raylib::Color
 #define AFTER_HOURS_RECTANGLE_TYPE_DEFINED
 #define AFTER_HOURS_VECTOR2_TYPE_DEFINED
 
