@@ -237,12 +237,12 @@ int main(int argc, char *argv[]) {
   win95::Menu editMenu;
   editMenu.label = "Edit";
   editMenu.items = {
-    {"Undo", "Ctrl+Z", false, false, nullptr},  // Not implemented yet
-    {"Redo", "Ctrl+Y", false, false, nullptr},
+    {"Undo", "Ctrl+Z", true, false, nullptr},
+    {"Redo", "Ctrl+Y", true, false, nullptr},
     {"", "", false, true, nullptr},  // Separator
-    {"Cut", "Ctrl+X", false, false, nullptr},
-    {"Copy", "Ctrl+C", false, false, nullptr},
-    {"Paste", "Ctrl+V", false, false, nullptr},
+    {"Cut", "Ctrl+X", true, false, nullptr},
+    {"Copy", "Ctrl+C", true, false, nullptr},
+    {"Paste", "Ctrl+V", true, false, nullptr},
     {"", "", false, true, nullptr},  // Separator
     {"Select All", "Ctrl+A", true, false, nullptr}
   };
@@ -418,6 +418,26 @@ int main(int argc, char *argv[]) {
     // Ctrl+A - Select All
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_A)) {
       buffer.selectAll();
+    }
+    
+    // Ctrl+Z - Undo
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Z)) {
+      if (buffer.canUndo()) {
+        buffer.undo();
+        isDirty = true;
+        caretVisible = true;
+        caretBlinkTimer = 0.0;
+      }
+    }
+    
+    // Ctrl+Y - Redo
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Y)) {
+      if (buffer.canRedo()) {
+        buffer.redo();
+        isDirty = true;
+        caretVisible = true;
+        caretBlinkTimer = 0.0;
+      }
     }
 
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||

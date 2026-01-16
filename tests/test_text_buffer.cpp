@@ -336,8 +336,110 @@ TEST_CASE("TextBuffer selection deletion", "[text_buffer]") {
     }
 }
 
-// TODO: Implement undo/redo tests when feature is complete
-// TEST_CASE("TextBuffer undo/redo", "[text_buffer][undo]") { ... }
+TEST_CASE("TextBuffer undo/redo", "[text_buffer][undo]") {
+    TextBuffer buffer;
+    
+    SECTION("undo insert char") {
+        buffer.insertChar('a');
+        REQUIRE(buffer.getText() == "a");
+        REQUIRE(buffer.canUndo());
+        
+        buffer.undo();
+        REQUIRE(buffer.getText().empty());
+        REQUIRE(buffer.canRedo());
+    }
+    
+    SECTION("redo after undo") {
+        buffer.insertChar('a');
+        buffer.undo();
+        REQUIRE(buffer.getText().empty());
+        
+        buffer.redo();
+        REQUIRE(buffer.getText() == "a");
+    }
+    
+    SECTION("undo multiple inserts") {
+        buffer.insertText("abc");
+        REQUIRE(buffer.getText() == "abc");
+        
+        buffer.undo();  // undo 'c'
+        REQUIRE(buffer.getText() == "ab");
+        
+        buffer.undo();  // undo 'b'
+        REQUIRE(buffer.getText() == "a");
+        
+        buffer.undo();  // undo 'a'
+        REQUIRE(buffer.getText().empty());
+    }
+    
+    SECTION("undo backspace restores character") {
+        buffer.insertText("abc");
+        buffer.clearHistory();  // Clear insert history to focus on backspace
+        
+        buffer.backspace();  // Delete 'c'
+        REQUIRE(buffer.getText() == "ab");
+        
+        buffer.undo();  // Should restore 'c'
+        REQUIRE(buffer.getText() == "abc");
+    }
+    
+    SECTION("undo delete restores character") {
+        buffer.insertText("abc");
+        buffer.clearHistory();
+        buffer.setCaret({0, 1});  // Position after 'a'
+        
+        buffer.del();  // Delete 'b'
+        REQUIRE(buffer.getText() == "ac");
+        
+        buffer.undo();  // Should restore 'b'
+        REQUIRE(buffer.getText() == "abc");
+    }
+    
+    SECTION("new action clears redo stack") {
+        buffer.insertChar('a');
+        buffer.undo();
+        REQUIRE(buffer.canRedo());
+        
+        buffer.insertChar('b');  // New action
+        REQUIRE_FALSE(buffer.canRedo());  // Redo stack cleared
+        REQUIRE(buffer.getText() == "b");
+    }
+    
+    SECTION("undo newline joins lines") {
+        buffer.insertText("line1");
+        buffer.insertChar('\n');
+        buffer.insertText("line2");
+        buffer.clearHistory();
+        
+        buffer.setCaret({1, 0});
+        buffer.backspace();  // Delete newline
+        REQUIRE(buffer.lineCount() == 1);
+        
+        buffer.undo();  // Restore newline
+        REQUIRE(buffer.lineCount() == 2);
+    }
+    
+    SECTION("clear history prevents undo") {
+        buffer.insertChar('a');
+        REQUIRE(buffer.canUndo());
+        
+        buffer.clearHistory();
+        REQUIRE_FALSE(buffer.canUndo());
+        REQUIRE_FALSE(buffer.canRedo());
+    }
+    
+    SECTION("cannot undo when history is empty") {
+        REQUIRE_FALSE(buffer.canUndo());
+        buffer.undo();  // Should not crash
+        REQUIRE(buffer.getText().empty());
+    }
+    
+    SECTION("cannot redo when history is empty") {
+        REQUIRE_FALSE(buffer.canRedo());
+        buffer.redo();  // Should not crash
+        REQUIRE(buffer.getText().empty());
+    }
+}
 
 // Regression test for caret positioning with narrow characters like 'l', 'i'
 // See: "Fix caret positioning to use per-glyph advance/metrics"

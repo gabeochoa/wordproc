@@ -610,3 +610,4 @@ Ralph Session Started: Thu Jan 15 18:52:10 CST 2026
 [18:52:46] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.h (251 lines, ~24.5KB)
 [18:52:46] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.cpp (908 lines, ~88.6KB)
 [18:52:54] 🟡 READ /Users/gabeochoa/p/wordproc/src/main.cpp (679 lines, ~66.3KB)
+[18:53:14] 🟡 TOKENS: 59494 / 80000 (74%) - approaching limit [read:228KB write:0KB assist:0KB shell:0KB]
