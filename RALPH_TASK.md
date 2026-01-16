@@ -157,6 +157,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add tests that validate on-screen content while scrolling.
 - [x] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
 - [x] Add unsaved-changes indicator (`*`) in the UI when the document is dirty.
+- [ ] Add paged vs pageless mode switching for document layout (pageless = continuous flow, no page breaks/margins; optional line width control).
 
 ## Future Work (Non-blocking v0.2+ enhancements)
 These are architectural improvements and new features for future versions. They do not block v0.1 completion.

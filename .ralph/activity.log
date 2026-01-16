@@ -883,3 +883,16 @@ EOF
 [19:31:49] 🟡 SHELL wc -l src/main.cpp && head -30 src/main.cpp → exit 0
 [19:31:55] 🟡 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (196 lines, ~19.1KB)
 [19:31:58] 🟡 TOKENS: 59592 / 80000 (74%) - approaching limit [read:228KB write:0KB assist:1KB shell:0KB]
+[19:32:17] 🟡 SHELL git add -A && git commit -m "$(cat <<'EOF'
+ralph: update progress - ECS refactoring complete
+
+- Verified ECS system implementation in src/ecs/
+- main.cpp uses afterhours::SystemManager (178 lines down from 727)
+- All 321 tests pass
+- All criteria marked complete
+EOF
+)" → exit 0
+[19:32:28] 🟡 ✅ Agent signaled COMPLETE
+[19:32:28] 🟡 TOKENS: 59800 / 80000 (74%) - approaching limit [read:228KB write:0KB assist:2KB shell:0KB]
+[19:32:28] 🟡 SESSION END: 383198ms, ~59800 tokens used
+[19:32:28] 🟡 TOKENS: 59800 / 80000 (74%) - approaching limit [read:228KB write:0KB assist:2KB shell:0KB]

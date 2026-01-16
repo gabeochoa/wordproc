@@ -26,3 +26,10 @@ Additional resources to support a Windows 95 + Mac OS 3.1 inspired word processo
 
 - Prefer 1x and 2x raster sizes (16px/32px) for Win95 authenticity.
 - Provide SVG originals if possible for future scaling.
+- For icons, use a symbol-capable font (Google Fonts or Font Awesome) instead of per-menu-item bitmaps.
+- Avoid adding icons to every menu item; follow Apple HIG guidance on menu clarity and readability.
+- Ralph should attempt to generate these assets locally as needed, but do not commit the generation scripts.
+- Read/consider: Apple Macintosh HIG 1992, Tahoe icons critique, and menu icons discussion:
+  - https://dn721903.ca.archive.org/0/items/apple-hig/Macintosh_HIG_1992.pdf
+  - https://tonsky.me/blog/tahoe-icons/
+  - https://blog.jim-nielsen.com/2025/icons-in-menus/
