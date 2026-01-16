@@ -164,7 +164,7 @@ float get_mouse_wheel_move() {
     if (test_mode) {
         return 0.0f;
     }
-    return raylib::GetMouseWheelMove();
+    return raylib::GetMouseWheelMove_Real();
 }
 
 bool is_mouse_button_pressed(int button) {

@@ -216,9 +216,9 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - `MenuSystem::for_each_with(Entity&, Components&...)` → NOT called, menus don't render
 
 **Fix options**:
-- [ ] Make `MenuSystem` a const render system (move mutable logic to update systems)
-- [ ] Or register `MenuSystem` as an update system instead of render system
-- [ ] Split menu rendering (const, render phase) from menu interaction (mutable, update phase)
+- [x] Make `MenuSystem` a const render system (move mutable logic to update systems) (MenuSystem moved to render phase)
+- [x] Or register `MenuSystem` as an update system instead of render system (N/A - render phase works)
+- [x] Split menu rendering (const, render phase) from menu interaction (mutable, update phase) (handled via action callbacks)
 
 ### E2E Core Fixes (ROOT CAUSE: raylib:: namespace bypasses test macros)
 
@@ -226,17 +226,17 @@ The test input system uses macros like `#define GetCharPressed GetCharPressed_Te
 `raylib::GetCharPressed()` bypasses these macros. All raylib input calls must use bare function names.
 
 #### Critical: Fix namespace-qualified raylib calls
-- [ ] `src/ecs/input_system.h:24,31` - Change `raylib::GetCharPressed()` to `GetCharPressed()`
-- [ ] `src/ecs/render_system.h:633` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()`
-- [ ] `src/ecs/render_system.h:673,755` - Change `raylib::IsMouseButtonPressed()` to `IsMouseButtonPressed()`
-- [ ] `src/ecs/render_system.h:685` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()`
-- [ ] `src/input/action_map.cpp:31` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()`
-- [ ] `src/ui/win95_widgets.cpp:59,66,114,163,213,314` - Change `raylib::IsMouseButton*()` to bare names
-- [ ] `src/ui/win95_widgets.cpp:448,456,460,465,470` - Change `raylib::GetCharPressed/IsKeyPressed()` to bare names
+- [x] `src/ecs/input_system.h:24,31` - Change `raylib::GetCharPressed()` to `GetCharPressed()` (already fixed)
+- [x] `src/ecs/render_system.h:633` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()` (already fixed)
+- [x] `src/ecs/render_system.h:673,755` - Change `raylib::IsMouseButtonPressed()` to `IsMouseButtonPressed()` (already fixed)
+- [x] `src/ecs/render_system.h:685` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()` (already fixed)
+- [x] `src/input/action_map.cpp:31` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()` (already fixed)
+- [x] `src/ui/win95_widgets.cpp:59,66,114,163,213,314` - Change `raylib::IsMouseButton*()` to bare names (fixed)
+- [x] `src/ui/win95_widgets.cpp:448,456,460,465,470` - Change `raylib::GetCharPressed/IsKeyPressed()` to bare names (already fixed)
 
 #### Validation fixes
-- [ ] Fix case sensitivity in validation (e.g., "Left" vs "left", "None" vs "none")
-- [ ] Normalize property values to lowercase in e2e_runner.cpp property getter
+- [x] Fix case sensitivity in validation (e.g., "Left" vs "left", "None" vs "none") (toLower in e2e_runner.cpp)
+- [x] Normalize property values to lowercase in e2e_runner.cpp property getter (implemented)
 
 ---
 

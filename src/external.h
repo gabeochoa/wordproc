@@ -51,6 +51,7 @@ inline bool IsMouseButtonUp_Real(int button) { return IsMouseButtonUp(button); }
 inline int GetCharPressed_Real() { return GetCharPressed(); }
 inline bool IsKeyPressed_Real(int key) { return IsKeyPressed(key); }
 inline Vector2 GetMousePosition_Real() { return GetMousePosition(); }
+inline float GetMouseWheelMove_Real() { return GetMouseWheelMove(); }
 
 }  // namespace raylib
 
@@ -79,6 +80,18 @@ inline raylib::Vector2 GetMousePosition_Test() {
 }
 inline float GetMouseWheelMove_Test() {
     return test_input::get_mouse_wheel_move();
+}
+
+// Also add to raylib namespace for code that uses raylib:: prefix
+namespace raylib {
+using ::IsMouseButtonPressed_Test;
+using ::IsMouseButtonDown_Test;
+using ::IsMouseButtonReleased_Test;
+using ::IsMouseButtonUp_Test;
+using ::GetCharPressed_Test;
+using ::IsKeyPressed_Test;
+using ::GetMousePosition_Test;
+using ::GetMouseWheelMove_Test;
 }
 
 #define IsMouseButtonPressed IsMouseButtonPressed_Test
