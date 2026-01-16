@@ -276,6 +276,10 @@ $(OBJ_DIR)/test/document_io.o: src/editor/document_io.cpp | $(OBJ_DIR)/test
 	@echo "Compiling $< for tests..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
+$(OBJ_DIR)/test/table.o: src/editor/table.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
 # Link test executable
 $(TEST_EXE): $(TEST_OBJS) | $(OUTPUT_DIR)/.stamp
 	@echo "Linking $(TEST_EXE)..."

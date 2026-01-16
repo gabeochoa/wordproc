@@ -132,6 +132,25 @@ inline std::vector<win95::Menu> createMenuBar() {
     };
     menus.push_back(formatMenu);
 
+    // Table menu
+    win95::Menu tableMenu;
+    tableMenu.label = "Table";
+    tableMenu.items = {
+        {"Insert Table...", "", true, false, nullptr},           // 0
+        {"", "", false, true, nullptr},                          // 1 Separator
+        {"Insert Row Above", "", true, false, nullptr},          // 2
+        {"Insert Row Below", "", true, false, nullptr},          // 3
+        {"Insert Column Left", "", true, false, nullptr},        // 4
+        {"Insert Column Right", "", true, false, nullptr},       // 5
+        {"", "", false, true, nullptr},                          // 6 Separator
+        {"Delete Row", "", true, false, nullptr},                // 7
+        {"Delete Column", "", true, false, nullptr},             // 8
+        {"", "", false, true, nullptr},                          // 9 Separator
+        {"Merge Cells", "", true, false, nullptr},               // 10
+        {"Split Cell", "", true, false, nullptr}                 // 11
+    };
+    menus.push_back(tableMenu);
+
     // Help menu
     win95::Menu helpMenu;
     helpMenu.label = "Help";
