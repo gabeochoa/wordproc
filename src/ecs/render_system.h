@@ -724,24 +724,82 @@ struct MenuSystem
                     doc.buffer.setTextStyle(style);
                     break;
                 // (14 is separator)
-                case 15:  // Font: Gaegu
+                // Text colors (15-21)
+                case 15:  // Text: Black
+                    style.textColor = TextColors::Black;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 16:  // Text: Red
+                    style.textColor = TextColors::Red;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 17:  // Text: Orange
+                    style.textColor = TextColors::Orange;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 18:  // Text: Green
+                    style.textColor = TextColors::Green;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 19:  // Text: Blue
+                    style.textColor = TextColors::Blue;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 20:  // Text: Purple
+                    style.textColor = TextColors::Purple;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 21:  // Text: Gray
+                    style.textColor = TextColors::Gray;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                // (22 is separator)
+                // Highlight colors (23-28)
+                case 23:  // Highlight: None
+                    style.highlightColor = HighlightColors::None;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 24:  // Highlight: Yellow
+                    style.highlightColor = HighlightColors::Yellow;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 25:  // Highlight: Green
+                    style.highlightColor = HighlightColors::Green;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 26:  // Highlight: Cyan
+                    style.highlightColor = HighlightColors::Cyan;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 27:  // Highlight: Pink
+                    style.highlightColor = HighlightColors::Pink;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 28:  // Highlight: Orange
+                    style.highlightColor = HighlightColors::Orange;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                // (29 is separator)
+                // Fonts (30-31)
+                case 30:  // Font: Gaegu
                     style.font = "Gaegu-Bold";
                     doc.buffer.setTextStyle(style);
                     break;
-                case 16:  // Font: Garamond
+                case 31:  // Font: Garamond
                     style.font = "EBGaramond-Regular";
                     doc.buffer.setTextStyle(style);
                     break;
-                // (17 is separator)
-                case 18:  // Increase Size
+                // (32 is separator)
+                // Font size (33-35)
+                case 33:  // Increase Size
                     style.fontSize = std::min(72, style.fontSize + 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 19:  // Decrease Size
+                case 34:  // Decrease Size
                     style.fontSize = std::max(8, style.fontSize - 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 20:  // Reset Size
+                case 35:  // Reset Size
                     style.fontSize = 16;
                     doc.buffer.setTextStyle(style);
                     break;

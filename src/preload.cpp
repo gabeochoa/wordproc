@@ -91,47 +91,8 @@ Preload &Preload::init(const char *title) {
     return *this;
 }
 
-// Generate codepoint array for a Unicode range
-static std::vector<int> generate_codepoint_range(int start, int end) {
-    std::vector<int> codepoints;
-    for (int i = start; i <= end; ++i) {
-        codepoints.push_back(i);
-    }
-    return codepoints;
-}
-
-// Build codepoints for Korean: Hangul Syllables + Hangul Jamo + ASCII
-static std::vector<int> get_korean_codepoints() {
-    std::vector<int> codepoints;
-    // ASCII (0x0020-0x007F)
-    auto ascii = generate_codepoint_range(0x0020, 0x007F);
-    codepoints.insert(codepoints.end(), ascii.begin(), ascii.end());
-    // Hangul Jamo (0x1100-0x11FF)
-    auto jamo = generate_codepoint_range(0x1100, 0x11FF);
-    codepoints.insert(codepoints.end(), jamo.begin(), jamo.end());
-    // Hangul Syllables (0xAC00-0xD7AF) - most common Korean characters
-    auto syllables = generate_codepoint_range(0xAC00, 0xD7AF);
-    codepoints.insert(codepoints.end(), syllables.begin(), syllables.end());
-    return codepoints;
-}
-
-// Build codepoints for Japanese: Hiragana + Katakana + common Kanji + ASCII
-static std::vector<int> get_japanese_codepoints() {
-    std::vector<int> codepoints;
-    // ASCII (0x0020-0x007F)
-    auto ascii = generate_codepoint_range(0x0020, 0x007F);
-    codepoints.insert(codepoints.end(), ascii.begin(), ascii.end());
-    // Hiragana (0x3040-0x309F)
-    auto hiragana = generate_codepoint_range(0x3040, 0x309F);
-    codepoints.insert(codepoints.end(), hiragana.begin(), hiragana.end());
-    // Katakana (0x30A0-0x30FF)
-    auto katakana = generate_codepoint_range(0x30A0, 0x30FF);
-    codepoints.insert(codepoints.end(), katakana.begin(), katakana.end());
-    // Common CJK Unified Ideographs subset (0x4E00-0x9FFF) - full range
-    auto kanji = generate_codepoint_range(0x4E00, 0x9FFF);
-    codepoints.insert(codepoints.end(), kanji.begin(), kanji.end());
-    return codepoints;
-}
+// CJK codepoint generation moved to fonts::FontLoader for lazy loading
+// See fonts/font_loader.h for loadCJKFontsIfNeeded()
 
 Preload &Preload::make_singleton() {
     auto &sophie = EntityHelper::createEntity();
@@ -140,16 +101,9 @@ Preload &Preload::make_singleton() {
         window_manager::add_singleton_components(sophie, 200);
         ui::add_singleton_components<ui_imm::InputAction>(sophie);
 
-        // Load fonts for all supported languages
+        // Load fonts for startup (CJK fonts are lazy-loaded on demand)
         std::string english_font =
             files::get_resource_path("fonts", "Gaegu-Bold.ttf").string();
-        std::string korean_font =
-            files::get_resource_path("fonts", "NotoSansMonoCJKkr-Bold.otf")
-                .string();
-        std::string japanese_font =
-            files::get_resource_path("fonts", "Sazanami-Hanazono-Mincho.ttf")
-                .string();
-        // New fonts for game screens
         std::string rounded_font =
             files::get_resource_path("fonts", "eqprorounded-regular.ttf")
                 .string();
@@ -159,7 +113,6 @@ Preload &Preload::make_singleton() {
         std::string symbols_font =
             files::get_resource_path("fonts", "SymbolsNerdFont-Regular.ttf")
                 .string();
-        // New fonts for better inspiration matching
         std::string fredoka_font =
             files::get_resource_path("fonts",
                                      "Fredoka-VariableFont_wdth,wght.ttf")
@@ -171,11 +124,6 @@ Preload &Preload::make_singleton() {
             files::get_resource_path("fonts",
                                      "AtkinsonHyperlegible-Regular.ttf")
                 .string();
-
-        // CJK fonts are lazy-loaded on demand to keep startup fast
-        // See fonts::FontLoader::loadCJKFontsIfNeeded()
-        (void)korean_font;
-        (void)japanese_font;
 
         {
             SCOPED_TIMER("Load English/Latin fonts");

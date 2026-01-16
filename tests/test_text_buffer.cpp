@@ -764,6 +764,51 @@ TEST_CASE("Font family and size selection", "[text_buffer][font]") {
     }
 }
 
+TEST_CASE("Text color and highlight formatting", "[text_buffer][color]") {
+    TextBuffer buffer;
+    
+    SECTION("default text color is black") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.textColor == TextColors::Black);
+    }
+    
+    SECTION("default highlight color is none") {
+        TextStyle style = buffer.textStyle();
+        REQUIRE(style.highlightColor.isNone());
+    }
+    
+    SECTION("set text color") {
+        TextStyle style = buffer.textStyle();
+        style.textColor = TextColors::Red;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.textColor == TextColors::Red);
+    }
+    
+    SECTION("set highlight color") {
+        TextStyle style = buffer.textStyle();
+        style.highlightColor = HighlightColors::Yellow;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.highlightColor == HighlightColors::Yellow);
+    }
+    
+    SECTION("color and highlight can be combined with other formatting") {
+        TextStyle style = buffer.textStyle();
+        style.bold = true;
+        style.textColor = TextColors::Blue;
+        style.highlightColor = HighlightColors::Green;
+        buffer.setTextStyle(style);
+        
+        TextStyle updated = buffer.textStyle();
+        REQUIRE(updated.bold == true);
+        REQUIRE(updated.textColor == TextColors::Blue);
+        REQUIRE(updated.highlightColor == HighlightColors::Green);
+    }
+}
+
 TEST_CASE("Text emphasis formatting", "[text_buffer][emphasis]") {
     TextBuffer buffer;
     

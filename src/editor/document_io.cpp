@@ -72,6 +72,10 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         {"strikethrough", style.strikethrough},
         {"font", style.font},
         {"fontSize", style.fontSize},
+        {"textColor", {{"r", style.textColor.r}, {"g", style.textColor.g},
+                       {"b", style.textColor.b}, {"a", style.textColor.a}}},
+        {"highlightColor", {{"r", style.highlightColor.r}, {"g", style.highlightColor.g},
+                            {"b", style.highlightColor.b}, {"a", style.highlightColor.a}}},
     };
 
     // Page layout settings (document-specific, saved with file)
@@ -158,6 +162,20 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                 int fontSize = style_json.at("fontSize").get<int>();
                 // Clamp to valid range
                 style.fontSize = std::max(8, std::min(72, fontSize));
+            }
+            if (style_json.contains("textColor")) {
+                const nlohmann::json &color = style_json.at("textColor");
+                if (color.contains("r")) style.textColor.r = color.at("r").get<unsigned char>();
+                if (color.contains("g")) style.textColor.g = color.at("g").get<unsigned char>();
+                if (color.contains("b")) style.textColor.b = color.at("b").get<unsigned char>();
+                if (color.contains("a")) style.textColor.a = color.at("a").get<unsigned char>();
+            }
+            if (style_json.contains("highlightColor")) {
+                const nlohmann::json &color = style_json.at("highlightColor");
+                if (color.contains("r")) style.highlightColor.r = color.at("r").get<unsigned char>();
+                if (color.contains("g")) style.highlightColor.g = color.at("g").get<unsigned char>();
+                if (color.contains("b")) style.highlightColor.b = color.at("b").get<unsigned char>();
+                if (color.contains("a")) style.highlightColor.a = color.at("a").get<unsigned char>();
             }
             buffer.setTextStyle(style);
         }

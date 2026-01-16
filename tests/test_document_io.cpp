@@ -86,6 +86,24 @@ TEST_CASE("saveTextFile and loadTextFile roundtrip", "[document_io]") {
         REQUIRE(loaded_style.underline == true);
         REQUIRE(loaded_style.strikethrough == true);
     }
+    
+    SECTION("save and load preserves text color and highlight color") {
+        TextBuffer original;
+        original.setText("Colored text");
+        TextStyle style;
+        style.textColor = TextColors::Blue;
+        style.highlightColor = HighlightColors::Yellow;
+        original.setTextStyle(style);
+
+        REQUIRE(saveTextFile(original, path));
+
+        TextBuffer loaded;
+        REQUIRE(loadTextFile(loaded, path));
+
+        TextStyle loaded_style = loaded.textStyle();
+        REQUIRE(loaded_style.textColor == TextColors::Blue);
+        REQUIRE(loaded_style.highlightColor == HighlightColors::Yellow);
+    }
 }
 
 TEST_CASE("loadTextFile handles plain text files", "[document_io]") {

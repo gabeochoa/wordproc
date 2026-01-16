@@ -1918,3 +1918,48 @@ Ralph Session Started: Thu Jan 15 21:27:56 CST 2026
 [21:29:04] 🔴 ROTATE: Token threshold reached (197814 >= 80000)
 [21:29:11] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git add -A && git status --short → exit 0
 [21:29:11] 🔴 ROTATE: Token threshold reached (197853 >= 80000)
+[21:29:19] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && git add -A && git commit -m "$(cat <<'EOF'
+Add tests for paragraph styles, fonts, and emphasis formatting
+
+- Added 42 test assertions for ParagraphStyle (Title, Subtitle, H1-H6)
+- Added 10 test assertions for font family and size selection
+- Added 16 test assertions for text emphasis (bold, italic, underline, strikethrough)
+- Tests cover: style setting/getting, persistence, helper functions
+- Total: 482 assertions in 44 test cases
+EOF
+)" → exit 0
+[21:29:19] 🔴 ROTATE: Token threshold reached (197853 >= 80000)
+[21:29:22] 🔴 TOKENS: 197853 / 80000 (247%) - rotation imminent [read:767KB write:0KB assist:2KB shell:0KB]
+[21:29:23] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_settings.h (155 lines, ~15.1KB)
+[21:29:23] 🔴 ROTATE: Token threshold reached (201754 >= 80000)
+[21:29:26] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_settings.h (155 lines, ~15.1KB)
+[21:29:26] 🔴 ROTATE: Token threshold reached (205629 >= 80000)
+[21:29:30] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_settings.h (155 lines, ~15.1KB)
+[21:29:30] 🔴 ROTATE: Token threshold reached (209504 >= 80000)
+[21:29:36] 🔴 ROTATE: Token threshold reached (209531 >= 80000)
+[21:29:43] 🔴 ROTATE: Token threshold reached (209545 >= 80000)
+[21:29:46] 🔴 ROTATE: Token threshold reached (209545 >= 80000)
+[21:29:50] 🔴 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.cpp (219 lines, ~21.3KB)
+[21:29:50] 🔴 ROTATE: Token threshold reached (215020 >= 80000)
+[21:29:52] 🔴 TOKENS: 215020 / 80000 (268%) - rotation imminent [read:834KB write:0KB assist:2KB shell:0KB]
+[21:29:54] 🔴 ROTATE: Token threshold reached (215046 >= 80000)
+[21:29:59] 🔴 ROTATE: Token threshold reached (215046 >= 80000)
+[21:30:02] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/menu_setup.h (109 lines, ~10.6KB)
+[21:30:02] 🔴 ROTATE: Token threshold reached (217771 >= 80000)
+[21:30:17] 🔴 ROTATE: Token threshold reached (217798 >= 80000)
+[21:30:24] 🟢 SHELL make test OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -20 → exit 0
+[21:30:24] 🟢 TOKENS: 33958 / 80000 (42%) [read:129KB write:0KB assist:0KB shell:0KB]
+[21:30:26] 🔴 TOKENS: 217798 / 80000 (272%) - rotation imminent [read:845KB write:0KB assist:2KB shell:0KB]
+[21:30:26] 🔴 ROTATE: Token threshold reached (217798 >= 80000)
+[21:30:44] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/document_settings.h (155 lines, ~15.1KB)
+[21:30:45] 🟡 READ /Users/gabeochoa/p/wordproc/src/ecs/render_system.h (820 lines, ~80.0KB)
+[21:30:55] 🟡 TOKENS: 58399 / 80000 (72%) - approaching limit [read:224KB write:0KB assist:0KB shell:0KB]
+[21:31:13] 🔴 READ /Users/gabeochoa/p/wordproc/src/ecs/render_system.h (820 lines, ~80.0KB)
+[21:31:13] 🔴 WARN: Approaching token limit (78928 >= 70000)
+[21:31:16] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs_fresh7 2>&1 | grep -E "(passed|assertion|error:|Error)" | tail -5 → exit 0
+[21:31:16] 🔴 ROTATE: Token threshold reached (217798 >= 80000)
+[21:31:16] 🔴 TOKENS: 217798 / 80000 (272%) - rotation imminent [read:845KB write:0KB assist:2KB shell:0KB]
+[21:31:22] 🔴 ROTATE: Token threshold reached (217813 >= 80000)
+[21:31:25] 🔴 TOKENS: 78961 / 80000 (98%) - rotation imminent [read:304KB write:0KB assist:0KB shell:0KB]
+[21:31:26] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/menu_setup.h (109 lines, ~10.6KB)
+[21:31:26] 🔴 ROTATE: Token threshold reached (81686 >= 80000)
