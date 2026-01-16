@@ -246,6 +246,29 @@ struct Hyperlink {
     }
 };
 
+// Bookmark structure for internal document navigation
+struct Bookmark {
+    std::string name;              // Unique name/ID for the bookmark
+    std::size_t offset = 0;        // Character offset in document
+    std::string displayName;       // Optional user-friendly display name
+    
+    // Check if bookmark is at a specific position
+    bool isAt(std::size_t pos) const {
+        return offset == pos;
+    }
+    
+    // Get the name to display (displayName if set, otherwise name)
+    std::string getDisplayName() const {
+        return displayName.empty() ? name : displayName;
+    }
+    
+    bool operator==(const Bookmark& other) const {
+        return name == other.name && offset == other.offset;
+    }
+    bool operator!=(const Bookmark& other) const { return !(*this == other); }
+    bool operator<(const Bookmark& other) const { return offset < other.offset; }
+};
+
 // Text styling settings
 struct TextStyle {
     bool bold = false;
