@@ -69,7 +69,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add find and replace with match options. (Implemented: find/findNext/findPrevious/findAll/replace/replaceAll in TextBuffer, FindOptions with caseSensitive/wholeWord/wrapAround, Ctrl+F/G/H shortcuts, Edit menu items, 43 test assertions)
 - [ ] Add footnotes with auto-numbering.
 - [ ] Add spelling and grammar suggestions with per-word actions.
-- [ ] Add page setup controls (size, orientation, margins, page color).
+- [x] Add page setup controls (size, orientation, margins, page color). (Implemented: PageSize enum with Letter/Legal/A4/A5/Custom, PageOrientation enum, per-side margins in PageSettings, pageColor using TextColor, applyPageSize/toggleOrientation methods, Page Setup menu item, pageMarginTop/Bottom/Left/Right fields)
 - [ ] Add headers and footers with page numbers.
 - [ ] Add section breaks with per-section layout settings.
 - [x] Add manual page breaks. (Implemented: insertPageBreak/togglePageBreak/clearPageBreak in TextBuffer, hasPageBreakBefore in LineSpan, Ctrl+Enter shortcut, visual page break indicator in render system, 8 test assertions)
