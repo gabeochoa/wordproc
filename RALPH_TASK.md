@@ -66,6 +66,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 1. Work on the next incomplete task (marked [ ])
 2. Check off completed tasks (change [ ] to [x])
 3. Run tests after changes
-4. Commit your changes frequently
-5. When ALL tasks are [x], output: `<ralph>COMPLETE</ralph>`
-6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
+4. Commit your changes frequently with **descriptive commit messages** (e.g., "Add E2E test for menu rendering", not "update" or "wip")
+5. **Go back and rewrite existing commit history** to have useful, descriptive messages using `git rebase -i`
+6. When ALL tasks are [x], output: `<ralph>COMPLETE</ralph>`
+7. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
