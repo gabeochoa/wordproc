@@ -1,3 +1,6 @@
+// Wrapper that uses the extracted e2e_testing.h implementation
+// This file maintains backward compatibility with existing code.
+
 #pragma once
 
 #include <string>
@@ -26,7 +29,6 @@ void initializeRunner(
 );
 
 // Initialize the E2E script runner in batch mode (loads all scripts from directory)
-// Scripts are run in sequence with document cleared between each
 void initializeRunnerBatch(
     ScriptRunner& runner,
     const std::string& scriptDir,
@@ -45,4 +47,3 @@ void initializeRunnerBatch(
 );
 
 }  // namespace e2e
-

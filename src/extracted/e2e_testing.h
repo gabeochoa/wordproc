@@ -701,10 +701,18 @@ public:
       case CommandType::Type: return "type \"" + cmd.arg1 + "\"";
       case CommandType::Key: return "key " + cmd.arg1;
       case CommandType::Click: return "click " + std::to_string(cmd.x) + " " + std::to_string(cmd.y);
+      case CommandType::DoubleClick: return "double_click " + std::to_string(cmd.x) + " " + std::to_string(cmd.y);
+      case CommandType::Drag: return "drag " + std::to_string(cmd.x) + " " + std::to_string(cmd.y) + " -> " + std::to_string(cmd.x2) + " " + std::to_string(cmd.y2);
+      case CommandType::MouseMove: return "mouse_move " + std::to_string(cmd.x) + " " + std::to_string(cmd.y);
       case CommandType::Wait: return "wait " + std::to_string(cmd.x);
       case CommandType::Validate: return "validate " + cmd.arg1 + "=" + cmd.arg2;
       case CommandType::ExpectText: return "expect_text \"" + cmd.arg1 + "\"";
-      default: return "(cmd)";
+      case CommandType::Screenshot: return "screenshot " + cmd.arg1;
+      case CommandType::Clear: return "clear";
+      case CommandType::MenuOpen: return "menu_open \"" + cmd.arg1 + "\"";
+      case CommandType::MenuSelect: return "menu_select \"" + cmd.arg1 + "\"";
+      case CommandType::Comment: return "# comment";
+      case CommandType::Unknown: return "(unknown: " + cmd.arg1 + ")";
     }
   }
   
@@ -804,7 +812,26 @@ private:
         report_error(cmd, "Unknown command: " + cmd.arg1);
         break;
         
-      default: break;
+      case CommandType::DoubleClick:
+        // Double-click: two clicks in quick succession
+        test_input::simulate_click(static_cast<float>(cmd.x), static_cast<float>(cmd.y));
+        // TODO: Queue second click after release
+        wait_frames_ = 3;
+        pending_release_ = true;
+        break;
+        
+      case CommandType::Drag:
+        // Start drag at (x,y), end at (x2,y2)
+        test_input::simulate_click(static_cast<float>(cmd.x), static_cast<float>(cmd.y));
+        // Move to end position (simplified - full impl would animate)
+        input_injector::set_mouse_position(static_cast<float>(cmd.x2), static_cast<float>(cmd.y2));
+        wait_frames_ = 5;
+        pending_release_ = true;
+        break;
+        
+      case CommandType::Comment:
+        // Comments are ignored
+        break;
     }
   }
   
