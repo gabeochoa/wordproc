@@ -283,6 +283,37 @@ class TextBuffer {
     // Page navigation
     void movePageUp(std::size_t linesPerPage);
     void movePageDown(std::size_t linesPerPage);
+    
+    // Find and Replace
+    struct FindOptions {
+        bool caseSensitive = false;
+        bool wholeWord = false;
+        bool wrapAround = true;
+    };
+    
+    struct FindResult {
+        bool found = false;
+        CaretPosition start{0, 0};
+        CaretPosition end{0, 0};
+    };
+    
+    // Find text from current caret position
+    FindResult find(const std::string& needle, const FindOptions& options = {}) const;
+    
+    // Find next occurrence (continue from last find)
+    FindResult findNext(const std::string& needle, const FindOptions& options = {}) const;
+    
+    // Find previous occurrence
+    FindResult findPrevious(const std::string& needle, const FindOptions& options = {}) const;
+    
+    // Find all occurrences and return count
+    std::vector<FindResult> findAll(const std::string& needle, const FindOptions& options = {}) const;
+    
+    // Replace current selection with replacement text (if selection matches needle)
+    bool replace(const std::string& needle, const std::string& replacement, const FindOptions& options = {});
+    
+    // Replace all occurrences and return count
+    std::size_t replaceAll(const std::string& needle, const std::string& replacement, const FindOptions& options = {});
 
     // Performance metrics
     struct PerfStats {
