@@ -1,5 +1,13 @@
 # Test Input Hooks
 
+## Working Implementation
+See these files for a complete working example:
+- `src/testing/test_input.h` - Main API for test input injection
+- `src/testing/test_input.cpp` - Implementation
+- `src/testing/input_injector.h` - Low-level input injection
+- `src/testing/input_injector.cpp` - Implementation
+- `src/testing/test_input_provider.h` - UIContext integration
+
 ## Problem
 Afterhours lacks a first-class way to inject input events for automated tests.
 The library provides no concrete API for simulated key/mouse input, requiring

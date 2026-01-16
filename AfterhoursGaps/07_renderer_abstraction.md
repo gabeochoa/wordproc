@@ -1,5 +1,11 @@
 # Renderer Abstraction Layer
 
+## Working Implementation
+See these files for a complete working example:
+- `src/renderer/renderer_interface.h` - IRenderer abstract interface
+- `src/renderer/renderer_interface.cpp` - Global renderer accessor
+- `src/renderer/raylib_renderer.h` - Raylib backend implementation
+
 ## Problem
 Afterhours is tightly coupled to raylib. There is no abstraction layer to support 
 alternative rendering backends (SDL, OpenGL, Vulkan, software rendering, headless testing).

@@ -1,5 +1,10 @@
 # Action Binding System
 
+## Working Implementation
+See these files for a complete working example:
+- `src/input/action_map.h` - Action enum, KeyBinding struct, ActionMap class
+- `src/input/action_map.cpp` - Implementation with Windows/macOS presets, key formatting
+
 ## Problem
 Afterhours provides low-level input detection (`is_key_pressed`, `is_key_down`, etc.) but no 
 high-level action binding system for remappable keyboard shortcuts with modifier keys.

@@ -1,5 +1,11 @@
 # Scrollable Containers
 
+## Working Implementation
+See these files for a complete working example:
+- `src/ecs/components.h` - ScrollComponent struct
+- `src/ecs/input_system.h` - Scroll input handling (search for "scroll")
+- `src/ecs/render_system.h` - Scroll-aware rendering
+
 ## Problem
 Afterhours UI does not provide scrollable containers or scroll view components. There is 
 no mouse wheel input handling for UI scrolling.

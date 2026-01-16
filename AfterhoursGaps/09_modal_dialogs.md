@@ -1,5 +1,11 @@
 # Modal Dialogs
 
+## Working Implementation
+See these files for a complete working example:
+- `src/ui/win95_widgets.h` - DrawMessageDialog, DrawInputDialog, DialogState
+- `src/ui/win95_widgets.cpp` - Dialog rendering implementation
+- `src/ecs/components.h` - MenuComponent with dialog state flags (showAboutDialog, showFindDialog, etc.)
+
 ## Problem
 Afterhours UI does not provide modal dialog components for common UI patterns like 
 message boxes, confirmation dialogs, input prompts, or complex multi-field dialogs.

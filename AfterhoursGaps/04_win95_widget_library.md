@@ -1,5 +1,11 @@
 # Win95-Style Widget Library
 
+## Working Implementation
+See these files for a complete working example:
+- `src/ui/win95_widgets.h` - API for raised/sunken borders, buttons, menus, dialogs
+- `src/ui/win95_widgets.cpp` - Implementation with DrawRaisedBorder, DrawSunkenBorder
+- `src/ui/theme.h` - Win95 color palette
+
 ## Problem
 Afterhours does not support 3D beveled borders needed for classic Win95/retro UI styling.
 

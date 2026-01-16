@@ -1,5 +1,12 @@
 # Text Editing Widget
 
+## Working Implementation
+See these files for a complete working example:
+- `src/editor/text_buffer.h` - TextBuffer with gap buffer, selection, undo/redo
+- `src/editor/text_buffer.cpp` - Implementation
+- `src/editor/text_layout.h` - Text layout and rendering
+- `src/editor/text_layout.cpp` - Implementation
+
 ## Problem
 Afterhours does not include a built-in text editor or multiline text area
 component with selection, caret, undo, and layout.
