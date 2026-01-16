@@ -485,3 +485,107 @@ TEST_CASE("Caret positioning with narrow characters", "[text_buffer][regression]
         REQUIRE(buffer.getText().length() == 51);
     }
 }
+
+TEST_CASE("Scroll viewport validation", "[text_buffer][scroll]") {
+    TextBuffer buffer;
+    
+    SECTION("lineSpan returns correct data for visible lines") {
+        // Create a document with 50 lines
+        for (int i = 0; i < 50; ++i) {
+            buffer.insertText("Line " + std::to_string(i));
+            if (i < 49) buffer.insertChar('\n');
+        }
+        
+        REQUIRE(buffer.lineCount() == 50);
+        
+        // Simulate scroll: accessing lines 10-20 (visible viewport)
+        int scrollOffset = 10;
+        int visibleLines = 10;
+        
+        for (int i = 0; i < visibleLines; ++i) {
+            std::size_t row = static_cast<std::size_t>(scrollOffset + i);
+            LineSpan span = buffer.lineSpan(row);
+            std::string line = buffer.lineString(row);
+            
+            // Each line should contain "Line X" where X is the line number
+            std::string expected = "Line " + std::to_string(scrollOffset + i);
+            REQUIRE(line == expected);
+            REQUIRE(span.length == expected.length());
+        }
+    }
+    
+    SECTION("lineSpan bounds checking at document end") {
+        // Create 5 lines
+        buffer.insertText("Line 0\nLine 1\nLine 2\nLine 3\nLine 4");
+        REQUIRE(buffer.lineCount() == 5);
+        
+        // Simulate scroll near end
+        int scrollOffset = 3;
+        int visibleLines = 5;  // Would show lines 3-7, but only 3-4 exist
+        
+        // Should be able to access lines 3 and 4
+        LineSpan span3 = buffer.lineSpan(3);
+        LineSpan span4 = buffer.lineSpan(4);
+        REQUIRE(buffer.lineString(3) == "Line 3");
+        REQUIRE(buffer.lineString(4) == "Line 4");
+        
+        // Lines 3-4 have correct content for scrolled view
+        REQUIRE(span3.length == 6);  // "Line 3"
+        REQUIRE(span4.length == 6);  // "Line 4"
+    }
+    
+    SECTION("caret visibility during scroll") {
+        // Create 100 lines
+        for (int i = 0; i < 100; ++i) {
+            buffer.insertText("L" + std::to_string(i));
+            if (i < 99) buffer.insertChar('\n');
+        }
+        
+        REQUIRE(buffer.lineCount() == 100);
+        
+        // Move caret to line 50
+        buffer.setCaret({50, 0});
+        REQUIRE(buffer.caret().row == 50);
+        
+        // Simulate scroll calculation: caret should be visible
+        int visibleLines = 20;
+        int scrollOffset = 40;  // Viewing lines 40-60
+        
+        std::size_t caretRow = buffer.caret().row;
+        bool caretVisible = (caretRow >= static_cast<std::size_t>(scrollOffset) && 
+                            caretRow < static_cast<std::size_t>(scrollOffset + visibleLines));
+        REQUIRE(caretVisible);
+        
+        // If we scroll past caret
+        scrollOffset = 60;  // Viewing lines 60-80
+        caretVisible = (caretRow >= static_cast<std::size_t>(scrollOffset) && 
+                       caretRow < static_cast<std::size_t>(scrollOffset + visibleLines));
+        REQUIRE_FALSE(caretVisible);  // Caret at line 50 not visible
+    }
+    
+    SECTION("scroll offset clamping") {
+        // Create 10 lines
+        buffer.insertText("L0\nL1\nL2\nL3\nL4\nL5\nL6\nL7\nL8\nL9");
+        REQUIRE(buffer.lineCount() == 10);
+        
+        int visibleLines = 5;
+        int lineCount = static_cast<int>(buffer.lineCount());
+        
+        // Max scroll offset calculation
+        int maxScroll = lineCount - visibleLines;
+        REQUIRE(maxScroll == 5);  // Can scroll lines 0-5 to show lines 5-9
+        
+        // Test various scroll offset clamping
+        auto clamp = [maxScroll](int offset) {
+            if (offset < 0) return 0;
+            if (offset > maxScroll) return maxScroll;
+            return offset;
+        };
+        
+        REQUIRE(clamp(-5) == 0);    // Negative clamped to 0
+        REQUIRE(clamp(0) == 0);     // Min valid
+        REQUIRE(clamp(3) == 3);     // Mid range
+        REQUIRE(clamp(5) == 5);     // Max valid
+        REQUIRE(clamp(10) == 5);    // Over max clamped
+    }
+}

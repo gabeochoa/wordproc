@@ -26,6 +26,16 @@ Tracking any Afterhours library changes we might need, plus app-side workarounds
 | Settings | Window position persistence | Works as expected |
 | Preload | Application initialization | Clean API |
 
+### 4. No Built-in Win95-Style Widget Library
+- Afterhours doesn't provide Win95/classic-style UI widgets.
+- **Workaround**: Custom `src/ui/win95_widgets.h/.cpp` implements:
+  - `DrawRaisedBorder` / `DrawSunkenBorder` for 3D effects
+  - `DrawButton` with hover/pressed/disabled states
+  - `DrawCheckbox` with state tracking
+  - `DrawMenuBar` with dropdown menu support
+  - `DrawMessageDialog` and `DrawInputDialog` for modal dialogs
+- Would benefit from Afterhours providing themeable widget primitives.
+
 ## Feature Requests / Ideas
 
 1. **Text Editing Component**: Built-in multiline text editor with selection, caret, undo/redo
@@ -33,6 +43,7 @@ Tracking any Afterhours library changes we might need, plus app-side workarounds
 3. **Menu System**: Win95-style dropdown menu component with keyboard navigation
 4. **Dialog Framework**: Modal dialogs with standardized button placement
 5. **Clipboard Abstraction**: Cross-platform clipboard with rich text support
+6. **Themeable Widget Library**: Buttons, checkboxes, menus, dialogs with configurable themes (Win95, macOS, modern flat)
 
 ## Notes
 
