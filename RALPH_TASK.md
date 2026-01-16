@@ -64,7 +64,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add image insertion and layout modes (inline, wrap, break text).
 - [ ] Add drawing insertion (basic shapes/lines) with inline placement.
 - [ ] Add equation editor and special character insertion.
-- [ ] Add hyperlink creation and editing.
+- [x] Add hyperlink creation and editing. (Implemented: Hyperlink struct in document_settings.h, addHyperlink/editHyperlink/removeHyperlink/hyperlinkAt methods in TextBuffer, offset auto-adjustment on edit, 50 test assertions in tests/test_hyperlink.cpp)
 - [ ] Add bookmarks/anchors for internal navigation.
 - [x] Add find and replace with match options. (Implemented: find/findNext/findPrevious/findAll/replace/replaceAll in TextBuffer, FindOptions with caseSensitive/wholeWord/wrapAround, Ctrl+F/G/H shortcuts, Edit menu items, 43 test assertions)
 - [ ] Add footnotes with auto-numbering.
