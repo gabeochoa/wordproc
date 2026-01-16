@@ -66,8 +66,14 @@ int main(int argc, char* argv[]) {
             testScriptPath = value;
         } else if (name == "test-script-dir") {
             testScriptDir = value;
+        } else if (name == "e2e-debug") {
+            // Value can be "true", "1", or just present
+            // This is handled below after scriptRunner is set up
         }
     }
+    
+    // Check for e2e-debug flag (can be --e2e-debug or --e2e-debug=true)
+    bool e2eDebugOverlay = cmdl["e2e-debug"] || cmdl("e2e-debug");
     LOG_INFO("screenshotDir = %s, frameLimit = %d", screenshotDir.c_str(), frameLimit);
     
     // If test script or directory is specified, enable test mode
@@ -193,12 +199,16 @@ int main(int argc, char* argv[]) {
     // Setup SystemManager with all systems
     SystemManager systemManager;
 
-    // Register Afterhours UI systems (must be early in the update order)
-    ui_imm::registerUIUpdateSystems(systemManager);
-
-    // Menu UI system - must run after Afterhours UI systems for button handling
+    // Register pre-layout UI systems (context begin, clear children)
+    ui_imm::registerUIPreLayoutSystems(systemManager);
+    
+    // MenuUISystem creates UI elements - must run BEFORE autolayout
     systemManager.register_update_system(
         std::make_unique<ecs::MenuUISystem>());
+    
+    // Register post-layout UI systems (autolayout, interactions)
+    // This computes sizes for all UI elements created above
+    ui_imm::registerUIPostLayoutSystems(systemManager);
 
     // Update systems (run every frame for input/logic)
     systemManager.register_update_system(
@@ -216,7 +226,9 @@ int main(int argc, char* argv[]) {
     // EditorRenderSystem must be first - it calls BeginDrawing() in once()
     systemManager.register_render_system(
         std::make_unique<ecs::EditorRenderSystem>());
-    // MenuSystem draws menus and dialogs - must run after BeginDrawing()
+    // Afterhours UI render systems (renders buttons, divs, etc.)
+    ui_imm::registerUIRenderSystems(systemManager);
+    // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
     systemManager.register_render_system(std::make_unique<ecs::MenuSystem>());
     // Note: Screenshots are now handled in EditorRenderSystem.after() before EndDrawing()
 
@@ -243,6 +255,11 @@ int main(int argc, char* argv[]) {
         // Single script mode (with menu/layout support)
         e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, screenshotDir);
     }
+    
+    // Enable debug overlay if requested
+    if (e2eDebugOverlay) {
+        scriptRunner.setDebugOverlay(true);
+    }
 
     while (!raylib::WindowShouldClose()) {
         float dt = raylib::GetFrameTime();
@@ -250,19 +267,8 @@ int main(int argc, char* argv[]) {
         // Reset test input frame state
         test_input::reset_frame();
         
-        // Execute E2E script if active
-        if (scriptRunner.hasCommands() && !scriptRunner.isFinished()) {
-            scriptRunner.tick();
-            
-            // If script finished, print results and exit
-            if (scriptRunner.isFinished()) {
-                scriptRunner.printResults();
-                takeScreenshot(screenshotDir, "final");
-                
-                Settings::get().write_save_file();
-                return scriptRunner.hasFailed() ? 1 : 0;
-            }
-        }
+        // Clear visible text registry at start of frame (for E2E tests)
+        test_input::clearVisibleTextRegistry();
 
         // FPS test mode: collect FPS data and simulate scrolling
         if (testComp.fpsTestMode && testComp.frameCount > 0) {
@@ -291,6 +297,30 @@ int main(int argc, char* argv[]) {
 
         // Run all systems through the SystemManager
         systemManager.run(dt);
+        
+        // Execute E2E script if active (AFTER systems run so visible text is registered)
+        if (scriptRunner.hasCommands() && !scriptRunner.isFinished()) {
+            // Update debug overlay info in TestConfigComponent
+            if (scriptRunner.showDebugOverlay()) {
+                testComp.e2eDebugOverlay = true;
+                testComp.e2eCurrentCommand = scriptRunner.getCurrentCommandDescription();
+                testComp.e2eTimeoutSeconds = scriptRunner.getRemainingTimeoutSeconds();
+            }
+            
+            scriptRunner.tick();
+            
+            // If script finished, print results and exit
+            if (scriptRunner.isFinished()) {
+                scriptRunner.printResults();
+                takeScreenshot(screenshotDir, "final");
+                
+                Settings::get().write_save_file();
+                return scriptRunner.hasFailed() ? 1 : 0;
+            }
+        } else {
+            // Clear debug overlay when not running
+            testComp.e2eDebugOverlay = false;
+        }
 
         // Check for test mode exit
         if (testComp.enabled && testComp.frameLimit > 0 &&

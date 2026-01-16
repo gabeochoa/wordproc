@@ -1,0 +1,20 @@
+# Test: Verify menu bar text is visible
+# This test validates that the expect_text command works for UI elements
+
+# Wait for window to render
+wait 5
+
+# Check that menu bar labels are visible
+expect_text "File"
+expect_text "Edit"
+expect_text "View"
+expect_text "Format"
+expect_text "Insert"
+expect_text "Table"
+expect_text "Help"
+
+# Check title bar text
+expect_text "Wordproc"
+
+# Take a screenshot to verify
+screenshot menu_bar_visible

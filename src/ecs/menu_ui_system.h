@@ -8,7 +8,9 @@
 
 #include "components.h"
 #include "../input_mapping.h"  // For InputAction enum
+#include "../testing/visible_text_registry.h"  // For E2E testing
 #include "../ui/theme.h"
+#include "../ui/ui_context.h"  // For ui_imm::getUIRootEntity()
 
 namespace ecs {
 
@@ -36,10 +38,20 @@ constexpr afterhours::Color SEPARATOR = {128, 128, 128, 255};
 }  // namespace menu_colors
 
 // Menu UI System - runs during update phase to handle menu interactions
-struct MenuUISystem : System<UIContext<InputAction>, MenuComponent> {
+// Queries only for UIContext singleton, then manually finds MenuComponent entities
+struct MenuUISystem : System<UIContext<InputAction>> {
     
-    void for_each_with(Entity& entity, UIContext<InputAction>& ctx,
-                       MenuComponent& menu, float) override {
+    void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
+        // Find entities with MenuComponent
+        auto menuEntities = afterhours::EntityQuery({.force_merge = true})
+                               .whereHasComponent<MenuComponent>()
+                               .gen();
+        if (menuEntities.empty()) return;
+        
+        MenuComponent& menu = menuEntities[0].get().get<MenuComponent>();
+        
+        // Get the UI root entity for parenting UI elements
+        Entity& entity = ui_imm::getUIRootEntity();
         
         // Set up Win95 theme
         Theme theme;
@@ -69,10 +81,13 @@ struct MenuUISystem : System<UIContext<InputAction>, MenuComponent> {
                 .with_custom_background(menu_colors::MENU_BG));
 
         Entity& menuBar = menuBarContainer.ent();
+        (void)menuBar;  // Menu bar container used for background only
         
-        float xOffset = 4.0f;
+        // Track X position for header buttons
+        float headerX = 4.0f;
+        float headerY = static_cast<float>(theme::layout::TITLE_BAR_HEIGHT);
         
-        // Render each menu header button
+        // Render each menu header button (absolute positioned to avoid layout issues)
         for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
             auto& menuItem = menu.menus[menuIdx];
             bool isOpen = menuItem.open;
@@ -80,16 +95,24 @@ struct MenuUISystem : System<UIContext<InputAction>, MenuComponent> {
             // Calculate button width based on label
             float buttonWidth = static_cast<float>(menuItem.label.length() * 8 + 16);
             
-            auto headerBtn = button(ctx, mk(menuBar, static_cast<int>(menuIdx)),
+            // Register menu label for E2E tests
+            test_input::registerVisibleText(menuItem.label);
+            
+            // Each header button is absolute-positioned to avoid parent layout dependency
+            auto headerBtn = button(ctx, mk(entity, 500 + static_cast<int>(menuIdx)),
                 ComponentConfig{}
                     .with_debug_name("menu_header_" + menuItem.label)
                     .with_label(menuItem.label)
                     .with_size(ComponentSize{pixels(buttonWidth), 
                                             pixels(static_cast<float>(theme::layout::MENU_BAR_HEIGHT))})
                     .with_absolute_position()
-                    .with_translate(xOffset, 0.0f)
+                    .with_translate(headerX, headerY)
                     .with_custom_background(isOpen ? menu_colors::MENU_HIGHLIGHT : menu_colors::MENU_BG)
-                    .with_custom_text_color(isOpen ? menu_colors::TEXT_LIGHT : menu_colors::TEXT_DARK));
+                    .with_custom_text_color(isOpen ? menu_colors::TEXT_LIGHT : menu_colors::TEXT_DARK)
+                    .with_render_layer(1));
+            
+            // Update X position for next header
+            headerX += buttonWidth;
             
             // Handle header click - toggle menu open state
             if (headerBtn) {
@@ -112,8 +135,6 @@ struct MenuUISystem : System<UIContext<InputAction>, MenuComponent> {
                 for (auto& m : menu.menus) m.open = false;
                 menuItem.open = true;
             }
-            
-            xOffset += buttonWidth;
         }
         
         // Render dropdown for open menu
@@ -156,38 +177,57 @@ struct MenuUISystem : System<UIContext<InputAction>, MenuComponent> {
                     .with_render_layer(10));  // Render on top
             
             Entity& dropdown = dropdownContainer.ent();
+            (void)dropdown;  // Dropdown container used for background only
             
-            float itemY = 0;
+            // Track Y position for menu items (each item individually absolute-positioned)
+            float itemY = dropdownY;
             
-            // Render menu items
+            // Render menu items - each individually absolute-positioned to avoid layout issues
             for (size_t itemIdx = 0; itemIdx < menuItem.items.size(); ++itemIdx) {
                 const auto& item = menuItem.items[itemIdx];
                 
                 if (item.separator) {
-                    // Draw separator as a thin div
-                    div(ctx, mk(dropdown, 1000 + static_cast<int>(itemIdx)),
+                    // Draw separator as a thin div - absolute positioned
+                    div(ctx, mk(entity, 1000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
                         ComponentConfig{}
                             .with_debug_name("separator")
-                            .with_size(ComponentSize{percent(1.0f), pixels(8.0f)})
+                            .with_size(ComponentSize{pixels(maxWidth), pixels(8.0f)})
                             .with_absolute_position()
-                            .with_translate(0.0f, itemY)
-                            .with_custom_background(menu_colors::SEPARATOR));
+                            .with_translate(dropdownX, itemY)
+                            .with_custom_background(menu_colors::SEPARATOR)
+                            .with_render_layer(11));
                     itemY += 8.0f;
                 } else {
-                    // Build label with shortcut
+                    // Build label with shortcut combined (padded for alignment)
                     std::string fullLabel = item.label;
+                    if (!item.shortcut.empty()) {
+                        // Pad label to align shortcuts on the right
+                        size_t labelLen = item.label.length();
+                        size_t targetLen = 20;  // Approximate width for menu item text
+                        if (labelLen < targetLen) {
+                            fullLabel += std::string(targetLen - labelLen, ' ');
+                        }
+                        fullLabel += item.shortcut;
+                    }
                     
-                    auto itemBtn = button(ctx, mk(dropdown, static_cast<int>(itemIdx)),
+                    // Register menu item label for E2E tests (when dropdown is open)
+                    test_input::registerVisibleText(item.label);
+                    
+                    // Menu item button - absolute positioned with explicit coordinates
+                    auto itemBtn = button(ctx, mk(entity, 2000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
                         ComponentConfig{}
                             .with_debug_name("item_" + item.label)
                             .with_label(fullLabel)
-                            .with_size(ComponentSize{percent(1.0f), pixels(20.0f)})
+                            .with_size(ComponentSize{pixels(maxWidth), pixels(20.0f)})
                             .with_absolute_position()
-                            .with_translate(0.0f, itemY)
+                            .with_translate(dropdownX, itemY)
                             .with_custom_background(menu_colors::MENU_BG)
                             .with_custom_text_color(item.enabled ? menu_colors::TEXT_DARK 
                                                                   : menu_colors::TEXT_DISABLED)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(11));
+                    
+                    itemY += 20.0f;
                     
                     // Handle item click
                     if (itemBtn && item.enabled) {
@@ -197,22 +237,6 @@ struct MenuUISystem : System<UIContext<InputAction>, MenuComponent> {
                         // Close menu
                         menuItem.open = false;
                     }
-                    
-                    // Draw shortcut on the right (as separate label)
-                    if (!item.shortcut.empty()) {
-                        div(ctx, mk(dropdown, 2000 + static_cast<int>(itemIdx)),
-                            ComponentConfig{}
-                                .with_debug_name("shortcut_" + item.label)
-                                .with_label(item.shortcut)
-                                .with_size(ComponentSize{pixels(80.0f), pixels(20.0f)})
-                                .with_absolute_position()
-                                .with_translate(maxWidth - 85.0f, itemY)
-                                .with_custom_text_color(item.enabled ? menu_colors::TEXT_DARK 
-                                                                      : menu_colors::TEXT_DISABLED)
-                                .with_render_layer(12));
-                    }
-                    
-                    itemY += 20.0f;
                 }
             }
         }

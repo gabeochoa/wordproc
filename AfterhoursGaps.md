@@ -36,7 +36,21 @@ Tracking any Afterhours library changes we might need, plus app-side workarounds
   - `DrawMessageDialog` and `DrawInputDialog` for modal dialogs
 - Would benefit from Afterhours providing themeable widget primitives.
 
-### 5. .doc File Import
+### 5. Uninitialized Element Size Warning
+- Autolayout skips computing sizes for elements created after `RunAutoLayout` runs.
+- Elements rendered with `computed[X/Y] = -1` cause "Container too small for text" warnings.
+- **Root Cause**: System ordering matters - UI-creating systems must run BEFORE `RunAutoLayout`.
+- **Workaround**: Split `registerUIUpdateSystems` into `registerUIPreLayoutSystems` and `registerUIPostLayoutSystems`. Register custom UI systems (like `MenuUISystem`) between them.
+- **Suggestion for Afterhours**: Add a warning/assert in the rendering code when `computed[X] == -1 || computed[Y] == -1` to catch uninitialized elements early. Something like:
+  ```cpp
+  if (widget.computed[Axis::X] == -1 || widget.computed[Axis::Y] == -1) {
+    log_warn("Rendering element '{}' with uninitialized size (-1). "
+             "Ensure UI-creating systems run before RunAutoLayout.",
+             widget.debug_name);
+  }
+  ```
+
+### 6. .doc File Import
 - Microsoft Word .doc files use a proprietary binary format (OLE Compound Document).
 - **Complexity**: Requires parsing OLE2/CFBF container, then Word-specific binary streams.
 - **External Libraries**:
@@ -58,7 +72,7 @@ Tracking any Afterhours library changes we might need, plus app-side workarounds
 
 ## Notes
 
-- No vendor/afterhours changes are required at this stage.
+- Minor vendor/afterhours changes have been made (removed debug output in `div()`).
 - All gaps have app-side workarounds implemented in `src/` directory.
 - The custom TextBuffer with gap buffer performs well (2M chars/sec typing capability).
 

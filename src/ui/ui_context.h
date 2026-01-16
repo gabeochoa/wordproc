@@ -79,8 +79,9 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     }
 }
 
-// Register all Afterhours UI update systems with the SystemManager
-inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
+// Register pre-layout UI systems (context begin, clear children)
+// Call this BEFORE registering systems that create UI elements
+inline void registerUIPreLayoutSystems(afterhours::SystemManager& manager) {
     using namespace afterhours;
 
     // Begin context (reads mouse/input state)
@@ -90,8 +91,14 @@ inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
     // Clear UI component children for rebuild
     manager.register_update_system(
         std::make_unique<ui::ClearUIComponentChildren>());
+}
 
-    // Run autolayout
+// Register post-layout UI systems (autolayout, interactions, cleanup)
+// Call this AFTER registering systems that create UI elements
+inline void registerUIPostLayoutSystems(afterhours::SystemManager& manager) {
+    using namespace afterhours;
+
+    // Run autolayout (must run AFTER all UI elements are created)
     manager.register_update_system(std::make_unique<ui::RunAutoLayout>());
 
     // Track visibility
@@ -115,6 +122,15 @@ inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
     // Compute visual focus
     manager.register_update_system(
         std::make_unique<ui::ComputeVisualFocusId<InputAction>>());
+}
+
+// Register all Afterhours UI update systems with the SystemManager
+// Note: If you have systems that create UI elements (like MenuUISystem),
+// use registerUIPreLayoutSystems and registerUIPostLayoutSystems instead,
+// with your UI-creating systems in between.
+inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
+    registerUIPreLayoutSystems(manager);
+    registerUIPostLayoutSystems(manager);
 }
 
 // Register Afterhours UI render systems with the SystemManager
