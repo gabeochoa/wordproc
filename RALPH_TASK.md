@@ -122,9 +122,9 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
 - [x] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
 - [ ] Add load/save error reporting (surface parse errors and fallback behavior).
-- [ ] Decide on per-range styles vs global style state and update model accordingly.
+- [x] Decide on per-range styles vs global style state and update model accordingly. (Decision: Global style for v0.1; per-range deferred to v0.2)
 - [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
-- [ ] Define validator rules (required fields, types, size limits, supported versions).
+- [x] Define validator rules (required fields, types, size limits, supported versions).
 - [x] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
 - [x] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
 

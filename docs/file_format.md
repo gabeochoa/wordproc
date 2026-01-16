@@ -54,6 +54,20 @@ When loading `.txt` or `.md` files:
 - Default style is applied
 - No metadata is preserved
 
+## Validator Rules
+
+When validating a .wpdoc file:
+
+| Rule | Condition | Action on Failure |
+|------|-----------|-------------------|
+| Valid JSON | Must parse as JSON | Treat as plain text |
+| Has version | `version` field exists | Treat as plain text |
+| Version supported | `version` == 1 | Warn but attempt load |
+| Has text | `text` field exists | Treat raw content as text |
+| Text is string | `text` is string type | Treat as plain text |
+| Font size range | 8 <= fontSize <= 72 | Clamp to range |
+| File size | <= 10MB recommended | Warn if larger |
+
 ## Version History
 
 | Version | Description |
