@@ -1,10 +1,185 @@
 #include "text_buffer.h"
 
 #include <algorithm>
+#include <cstring>
 
-TextBuffer::TextBuffer() { ensureNonEmpty(); }
+// ============================================================================
+// GapBuffer implementation
+// ============================================================================
 
-const std::vector<std::string> &TextBuffer::lines() const { return lines_; }
+GapBuffer::GapBuffer(std::size_t initial_capacity) {
+  buffer_.resize(initial_capacity);
+  gap_start_ = 0;
+  gap_end_ = initial_capacity;
+}
+
+void GapBuffer::moveGapTo(std::size_t pos) {
+  if (pos == gap_start_) {
+    return;
+  }
+  
+  if (pos < gap_start_) {
+    // Move gap backwards: shift characters forward
+    std::size_t shift = gap_start_ - pos;
+    std::memmove(&buffer_[gap_end_ - shift], &buffer_[pos], shift);
+    gap_end_ -= shift;
+    gap_start_ = pos;
+  } else {
+    // Move gap forwards: shift characters backward
+    std::size_t shift = pos - gap_start_;
+    std::memmove(&buffer_[gap_start_], &buffer_[gap_end_], shift);
+    gap_start_ += shift;
+    gap_end_ += shift;
+  }
+}
+
+void GapBuffer::ensureCapacity(std::size_t needed) {
+  std::size_t gap_size = gap_end_ - gap_start_;
+  if (gap_size >= needed) {
+    return;
+  }
+  
+  // Grow by 2x or to fit needed, whichever is larger
+  std::size_t current_size = buffer_.size();
+  std::size_t new_size = std::max(current_size * 2, current_size + needed - gap_size);
+  
+  std::vector<char> new_buffer(new_size);
+  
+  // Copy before gap
+  if (gap_start_ > 0) {
+    std::memcpy(&new_buffer[0], &buffer_[0], gap_start_);
+  }
+  
+  // Copy after gap
+  std::size_t after_gap = current_size - gap_end_;
+  if (after_gap > 0) {
+    std::memcpy(&new_buffer[new_size - after_gap], &buffer_[gap_end_], after_gap);
+  }
+  
+  gap_end_ = new_size - after_gap;
+  buffer_ = std::move(new_buffer);
+}
+
+void GapBuffer::insert(std::size_t pos, char ch) {
+  moveGapTo(pos);
+  ensureCapacity(1);
+  buffer_[gap_start_++] = ch;
+}
+
+void GapBuffer::insertString(std::size_t pos, const char* str, std::size_t len) {
+  if (len == 0) return;
+  moveGapTo(pos);
+  ensureCapacity(len);
+  std::memcpy(&buffer_[gap_start_], str, len);
+  gap_start_ += len;
+}
+
+void GapBuffer::erase(std::size_t pos, std::size_t count) {
+  if (count == 0) return;
+  moveGapTo(pos);
+  // Expand gap to "delete" characters after gap
+  gap_end_ = std::min(gap_end_ + count, buffer_.size());
+}
+
+char GapBuffer::at(std::size_t pos) const {
+  if (pos < gap_start_) {
+    return buffer_[pos];
+  }
+  return buffer_[gap_end_ + (pos - gap_start_)];
+}
+
+std::size_t GapBuffer::size() const {
+  return buffer_.size() - (gap_end_ - gap_start_);
+}
+
+bool GapBuffer::empty() const {
+  return size() == 0;
+}
+
+const char* GapBuffer::data(std::size_t pos, std::size_t len) const {
+  // This only works if the range doesn't span the gap
+  if (pos < gap_start_ && pos + len <= gap_start_) {
+    return &buffer_[pos];
+  }
+  if (pos >= gap_start_) {
+    return &buffer_[gap_end_ + (pos - gap_start_)];
+  }
+  // Range spans gap - return nullptr to indicate copy needed
+  return nullptr;
+}
+
+void GapBuffer::copyTo(std::size_t pos, std::size_t len, char* out) const {
+  for (std::size_t i = 0; i < len; ++i) {
+    out[i] = at(pos + i);
+  }
+}
+
+std::string GapBuffer::toString() const {
+  std::string result;
+  result.reserve(size());
+  
+  // Before gap
+  for (std::size_t i = 0; i < gap_start_; ++i) {
+    result.push_back(buffer_[i]);
+  }
+  
+  // After gap
+  for (std::size_t i = gap_end_; i < buffer_.size(); ++i) {
+    result.push_back(buffer_[i]);
+  }
+  
+  return result;
+}
+
+void GapBuffer::clear() {
+  gap_start_ = 0;
+  gap_end_ = buffer_.size();
+}
+
+// ============================================================================
+// TextBuffer implementation (SoA with gap buffer)
+// ============================================================================
+
+TextBuffer::TextBuffer() { 
+  ensureNonEmpty(); 
+}
+
+std::size_t TextBuffer::lineCount() const {
+  return line_spans_.size();
+}
+
+LineSpan TextBuffer::lineSpan(std::size_t row) const {
+  if (row >= line_spans_.size()) {
+    return {0, 0};
+  }
+  return line_spans_[row];
+}
+
+std::string TextBuffer::lineString(std::size_t row) const {
+  if (row >= line_spans_.size()) {
+    return "";
+  }
+  
+  const LineSpan& span = line_spans_[row];
+  if (span.length == 0) {
+    return "";
+  }
+  
+  std::string result(span.length, '\0');
+  chars_.copyTo(span.offset, span.length, &result[0]);
+  return result;
+}
+
+std::vector<std::string> TextBuffer::lines() const {
+  std::vector<std::string> result;
+  result.reserve(line_spans_.size());
+  
+  for (std::size_t i = 0; i < line_spans_.size(); ++i) {
+    result.push_back(lineString(i));
+  }
+  
+  return result;
+}
 
 CaretPosition TextBuffer::caret() const { return caret_; }
 
@@ -48,23 +223,81 @@ void TextBuffer::updateSelectionToCaret() {
   selection_end_ = caret_;
 }
 
+std::size_t TextBuffer::positionToOffset(const CaretPosition& pos) const {
+  if (pos.row >= line_spans_.size()) {
+    return chars_.size();
+  }
+  
+  const LineSpan& span = line_spans_[pos.row];
+  std::size_t col = std::min(pos.column, span.length);
+  return span.offset + col;
+}
+
+CaretPosition TextBuffer::offsetToPosition(std::size_t offset) const {
+  for (std::size_t row = 0; row < line_spans_.size(); ++row) {
+    const LineSpan& span = line_spans_[row];
+    
+    // Include the newline character in line range check
+    std::size_t next_line_start = (row + 1 < line_spans_.size()) 
+        ? line_spans_[row + 1].offset 
+        : chars_.size();
+    
+    if (offset < next_line_start) {
+      std::size_t col = (offset >= span.offset) ? offset - span.offset : 0;
+      col = std::min(col, span.length);
+      return {row, col};
+    }
+  }
+  
+  // Past end - return end of last line
+  if (!line_spans_.empty()) {
+    std::size_t last = line_spans_.size() - 1;
+    return {last, line_spans_[last].length};
+  }
+  return {0, 0};
+}
+
+void TextBuffer::rebuildLineIndex() {
+  line_spans_.clear();
+  
+  std::size_t total = chars_.size();
+  std::size_t line_start = 0;
+  
+  for (std::size_t i = 0; i < total; ++i) {
+    if (chars_.at(i) == '\n') {
+      line_spans_.push_back({line_start, i - line_start});
+      line_start = i + 1;
+    }
+  }
+  
+  // Add final line (may be empty)
+  line_spans_.push_back({line_start, total - line_start});
+}
+
 void TextBuffer::insertChar(char ch) {
   ensureNonEmpty();
-
+  stats_.total_inserts++;
+  
+  std::size_t offset = positionToOffset(caret_);
+  chars_.insert(offset, ch);
+  
   if (ch == '\n') {
-    std::string &line = lines_[caret_.row];
-    std::string remainder = line.substr(caret_.column);
-    line.erase(caret_.column);
-    lines_.insert(lines_.begin() + static_cast<long>(caret_.row) + 1,
-                  remainder);
+    // Split current line
+    rebuildLineIndex();
     caret_.row += 1;
     caret_.column = 0;
-    return;
+  } else {
+    // Update current line span
+    if (caret_.row < line_spans_.size()) {
+      line_spans_[caret_.row].length += 1;
+      
+      // Shift subsequent line offsets
+      for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
+        line_spans_[i].offset += 1;
+      }
+    }
+    caret_.column += 1;
   }
-
-  std::string &line = lines_[caret_.row];
-  line.insert(line.begin() + static_cast<long>(caret_.column), ch);
-  caret_.column += 1;
 }
 
 void TextBuffer::insertText(const std::string &text) {
@@ -74,45 +307,36 @@ void TextBuffer::insertText(const std::string &text) {
 }
 
 void TextBuffer::setText(const std::string &text) {
-  lines_.clear();
-  std::string current;
-
-  for (char ch : text) {
-    if (ch == '\n') {
-      if (!current.empty() && current.back() == '\r') {
-        current.pop_back();
+  chars_.clear();
+  line_spans_.clear();
+  
+  if (!text.empty()) {
+    // Remove \r from CRLF line endings
+    std::string cleaned;
+    cleaned.reserve(text.size());
+    for (char ch : text) {
+      if (ch != '\r') {
+        cleaned.push_back(ch);
       }
-      lines_.push_back(current);
-      current.clear();
-      continue;
     }
-    current.push_back(ch);
+    
+    chars_.insertString(0, cleaned.c_str(), cleaned.size());
   }
-
-  if (!current.empty() && current.back() == '\r') {
-    current.pop_back();
+  
+  rebuildLineIndex();
+  
+  // Move caret to end
+  if (!line_spans_.empty()) {
+    caret_.row = line_spans_.size() - 1;
+    caret_.column = line_spans_[caret_.row].length;
+  } else {
+    caret_ = {0, 0};
   }
-  lines_.push_back(current);
-
-  ensureNonEmpty();
-  caret_.row = lines_.size() - 1;
-  caret_.column = lines_[caret_.row].size();
   clearSelection();
 }
 
 std::string TextBuffer::getText() const {
-  if (lines_.empty()) {
-    return "";
-  }
-
-  std::string result;
-  for (std::size_t i = 0; i < lines_.size(); ++i) {
-    result += lines_[i];
-    if (i + 1 < lines_.size()) {
-      result += '\n';
-    }
-  }
-  return result;
+  return chars_.toString();
 }
 
 TextStyle TextBuffer::textStyle() const { return style_; }
@@ -121,10 +345,20 @@ void TextBuffer::setTextStyle(const TextStyle &style) { style_ = style; }
 
 void TextBuffer::backspace() {
   ensureNonEmpty();
-
+  
   if (caret_.column > 0) {
-    std::string &line = lines_[caret_.row];
-    line.erase(line.begin() + static_cast<long>(caret_.column) - 1);
+    // Delete character before caret on same line
+    std::size_t offset = positionToOffset(caret_);
+    chars_.erase(offset - 1, 1);
+    stats_.total_deletes++;
+    
+    line_spans_[caret_.row].length -= 1;
+    
+    // Shift subsequent line offsets
+    for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
+      line_spans_[i].offset -= 1;
+    }
+    
     caret_.column -= 1;
     return;
   }
@@ -133,30 +367,49 @@ void TextBuffer::backspace() {
     return;
   }
 
-  std::string &line = lines_[caret_.row];
-  std::string &prev = lines_[caret_.row - 1];
-  std::size_t prev_len = prev.size();
-  prev += line;
-  lines_.erase(lines_.begin() + static_cast<long>(caret_.row));
+  // Join with previous line - delete the newline
+  std::size_t prev_line_len = line_spans_[caret_.row - 1].length;
+  std::size_t newline_offset = line_spans_[caret_.row - 1].offset + prev_line_len;
+  
+  chars_.erase(newline_offset, 1);
+  stats_.total_deletes++;
+  
+  rebuildLineIndex();
+  
   caret_.row -= 1;
-  caret_.column = prev_len;
+  caret_.column = prev_line_len;
 }
 
 void TextBuffer::del() {
   ensureNonEmpty();
-
-  std::string &line = lines_[caret_.row];
-  if (caret_.column < line.size()) {
-    line.erase(line.begin() + static_cast<long>(caret_.column));
+  
+  const LineSpan& span = line_spans_[caret_.row];
+  
+  if (caret_.column < span.length) {
+    // Delete character at caret
+    std::size_t offset = positionToOffset(caret_);
+    chars_.erase(offset, 1);
+    stats_.total_deletes++;
+    
+    line_spans_[caret_.row].length -= 1;
+    
+    // Shift subsequent line offsets
+    for (std::size_t i = caret_.row + 1; i < line_spans_.size(); ++i) {
+      line_spans_[i].offset -= 1;
+    }
     return;
   }
 
-  if (caret_.row + 1 >= lines_.size()) {
+  if (caret_.row + 1 >= line_spans_.size()) {
     return;
   }
 
-  line += lines_[caret_.row + 1];
-  lines_.erase(lines_.begin() + static_cast<long>(caret_.row) + 1);
+  // Join with next line - delete the newline at end of current line
+  std::size_t newline_offset = span.offset + span.length;
+  chars_.erase(newline_offset, 1);
+  stats_.total_deletes++;
+  
+  rebuildLineIndex();
 }
 
 void TextBuffer::moveLeft() {
@@ -168,16 +421,16 @@ void TextBuffer::moveLeft() {
     return;
   }
   caret_.row -= 1;
-  caret_.column = lines_[caret_.row].size();
+  caret_.column = line_spans_[caret_.row].length;
 }
 
 void TextBuffer::moveRight() {
-  std::string &line = lines_[caret_.row];
-  if (caret_.column < line.size()) {
+  const LineSpan& span = line_spans_[caret_.row];
+  if (caret_.column < span.length) {
     caret_.column += 1;
     return;
   }
-  if (caret_.row + 1 >= lines_.size()) {
+  if (caret_.row + 1 >= line_spans_.size()) {
     return;
   }
   caret_.row += 1;
@@ -189,35 +442,33 @@ void TextBuffer::moveUp() {
     return;
   }
   caret_.row -= 1;
-  caret_.column =
-      std::min(caret_.column, lines_[caret_.row].size());
+  caret_.column = std::min(caret_.column, line_spans_[caret_.row].length);
 }
 
 void TextBuffer::moveDown() {
-  if (caret_.row + 1 >= lines_.size()) {
+  if (caret_.row + 1 >= line_spans_.size()) {
     return;
   }
   caret_.row += 1;
-  caret_.column =
-      std::min(caret_.column, lines_[caret_.row].size());
+  caret_.column = std::min(caret_.column, line_spans_[caret_.row].length);
 }
 
 void TextBuffer::ensureNonEmpty() {
-  if (lines_.empty()) {
-    lines_.emplace_back();
+  if (line_spans_.empty()) {
+    line_spans_.push_back({0, 0});
   }
   clampCaret();
 }
 
 void TextBuffer::clampCaret() {
-  if (lines_.empty()) {
+  if (line_spans_.empty()) {
     caret_ = {};
     return;
   }
-  if (caret_.row >= lines_.size()) {
-    caret_.row = lines_.size() - 1;
+  if (caret_.row >= line_spans_.size()) {
+    caret_.row = line_spans_.size() - 1;
   }
-  std::size_t max_column = lines_[caret_.row].size();
+  std::size_t max_column = line_spans_[caret_.row].length;
   if (caret_.column > max_column) {
     caret_.column = max_column;
   }

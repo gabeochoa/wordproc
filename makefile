@@ -293,5 +293,10 @@ e2e: $(MAIN_EXE)
 	@echo "Running E2E tests..."
 	@./tests/run_e2e.sh
 
-.PHONY: test test-verbose e2e
+# Load-time benchmark (measures cold start for test files)
+benchmark: $(MAIN_EXE)
+	@echo "Running load-time benchmark..."
+	@./tests/run_benchmark.sh
+
+.PHONY: test test-verbose e2e benchmark
 

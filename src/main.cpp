@@ -82,10 +82,10 @@ void drawSunkenBorder(raylib::Rectangle rect) {
                    colors::BORDER_LIGHT);
 }
 
-// Render text buffer with caret and selection
+// Render text buffer with caret and selection (uses SoA layout for efficiency)
 void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
                       bool caretVisible, int fontSize, int lineHeight) {
-  const auto &lines = buffer.lines();
+  std::size_t lineCount = buffer.lineCount();
   CaretPosition caret = buffer.caret();
   bool hasSelection = buffer.hasSelection();
   CaretPosition selStart = buffer.selectionStart();
@@ -97,8 +97,8 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
 
   int y = static_cast<int>(textArea.y) + TEXT_PADDING;
   
-  for (std::size_t row = 0; row < lines.size(); ++row) {
-    const std::string &line = lines[row];
+  for (std::size_t row = 0; row < lineCount; ++row) {
+    LineSpan span = buffer.lineSpan(row);
     int x = static_cast<int>(textArea.x) + TEXT_PADDING;
 
     // Draw selection highlight for this line
@@ -106,7 +106,7 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
       bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
       if (lineInSelection) {
         std::size_t startCol = (row == selStart.row) ? selStart.column : 0;
-        std::size_t endCol = (row == selEnd.row) ? selEnd.column : line.size();
+        std::size_t endCol = (row == selEnd.row) ? selEnd.column : span.length;
         
         if (startCol < endCol) {
           int selX = x + static_cast<int>(startCol) * charWidth;
@@ -116,8 +116,9 @@ void renderTextBuffer(const TextBuffer &buffer, raylib::Rectangle textArea,
       }
     }
 
-    // Draw text
-    if (!line.empty()) {
+    // Draw text (get line string for rendering - could be optimized further with direct char access)
+    if (span.length > 0) {
+      std::string line = buffer.lineString(row);
       raylib::DrawText(line.c_str(), x, y, fontSize, colors::TEXT_COLOR);
     }
 

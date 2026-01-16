@@ -82,6 +82,34 @@ This is how Ralph maintains continuity across iterations.
 ### 2026-01-15 18:06:36
 **Session 1 started** (model: opus-4.5-thinking)
 
+### 2026-01-15 (continued)
+- Added Catch2 v2 unit testing framework with 101 assertions across 13 test cases
+- Created test files: test_text_buffer.cpp, test_text_layout.cpp, test_document_io.cpp
+- Added 'make test', 'make test-verbose', and 'make e2e' targets to makefile
+- Implemented Win95-style UI rendering:
+  - Blue title bar with filename and dirty indicator
+  - Gray window chrome with 3D borders
+  - Sunken text editing area
+  - Status bar showing line/col, formatting, font size
+- Added blinking caret with 500ms interval
+- Added selection highlight rendering
+- Added test mode (--test-mode) with screenshot capture
+- Added font size controls: Ctrl+Plus/Minus to adjust, Ctrl+0 to reset
+- Created comprehensive style_guide.md with Win95/Mac3.1 design specs
+- Updated TextStyle to include fontSize field with persistence
+
+**Success criteria completed: 6/8**
+- [x] P0 testing stack
+- [x] App launches with typing/caret/save/open
+- [x] Bold/italic and font selection
+- [x] style_guide.md
+- [x] AfterhoursGaps.md
+- [x] Assets/config copied and integrated
+
+**Remaining:**
+- [ ] SoA layout with performance wins
+- [ ] 100ms cold start measured and tracked
+
 ### 2026-01-15 18:17:07
 **Session 1 ended** - 🔄 Context rotation (token limit reached)
 

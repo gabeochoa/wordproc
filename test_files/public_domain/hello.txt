@@ -1,0 +1,3 @@
+Hello, World!
+
+This is a simple test file for the Wordproc application.

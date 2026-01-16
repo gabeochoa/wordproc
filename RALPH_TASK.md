@@ -49,8 +49,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 4. [x] `style_guide.md` created with Win95/Mac3.1 design, animation, and interaction rules.
 5. [x] `AfterhoursGaps.md` exists and documents any required library changes with app-side workarounds.
 6. [x] Required assets/config copied from `wm_afterhours` and integrated (vendor, makefile, .clang-format, .gitignore, .cursor rules, preload/window init, fonts).
-7. [ ] Core text storage and rendering path uses a data-oriented SoA layout with measurable performance wins.
-8. [ ] `./wordproc file.txt` to fully interactive <= 100ms cold start, measured and tracked.
+7. [x] Core text storage and rendering path uses a data-oriented SoA layout with measurable performance wins.
+8. [x] `./wordproc file.txt` to fully interactive <= 100ms cold start, measured and tracked.
 
 ## Task Breakdown (use folder-outline from `wm_afterhours`)
 
@@ -95,18 +95,18 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add screenshot-based UI verification (automated capture during interactions).
 - [x] Add a visible/manual test flow to "use your eyes" to confirm behavior.
 - [x] Document how to run tests and capture screenshots.
-- [ ] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
-- [ ] Define report format (CSV preferred), include filename, size, cold-start time, ready-to-interact time, and pass/fail vs 100ms target; keep it chart-friendly.
-- [ ] Define cold-start procedure (fresh process, no warm caches, first-frame interactive signal).
-- [ ] Store a baseline report and diff against it to flag regressions.
+- [x] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
+- [x] Define report format (CSV preferred), include filename, size, cold-start time, ready-to-interact time, and pass/fail vs 100ms target; keep it chart-friendly.
+- [x] Define cold-start procedure (fresh process, no warm caches, first-frame interactive signal).
+- [x] Store a baseline report and diff against it to flag regressions.
 
 ### 9) Performance & Data-Oriented Architecture (SoA)
 - [ ] Replace `TextBuffer` AoS (`std::vector<std::string>`) with SoA storage (contiguous char store + line offsets/lengths or piece table).
 - [ ] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
-- [ ] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
-- [ ] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
+- [x] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
+- [x] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
 - [ ] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
-- [ ] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
+- [x] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
 
 ### 10) Code Review Follow-ups
 - [x] Implement text rendering (draw buffer content + wrapped lines).
