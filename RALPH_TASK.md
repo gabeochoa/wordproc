@@ -43,6 +43,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 10. Document format version is always `v0.1` for now.
 11. Cursor overlay must align precisely with the actual edit position (no rightward offset).
 12. Executable name is `wordproc` (not `ui_tester`).
+13. Build must run and compile cleanly with `-Wall -Wextra` and no warnings when possible.
 
 ## Success Criteria
 1. [x] P0 testing stack in place: unit + integration + e2e/screenshot tests with manual visual verification.
@@ -174,11 +175,12 @@ These are architectural improvements and new features for future versions. They 
 - [ ] Add a test that loads the largest file and logs FPS while scrolling.
 - [ ] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
 - [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
+- [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
 - [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
 - [ ] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
 - [ ] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).
-- (v0.2) Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
+- [2) Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
 - (v0.2) Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
 - (v0.2) Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
 
@@ -195,10 +197,10 @@ These are architectural improvements and new features for future versions. They 
 ---
 
 ## Refactor Opportunities (reduce LOC / simplify - non-blocking v0.2+)
-- (v0.2) Centralize editor actions into a command table (keyboard + menu dispatch in one place).
-- (v0.2) Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
-- (v0.2) Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
-- (v0.2) Remove or wire `RenderCache` (avoid unused code paths).
-- (v0.2) Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
-- (v0.2) Make font loading table-driven instead of manual per-font wiring.
-- (v0.2) Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
+- [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
+- [ ] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
+- [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
+- [ ] Remove or wire `RenderCache` (avoid unused code paths).
+- [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
+- [ ] Make font loading table-driven instead of manual per-font wiring.
+- [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
