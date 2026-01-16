@@ -83,48 +83,19 @@ inline void initWin95Theme() {
     themeDefaults.set_theme(createWin95Theme());
 }
 
-// Create and initialize the UI context entity
+// Initialize the UI context with current screen dimensions
+// Note: Preload::make_singleton() already creates UIContext and other singletons
+// This function just updates the resolution and applies the Win95 theme
 inline void initUIContext(int screenWidth, int screenHeight) {
     using namespace afterhours;
 
     // Initialize theme first
     initWin95Theme();
 
-    // Check if resolution provider already exists (may be registered by Preload)
-    auto* existingRes = EntityHelper::get_singleton_cmp<window_manager::ProvidesCurrentResolution>();
-    if (existingRes) {
-        // Just update the resolution
-        existingRes->current_resolution = {screenWidth, screenHeight};
-    } else {
-        // Create resolution provider entity (required by RunAutoLayout)
-        auto& resEntity = EntityHelper::createEntity();
-        auto& resProv =
-            resEntity.addComponent<window_manager::ProvidesCurrentResolution>();
-        resProv.current_resolution = {screenWidth, screenHeight};
-        EntityHelper::registerSingleton<window_manager::ProvidesCurrentResolution>(
-            resEntity);
-    }
-
-    // Check if UI context already exists
-    auto* existingCtx = EntityHelper::get_singleton_cmp<UIContextType>();
-    if (!existingCtx) {
-        // Create UI context entity with the context component
-        auto& ctxEntity = EntityHelper::createEntity();
-        ctxEntity.addComponent<UIContextType>();
-        EntityHelper::registerSingleton<UIContextType>(ctxEntity);
-    }
-
-    // Check if UI root already exists
-    auto roots = EntityQuery({.ignore_temp_warning = true})
-                     .whereHasComponent<ui::AutoLayoutRoot>()
-                     .gen();
-    if (roots.empty()) {
-        // Create the root entity for all UI elements
-        auto& rootEntity = EntityHelper::createEntity();
-        rootEntity.addComponent<ui::AutoLayoutRoot>();
-        auto& rootCmp = rootEntity.addComponent<ui::UIComponent>(rootEntity.id);
-        rootCmp.set_desired_width(ui::percent(1.0f))
-            .set_desired_height(ui::percent(1.0f));
+    // Update resolution (already registered by Preload::make_singleton)
+    auto* resProv = EntityHelper::get_singleton_cmp<window_manager::ProvidesCurrentResolution>();
+    if (resProv) {
+        resProv->current_resolution = {screenWidth, screenHeight};
     }
 }
 
