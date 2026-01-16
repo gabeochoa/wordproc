@@ -2,143 +2,166 @@
 
 #include <string>
 #include <unordered_map>
-#include <vector>
+#include <optional>
 
-#include "../input/action_map.h"
+// Icon registry maps actions to approved icons
+// Design rule: One action = one icon. Icons add meaning that text cannot.
+//
+// Usage:
+//   auto icon = IconRegistry::getIcon(Action::Undo);
+//   if (icon) drawIcon(*icon, x, y);
+//
+// Icon sources (Win95/Mac 3.1 style):
+// - Icons should be 16x16 or 32x32 pixels
+// - Pixel-aligned, minimal detail, clear silhouettes
+// - Paired actions (undo/redo) use mirrored metaphors
 
-// Icon identifier type
-using IconId = std::string;
+namespace IconRegistry {
+
+// Icon identifiers - these map to actual icon resources
+// For now we use text labels; can be replaced with actual icon paths/sprites
+enum class IconId {
+    // File operations
+    New,
+    Open,
+    Save,
+    SaveAs,
+    Print,
+    
+    // Edit operations
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    Delete,
+    SelectAll,
+    Find,
+    Replace,
+    
+    // Format operations
+    Bold,
+    Italic,
+    Underline,
+    Strikethrough,
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    AlignJustify,
+    BulletList,
+    NumberList,
+    IndentIncrease,
+    IndentDecrease,
+    
+    // Insert operations
+    InsertImage,
+    InsertTable,
+    InsertLink,
+    InsertPageBreak,
+    InsertShape,
+    InsertEquation,
+    
+    // View operations
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
+    ShowGrid,
+    ShowRuler,
+    
+    // Navigation
+    GoToTop,
+    GoToBottom,
+    PageUp,
+    PageDown,
+    NextBookmark,
+    PrevBookmark,
+    
+    // Help
+    Help,
+    About,
+    
+    // No icon (placeholder)
+    None
+};
 
 // Icon metadata
 struct IconInfo {
-    IconId id;                    // Unique identifier (e.g., "save", "undo")
-    const char* name;             // Display name for accessibility
-    const char* description;      // Tooltip/description
-    bool isPaired = false;        // Part of a paired action (undo/redo, etc.)
-    IconId pairedWith;            // ID of paired icon (if isPaired)
+    IconId id;
+    std::string name;           // Display name for debugging
+    std::string resourcePath;   // Path to icon resource (empty = no visual icon)
+    char textSymbol;            // Fallback text symbol (for Win95 style)
+    bool useMirror;            // True if this is the mirrored version of another icon
+    IconId mirrorOf;           // If mirrored, the base icon
 };
 
-// Icon registry - maps actions to approved icons
-// Ensures one action = one icon, consistent metaphors across the app
-class IconRegistry {
-public:
-    static IconRegistry& instance() {
-        static IconRegistry registry;
-        return registry;
-    }
+// Get icon info for an action (returns nullopt if no icon assigned)
+inline std::optional<IconInfo> getIcon(IconId id) {
+    static const std::unordered_map<IconId, IconInfo> registry = {
+        // File operations - simple document metaphors
+        {IconId::New,      {IconId::New, "New", "", '+', false, IconId::None}},
+        {IconId::Open,     {IconId::Open, "Open", "", 'O', false, IconId::None}},
+        {IconId::Save,     {IconId::Save, "Save", "", 'S', false, IconId::None}},
+        {IconId::Print,    {IconId::Print, "Print", "", 'P', false, IconId::None}},
+        
+        // Edit operations - paired undo/redo use mirrored arrows
+        {IconId::Undo,     {IconId::Undo, "Undo", "", '<', false, IconId::None}},
+        {IconId::Redo,     {IconId::Redo, "Redo", "", '>', true, IconId::Undo}},
+        {IconId::Cut,      {IconId::Cut, "Cut", "", 'X', false, IconId::None}},
+        {IconId::Copy,     {IconId::Copy, "Copy", "", 'C', false, IconId::None}},
+        {IconId::Paste,    {IconId::Paste, "Paste", "", 'V', false, IconId::None}},
+        
+        // Format operations
+        {IconId::Bold,         {IconId::Bold, "Bold", "", 'B', false, IconId::None}},
+        {IconId::Italic,       {IconId::Italic, "Italic", "", 'I', false, IconId::None}},
+        {IconId::Underline,    {IconId::Underline, "Underline", "", 'U', false, IconId::None}},
+        {IconId::AlignLeft,    {IconId::AlignLeft, "Align Left", "", '[', false, IconId::None}},
+        {IconId::AlignCenter,  {IconId::AlignCenter, "Align Center", "", '|', false, IconId::None}},
+        {IconId::AlignRight,   {IconId::AlignRight, "Align Right", "", ']', true, IconId::AlignLeft}},
+        
+        // Indent uses mirrored arrows
+        {IconId::IndentIncrease, {IconId::IndentIncrease, "Indent", "", '>', false, IconId::None}},
+        {IconId::IndentDecrease, {IconId::IndentDecrease, "Outdent", "", '<', true, IconId::IndentIncrease}},
+        
+        // Navigation
+        {IconId::ZoomIn,   {IconId::ZoomIn, "Zoom In", "", '+', false, IconId::None}},
+        {IconId::ZoomOut,  {IconId::ZoomOut, "Zoom Out", "", '-', false, IconId::None}},
+        
+        // Help
+        {IconId::Help,     {IconId::Help, "Help", "", '?', false, IconId::None}},
+    };
     
-    // Get icon for an action
-    const IconInfo* iconForAction(Action action) const {
-        auto it = actionToIcon_.find(action);
-        if (it != actionToIcon_.end()) {
-            return &it->second;
-        }
-        return nullptr;
+    auto it = registry.find(id);
+    if (it != registry.end()) {
+        return it->second;
     }
-    
-    // Check if an action has an approved icon
-    bool hasIcon(Action action) const {
-        return actionToIcon_.count(action) > 0;
-    }
-    
-    // Get all icons (for auditing/display)
-    const std::unordered_map<Action, IconInfo>& allIcons() const {
-        return actionToIcon_;
-    }
-    
-    // Get paired actions (for consistent metaphor verification)
-    const std::vector<std::pair<Action, Action>>& pairedActions() const {
-        return pairedActions_;
-    }
-    
-private:
-    IconRegistry() {
-        // Register approved icons for actions
-        // Icons are opt-in only - actions without icons here won't display icons
-        
-        // File operations
-        registerIcon(Action::NewDocument, {"new", "New", "Create new document"});
-        registerIcon(Action::Open, {"open", "Open", "Open document"});
-        registerIcon(Action::Save, {"save", "Save", "Save document"});
-        registerIcon(Action::Print, {"print", "Print", "Print document"});
-        
-        // Edit operations (paired)
-        registerPairedIcons(
-            Action::Undo, {"undo", "Undo", "Undo last action"},
-            Action::Redo, {"redo", "Redo", "Redo last action"}
-        );
-        
-        registerIcon(Action::Cut, {"cut", "Cut", "Cut selection"});
-        registerIcon(Action::Copy, {"copy", "Copy", "Copy selection"});
-        registerIcon(Action::Paste, {"paste", "Paste", "Paste from clipboard"});
-        
-        // Formatting
-        registerIcon(Action::Bold, {"bold", "Bold", "Toggle bold"});
-        registerIcon(Action::Italic, {"italic", "Italic", "Toggle italic"});
-        registerIcon(Action::Underline, {"underline", "Underline", "Toggle underline"});
-        
-        // Alignment (related group - use similar visual style)
-        registerIcon(Action::AlignLeft, {"align-left", "Align Left", "Align text left"});
-        registerIcon(Action::AlignCenter, {"align-center", "Align Center", "Center text"});
-        registerIcon(Action::AlignRight, {"align-right", "Align Right", "Align text right"});
-        registerIcon(Action::AlignJustify, {"align-justify", "Justify", "Justify text"});
-        
-        // Lists (paired concept)
-        registerPairedIcons(
-            Action::BulletedList, {"list-bullet", "Bullets", "Toggle bulleted list"},
-            Action::NumberedList, {"list-numbered", "Numbering", "Toggle numbered list"}
-        );
-        
-        // Indentation (paired)
-        registerPairedIcons(
-            Action::IndentIncrease, {"indent-increase", "Increase Indent", "Increase indentation"},
-            Action::IndentDecrease, {"indent-decrease", "Decrease Indent", "Decrease indentation"}
-        );
-        
-        // Find
-        registerIcon(Action::Find, {"find", "Find", "Find text"});
-        registerIcon(Action::Replace, {"replace", "Replace", "Find and replace"});
-        
-        // Zoom (paired)
-        registerPairedIcons(
-            Action::ZoomIn, {"zoom-in", "Zoom In", "Increase zoom"},
-            Action::ZoomOut, {"zoom-out", "Zoom Out", "Decrease zoom"}
-        );
-    }
-    
-    void registerIcon(Action action, IconInfo info) {
-        actionToIcon_[action] = info;
-    }
-    
-    void registerPairedIcons(Action action1, IconInfo info1, 
-                             Action action2, IconInfo info2) {
-        info1.isPaired = true;
-        info1.pairedWith = info2.id;
-        info2.isPaired = true;
-        info2.pairedWith = info1.id;
-        
-        actionToIcon_[action1] = info1;
-        actionToIcon_[action2] = info2;
-        pairedActions_.emplace_back(action1, action2);
-    }
-    
-    std::unordered_map<Action, IconInfo> actionToIcon_;
-    std::vector<std::pair<Action, Action>> pairedActions_;
-};
-
-// Helper function to check if an action should show an icon
-inline bool shouldShowIcon(Action action) {
-    return IconRegistry::instance().hasIcon(action);
+    return std::nullopt;
 }
 
-// Helper function to get icon ID for an action
-inline const char* getIconId(Action action) {
-    const IconInfo* info = IconRegistry::instance().iconForAction(action);
-    return info ? info->id.c_str() : nullptr;
+// Check if an icon is approved for use
+inline bool hasApprovedIcon(IconId id) {
+    return getIcon(id).has_value();
 }
 
-// Helper function to get icon name for accessibility
-inline const char* getIconName(Action action) {
-    const IconInfo* info = IconRegistry::instance().iconForAction(action);
-    return info ? info->name : nullptr;
+// Get the text symbol fallback for an icon
+inline char getIconSymbol(IconId id) {
+    auto info = getIcon(id);
+    return info ? info->textSymbol : ' ';
 }
+
+// Check if icons should be shown (based on UI density preference)
+// For Win95 style, icons are optional and text labels are primary
+inline bool shouldShowIcons() {
+    // Default: icons add meaning but are not required
+    // Return true to show icons in toolbar/menus where available
+    return true;
+}
+
+// Design rules for icon usage:
+// 1. Icons are opt-in only - add meaning that text cannot
+// 2. Each action has at most one icon (consistency)
+// 3. Icons must be legible at 16x16 (minimal detail)
+// 4. Paired actions use mirrored metaphors (undo/redo, indent/outdent)
+// 5. Icons never replace text labels - labels are always shown
+// 6. Use standard Win95 metaphors where applicable
+
+}  // namespace IconRegistry
