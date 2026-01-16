@@ -1,0 +1,25 @@
+# Test: Numbered list (Ctrl+Shift+7)
+# Validates numbered list toggle
+
+# Type some text
+type "Numbered Item One"
+wait 2
+
+# Toggle numbered list
+key CTRL+SHIFT+7
+wait 2
+validate list_type=numbered
+
+# Add another item
+key ENTER
+type "Numbered Item Two"
+wait 2
+validate list_type=numbered
+
+# Toggle off
+key CTRL+SHIFT+7
+wait 2
+validate list_type=none
+
+screenshot e2e_numbered_list
+

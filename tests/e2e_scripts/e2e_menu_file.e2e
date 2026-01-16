@@ -1,0 +1,19 @@
+# Test: File menu
+# Validates File menu opens and contains expected items
+
+# Click on File menu
+click_menu File
+wait 1
+
+# Validate File menu is open
+validate menu_open=File
+
+# Validate expected items exist
+validate menu_item_exists=New
+validate menu_item_exists=Open
+validate menu_item_exists=Save
+validate menu_item_exists=Exit
+
+# Take screenshot
+screenshot 41_menu_file
+

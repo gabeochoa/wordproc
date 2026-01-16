@@ -1,0 +1,22 @@
+# Test: Mouse drag creates selection
+# Validates that mouse drag creates a text selection
+
+# Type some text
+type "Drag to select this text"
+wait 2
+
+# Clear any selection
+key HOME
+wait 2
+validate has_selection=false
+
+# Drag from start to middle
+drag 100 100 300 100
+wait 2
+
+# Validate selection was created
+validate has_selection=true
+validate selection_length_greater_than=0
+
+screenshot e2e_mouse_drag_selection
+

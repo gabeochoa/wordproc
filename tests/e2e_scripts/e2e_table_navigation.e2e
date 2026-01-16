@@ -1,0 +1,37 @@
+# Test: Table navigation (Tab/Shift+Tab)
+# Validates Tab and Shift+Tab navigate table cells
+
+# Insert a 2x2 table first
+menu_open Insert
+wait 2
+menu_select "Table..."
+wait 2
+type "2"
+key TAB
+type "2"
+key ENTER
+wait 2
+
+# Type in first cell
+type "Cell 1"
+wait 2
+
+# Tab to next cell
+key TAB
+wait 2
+type "Cell 2"
+wait 2
+
+# Tab to third cell
+key TAB
+wait 2
+type "Cell 3"
+wait 2
+
+# Shift+Tab back to cell 2
+key SHIFT+TAB
+wait 2
+validate cell_content=Cell 2
+
+screenshot e2e_table_navigation
+

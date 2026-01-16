@@ -1,0 +1,35 @@
+# Test: Image insertion
+# Validates image can be inserted
+
+# Type some text
+type "Here is an image:"
+key ENTER
+wait 2
+
+# Insert image
+menu_open Insert
+wait 2
+menu_select "Image..."
+wait 2
+
+# Select test image file (using file dialog simulation)
+type "resources/test_image.png"
+key ENTER
+wait 2
+
+# Validate image was inserted
+validate has_image=true
+validate image_count=1
+
+# Test layout mode change
+menu_open Format
+wait 2
+menu_select "Image Layout..."
+wait 2
+menu_select "Wrap Text"
+wait 2
+
+validate image_layout=wrap
+
+screenshot e2e_image
+

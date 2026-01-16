@@ -1,31 +1,33 @@
-# Test: Text alignment (left/center/right/justify)
-# Validates alignment via Ctrl+L/E/R/J
+# Test: Text alignment (Ctrl+L/E/R/J)
+# Validates left/center/right/justify alignment
 
 # Type some text
-type "Aligned Text Sample"
-wait 1
+type "Alignment Test"
+wait 2
 
-# Center align (Ctrl+E)
-key ctrl+e
-wait 1
-
-# Validate center alignment
-validate alignment=center
-
-# Right align (Ctrl+R)
-key ctrl+r
-wait 1
-
-# Validate right alignment
-validate alignment=right
-
-# Left align (Ctrl+L)
-key ctrl+l
-wait 1
-
-# Validate left alignment
+# Test left align (Ctrl+L)
+key CTRL+L
+wait 2
 validate alignment=left
 
-# Take screenshot
-screenshot 09_text_alignment
+# Test center align (Ctrl+E)
+key CTRL+E
+wait 2
+validate alignment=center
+
+# Test right align (Ctrl+R)
+key CTRL+R
+wait 2
+validate alignment=right
+
+# Test justify (Ctrl+J)
+key CTRL+J
+wait 2
+validate alignment=justify
+
+# Return to left
+key CTRL+L
+wait 2
+
+screenshot e2e_text_alignment
 

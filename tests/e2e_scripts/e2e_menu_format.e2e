@@ -1,0 +1,18 @@
+# Test: Format menu
+# Validates Format menu opens and contains expected items
+
+# Click on Format menu
+click_menu Format
+wait 1
+
+# Validate Format menu is open
+validate menu_open=Format
+
+# Validate expected items exist
+validate menu_item_exists=Bold
+validate menu_item_exists=Italic
+validate menu_item_exists=Underline
+
+# Take screenshot
+screenshot 43_menu_format
+

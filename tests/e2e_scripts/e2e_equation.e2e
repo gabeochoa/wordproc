@@ -1,0 +1,24 @@
+# Test: Equation insertion
+# Validates equation can be inserted
+
+# Type introductory text
+type "The quadratic formula is: "
+wait 2
+
+# Insert equation
+menu_open Insert
+wait 2
+menu_select "Equation..."
+wait 2
+
+# Type equation in LaTeX format
+type "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}"
+key ENTER
+wait 2
+
+# Validate equation was inserted
+validate has_equation=true
+validate equation_count=1
+
+screenshot e2e_equation
+

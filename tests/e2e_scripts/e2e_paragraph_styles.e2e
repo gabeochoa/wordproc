@@ -1,17 +1,29 @@
-# Test: Paragraph styles (H1-H6 and Normal)
-# Validates heading styles via Ctrl+Alt+0-6
+# Test: Paragraph styles (H1-H6, Normal)
+# Validates heading styles can be applied with Ctrl+Alt+0-6
 
-# Type heading text
-type "Heading 1 Test"
-wait 1
+# Type some text
+type "Heading Test"
+wait 2
 
-# Apply Heading 1 style (Ctrl+Alt+1)
-key ctrl+alt+1
-wait 1
+# Apply H1 style
+key CTRL+ALT+1
+wait 2
+validate paragraph_style=h1
 
-# Validate H1 style applied
-validate paragraph_style=Heading1
+# Apply H2 style
+key CTRL+ALT+2
+wait 2
+validate paragraph_style=h2
 
-# Take screenshot
-screenshot 08_paragraph_styles
+# Apply H3 style
+key CTRL+ALT+3
+wait 2
+validate paragraph_style=h3
+
+# Apply Normal style
+key CTRL+ALT+0
+wait 2
+validate paragraph_style=normal
+
+screenshot e2e_paragraph_styles
 

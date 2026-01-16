@@ -1,0 +1,13 @@
+# Test: Help window (F1)
+# Validates F1 opens help/keyboard shortcuts window
+
+# Press F1 to open help
+key f1
+wait 1
+
+# Validate help window is visible
+validate help_visible=true
+
+# Take screenshot
+screenshot 45_help_window
+

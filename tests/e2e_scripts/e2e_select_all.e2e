@@ -1,0 +1,21 @@
+# Test: Select all (Ctrl+A)
+# Validates select all functionality
+
+# Type some text
+type "First line"
+key ENTER
+type "Second line"
+key ENTER
+type "Third line"
+wait 2
+
+# Select all
+key CTRL+A
+wait 2
+
+# Validate selection covers all text
+validate has_selection=true
+validate selection_length=33
+
+screenshot e2e_select_all
+

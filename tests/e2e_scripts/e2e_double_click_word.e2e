@@ -1,0 +1,22 @@
+# Test: Double-click selects word
+# Validates that double-click selects a word
+
+# Type some text with multiple words
+type "One Two Three Four"
+wait 2
+
+# Clear selection and move to start
+key HOME
+wait 2
+validate has_selection=false
+
+# Double-click on "Two" (approximate position)
+double_click 150 100
+wait 2
+
+# Validate a word was selected
+validate has_selection=true
+validate selected_text=Two
+
+screenshot e2e_double_click_word
+

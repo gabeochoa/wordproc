@@ -1,21 +1,23 @@
-# Test: Italic formatting (Ctrl+I)
-# Validates that italic toggle applies italic style to text
+# Test: Italic text formatting (Ctrl+I)
+# Validates that italic formatting can be toggled
 
 # Type some text
-type "Test Italic"
-wait 1
+type "Italic Text Test"
+wait 2
 
-# Select all text
-key ctrl+a
-wait 1
+# Select all and apply italic
+select_all
+wait 2
+key CTRL+I
+wait 2
 
-# Apply italic
-key ctrl+i
-wait 1
+# Validate italic is enabled
+validate italic=true
 
-# Validate italic is applied
-validate style_italic=true
+# Toggle italic off
+key CTRL+I
+wait 2
+validate italic=false
 
-# Take screenshot
-screenshot 03_italic_formatting
+screenshot e2e_italic_formatting
 

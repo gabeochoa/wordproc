@@ -1,0 +1,37 @@
+# Test: Page setup (size, orientation, margins)
+# Validates page size and orientation settings
+
+# Open File menu for Page Setup
+menu_open File
+wait 2
+menu_select "Page Setup..."
+wait 2
+
+# Change to Legal size
+menu_select "Legal"
+wait 2
+validate page_size=legal
+
+# Change orientation to Landscape
+key TAB
+menu_select "Landscape"
+wait 2
+validate page_orientation=landscape
+
+# Change margins
+key TAB
+type "1.5"  # Left margin
+key TAB
+type "1.5"  # Right margin
+key TAB
+type "1.0"  # Top margin
+key TAB
+type "1.0"  # Bottom margin
+key ENTER
+wait 2
+
+validate margin_left=1.5
+validate margin_right=1.5
+
+screenshot e2e_page_setup
+

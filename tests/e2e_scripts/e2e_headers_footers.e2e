@@ -1,0 +1,37 @@
+# Test: Headers and footers with page numbers
+# Validates header/footer with page number insertion
+
+# Open View menu to edit header
+menu_open View
+wait 2
+menu_select "Header"
+wait 2
+
+# Type header content
+type "Document Title"
+wait 2
+validate header_content=Document Title
+
+# Switch to footer
+menu_open View
+wait 2
+menu_select "Footer"
+wait 2
+
+# Insert page number
+menu_open Insert
+wait 2
+menu_select "Page Number"
+wait 2
+
+# Validate page number was inserted
+validate has_page_number=true
+
+# Return to document body
+menu_open View
+wait 2
+menu_select "Document Body"
+wait 2
+
+screenshot e2e_headers_footers
+

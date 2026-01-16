@@ -1,0 +1,33 @@
+# Test: Multi-level list
+# Validates list level increase/decrease
+
+# Start a bulleted list
+type "Level 0 Item"
+key CTRL+SHIFT+8
+wait 2
+validate list_type=bulleted
+validate list_level=0
+
+# Add item and increase level (Tab)
+key ENTER
+key TAB
+type "Level 1 Item"
+wait 2
+validate list_level=1
+
+# Add item and increase level again
+key ENTER
+key TAB
+type "Level 2 Item"
+wait 2
+validate list_level=2
+
+# Decrease level (Shift+Tab)
+key ENTER
+key SHIFT+TAB
+type "Back to Level 1"
+wait 2
+validate list_level=1
+
+screenshot e2e_multi_level_list
+

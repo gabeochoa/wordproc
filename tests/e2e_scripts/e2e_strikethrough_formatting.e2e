@@ -1,21 +1,23 @@
-# Test: Strikethrough formatting (Ctrl+Shift+S)
-# Validates that strikethrough toggle applies strikethrough style to text
+# Test: Strikethrough text formatting (Ctrl+Shift+S)
+# Validates that strikethrough formatting can be toggled
 
 # Type some text
-type "Test Strikethrough"
-wait 1
+type "Strikethrough Test"
+wait 2
 
-# Select all text
-key ctrl+a
-wait 1
+# Select all and apply strikethrough
+select_all
+wait 2
+key CTRL+SHIFT+S
+wait 2
 
-# Apply strikethrough
-key ctrl+shift+s
-wait 1
+# Validate strikethrough is enabled
+validate strikethrough=true
 
-# Validate strikethrough is applied
-validate style_strikethrough=true
+# Toggle strikethrough off
+key CTRL+SHIFT+S
+wait 2
+validate strikethrough=false
 
-# Take screenshot
-screenshot 05_strikethrough_formatting
+screenshot e2e_strikethrough_formatting
 

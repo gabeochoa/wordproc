@@ -3,16 +3,20 @@
 
 # Type some text
 type "Highlighted Text"
-wait 1
+wait 2
 
 # Select all text
-key ctrl+a
-wait 1
+select_all
+wait 2
 
-# Note: Highlight color is applied via Format menu or color picker
-# For E2E purposes, validate the menu path exists
-validate menu_exists=Format
+# Open Format menu and select highlight color option
+menu_open Format
+wait 2
+menu_select "Highlight Color..."
+wait 2
 
-# Take screenshot
-screenshot 07_highlight_color
+# Validate highlight color was applied
+validate has_highlight=true
+
+screenshot e2e_highlight_color
 

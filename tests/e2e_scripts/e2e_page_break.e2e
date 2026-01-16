@@ -1,0 +1,21 @@
+# Test: Manual page break (Ctrl+Enter)
+# Validates manual page break insertion
+
+# Type some text
+type "Before page break"
+wait 2
+
+# Insert page break
+key CTRL+ENTER
+wait 2
+
+# Type more text
+type "After page break"
+wait 2
+
+# Validate page break exists
+validate has_page_break=true
+validate page_count=2
+
+screenshot e2e_page_break
+

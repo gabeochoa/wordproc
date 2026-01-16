@@ -1,0 +1,28 @@
+# Test: Add column to table
+# Validates adding columns to an existing table
+
+# Insert a 2x2 table
+menu_open Insert
+wait 2
+menu_select "Table..."
+wait 2
+type "2"
+key TAB
+type "2"
+key ENTER
+wait 2
+
+# Validate initial column count
+validate table_cols=2
+
+# Open Table menu to add column
+menu_open Table
+wait 2
+menu_select "Insert Column Right"
+wait 2
+
+# Validate column was added
+validate table_cols=3
+
+screenshot e2e_table_add_column
+

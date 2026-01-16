@@ -1,0 +1,28 @@
+# Test: Multiline text with Enter key
+# Validates multiline text entry
+
+# Type first line
+type "Line One"
+wait 2
+
+# Press Enter
+key ENTER
+wait 2
+
+# Type second line
+type "Line Two"
+wait 2
+
+# Press Enter
+key ENTER
+wait 2
+
+# Type third line
+type "Line Three"
+wait 2
+
+# Validate line count
+validate line_count=3
+
+screenshot e2e_multiline
+

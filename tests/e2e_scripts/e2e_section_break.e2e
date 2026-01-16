@@ -1,0 +1,33 @@
+# Test: Section break insertion
+# Validates section breaks with per-section layout
+
+# Type first section content
+type "Section One Content"
+wait 2
+
+# Insert section break
+menu_open Insert
+wait 2
+menu_select "Section Break"
+wait 2
+
+# Validate section break was inserted
+validate section_count=2
+
+# Type second section content
+type "Section Two Content"
+wait 2
+
+# Change layout for current section only
+menu_open Format
+wait 2
+menu_select "Columns..."
+wait 2
+menu_select "Two Columns"
+wait 2
+
+# Validate section-specific layout
+validate current_section_columns=2
+
+screenshot e2e_section_break
+

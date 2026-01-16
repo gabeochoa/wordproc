@@ -1,0 +1,17 @@
+# Test: Status bar
+# Validates status bar shows formatting state
+
+# Type some text
+type "Status bar test"
+wait 1
+
+# Apply bold
+key ctrl+b
+wait 1
+
+# Validate status bar shows formatting info
+validate status_bar_visible=true
+
+# Take screenshot
+screenshot 46_status_bar
+

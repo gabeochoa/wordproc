@@ -1,0 +1,13 @@
+# Test: View menu
+# Validates View menu opens and contains expected items
+
+# Click on View menu
+click_menu View
+wait 1
+
+# Validate View menu is open
+validate menu_open=View
+
+# Take screenshot
+screenshot 44_menu_view
+

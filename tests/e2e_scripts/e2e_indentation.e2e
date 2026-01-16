@@ -1,0 +1,29 @@
+# Test: Indentation controls (Ctrl+]/[)
+# Validates indent increase/decrease
+
+# Type some text
+type "Indentation Test"
+wait 2
+
+# Increase indent
+key CTRL+]
+wait 2
+validate indent_level=1
+
+# Increase indent again
+key CTRL+]
+wait 2
+validate indent_level=2
+
+# Decrease indent
+key CTRL+[
+wait 2
+validate indent_level=1
+
+# Decrease to zero
+key CTRL+[
+wait 2
+validate indent_level=0
+
+screenshot e2e_indentation
+

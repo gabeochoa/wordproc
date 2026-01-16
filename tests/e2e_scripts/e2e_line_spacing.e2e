@@ -1,0 +1,32 @@
+# Test: Line spacing (Ctrl+Shift+1/5/2)
+# Validates single/1.5/double line spacing
+
+# Type multiline text
+type "Line One"
+key ENTER
+type "Line Two"
+key ENTER
+type "Line Three"
+wait 2
+
+# Select all
+select_all
+wait 2
+
+# Single spacing (Ctrl+Shift+1)
+key CTRL+SHIFT+1
+wait 2
+validate line_spacing=1.0
+
+# 1.5 spacing (Ctrl+Shift+5)
+key CTRL+SHIFT+5
+wait 2
+validate line_spacing=1.5
+
+# Double spacing (Ctrl+Shift+2)
+key CTRL+SHIFT+2
+wait 2
+validate line_spacing=2.0
+
+screenshot e2e_line_spacing
+

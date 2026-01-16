@@ -1,0 +1,27 @@
+# Test: Cut and Paste (Ctrl+X, Ctrl+V)
+# Validates cut/paste functionality
+
+# Type some text
+type "Cut This Text"
+wait 2
+
+# Select all
+select_all
+wait 2
+
+# Cut (Ctrl+X)
+key CTRL+X
+wait 2
+
+# Validate text is now empty
+validate text=
+
+# Paste (Ctrl+V)
+key CTRL+V
+wait 2
+
+# Validate text is restored
+validate text=Cut This Text
+
+screenshot e2e_cut_paste
+

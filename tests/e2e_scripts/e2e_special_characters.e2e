@@ -1,0 +1,34 @@
+# Test: Special character insertion
+# Validates special characters can be inserted
+
+# Type some text
+type "Mathematical formula: "
+wait 2
+
+# Open Insert menu for special characters
+menu_open Insert
+wait 2
+menu_select "Special Character..."
+wait 2
+
+# Select a Greek letter (alpha)
+type "alpha"
+key ENTER
+wait 2
+
+# Validate special character was inserted
+validate text_contains=α
+
+# Insert another character (pi)
+menu_open Insert
+wait 2
+menu_select "Special Character..."
+wait 2
+type "pi"
+key ENTER
+wait 2
+
+validate text_contains=π
+
+screenshot e2e_special_characters
+

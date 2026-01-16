@@ -1,21 +1,23 @@
-# Test: Underline formatting (Ctrl+U)
-# Validates that underline toggle applies underline style to text
+# Test: Underline text formatting (Ctrl+U)
+# Validates that underline formatting can be toggled
 
 # Type some text
-type "Test Underline"
-wait 1
+type "Underline Text Test"
+wait 2
 
-# Select all text
-key ctrl+a
-wait 1
+# Select all and apply underline
+select_all
+wait 2
+key CTRL+U
+wait 2
 
-# Apply underline
-key ctrl+u
-wait 1
+# Validate underline is enabled
+validate underline=true
 
-# Validate underline is applied
-validate style_underline=true
+# Toggle underline off
+key CTRL+U
+wait 2
+validate underline=false
 
-# Take screenshot
-screenshot 04_underline_formatting
+screenshot e2e_underline_formatting
 

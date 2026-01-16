@@ -3,16 +3,21 @@
 
 # Type some text
 type "Colored Text"
-wait 1
+wait 2
 
 # Select all text
-key ctrl+a
-wait 1
+select_all
+wait 2
 
-# Note: Text color is applied via Format menu or color picker
-# For E2E purposes, validate the menu path exists
-validate menu_exists=Format
+# Open Format menu and select text color option
+# Note: This simulates user applying red text color
+menu_open Format
+wait 2
+menu_select "Text Color..."
+wait 2
 
-# Take screenshot
-screenshot 06_text_color
+# Validate text color was applied
+validate has_text_color=true
+
+screenshot e2e_text_color
 

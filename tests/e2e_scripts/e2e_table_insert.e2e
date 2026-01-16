@@ -1,0 +1,25 @@
+# Test: Table insertion
+# Validates table can be inserted
+
+# Open Insert menu
+menu_open Insert
+wait 2
+
+# Select Table option
+menu_select "Table..."
+wait 2
+
+# Specify 3x3 table
+type "3"
+key TAB
+type "3"
+key ENTER
+wait 2
+
+# Validate table was inserted
+validate has_table=true
+validate table_rows=3
+validate table_cols=3
+
+screenshot e2e_table_insert
+

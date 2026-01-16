@@ -1,0 +1,32 @@
+# Test: Copy and Paste (Ctrl+C, Ctrl+V)
+# Validates copy/paste functionality
+
+# Type some text
+type "Copy Me"
+wait 2
+
+# Select all
+select_all
+wait 2
+
+# Copy (Ctrl+C)
+key CTRL+C
+wait 2
+
+# Move to end
+key END
+wait 2
+
+# Add space
+type " "
+wait 2
+
+# Paste (Ctrl+V)
+key CTRL+V
+wait 2
+
+# Validate text was duplicated
+validate text=Copy Me Copy Me
+
+screenshot e2e_copy_paste
+

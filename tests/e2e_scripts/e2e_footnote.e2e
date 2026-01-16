@@ -1,0 +1,37 @@
+# Test: Footnote insertion
+# Validates footnote can be inserted with auto-numbering
+
+# Type some text
+type "This statement needs a citation"
+wait 2
+
+# Insert footnote
+menu_open Insert
+wait 2
+menu_select "Footnote"
+wait 2
+
+# Type footnote content
+type "Source: Example Reference, 2024"
+wait 2
+
+# Validate footnote was inserted
+validate has_footnote=true
+validate footnote_count=1
+
+# Add another footnote
+key CTRL+END
+type " and another claim"
+wait 2
+menu_open Insert
+wait 2
+menu_select "Footnote"
+wait 2
+type "Another Reference"
+wait 2
+
+# Validate second footnote has correct number
+validate footnote_count=2
+
+screenshot e2e_footnote
+

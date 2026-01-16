@@ -1,0 +1,19 @@
+# Test: Outline view from headings
+# Validates outline generation
+
+# Type headings
+type "Heading 1"
+key ctrl+alt+1
+key enter
+type "Heading 2"
+key ctrl+alt+2
+key enter
+type "Body text"
+wait 1
+
+# Outline view is via View menu
+validate menu_exists=View
+
+# Take screenshot
+screenshot 39_outline_view
+

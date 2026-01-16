@@ -1,0 +1,25 @@
+# Test: Bulleted list (Ctrl+Shift+8)
+# Validates bulleted list toggle
+
+# Type some text
+type "List Item One"
+wait 2
+
+# Toggle bulleted list
+key CTRL+SHIFT+8
+wait 2
+validate list_type=bulleted
+
+# Add another item
+key ENTER
+type "List Item Two"
+wait 2
+validate list_type=bulleted
+
+# Toggle off
+key CTRL+SHIFT+8
+wait 2
+validate list_type=none
+
+screenshot e2e_bulleted_list
+

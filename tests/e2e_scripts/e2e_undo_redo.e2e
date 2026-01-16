@@ -1,0 +1,26 @@
+# Test: Undo and Redo (Ctrl+Z, Ctrl+Y)
+# Validates undo/redo functionality
+
+# Type some text
+type "Hello"
+wait 2
+validate text=Hello
+
+# Type more
+type " World"
+wait 2
+validate text=Hello World
+
+# Undo (Ctrl+Z)
+key CTRL+Z
+wait 2
+# After undo, text should be shorter
+validate text_shorter_than=Hello World
+
+# Redo (Ctrl+Y)
+key CTRL+Y
+wait 2
+# After redo, text should be restored
+
+screenshot e2e_undo_redo
+

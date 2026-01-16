@@ -1,0 +1,40 @@
+# Test: Shape/drawing insertion
+# Validates shapes can be inserted
+
+# Type some text
+type "Document with shapes:"
+key ENTER
+wait 2
+
+# Insert drawing/shape
+menu_open Insert
+wait 2
+menu_select "Shape..."
+wait 2
+
+# Select rectangle shape
+menu_select "Rectangle"
+wait 2
+
+# Draw the shape (click and drag)
+drag 100 150 200 200
+wait 2
+
+# Validate shape was inserted
+validate has_drawing=true
+validate drawing_count=1
+
+# Insert another shape (circle)
+menu_open Insert
+wait 2
+menu_select "Shape..."
+wait 2
+menu_select "Circle"
+wait 2
+drag 250 150 350 200
+wait 2
+
+validate drawing_count=2
+
+screenshot e2e_drawing
+

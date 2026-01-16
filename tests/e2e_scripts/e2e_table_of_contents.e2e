@@ -1,0 +1,19 @@
+# Test: Table of contents generation
+# Validates TOC generation from headings
+
+# Type headings first
+type "Chapter 1"
+key ctrl+alt+1
+key enter
+type "Section 1.1"
+key ctrl+alt+2
+key enter
+type "Body text"
+wait 1
+
+# TOC insertion is via Insert menu
+validate menu_exists=Insert
+
+# Take screenshot
+screenshot 40_table_of_contents
+

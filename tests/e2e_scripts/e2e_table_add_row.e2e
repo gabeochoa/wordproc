@@ -1,0 +1,28 @@
+# Test: Add row to table
+# Validates adding rows to an existing table
+
+# Insert a 2x2 table
+menu_open Insert
+wait 2
+menu_select "Table..."
+wait 2
+type "2"
+key TAB
+type "2"
+key ENTER
+wait 2
+
+# Validate initial row count
+validate table_rows=2
+
+# Open context menu or use menu to add row
+menu_open Table
+wait 2
+menu_select "Insert Row Below"
+wait 2
+
+# Validate row was added
+validate table_rows=3
+
+screenshot e2e_table_add_row
+

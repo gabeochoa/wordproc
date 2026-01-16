@@ -1,0 +1,20 @@
+# Test: Edit menu
+# Validates Edit menu opens and contains expected items
+
+# Click on Edit menu
+click_menu Edit
+wait 1
+
+# Validate Edit menu is open
+validate menu_open=Edit
+
+# Validate expected items exist
+validate menu_item_exists=Undo
+validate menu_item_exists=Redo
+validate menu_item_exists=Cut
+validate menu_item_exists=Copy
+validate menu_item_exists=Paste
+
+# Take screenshot
+screenshot 42_menu_edit
+
