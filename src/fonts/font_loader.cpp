@@ -11,12 +11,12 @@ FontLoader::FontLoader() { registerBuiltinFonts(); }
 
 void FontLoader::registerBuiltinFonts() {
     // P0: Required startup fonts
+    builtinFonts_.push_back({"EB Garamond", "Garamond",
+                             "EBGaramond-Regular.ttf", true, false, ""});
     builtinFonts_.push_back(
-        {"Gaegu Bold", "Gaegu-Bold", "Gaegu-Bold.ttf", true, false, ""});
+        {"Gaegu Bold", "Gaegu-Bold", "Gaegu-Bold.ttf", false, false, ""});
     builtinFonts_.push_back({"EqPro Rounded", "EqProRounded",
                              "eqprorounded-regular.ttf", false, false, ""});
-    builtinFonts_.push_back({"EB Garamond", "Garamond",
-                             "EBGaramond-Regular.ttf", false, false, ""});
     builtinFonts_.push_back({"Nerd Symbols", "NerdSymbols",
                              "SymbolsNerdFont-Regular.ttf", false, false, ""});
     builtinFonts_.push_back({"Fredoka", "Fredoka",

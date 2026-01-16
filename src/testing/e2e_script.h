@@ -11,6 +11,7 @@
 #include "../rl.h"
 #include "input_injector.h"
 #include "test_input.h"
+#include "visible_text_registry.h"
 
 // Key constants (avoiding issues with raylib namespace in headers)
 namespace e2e_keys {
@@ -35,6 +36,7 @@ enum class CommandType {
     MouseMove,     // mouse_move x y - moves mouse to coordinates
     Wait,          // wait 5 - waits N frames
     Validate,      // validate property=value - validates document state
+    ExpectText,    // expect_text "text" - validates text is visible on screen
     DumpDocument,  // dump_document path.txt - dumps document to file
     Screenshot,    // screenshot name - takes a screenshot
     Clear,         // clear - clears document and resets state
@@ -288,6 +290,16 @@ inline std::vector<TestCommand> parseScript(const std::string& path) {
                     cmd.arg1.pop_back();
                 }
             }
+        } else if (verb == "expect_text") {
+            cmd.type = CommandType::ExpectText;
+            std::getline(iss >> std::ws, cmd.arg1);
+            // Remove quotes if present
+            if (!cmd.arg1.empty() && cmd.arg1.front() == '"') {
+                cmd.arg1 = cmd.arg1.substr(1);
+                if (!cmd.arg1.empty() && cmd.arg1.back() == '"') {
+                    cmd.arg1.pop_back();
+                }
+            }
         } else {
             cmd.type = CommandType::Unknown;
             cmd.arg1 = verb;
@@ -400,6 +412,56 @@ public:
     const std::vector<ValidationResult>& results() const { return results_; }
     const std::vector<ScriptError>& errors() const { return errors_; }
     
+    // Debug overlay info - get current command description and timeout status
+    std::string getCurrentCommandDescription() const {
+        if (finished_ || currentIndex_ >= commands_.size()) {
+            return "(finished)";
+        }
+        const TestCommand& cmd = commands_[currentIndex_];
+        std::string desc;
+        switch (cmd.type) {
+            case CommandType::Type: desc = "type \"" + cmd.arg1 + "\""; break;
+            case CommandType::Key: desc = "key " + cmd.arg1; break;
+            case CommandType::SelectAll: desc = "select_all"; break;
+            case CommandType::Click: desc = "click " + std::to_string(cmd.intArg) + " " + std::to_string(cmd.intArg2); break;
+            case CommandType::DoubleClick: desc = "double_click " + std::to_string(cmd.intArg) + " " + std::to_string(cmd.intArg2); break;
+            case CommandType::Drag: desc = "drag"; break;
+            case CommandType::MouseMove: desc = "mouse_move " + std::to_string(cmd.intArg) + " " + std::to_string(cmd.intArg2); break;
+            case CommandType::Wait: desc = "wait " + std::to_string(cmd.intArg); break;
+            case CommandType::Validate: desc = "validate " + cmd.arg1 + "=" + cmd.arg2; break;
+            case CommandType::ExpectText: desc = "expect_text \"" + cmd.arg1 + "\""; break;
+            case CommandType::DumpDocument: desc = "dump_document"; break;
+            case CommandType::Screenshot: desc = "screenshot " + cmd.arg1; break;
+            case CommandType::Clear: desc = "clear"; break;
+            case CommandType::MenuOpen: desc = "menu_open \"" + cmd.arg1 + "\""; break;
+            case CommandType::MenuSelect: desc = "menu_select \"" + cmd.arg1 + "\""; break;
+            case CommandType::ClickOutline: desc = "click_outline \"" + cmd.arg1 + "\""; break;
+            case CommandType::Comment: desc = "# comment"; break;
+            case CommandType::Unknown: desc = "unknown: " + cmd.arg1; break;
+            default: desc = "(unknown)"; break;
+        }
+        return desc;
+    }
+    
+    // Get remaining frames before timeout (returns -1 if no timeout)
+    int getRemainingTimeoutFrames() const {
+        if (timeoutFrames_ <= 0) return -1;
+        int elapsed = frameCount_ - scriptStartFrame_;
+        int remaining = timeoutFrames_ - elapsed;
+        return remaining > 0 ? remaining : 0;
+    }
+    
+    // Get remaining seconds before timeout (at 60fps)
+    float getRemainingTimeoutSeconds() const {
+        int frames = getRemainingTimeoutFrames();
+        if (frames < 0) return -1.0f;
+        return static_cast<float>(frames) / 60.0f;
+    }
+    
+    // Check if debug overlay should be shown
+    bool showDebugOverlay() const { return debugOverlay_; }
+    void setDebugOverlay(bool show) { debugOverlay_ = show; }
+    
     // Set callback for getting document properties (set from main.cpp)
     using PropertyGetter = std::function<std::string(const std::string&)>;
     void setPropertyGetter(PropertyGetter getter) { propertyGetter_ = getter; }
@@ -459,6 +521,14 @@ public:
         // Handle wait
         if (waitFrames_ > 0) {
             waitFrames_--;
+            
+            // Release mouse button if pending (for click simulation)
+            if (waitFrames_ == 0 && pendingMouseRelease_) {
+                test_input::simulate_mouse_button_release(raylib::MOUSE_BUTTON_LEFT);
+                pendingMouseRelease_ = false;
+                waitFrames_ = 2;  // Wait for click to be processed
+            }
+            
             // Check for pending double-click on the last wait frame
             if (waitFrames_ == 0 && pendingDoubleClick_) {
                 raylib::Rectangle clickRect = {
@@ -527,6 +597,9 @@ public:
                 break;
             case CommandType::ClickOutline:
                 executeClickOutline(cmd);
+                break;
+            case CommandType::ExpectText:
+                executeExpectText(cmd);
                 break;
             case CommandType::Comment:
                 // Comments are ignored
@@ -627,15 +700,14 @@ private:
     }
     
     void executeClick(const TestCommand& cmd) {
-        // Create a rectangle at the click position (1x1 pixel)
-        raylib::Rectangle clickRect = {
-            static_cast<float>(cmd.intArg),
-            static_cast<float>(cmd.intArg2),
-            1.0f, 1.0f
-        };
-        input_injector::schedule_mouse_click_at(clickRect);
-        input_injector::inject_scheduled_click();
-        waitFrames_ = 3;  // Wait for click to process and release
+        // Set mouse position and simulate click using test_input
+        vec2 clickPos = {static_cast<float>(cmd.intArg), 
+                         static_cast<float>(cmd.intArg2)};
+        test_input::set_mouse_position(clickPos);
+        test_input::simulate_mouse_button_press(raylib::MOUSE_BUTTON_LEFT);
+        // Set wait frames - the release will happen after 1 frame
+        waitFrames_ = 1;
+        pendingMouseRelease_ = true;
     }
     
     void executeDoubleClick(const TestCommand& cmd) {
@@ -764,6 +836,39 @@ private:
         waitFrames_ = 2;  // Wait for navigation to complete
     }
     
+    void executeExpectText(const TestCommand& cmd) {
+        const std::string& expectedText = cmd.arg1;
+        
+        // Check if the text is visible on screen
+        auto& registry = test_input::VisibleTextRegistry::instance();
+        bool found = registry.containsText(expectedText);
+        
+        ValidationResult result;
+        result.property = "visible_text";
+        result.expected = expectedText;
+        result.lineNumber = cmd.lineNumber;
+        result.success = found;
+        
+        if (found) {
+            result.actual = expectedText;
+            result.message = "Text found on screen";
+        } else {
+            // Show what was visible for debugging
+            std::string allVisible = registry.getAllText();
+            if (allVisible.empty()) {
+                result.actual = "(no visible text)";
+            } else if (allVisible.length() > 200) {
+                result.actual = allVisible.substr(0, 200) + "...";
+            } else {
+                result.actual = allVisible;
+            }
+            result.message = "Text not found on screen";
+            failed_ = true;
+        }
+        
+        results_.push_back(result);
+    }
+    
     void reportError(const TestCommand& cmd, const std::string& message) {
         ScriptError error;
         error.lineNumber = cmd.lineNumber;
@@ -787,10 +892,14 @@ private:
     bool finished_ = false;
     bool failed_ = false;
     bool timedOut_ = false;
+    bool debugOverlay_ = false;  // Show debug overlay with current command
     
     // For double-click simulation
     bool pendingDoubleClick_ = false;
     vec2 doubleClickPos_ = {0, 0};
+    
+    // For click release (mouse needs to be released after a frame)
+    bool pendingMouseRelease_ = false;
     
     PropertyGetter propertyGetter_;
     ScreenshotTaker screenshotTaker_;

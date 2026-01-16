@@ -115,9 +115,8 @@ Preload &Preload::make_singleton() {
         }
 
         // Load only ONE essential font at startup for fastest launch
-        // Garamond and other fonts lazy-loaded on first use
         std::string english_font =
-            files::get_resource_path("fonts", "Gaegu-Bold.ttf").string();
+            files::get_resource_path("fonts", "EBGaramond-Regular.ttf").string();
 
         {
             SCOPED_TIMER("Load default font");
@@ -126,8 +125,7 @@ Preload &Preload::make_singleton() {
             fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str());
             // Alias the same font for other uses to avoid extra loads
             fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str());
-            fontMgr.load_font("Gaegu-Bold", english_font.c_str());
-            // EBGaramond-Regular loaded lazily when user selects it
+            fontMgr.load_font("Garamond", english_font.c_str());
         }
 
         // Register loaded fonts with FontLoader for P2 font listing

@@ -9,6 +9,7 @@
 #include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
+#include "../testing/visible_text_registry.h"
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
 #include "../util/drawing.h"
@@ -17,6 +18,21 @@
 #include "components.h"
 
 namespace ecs {
+
+// Helper to draw text and register it for E2E testing
+inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize, 
+                                  raylib::Color color) {
+    raylib::DrawText(text, x, y, fontSize, color);
+    test_input::registerVisibleText(text);
+}
+
+// Helper to draw text with font and register it for E2E testing
+inline void drawTextExWithRegistry(raylib::Font font, const char* text, 
+                                    raylib::Vector2 pos, float fontSize, 
+                                    float spacing, raylib::Color color) {
+    raylib::DrawTextEx(font, text, pos, fontSize, spacing, color);
+    test_input::registerVisibleText(text);
+}
 
 // Draw a page background with shadow (for paged mode)
 inline void drawPageBackground(const LayoutComponent& layout) {
@@ -394,6 +410,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
         // Draw text with paragraph style applied
         if (!line.empty()) {
+            // Register document text for E2E tests
+            test_input::registerVisibleText(line);
+            
             // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
             
@@ -468,6 +487,7 @@ struct EditorRenderSystem
     void once(const float) const override {
         raylib::BeginDrawing();
         raylib::ClearBackground(theme::WINDOW_BG);
+        // Note: Visible text registry is cleared in main.cpp at start of frame
     }
 
     void after(const float) const override {
@@ -493,6 +513,41 @@ struct EditorRenderSystem
                         LOG_WARNING("Screenshot file not found after TakeScreenshot");
                     }
                 }
+            }
+            
+            // Draw E2E debug overlay if enabled
+            if (testConfig.e2eDebugOverlay && !testConfig.e2eCurrentCommand.empty()) {
+                int screenWidth = raylib::GetScreenWidth();
+                int overlayWidth = 400;
+                int overlayHeight = 50;
+                int overlayX = screenWidth - overlayWidth - 10;
+                int overlayY = 10;
+                
+                // Draw semi-transparent background
+                raylib::DrawRectangle(overlayX, overlayY, overlayWidth, overlayHeight, 
+                                      raylib::Color{0, 0, 0, 200});
+                raylib::DrawRectangleLines(overlayX, overlayY, overlayWidth, overlayHeight, 
+                                           raylib::Color{255, 255, 0, 255});
+                
+                // Draw current command
+                std::string cmdText = testConfig.e2eCurrentCommand;
+                if (cmdText.length() > 40) {
+                    cmdText = cmdText.substr(0, 37) + "...";
+                }
+                raylib::DrawText(cmdText.c_str(), overlayX + 5, overlayY + 5, 14, 
+                                 raylib::Color{255, 255, 255, 255});
+                
+                // Draw timeout countdown
+                std::string timeoutText;
+                if (testConfig.e2eTimeoutSeconds >= 0) {
+                    char buf[32];
+                    snprintf(buf, sizeof(buf), "<%.1fs>", testConfig.e2eTimeoutSeconds);
+                    timeoutText = buf;
+                } else {
+                    timeoutText = "<no timeout>";
+                }
+                raylib::DrawText(timeoutText.c_str(), overlayX + 5, overlayY + 25, 14, 
+                                 raylib::Color{255, 200, 100, 255});
             }
         }
         raylib::EndDrawing();
@@ -521,8 +576,8 @@ struct EditorRenderSystem
         if (doc.isDirty) {
             title += " *";
         }
-        raylib::DrawText(title.c_str(), 4, 4, theme::layout::FONT_SIZE,
-                         theme::TITLE_TEXT);
+        drawTextWithRegistry(title.c_str(), 4, 4, theme::layout::FONT_SIZE,
+                             theme::TITLE_TEXT);
 
         // Draw menu bar background
         raylib::Rectangle menuBarRect = {layout.menuBar.x, layout.menuBar.y,
@@ -603,7 +658,7 @@ struct EditorRenderSystem
                 style.underline ? "U " : "",
                 style.strikethrough ? "S " : "",
                 style.fontSize, style.font);
-            raylib::DrawText(
+            drawTextWithRegistry(
                 statusText.c_str(), 4,
                 layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
                 theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
@@ -661,10 +716,9 @@ struct MenuSystem
 
     void renderMenus(DocumentComponent& doc, MenuComponent& menu,
                      StatusComponent& status, LayoutComponent& layout) const {
-        // Draw interactive menus
-        int menuResult =
-            win95::DrawMenuBar(menu.menus, theme::layout::TITLE_BAR_HEIGHT,
-                               theme::layout::MENU_BAR_HEIGHT);
+        // Menu bar is now rendered by MenuUISystem using Afterhours UI
+        // Just consume any click results and handle actions here
+        int menuResult = menu.consumeClickedResult();
 
         if (menuResult >= 0) {
             handleMenuAction(menuResult, doc, menu, status, layout);

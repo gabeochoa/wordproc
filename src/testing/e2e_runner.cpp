@@ -222,6 +222,9 @@ static void setupCallbacksEx(
                     switch (images[0].layoutMode) {
                         case ImageLayoutMode::Inline: return "inline";
                         case ImageLayoutMode::WrapSquare: return "wrap";
+                        case ImageLayoutMode::WrapTight: return "tight";
+                        case ImageLayoutMode::Behind: return "behind";
+                        case ImageLayoutMode::InFront: return "infront";
                         case ImageLayoutMode::BreakText: return "break";
                         default: return "inline";
                     }

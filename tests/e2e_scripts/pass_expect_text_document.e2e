@@ -1,0 +1,22 @@
+# Test: Verify typed text is visible on screen
+# This test validates that document content can be checked with expect_text
+
+# Type some text
+type "Hello World"
+wait 3
+
+# Verify the text appears on screen
+expect_text "Hello World"
+
+# Type more text on a new line
+key ENTER
+type "This is a test"
+wait 3
+
+# Both lines should be visible
+expect_text "Hello World"
+expect_text "This is a test"
+
+# Take a screenshot to verify
+screenshot expect_text_document
+

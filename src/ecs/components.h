@@ -138,9 +138,18 @@ struct StatusComponent : public afterhours::BaseComponent {
 // Component for menu state
 struct MenuComponent : public afterhours::BaseComponent {
     std::vector<win95::Menu> menus;
+    int activeMenuIndex = -1;      // Currently active menu (-1 = none)
+    int lastClickedResult = -1;    // Result of last menu click for action handling
     bool showAboutDialog = false;
     bool showHelpWindow = false;  // Keybindings help window
     int helpScrollOffset = 0;     // Scroll position in help window
+    
+    // Consume the clicked result (returns it and clears it)
+    int consumeClickedResult() {
+        int result = lastClickedResult;
+        lastClickedResult = -1;
+        return result;
+    }
     
     // Find/Replace state
     bool showFindDialog = false;
@@ -221,6 +230,11 @@ struct TestConfigComponent : public afterhours::BaseComponent {
     float fpsMin = 999999.0f;
     float fpsMax = 0.0f;
     int fpsSamples = 0;
+    
+    // E2E debug overlay - shows current command and timeout
+    bool e2eDebugOverlay = false;
+    std::string e2eCurrentCommand;
+    float e2eTimeoutSeconds = -1.0f;  // -1 = no timeout
 };
 
 // Component for input handling (stores the action map for remappable shortcuts)
