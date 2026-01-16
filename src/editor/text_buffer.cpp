@@ -287,6 +287,7 @@ bool TextBuffer::deleteSelection() {
   // Erase the selected range
   chars_.erase(startOffset, deleteCount);
   stats_.total_deletes += deleteCount;
+  version_++;  // Content changed - invalidate render cache
   
   // Rebuild line index since we may have deleted across lines
   rebuildLineIndex();
@@ -477,6 +478,7 @@ void TextBuffer::backspace() {
   
   chars_.erase(newline_offset, 1);
   stats_.total_deletes++;
+  version_++;  // Content changed - invalidate render cache
   
   rebuildLineIndex();
   
@@ -499,6 +501,7 @@ void TextBuffer::del() {
     std::size_t offset = positionToOffset(caret_);
     chars_.erase(offset, 1);
     stats_.total_deletes++;
+    version_++;  // Content changed - invalidate render cache
     
     line_spans_[caret_.row].length -= 1;
     
@@ -517,6 +520,7 @@ void TextBuffer::del() {
   std::size_t newline_offset = span.offset + span.length;
   chars_.erase(newline_offset, 1);
   stats_.total_deletes++;
+  version_++;  // Content changed - invalidate render cache
   
   rebuildLineIndex();
 }
