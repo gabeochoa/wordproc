@@ -59,83 +59,83 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ## Task Breakdown (use folder-outline from `wm_afterhours`)
 
 ### 1) Vendor & Build System
-- [ ] Copy `vendor/` from `wm_afterhours` (keep any `vendor/afterhours` modifications on `wordproc` branch only).
-- [ ] Copy `.clang-format`, `.gitignore`, `makefile`, and `.cursor` rules.
-- [ ] Verify build succeeds with copied vendor + build config.
+- [x] Copy `vendor/` from `wm_afterhours` (keep any `vendor/afterhours` modifications on `wordproc` branch only).
+- [x] Copy `.clang-format`, `.gitignore`, `makefile`, and `.cursor` rules.
+- [x] Verify build succeeds with copied vendor + build config.
 
 ### 2) Resources
-- [ ] Copy selected fonts from `wm_afterhours/resources/fonts/` (document licenses if needed).
-- [ ] Decide which additional resources (images, cursors) are needed for the UI skin.
+- [x] Copy selected fonts from `wm_afterhours/resources/fonts/` (document licenses if needed).
+- [x] Decide which additional resources (images, cursors) are needed for the UI skin.
 
 ### 3) Core Runtime (preload / window / raylib)
-- [ ] Copy preload and window initialization pieces from `wm_afterhours/src/` as a starting point.
-- [ ] Document any missing needs in `AfterhoursGaps.md` and implement temporary workarounds in app code.
+- [x] Copy preload and window initialization pieces from `wm_afterhours/src/` as a starting point.
+- [x] Document any missing needs in `AfterhoursGaps.md` and implement temporary workarounds in app code.
 
 ### 4) Editor Engine (small features first)
-- [ ] Basic text buffer and caret model.
-- [ ] Keyboard input for typing, backspace/delete, and line breaks.
-- [ ] Selection model (start/end, shift-select) as needed.
-- [ ] Simple layout for lines and wrapping.
+- [x] Basic text buffer and caret model.
+- [x] Keyboard input for typing, backspace/delete, and line breaks.
+- [x] Selection model (start/end, shift-select) as needed.
+- [x] Simple layout for lines and wrapping.
 
 ### 5) File I/O
-- [ ] Save document to file.
-- [ ] Open document from file.
-- [ ] Persist formatting metadata (at least bold/italic and font choice).
+- [x] Save document to file.
+- [x] Open document from file.
+- [x] Persist formatting metadata (at least bold/italic and font choice).
 
 ### 6) Formatting & Fonts
-- [ ] Bold + italic toggles.
-- [ ] Font selection UI (start with a small set).
-- [ ] Font size adjustments and defaults.
+- [x] Bold + italic toggles.
+- [x] Font selection UI (start with a small set).
+- [x] Font size adjustments and defaults.
 
 ### 7) UI/UX & Styling (Win95 base + Mac OS 3.1 accents)
-- [ ] Implement classic window chrome (title bar, borders, menu strip).
-- [ ] Buttons, menus, dialogs styled for Win95/Mac3.1 hybrid.
-- [ ] Cursor, selection, and focus states visually clear.
-- [ ] Create `style_guide.md` defining colors, typography, spacing, animations, and interaction states.
-- [ ] Add document scrolling (mouse wheel/trackpad + scrollbar).
-- [ ] Wire menu buttons to real actions (disable or remove placeholders).
+- [x] Implement classic window chrome (title bar, borders, menu strip).
+- [x] Buttons, menus, dialogs styled for Win95/Mac3.1 hybrid.
+- [x] Cursor, selection, and focus states visually clear.
+- [x] Create `style_guide.md` defining colors, typography, spacing, animations, and interaction states.
+- [x] Add document scrolling (mouse wheel/trackpad + scrollbar).
+- [x] Wire menu buttons to real actions (disable or remove placeholders).
 
 ### 8) Testing & Tooling (P0)
-- [ ] Choose and set up unit test framework (Catch2 or GTest).
-- [ ] Set up integration + E2E tests early (Jest/automation or equivalent).
-- [ ] Add screenshot-based UI verification (automated capture during interactions).
-- [ ] Add a visible/manual test flow to "use your eyes" to confirm behavior.
-- [ ] Document how to run tests and capture screenshots.
-- [ ] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
-- [ ] Define report format (CSV preferred), include filename, size, cold-start time, ready-to-interact time, and pass/fail vs 100ms target; keep it chart-friendly.
-- [ ] Define cold-start procedure (fresh process, no warm caches, first-frame interactive signal).
-- [ ] Store a baseline report and diff against it to flag regressions.
+- [x] Choose and set up unit test framework (Catch2 or GTest).
+- [x] Set up integration + E2E tests early (Jest/automation or equivalent).
+- [x] Add screenshot-based UI verification (automated capture during interactions).
+- [x] Add a visible/manual test flow to "use your eyes" to confirm behavior.
+- [x] Document how to run tests and capture screenshots.
+- [x] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
+- [x] Define report format (CSV preferred), include filename, size, cold-start time, ready-to-interact time, and pass/fail vs 100ms target; keep it chart-friendly.
+- [x] Define cold-start procedure (fresh process, no warm caches, first-frame interactive signal).
+- [x] Store a baseline report and diff against it to flag regressions.
 
 ### 9) Performance & Data-Oriented Architecture (SoA)
-- [ ] Replace `TextBuffer` AoS (`std::vector<std::string>`) with SoA storage (contiguous char store + line offsets/lengths or piece table).
-- [ ] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
-- [ ] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
-- [ ] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
-- [ ] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
-- [ ] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
+- [x] Replace `TextBuffer` AoS (`std::vector<std::string>`) with SoA storage (contiguous char store + line offsets/lengths or piece table).
+- [x] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
+- [x] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
+- [x] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
+- [x] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
+- [x] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
 
 ### 10) Code Review Follow-ups
-- [ ] Implement text rendering (draw buffer content + wrapped lines).
-- [ ] Draw caret and selection highlight with blink/animation timing.
-- [ ] Handle selection deletion on typing/backspace/delete.
-- [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
-- [ ] Add clipboard integration (copy/cut/paste).
-- [ ] Add undo/redo with command history.
-- [ ] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
-- [ ] Add window title + dirty-state indicator on edits.
-- [ ] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
-- [ ] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
-- [ ] Add load/save error reporting (surface parse errors and fallback behavior).
-- [ ] Decide on per-range styles vs global style state and update model accordingly. (Decision: Global style for v0.1; per-range deferred to v0.2)
-- [ ] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
-- [ ] Define validator rules (required fields, types, size limits, supported versions).
-- [ ] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
-- [ ] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
+- [x] Implement text rendering (draw buffer content + wrapped lines).
+- [x] Draw caret and selection highlight with blink/animation timing.
+- [x] Handle selection deletion on typing/backspace/delete.
+- [x] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
+- [x] Add clipboard integration (copy/cut/paste).
+- [x] Add undo/redo with command history.
+- [x] Ensure save/open path handles formatting metadata (basic rich text format or JSON).
+- [x] Add window title + dirty-state indicator on edits.
+- [x] Fix caret positioning to use per-glyph advance/metrics (not max-width); add a regression case like "llllll".
+- [x] Define document file format/extension (e.g., .wpdoc) and versioned schema (fixed at `v0.1` for now) with backward-compat to plaintext and importers for .txt/.md/.doc.
+- [x] Add load/save error reporting (surface parse errors and fallback behavior).
+- [x] Decide on per-range styles vs global style state and update model accordingly. (Decision: Global style for v0.1; per-range deferred to v0.2)
+- [x] Build a format validator and invalid-fixture generator to load malformed files, verifying error messaging or warning-banner fallback render.
+- [x] Define validator rules (required fields, types, size limits, supported versions).
+- [x] Populate `test_files/should_fail/` with malformed JSON, truncated files, wrong versions, and oversized payloads.
+- [x] Populate `test_files/should_pass/` with edge-case but valid files (empty, huge, mixed encoding, markdown input).
 
 ### 11) AfterhoursGaps
-- [ ] Create `AfterhoursGaps.md` and log any needed library changes.
-- [ ] Provide app-side workaround for each gap while avoiding vendor changes.
-- [ ] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
+- [x] Create `AfterhoursGaps.md` and log any needed library changes.
+- [x] Provide app-side workaround for each gap while avoiding vendor changes.
+- [x] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
 ## Feedback Tasks
 - [ ] Replace `std::snprintf` with `fmt::` or `std::format` for status text formatting in `src/main.cpp`.
@@ -145,6 +145,9 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Move input handling to an enum-based action map so keys can be remapped later.
 - [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
 - [ ] Stop using Gaegu-Bold for default UI elements; choose a more readable small-font UI face.
+- [ ] Move Win95 menu setup (`src/main.cpp:249-303`) into its own file.
+- [ ] Replace `std::printf` at `src/main.cpp:207-214` with the project's logging system.
+- [ ] Add a timing header around `src/main.cpp:188-199` for easier profiling without full setup.
 
 ---
 
