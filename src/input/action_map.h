@@ -74,6 +74,10 @@ enum class Action {
     AlignCenter,
     AlignRight,
     AlignJustify,
+    
+    // Indentation
+    IndentIncrease,
+    IndentDecrease,
 
     // Count (for iteration)
     COUNT

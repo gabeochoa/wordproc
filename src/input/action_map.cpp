@@ -139,6 +139,10 @@ const char* ActionMap::actionName(Action action) {
             return "AlignRight";
         case Action::AlignJustify:
             return "AlignJustify";
+        case Action::IndentIncrease:
+            return "IndentIncrease";
+        case Action::IndentDecrease:
+            return "IndentDecrease";
         case Action::COUNT:
         default:
             return "NONE";
@@ -229,6 +233,10 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_E, true, false, false}, Action::AlignCenter);
     map.bind({raylib::KEY_R, true, false, false}, Action::AlignRight);
     map.bind({raylib::KEY_J, true, false, false}, Action::AlignJustify);
+    
+    // Indentation: Ctrl+] to increase, Ctrl+[ to decrease (standard Word shortcuts)
+    map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
+    map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
@@ -298,6 +306,10 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({raylib::KEY_E, true, false, false}, Action::AlignCenter);
     map.bind({raylib::KEY_R, true, false, false}, Action::AlignRight);
     map.bind({raylib::KEY_J, true, false, false}, Action::AlignJustify);
+    
+    // Indentation: Cmd+] to increase, Cmd+[ to decrease
+    map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
+    map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -425,6 +437,10 @@ const char* actionDisplayName(Action action) {
             return "Align Right";
         case Action::AlignJustify:
             return "Justify";
+        case Action::IndentIncrease:
+            return "Increase Indent";
+        case Action::IndentDecrease:
+            return "Decrease Indent";
         case Action::COUNT:
         default:
             return "";
@@ -693,6 +709,10 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::AlignCenter, {raylib::KEY_E, true, false, false});
     addBinding(Action::AlignRight, {raylib::KEY_R, true, false, false});
     addBinding(Action::AlignJustify, {raylib::KEY_J, true, false, false});
+    
+    // Indentation
+    addBinding(Action::IndentIncrease, {raylib::KEY_RIGHT_BRACKET, true, false, false});
+    addBinding(Action::IndentDecrease, {raylib::KEY_LEFT_BRACKET, true, false, false});
 
     return result;
 }

@@ -492,6 +492,63 @@ TextAlignment TextBuffer::lineAlignment(std::size_t row) const {
     return TextAlignment::Left;
 }
 
+int TextBuffer::currentLeftIndent() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].leftIndent;
+    }
+    return 0;
+}
+
+int TextBuffer::currentFirstLineIndent() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].firstLineIndent;
+    }
+    return 0;
+}
+
+void TextBuffer::setCurrentLeftIndent(int pixels) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].leftIndent = std::max(0, pixels);
+        version_++;  // Indent change invalidates render cache
+    }
+}
+
+void TextBuffer::setCurrentFirstLineIndent(int pixels) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].firstLineIndent = pixels;  // Can be negative for hanging indent
+        version_++;
+    }
+}
+
+void TextBuffer::increaseIndent(int amount) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].leftIndent += amount;
+        version_++;
+    }
+}
+
+void TextBuffer::decreaseIndent(int amount) {
+    if (caret_.row < line_spans_.size()) {
+        int current = line_spans_[caret_.row].leftIndent;
+        line_spans_[caret_.row].leftIndent = std::max(0, current - amount);
+        version_++;
+    }
+}
+
+int TextBuffer::lineLeftIndent(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].leftIndent;
+    }
+    return 0;
+}
+
+int TextBuffer::lineFirstLineIndent(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].firstLineIndent;
+    }
+    return 0;
+}
+
 TextBuffer::PerfStats TextBuffer::perfStats() const {
     PerfStats stats;
     stats.total_inserts = stats_.total_inserts;

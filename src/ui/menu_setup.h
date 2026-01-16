@@ -102,7 +102,11 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Align Left", "Ctrl+L", true, false, nullptr},
         {"Align Center", "Ctrl+E", true, false, nullptr},
         {"Align Right", "Ctrl+R", true, false, nullptr},
-        {"Justify", "Ctrl+J", true, false, nullptr}
+        {"Justify", "Ctrl+J", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator (41)
+        // Indentation (42-43)
+        {"Increase Indent", "Ctrl+]", true, false, nullptr},
+        {"Decrease Indent", "Ctrl+[", true, false, nullptr}
     };
     menus.push_back(formatMenu);
 

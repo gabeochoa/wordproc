@@ -99,6 +99,10 @@ struct LineSpan {
     std::size_t length = 0;  // Length of line (excluding newline)
     ParagraphStyle style = ParagraphStyle::Normal;  // Paragraph style for this line
     TextAlignment alignment = TextAlignment::Left;  // Text alignment for this line
+    
+    // Indentation (in pixels or character widths)
+    int leftIndent = 0;       // Left margin indent for entire paragraph
+    int firstLineIndent = 0;  // Additional indent for first line only (can be negative for hanging)
 };
 
 // Gap buffer for efficient text editing
@@ -195,6 +199,18 @@ class TextBuffer {
     
     // Get text alignment for a specific line
     TextAlignment lineAlignment(std::size_t row) const;
+    
+    // Indentation for current line (where caret is)
+    int currentLeftIndent() const;
+    int currentFirstLineIndent() const;
+    void setCurrentLeftIndent(int pixels);
+    void setCurrentFirstLineIndent(int pixels);
+    void increaseIndent(int amount = 20);  // Default 20px (approx 2 chars at 10px/char)
+    void decreaseIndent(int amount = 20);
+    
+    // Get indentation for a specific line
+    int lineLeftIndent(std::size_t row) const;
+    int lineFirstLineIndent(std::size_t row) const;
     
     void backspace();
     void del();
