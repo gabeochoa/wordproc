@@ -181,7 +181,7 @@ inline UIContextType& getUIContext() {
 
 // Get the root UIComponent for parenting UI elements
 inline afterhours::ui::UIComponent& getUIRoot() {
-    auto roots = afterhours::EntityQuery()
+    auto roots = afterhours::EntityQuery({.force_merge = true})
                      .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
                      .gen();
     if (roots.empty()) {
@@ -192,7 +192,7 @@ inline afterhours::ui::UIComponent& getUIRoot() {
 
 // Get the root entity for parenting UI elements
 inline afterhours::Entity& getUIRootEntity() {
-    auto roots = afterhours::EntityQuery()
+    auto roots = afterhours::EntityQuery({.force_merge = true})
                      .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
                      .gen();
     if (roots.empty()) {
