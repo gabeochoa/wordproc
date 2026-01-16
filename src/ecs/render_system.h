@@ -249,6 +249,33 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int paragraphSpaceBefore = buffer.lineSpaceBefore(row);
         y += paragraphSpaceBefore;
         
+        // Draw page break indicator if present
+        if (buffer.hasPageBreakBefore(row)) {
+            // In paged mode, this would force a new page
+            // In pageless mode, we show a visual indicator
+            int breakY = y - 8;  // Position above the line
+            int lineStart = static_cast<int>(textArea.x) + 20;
+            int lineEnd = static_cast<int>(textArea.x + textArea.width) - 20;
+            
+            // Draw a dashed line to indicate page break
+            raylib::Color breakColor = {128, 128, 128, 255};  // Gray
+            for (int px = lineStart; px < lineEnd; px += 8) {
+                raylib::DrawLine(px, breakY, px + 4, breakY, breakColor);
+            }
+            
+            // Draw "Page Break" text in center
+            const char* breakText = "Page Break";
+            int textWidth = raylib::MeasureText(breakText, 10);
+            int textX = lineStart + (lineEnd - lineStart - textWidth) / 2;
+            
+            // Draw background for text
+            raylib::DrawRectangle(textX - 4, breakY - 6, textWidth + 8, 12, 
+                                 raylib::Color{255, 255, 255, 255});
+            raylib::DrawText(breakText, textX, breakY - 5, 10, breakColor);
+            
+            y += 20;  // Add space for the page break indicator
+        }
+        
         // Draw line number in gutter if enabled
         if (showLineNumbers) {
             int lineNum = static_cast<int>(row + 1);  // 1-based line numbers

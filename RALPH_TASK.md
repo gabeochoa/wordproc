@@ -76,7 +76,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add multi-column layout and column breaks.
 - [ ] Add table of contents generation from headings.
 - [ ] Add outline view based on heading hierarchy.
-- [ ] Add line numbering for editing/review.
+- [x] Add line numbering for editing/review. (Implemented: showLineNumbers in LayoutComponent, line number gutter rendering in renderTextBuffer, View menu toggle, gray right-aligned numbers)
 - [ ] Add watermark support (text or image).
 
 ### Refactor Opportunities

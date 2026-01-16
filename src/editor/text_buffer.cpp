@@ -424,6 +424,7 @@ void TextBuffer::insertText(const std::string& text) {
 void TextBuffer::setText(const std::string& text) {
     chars_.clear();
     line_spans_.clear();
+    hyperlinks_.clear();  // Clear all hyperlinks when setting new text
     version_++;  // Content changed - invalidate render cache
 
     if (!text.empty()) {

@@ -249,6 +249,16 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::DecreaseSpaceAfter)) {
             doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
         }
+        
+        // Page breaks
+        if (actionMap_.isActionPressed(Action::InsertPageBreak)) {
+            doc.buffer.insertPageBreak();
+            doc.isDirty = true;
+        }
+        if (actionMap_.isActionPressed(Action::TogglePageBreak)) {
+            doc.buffer.togglePageBreak();
+            doc.isDirty = true;
+        }
 
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {

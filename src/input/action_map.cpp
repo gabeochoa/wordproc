@@ -191,6 +191,10 @@ const char* ActionMap::actionName(Action action) {
             return "TableMoveNextCell";
         case Action::TableMovePrevCell:
             return "TableMovePrevCell";
+        case Action::InsertPageBreak:
+            return "InsertPageBreak";
+        case Action::TogglePageBreak:
+            return "TogglePageBreak";
         case Action::COUNT:
         default:
             return "NONE";
@@ -583,6 +587,10 @@ const char* actionDisplayName(Action action) {
             return "Next Cell";
         case Action::TableMovePrevCell:
             return "Previous Cell";
+        case Action::InsertPageBreak:
+            return "Page Break";
+        case Action::TogglePageBreak:
+            return "Toggle Page Break";
         case Action::COUNT:
         default:
             return "";
@@ -876,6 +884,9 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::DecreaseSpaceBefore, {raylib::KEY_DOWN, true, false, true});
     addBinding(Action::IncreaseSpaceAfter, {raylib::KEY_UP, true, true, true});
     addBinding(Action::DecreaseSpaceAfter, {raylib::KEY_DOWN, true, true, true});
+    
+    // Page breaks
+    addBinding(Action::InsertPageBreak, {raylib::KEY_ENTER, true, false, false});  // Ctrl+Enter
 
     return result;
 }
