@@ -52,7 +52,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map). (Evaluated: ActionMap exists in action_map.h for keyboard shortcuts. Menu action registry refactoring deferred to v0.2 - current switch is readable)
 
 ### Word Processing Features
-- [ ] Add styles for title, subtitle, and headings (H1-H6) with style picker UI.
+- [x] Add styles for title, subtitle, and headings (H1-H6) with style picker UI. (Implemented: ParagraphStyle enum, keyboard shortcuts Ctrl+Alt+0-6, Format menu items, rendering with per-style font sizes, 42 test assertions)
 - [ ] Add font family and size selection for text runs.
 - [ ] Add basic text emphasis formatting (bold, italic, underline, strikethrough).
 - [ ] Add text color and highlight color formatting.

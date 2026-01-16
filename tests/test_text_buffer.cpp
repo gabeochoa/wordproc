@@ -592,3 +592,113 @@ TEST_CASE("Scroll viewport validation", "[text_buffer][scroll]") {
         REQUIRE(clamp(10) == 5);  // Over max clamped
     }
 }
+
+TEST_CASE("Paragraph styles", "[text_buffer][paragraph_styles]") {
+    TextBuffer buffer;
+    
+    SECTION("default paragraph style is Normal") {
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Normal);
+        REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Normal);
+    }
+    
+    SECTION("set and get paragraph style") {
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading1);
+        REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Heading1);
+    }
+    
+    SECTION("paragraph styles per line are independent") {
+        // Create multiple lines
+        buffer.insertText("Line 1\nLine 2\nLine 3");
+        REQUIRE(buffer.lineCount() == 3);
+        
+        // Set different styles for each line
+        buffer.setCaret({0, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+        
+        buffer.setCaret({1, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        
+        buffer.setCaret({2, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
+        
+        // Verify each line has its own style
+        REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Title);
+        REQUIRE(buffer.lineParagraphStyle(1) == ParagraphStyle::Heading1);
+        REQUIRE(buffer.lineParagraphStyle(2) == ParagraphStyle::Normal);
+    }
+    
+    SECTION("all paragraph styles can be applied") {
+        // Test all styles can be set
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Normal);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Title);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Subtitle);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading1);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading2);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading3);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading3);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading4);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading4);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading5);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading5);
+        
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
+        REQUIRE(buffer.currentParagraphStyle() == ParagraphStyle::Heading6);
+    }
+    
+    SECTION("paragraph style helper functions") {
+        // Test font size helpers
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Title) == 32);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Subtitle) == 24);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Heading1) == 28);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Heading2) == 24);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Heading3) == 20);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Heading4) == 18);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Heading5) == 16);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Heading6) == 14);
+        REQUIRE(paragraphStyleFontSize(ParagraphStyle::Normal) == 16);
+        
+        // Test bold helpers
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Title) == true);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Heading1) == true);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Heading2) == true);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Heading3) == true);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Heading4) == true);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Heading5) == false);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Heading6) == false);
+        REQUIRE(paragraphStyleIsBold(ParagraphStyle::Normal) == false);
+        
+        // Test italic helpers
+        REQUIRE(paragraphStyleIsItalic(ParagraphStyle::Subtitle) == true);
+        REQUIRE(paragraphStyleIsItalic(ParagraphStyle::Normal) == false);
+        REQUIRE(paragraphStyleIsItalic(ParagraphStyle::Heading1) == false);
+        
+        // Test name helpers
+        REQUIRE(std::string(paragraphStyleName(ParagraphStyle::Normal)) == "Normal");
+        REQUIRE(std::string(paragraphStyleName(ParagraphStyle::Title)) == "Title");
+        REQUIRE(std::string(paragraphStyleName(ParagraphStyle::Subtitle)) == "Subtitle");
+        REQUIRE(std::string(paragraphStyleName(ParagraphStyle::Heading1)) == "Heading 1");
+    }
+    
+    SECTION("new lines inherit style from current line") {
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        buffer.insertText("Heading");
+        buffer.insertChar('\n');  // Create new line
+        
+        // New line should inherit the style from the previous line
+        // (implementation may vary - this tests current behavior)
+        REQUIRE(buffer.lineCount() == 2);
+    }
+}

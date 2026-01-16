@@ -317,5 +317,10 @@ launch-benchmark: $(MAIN_EXE)
 	@echo "Running launch-time benchmark..."
 	@bash ./tests/run_launch_benchmark.sh
 
-.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark
+# Sampling profile (macOS `sample`)
+profile-startup: $(MAIN_EXE)
+	@echo "Running sampling profile..."
+	@bash ./tests/run_sample_profile.sh
+
+.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark profile-startup
 

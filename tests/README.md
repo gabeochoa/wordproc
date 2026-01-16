@@ -16,6 +16,9 @@ make e2e
 
 # Run interactive launch-time benchmark (requires display)
 make launch-benchmark
+
+# Run sampling profile for startup (macOS `sample`)
+make profile-startup
 ```
 
 ## E2E / Screenshot Testing
@@ -63,6 +66,26 @@ Environment overrides:
 - `FRAME_LIMIT` - frames to render before exit (default: 2)
 
 Results are saved to `output/perf/launch_times.csv`.
+
+## Startup Sampling Profile (macOS)
+
+Capture a short sampling profile of startup using `sample`:
+
+```bash
+make profile-startup
+```
+
+Environment overrides:
+- `DURATION_SEC` - seconds to sample (default: 5)
+- `FRAME_LIMIT` - frames to render before exit (default: 300)
+- `LOAD_FILE` - file path to load on startup (default: blank)
+- `SUDO` - set to `1` to run `sample` via sudo if needed
+
+Results are saved to `output/perf/sample_startup.txt` with app logs in
+`output/perf/sample_app.log`.
+
+If `sample` reports “Operation not permitted”, grant Developer Tools permission
+to your terminal app in System Settings > Privacy & Security > Developer Tools.
 
 ## Test Structure
 
