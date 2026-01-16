@@ -269,19 +269,28 @@ inline std::vector<TestCommand> parseScript(const std::string& path) {
 // Script runner state
 class ScriptRunner {
 public:
+    // Default timeout: 600 frames (~10 seconds at 60fps)
+    static constexpr int DEFAULT_TIMEOUT_FRAMES = 600;
+    
     ScriptRunner() = default;
     
     void loadScript(const std::string& path) {
         commands_ = parseScript(path);
         currentIndex_ = 0;
         waitFrames_ = 0;
+        frameCount_ = 0;
+        scriptStartFrame_ = 0;
         results_.clear();
         errors_.clear();
         scriptResults_.clear();
         finished_ = false;
         failed_ = false;
+        timedOut_ = false;
         currentScriptName_ = path;
     }
+    
+    // Set timeout in frames (0 = no timeout)
+    void setTimeoutFrames(int frames) { timeoutFrames_ = frames; }
     
     // Load multiple scripts from a directory (batch mode)
     // Inserts 'clear' command between each script automatically
@@ -292,8 +301,11 @@ public:
         errors_.clear();
         currentIndex_ = 0;
         waitFrames_ = 0;
+        frameCount_ = 0;
+        scriptStartFrame_ = 0;
         finished_ = false;
         failed_ = false;
+        timedOut_ = false;
         
         // Find all .e2e files in directory
         std::vector<std::string> scripts;
@@ -350,6 +362,8 @@ public:
     bool hasCommands() const { return !commands_.empty(); }
     bool isFinished() const { return finished_; }
     bool hasFailed() const { return failed_; }
+    bool hasTimedOut() const { return timedOut_; }
+    int frameCount() const { return frameCount_; }
     const std::vector<ValidationResult>& results() const { return results_; }
     const std::vector<ScriptError>& errors() const { return errors_; }
     
@@ -372,6 +386,30 @@ public:
     // Execute one frame of the script
     void tick() {
         if (finished_ || commands_.empty()) return;
+        
+        // Increment frame counter
+        frameCount_++;
+        
+        // Check for timeout
+        if (timeoutFrames_ > 0) {
+            int framesInCurrentScript = frameCount_ - scriptStartFrame_;
+            if (framesInCurrentScript > timeoutFrames_) {
+                printf("[TIMEOUT] Script exceeded %d frames at command %zu/%zu\n", 
+                       timeoutFrames_, currentIndex_, commands_.size());
+                timedOut_ = true;
+                failed_ = true;
+                finished_ = true;
+                
+                // Record timeout error
+                ScriptError error;
+                error.lineNumber = currentIndex_ < commands_.size() ? 
+                    commands_[currentIndex_].lineNumber : 0;
+                error.command = "timeout";
+                error.message = "Script timed out after " + std::to_string(timeoutFrames_) + " frames";
+                errors_.push_back(error);
+                return;
+            }
+        }
         
         // Handle wait
         if (waitFrames_ > 0) {
@@ -487,7 +525,12 @@ public:
             }
         }
         
-        printf("E2E Test Results: %d passed, %d failed\n", passed, failed);
+        if (timedOut_) {
+            printf("\n[TIMEOUT] Test execution timed out after %d frames\n", frameCount_);
+        }
+        
+        printf("E2E Test Results: %d passed, %d failed (total frames: %d)\n", 
+               passed, failed, frameCount_);
     }
     
 private:
@@ -629,6 +672,8 @@ private:
         if (documentClearer_) {
             documentClearer_();
         }
+        // Reset script start frame for timeout tracking in batch mode
+        scriptStartFrame_ = frameCount_;
         waitFrames_ = 2;  // Wait for UI to update
     }
     
@@ -647,10 +692,14 @@ private:
     std::vector<TestCommand> commands_;
     std::size_t currentIndex_ = 0;
     int waitFrames_ = 0;
+    int frameCount_ = 0;           // Total frames elapsed
+    int scriptStartFrame_ = 0;     // Frame when current script started (for batch timeout)
+    int timeoutFrames_ = DEFAULT_TIMEOUT_FRAMES;  // Max frames per script (0 = no timeout)
     std::vector<ValidationResult> results_;
     std::vector<ScriptError> errors_;
     bool finished_ = false;
     bool failed_ = false;
+    bool timedOut_ = false;
     
     // For double-click simulation
     bool pendingDoubleClick_ = false;
