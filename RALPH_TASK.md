@@ -101,8 +101,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Store a baseline report and diff against it to flag regressions.
 
 ### 9) Performance & Data-Oriented Architecture (SoA)
-- [ ] Replace `TextBuffer` AoS (`std::vector<std::string>`) with SoA storage (contiguous char store + line offsets/lengths or piece table).
-- [ ] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
+- [x] Replace `TextBuffer` AoS (`std::vector<std::string>`) with SoA storage (contiguous char store + line offsets/lengths or piece table).
+- [x] Reduce per-insert allocations by using a gap buffer or piece table per document/line.
 - [x] Update layout to avoid copying substrings (store spans/offsets instead of `std::string` per wrapped line).
 - [x] Add benchmarks for insert, delete, and layout operations (document sizes + typing bursts).
 - [ ] Ensure rendering uses cached glyph/layout data to avoid per-frame re-layout.
