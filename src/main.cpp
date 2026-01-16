@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
   auto setStatus = [&statusMsg](const std::string& msg, bool isError = false) {
     statusMsg.text = msg;
     statusMsg.isError = isError;
-    statusMsg.expiresAt = raylib::GetTime() + STATUS_MESSAGE_DURATION;
+    statusMsg.expiresAt = raylib::GetTime() + theme::layout::STATUS_MESSAGE_DURATION;
   };
   
   // Load file if specified
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
     
     // Caret blinking
     caretBlinkTimer += dt;
-    if (caretBlinkTimer >= 0.5) {
+    if (caretBlinkTimer >= theme::layout::CARET_BLINK_INTERVAL) {
       caretBlinkTimer = 0.0;
       caretVisible = !caretVisible;
     }
@@ -460,31 +460,31 @@ int main(int argc, char *argv[]) {
 
     // Title bar area
     raylib::Rectangle titleBar = {0, 0, static_cast<float>(screenWidth),
-                                   static_cast<float>(TITLE_BAR_HEIGHT)};
+                                   static_cast<float>(theme::layout::TITLE_BAR_HEIGHT)};
     
     // Menu bar area
-    raylib::Rectangle menuBar = {0, static_cast<float>(TITLE_BAR_HEIGHT),
+    raylib::Rectangle menuBar = {0, static_cast<float>(theme::layout::TITLE_BAR_HEIGHT),
                                   static_cast<float>(screenWidth),
-                                  static_cast<float>(MENU_BAR_HEIGHT)};
+                                  static_cast<float>(theme::layout::MENU_BAR_HEIGHT)};
     
     // Status bar area
-    raylib::Rectangle statusBar = {0, static_cast<float>(screenHeight - STATUS_BAR_HEIGHT),
+    raylib::Rectangle statusBar = {0, static_cast<float>(screenHeight - theme::layout::STATUS_BAR_HEIGHT),
                                     static_cast<float>(screenWidth),
-                                    static_cast<float>(STATUS_BAR_HEIGHT)};
+                                    static_cast<float>(theme::layout::STATUS_BAR_HEIGHT)};
     
     // Text editing area
-    float textAreaTop = static_cast<float>(TITLE_BAR_HEIGHT + MENU_BAR_HEIGHT + BORDER_WIDTH);
-    float textAreaHeight = static_cast<float>(screenHeight - TITLE_BAR_HEIGHT - 
-                                               MENU_BAR_HEIGHT - STATUS_BAR_HEIGHT - 
-                                               2 * BORDER_WIDTH);
-    raylib::Rectangle textArea = {static_cast<float>(BORDER_WIDTH), textAreaTop,
-                                   static_cast<float>(screenWidth - 2 * BORDER_WIDTH),
+    float textAreaTop = static_cast<float>(theme::layout::TITLE_BAR_HEIGHT + theme::layout::MENU_BAR_HEIGHT + theme::layout::BORDER_WIDTH);
+    float textAreaHeight = static_cast<float>(screenHeight - theme::layout::TITLE_BAR_HEIGHT - 
+                                               theme::layout::MENU_BAR_HEIGHT - theme::layout::STATUS_BAR_HEIGHT - 
+                                               2 * theme::layout::BORDER_WIDTH);
+    raylib::Rectangle textArea = {static_cast<float>(theme::layout::BORDER_WIDTH), textAreaTop,
+                                   static_cast<float>(screenWidth - 2 * theme::layout::BORDER_WIDTH),
                                    textAreaHeight};
     
     // Calculate visible lines for auto-scroll
     TextStyle currentStyle = buffer.textStyle();
     int currentLineHeight = currentStyle.fontSize + 4;
-    int visibleLines = static_cast<int>((textAreaHeight - 2 * TEXT_PADDING) / currentLineHeight);
+    int visibleLines = static_cast<int>((textAreaHeight - 2 * theme::layout::TEXT_PADDING) / currentLineHeight);
     if (visibleLines < 1) visibleLines = 1;
     
     // Auto-scroll to keep caret visible
@@ -504,10 +504,10 @@ int main(int argc, char *argv[]) {
 
     // === DRAWING ===
     raylib::BeginDrawing();
-    raylib::ClearBackground(colors::WINDOW_BG);
+    raylib::ClearBackground(theme::WINDOW_BG);
 
     // Draw title bar
-    raylib::DrawRectangleRec(titleBar, colors::TITLE_BAR);
+    raylib::DrawRectangleRec(titleBar, theme::TITLE_BAR);
     std::string title = "Wordproc";
     if (!currentFilePath.empty()) {
       title += " - " + std::filesystem::path(currentFilePath).filename().string();
@@ -517,14 +517,14 @@ int main(int argc, char *argv[]) {
     if (isDirty) {
       title += " *";
     }
-    raylib::DrawText(title.c_str(), 4, 4, FONT_SIZE, colors::TITLE_TEXT);
+    raylib::DrawText(title.c_str(), 4, 4, theme::layout::FONT_SIZE, theme::TITLE_TEXT);
 
     // Draw menu bar background
-    raylib::DrawRectangleRec(menuBar, colors::WINDOW_BG);
-    drawRaisedBorder(menuBar);
+    raylib::DrawRectangleRec(menuBar, theme::WINDOW_BG);
+    util::drawRaisedBorder(menuBar);
     
     // Draw interactive menus (must be done before other UI to get proper z-order)
-    int menuResult = win95::DrawMenuBar(menus, TITLE_BAR_HEIGHT, MENU_BAR_HEIGHT);
+    int menuResult = win95::DrawMenuBar(menus, theme::layout::TITLE_BAR_HEIGHT, theme::layout::MENU_BAR_HEIGHT);
     
     // Handle menu actions
     if (menuResult >= 0) {
@@ -661,8 +661,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Draw text area background
-    raylib::DrawRectangleRec(textArea, colors::TEXT_AREA_BG);
-    drawSunkenBorder(textArea);
+    raylib::DrawRectangleRec(textArea, theme::TEXT_AREA_BG);
+    util::drawSunkenBorder(textArea);
 
     // Render text buffer with dynamic font size
     TextStyle style = buffer.textStyle();
@@ -671,30 +671,27 @@ int main(int argc, char *argv[]) {
     renderTextBuffer(buffer, textArea, caretVisible, fontSize, lineHeight, scrollOffset);
 
     // Draw status bar
-    raylib::DrawRectangleRec(statusBar, colors::STATUS_BAR);
-    drawRaisedBorder(statusBar);
+    raylib::DrawRectangleRec(statusBar, theme::STATUS_BAR);
+    util::drawRaisedBorder(statusBar);
     
     // Check if there's an active status message
     double currentTime = raylib::GetTime();
     if (!statusMsg.text.empty() && currentTime < statusMsg.expiresAt) {
       // Display status message
-      raylib::Color msgColor = statusMsg.isError ? 
-        raylib::Color{200, 0, 0, 255} : raylib::Color{0, 100, 0, 255};
-      raylib::DrawText(statusMsg.text.c_str(), 4, screenHeight - STATUS_BAR_HEIGHT + 2,
-                       FONT_SIZE - 2, msgColor);
+      raylib::Color msgColor = statusMsg.isError ? theme::STATUS_ERROR : theme::STATUS_SUCCESS;
+      raylib::DrawText(statusMsg.text.c_str(), 4, screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
+                       theme::layout::FONT_SIZE - 2, msgColor);
     } else {
       // Display normal status: line/col, formatting, etc.
       CaretPosition caret = buffer.caret();
-      char statusText[128];
-      std::snprintf(statusText, sizeof(statusText), 
-                    "Ln %zu, Col %zu | %s%s| %dpt | %s",
+      std::string statusText = std::format("Ln {}, Col {} | {}{}| {}pt | {}",
                     caret.row + 1, caret.column + 1,
                     style.bold ? "B " : "",
                     style.italic ? "I " : "",
                     style.fontSize,
-                    style.font.c_str());
-      raylib::DrawText(statusText, 4, screenHeight - STATUS_BAR_HEIGHT + 2,
-                       FONT_SIZE - 2, colors::TEXT_COLOR);
+                    style.font);
+      raylib::DrawText(statusText.c_str(), 4, screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
+                       theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
     }
 
     // Draw About dialog if active

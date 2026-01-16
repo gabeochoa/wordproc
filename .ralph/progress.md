@@ -530,3 +530,9 @@ All 199 tests pass.
 
 ### 2026-01-15 19:22:16
 **Session 7 started** (model: opus-4.5-thinking)
+
+### 2026-01-15 19:25:58
+**Session 7 ended** - 🔄 Context rotation (token limit reached)
+
+### 2026-01-15 19:26:00
+**Session 8 started** (model: opus-4.5-thinking)

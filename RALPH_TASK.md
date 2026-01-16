@@ -138,29 +138,32 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
 ## Feedback Tasks
-- [ ] Replace `std::snprintf` with `fmt::` or `std::format` for status text formatting in `src/main.cpp`.
-- [ ] Move hardcoded colors (e.g., around `src/main.cpp:793`) into a Theme file to centralize styling.
+- [x] Replace `std::snprintf` with `fmt::` or `std::format` for status text formatting in `src/main.cpp`.
+- [x] Move hardcoded colors (e.g., around `src/main.cpp:793`) into a Theme file to centralize styling.
 - [ ] Refactor the main loop in `src/main.cpp:323-833` to use ECS system functionality instead of a single file.
 - [ ] Use immediate-mode UI for the UI layer.
-- [ ] Move input handling to an enum-based action map so keys can be remapped later.
+- [x] Move input handling to an enum-based action map so keys can be remapped later.
 - [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
-- [ ] Stop using Gaegu-Bold for default UI elements; choose a more readable small-font UI face.
-- [ ] Move Win95 menu setup (`src/main.cpp:249-303`) into its own file.
-- [ ] Replace `std::printf` at `src/main.cpp:207-214` with the project's logging system.
-- [ ] Add a timing header around `src/main.cpp:188-199` for easier profiling without full setup.
-- [ ] Move the utility definitions in `src/main.cpp:15-165` (colors, config structs, drawing helpers, etc.) into separate files.
+- [x] Stop using Gaegu-Bold for default UI elements; choose a more readable small-font UI face. (UI uses raylib default font; Gaegu is only for document text on user selection)
+- [x] Move Win95 menu setup (`src/main.cpp:249-303`) into its own file.
+- [x] Replace `std::printf` at `src/main.cpp:207-214` with the project's logging system.
+- [x] Add a timing header around `src/main.cpp:188-199` for easier profiling without full setup.
+- [x] Move the utility definitions in `src/main.cpp:15-165` (colors, config structs, drawing helpers, etc.) into separate files.
 - [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2), refactoring `src/preload.cpp:84-220`.
-- [ ] Review `src/settings.cpp:1-217` for improved setup; consider zpp-bits serialization (from pharmasea) if it simplifies settings I/O.
-- [ ] Remove volume-related APIs from `src/settings.h:33-41`.
-- [ ] Remove post-processing APIs from `src/settings.h:44-46`.
-- [ ] Review `src/settings.h:1-48` and add any missing settings needed for the app.
+- [x] Review `src/settings.cpp:1-217` for improved setup; consider zpp-bits serialization (from pharmasea) if it simplifies settings I/O. (Simplified by removing unused volume/post-processing; zpp-bits deferred)
+- [x] Remove volume-related APIs from `src/settings.h:33-41`.
+- [x] Remove post-processing APIs from `src/settings.h:44-46`.
+- [x] Review `src/settings.h:1-48` and add any missing settings needed for the app.
 - [ ] Replace custom Win95 widgets in `src/ui/win95_widgets.h:1-85` with vendor/afterhours UI library usage; document gaps in `AfterhoursGaps.md`.
 - [ ] Use Afterhours UI state context for test input handling in `src/testing/test_input.h:1-55`.
-- [ ] Review `src/testing/test_input.cpp:5-13` macro undefines and decide whether to keep/replace them.
+- [x] Review `src/testing/test_input.cpp:5-13` macro undefines and decide whether to keep/replace them. (Kept: necessary to avoid recursion in raylib-mocked test input)
 - [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
-- [ ] If `src/engine/input_injector.cpp:1-173` is test-only, move it into the testing folder.
+- [x] If `src/engine/input_injector.cpp:1-173` is test-only, move it into the testing folder. (Already in src/testing/)
 - [ ] Evaluate using immutable structures for text layout in `src/editor/text_layout.h:1-107`.
 - [ ] Add tests that validate on-screen content while scrolling.
+- [ ] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
+- [x] Add unsaved-changes indicator (`*`) in the UI when the document is dirty.
+- [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
 
 ---
 

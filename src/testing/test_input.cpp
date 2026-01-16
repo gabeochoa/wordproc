@@ -1,5 +1,5 @@
 #include "test_input.h"
-#include "../engine/input_injector.h"
+#include "input_injector.h"
 #include "../rl.h"
 #include "test_input_fwd.h"
 

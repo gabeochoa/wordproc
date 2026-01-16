@@ -1,6 +1,5 @@
 #include "settings.h"
 
-#include <algorithm>
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -8,24 +7,6 @@
 #include <afterhours/src/plugins/files.h>
 
 using namespace afterhours;
-
-template <typename T> struct ValueHolder {
-  using value_type = T;
-  T data;
-
-  ValueHolder(const T &initial) : data(initial) {}
-  T &get() { return data; }
-  const T &get() const { return data; }
-  void set(const T &data_) { data = data_; }
-
-  operator const T &() { return get(); }
-};
-
-struct Pct : ValueHolder<float> {
-  Pct(const float &initial) : ValueHolder(0.f) { set(initial); }
-  void set(const float &data_) { data = std::min(1.f, std::max(0.f, data_)); }
-  float str() const { return data; }
-};
 
 struct S_Data {
   afterhours::window_manager::Resolution resolution = {
