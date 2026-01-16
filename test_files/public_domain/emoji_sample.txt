@@ -1,0 +1,9 @@
+Title: Emoji Sample — public domain
+Source: Generated sample text, public domain
+
+Hello, world! 😀😄😁
+Text with symbols: ✨⚡️🔥
+Faces and gestures: 🙂🙌👍
+Objects and places: 📚📝🏛️
+Nature and animals: 🌿🌸🦊
+

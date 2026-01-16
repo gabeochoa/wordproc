@@ -137,6 +137,15 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Provide app-side workaround for each gap while avoiding vendor changes.
 - [ ] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
+## Feedback Tasks
+- [ ] Replace `std::snprintf` with `fmt::` or `std::format` for status text formatting in `src/main.cpp`.
+- [ ] Move hardcoded colors (e.g., around `src/main.cpp:793`) into a Theme file to centralize styling.
+- [ ] Refactor the main loop in `src/main.cpp:323-833` to use ECS system functionality instead of a single file.
+- [ ] Use immediate-mode UI for the UI layer.
+- [ ] Move input handling to an enum-based action map so keys can be remapped later.
+- [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
+- [ ] Stop using Gaegu-Bold for default UI elements; choose a more readable small-font UI face.
+
 ---
 
 ## Ralph Instructions
