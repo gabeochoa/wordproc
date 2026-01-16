@@ -148,7 +148,15 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Table...", "", true, false, nullptr},                  // 5
         {"", "", false, true, nullptr},                          // 6 Separator
         {"Image...", "", true, false, nullptr},                  // 7 (placeholder)
-        {"Special Character...", "", true, false, nullptr}       // 8 (placeholder)
+        {"", "", false, true, nullptr},                          // 8 Separator
+        {"Line", "", true, false, nullptr},                      // 9 - Drawing: Line
+        {"Rectangle", "", true, false, nullptr},                 // 10 - Drawing: Rectangle
+        {"Ellipse", "", true, false, nullptr},                   // 11 - Drawing: Ellipse
+        {"Arrow", "", true, false, nullptr},                     // 12 - Drawing: Arrow
+        {"Rounded Rectangle", "", true, false, nullptr},         // 13 - Drawing: Rounded Rectangle
+        {"Triangle", "", true, false, nullptr},                  // 14 - Drawing: Triangle
+        {"", "", false, true, nullptr},                          // 15 Separator
+        {"Special Character...", "", true, false, nullptr}       // 16 (placeholder)
     };
     menus.push_back(insertMenu);
 
