@@ -91,8 +91,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 ### 8) Testing & Tooling (P0)
 - [x] Choose and set up unit test framework (Catch2 or GTest).
-- [ ] Set up integration + E2E tests early (Jest/automation or equivalent).
-- [ ] Add screenshot-based UI verification (automated capture during interactions).
+- [x] Set up integration + E2E tests early (Jest/automation or equivalent).
+- [x] Add screenshot-based UI verification (automated capture during interactions).
 - [x] Add a visible/manual test flow to "use your eyes" to confirm behavior.
 - [x] Document how to run tests and capture screenshots.
 - [ ] Add load-time regression suite that opens all `test_files/public_domain/*.txt` and writes a timing report (cold start + ready-to-interact).
@@ -109,8 +109,8 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Instrument and log startup time from CLI launch to interactive; add perf budget checks (<= 100ms cold start).
 
 ### 10) Code Review Follow-ups
-- [ ] Implement text rendering (draw buffer content + wrapped lines).
-- [ ] Draw caret and selection highlight with blink/animation timing.
+- [x] Implement text rendering (draw buffer content + wrapped lines).
+- [x] Draw caret and selection highlight with blink/animation timing.
 - [ ] Handle selection deletion on typing/backspace/delete.
 - [ ] Add word/line navigation (Ctrl+Arrow, Home/End, PageUp/PageDown).
 - [ ] Add clipboard integration (copy/cut/paste).

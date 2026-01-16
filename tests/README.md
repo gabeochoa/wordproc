@@ -1,16 +1,50 @@
 # Testing
 
-This project uses [Catch2 v2](https://github.com/catchorg/Catch2/tree/v2.x) for unit testing.
+This project uses [Catch2 v2](https://github.com/catchorg/Catch2/tree/v2.x) for unit testing and custom E2E testing with screenshot capture.
 
 ## Running Tests
 
 ```bash
-# Run all tests
+# Run all unit tests
 make test
 
 # Run tests with verbose output (shows all assertions)
 make test-verbose
+
+# Run E2E tests with screenshot capture (requires display)
+make e2e
 ```
+
+## E2E / Screenshot Testing
+
+The application supports a test mode for automated E2E testing:
+
+```bash
+# Run with test mode enabled
+./output/ui_tester.exe --test-mode --frame-limit 10 --screenshot-dir output/screenshots
+```
+
+Options:
+- `--test-mode` - Enables test mode, captures screenshots and logs startup time
+- `--frame-limit N` - Exit after N frames (0 = run forever)
+- `--screenshot-dir DIR` - Directory to save screenshots
+
+Screenshots are saved at key points:
+- `01_startup.png` - First frame after startup
+- `final.png` - Last frame before exit
+
+### Manual Visual Verification
+
+After running E2E tests, visually verify screenshots:
+```bash
+open output/screenshots/
+```
+
+Check that:
+1. Win95-style window chrome is visible (blue title bar, gray background)
+2. Text area has sunken 3D border
+3. Status bar shows line/column info
+4. Caret is visible and positioned correctly
 
 ## Test Structure
 

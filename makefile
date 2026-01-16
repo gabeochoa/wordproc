@@ -288,5 +288,10 @@ test-verbose: $(TEST_EXE)
 	@echo "Running tests (verbose)..."
 	./$(TEST_EXE) --success
 
-.PHONY: test test-verbose
+# E2E tests with screenshot capture
+e2e: $(MAIN_EXE)
+	@echo "Running E2E tests..."
+	@./tests/run_e2e.sh
+
+.PHONY: test test-verbose e2e
 

@@ -185,3 +185,52 @@ EOF
 ═══════════════════════════════════════════════════════════════
 Ralph Session Started: Thu Jan 15 18:06:36 CST 2026
 ═══════════════════════════════════════════════════════════════
+[18:06:41] 🟢 SESSION START: model=Claude 4.5 Opus (Thinking)
+[18:06:49] 🟢 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (142 lines, ~13.8KB)
+[18:06:50] 🟢 READ /Users/gabeochoa/p/wordproc/.ralph/progress.md (84 lines, ~8.2KB)
+[18:07:06] 🟢 TOKENS: 6445 / 80000 (8%) [read:22KB write:0KB assist:0KB shell:0KB]
+[18:07:10] 🟢 READ /Users/gabeochoa/p/wordproc/src/main.cpp (137 lines, ~13.3KB)
+[18:07:10] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.h (60 lines, ~5.8KB)
+[18:07:11] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.h (9 lines, ~.8KB)
+[18:07:26] 🟢 READ /Users/gabeochoa/p/wordproc/makefile (226 lines, ~22.0KB)
+[18:07:36] 🟢 TOKENS: 17330 / 80000 (21%) [read:64KB write:0KB assist:0KB shell:0KB]
+[18:07:38] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make 2>&1 | head -50 → exit 0
+[18:07:45] 🟢 SHELL curl -sSL -o /Users/gabeochoa/p/wordproc/vendor/catch2/catch.hpp https://github.com/catchorg/Catch2/releases/download/v2.13.10/catch.hpp && echo "Downloaded Catch2" → exit 0
+[18:07:50] 🟢 SHELL mkdir -p /Users/gabeochoa/p/wordproc/vendor/catch2 && curl -sSL -o /Users/gabeochoa/p/wordproc/vendor/catch2/catch.hpp https://github.com/catchorg/Catch2/releases/download/v2.13.10/catch.hpp && echo "Downloaded Catch2" → exit 0
+[18:07:54] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_buffer.cpp (236 lines, ~23.0KB)
+[18:07:59] 🟢 SHELL mkdir -p /Users/gabeochoa/p/wordproc/tests → exit 0
+[18:08:32] 🟢 TOKENS: 23323 / 80000 (29%) [read:87KB write:0KB assist:0KB shell:0KB]
+[18:09:02] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make test 2>&1 → exit 0
+[18:09:02] 🟢 TOKENS: 23345 / 80000 (29%) [read:87KB write:0KB assist:0KB shell:0KB]
+[18:09:07] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_layout.h (18 lines, ~1.7KB)
+[18:09:07] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/text_layout.cpp (31 lines, ~3.0KB)
+[18:09:08] 🟢 READ /Users/gabeochoa/p/wordproc/src/editor/document_io.cpp (72 lines, ~7.0KB)
+[18:09:34] 🟢 TOKENS: 26406 / 80000 (33%) [read:99KB write:0KB assist:1KB shell:0KB]
+[18:09:40] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make test 2>&1 → exit 0
+[18:10:06] 🟢 TOKENS: 26431 / 80000 (33%) [read:99KB write:0KB assist:1KB shell:0KB]
+[18:10:09] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && git status → exit 0
+[18:10:16] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && git add vendor/catch2/ tests/ makefile RALPH_TASK.md && git commit -m "$(cat <<'EOF'
+ralph: add unit testing infrastructure with Catch2
+
+- Add Catch2 v2 header-only library to vendor/catch2/
+- Create tests/ directory with test_main.cpp (Catch2 entry point)
+- Add unit tests for TextBuffer (insert, delete, caret, selection)
+- Add unit tests for text_layout (line wrapping)
+- Add unit tests for document_io (save/load roundtrip)
+- Add 'make test' and 'make test-verbose' targets to makefile
+- Add tests/README.md documenting how to run tests
+- All 101 assertions in 13 test cases pass
+EOF
+)" → exit 0
+[18:10:33] 🟢 READ /Users/gabeochoa/p/wordproc/AfterhoursGaps.md (14 lines, ~1.3KB)
+[18:10:36] 🟢 TOKENS: 26811 / 80000 (33%) [read:100KB write:0KB assist:1KB shell:0KB]
+[18:10:38] 🟢 READ /Users/gabeochoa/p/wordproc/src/main.cpp (137 lines, ~13.3KB)
+[18:10:48] 🟢 READ /Users/gabeochoa/p/wordproc/vendor/afterhours/src/font_helper.h (191 lines, ~18.6KB)
+[18:10:53] 🟢 READ /Users/gabeochoa/p/wordproc/src/rl.h (74 lines, ~7.2KB)
+[18:10:56] 🟢 READ /Users/gabeochoa/p/wordproc/src/preload.cpp (222 lines, ~21.6KB)
+[18:12:25] 🟢 TOKENS: 42526 / 80000 (53%) [read:161KB write:0KB assist:1KB shell:0KB]
+[18:12:33] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make 2>&1 | head -100 → exit 0
+[18:12:44] 🟢 SHELL cd /Users/gabeochoa/p/wordproc && make 2>&1 && make test 2>&1 → exit 0
+[18:12:59] 🟢 TOKENS: 42573 / 80000 (53%) [read:161KB write:0KB assist:1KB shell:0KB]
+[18:13:00] 🟢 SHELL chmod +x /Users/gabeochoa/p/wordproc/tests/run_e2e.sh → exit 0
+[18:13:30] 🟢 TOKENS: 42611 / 80000 (53%) [read:161KB write:0KB assist:2KB shell:0KB]
