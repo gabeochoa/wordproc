@@ -79,8 +79,8 @@ build-analysis.txt
 # Compilation database
 compile_commands.json
 
-# Ralph config (may contain API key)
-.cursor/ralph-config.json
+# Cursor IDE
+.cursor/
 
 # Test screenshots (generated during E2E tests)
 *.png
