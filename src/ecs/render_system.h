@@ -537,6 +537,24 @@ struct EditorRenderSystem
         auto& mutableStatus = const_cast<StatusComponent&>(status);
         auto& mutableLayout = const_cast<LayoutComponent&>(layout);
         
+        // #region agent log
+        {
+            static int logCount = 0;
+            if (logCount++ < 3) {
+                FILE* f = fopen("/Users/gabeochoa/p/wordproc/.cursor/debug.log", "a");
+                if (f) {
+                    fprintf(f, "{\"hypothesisId\":\"A,B,C\",\"location\":\"render_system.h:540\",\"message\":\"Before DrawMenuBar\",\"data\":{\"menuCount\":%zu,\"menuBarY\":%d,\"menuBarHeight\":%d,\"layoutMenuBarX\":%.1f,\"layoutMenuBarY\":%.1f}}\n",
+                        mutableMenu.menus.size(),
+                        theme::layout::TITLE_BAR_HEIGHT,
+                        theme::layout::MENU_BAR_HEIGHT,
+                        layout.menuBar.x,
+                        layout.menuBar.y);
+                    fclose(f);
+                }
+            }
+        }
+        // #endregion
+        
         int menuResult =
             win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
                                theme::layout::MENU_BAR_HEIGHT);
