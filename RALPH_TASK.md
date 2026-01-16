@@ -61,7 +61,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Add line spacing and paragraph spacing (before/after). (Implemented: lineSpacing multiplier, spaceBefore/spaceAfter in LineSpan, Ctrl+Shift+1/5/2 shortcuts for single/1.5/double, rendering applies spacing, 36 test assertions)
 - [x] Add bulleted and numbered lists (including multi-level lists). (Implemented: ListType enum, list properties in LineSpan, toggleBulletedList/toggleNumberedList, increase/decreaseListLevel, list rendering with bullets/numbers, Ctrl+Shift+8/7 shortcuts, Format menu items, 26 test assertions)
 - [x] Add table insertion and editing (add/remove rows/cols, merge/split cells). (Implemented: Table class with full CRUD, merging, selection, navigation. 125 test assertions in tests/test_table.cpp. Menu in Table menu. Integration via DocumentComponent.tables vector)
-- [ ] Add image insertion and layout modes (inline, wrap, break text).
+- [x] Add image insertion and layout modes (inline, wrap, break text). (Implemented: ImageLayoutMode enum with Inline/WrapSquare/WrapTight/BreakText/Behind/InFront, DocumentImage struct with dimensions/margins/borders/alt-text, ImageCollection class with CRUD and line anchoring, 63 test assertions. Menu placeholder in Insert menu.)
 - [ ] Add drawing insertion (basic shapes/lines) with inline placement.
 - [ ] Add equation editor and special character insertion.
 - [x] Add hyperlink creation and editing. (Implemented: Hyperlink struct in document_settings.h, addHyperlink/editHyperlink/removeHyperlink/hyperlinkAt methods in TextBuffer, offset auto-adjustment on edit, 50 test assertions in tests/test_hyperlink.cpp)
