@@ -39,6 +39,9 @@ enum class CommandType {
     Screenshot,    // screenshot name - takes a screenshot
     Clear,         // clear - clears document and resets state
     Comment,       // # comment - ignored line
+    MenuOpen,      // menu_open "File" - opens a menu by name
+    MenuSelect,    // menu_select "Save" - selects item from open menu
+    ClickOutline,  // click_outline "Heading 1" - clicks an outline entry
     Unknown
 };
 
@@ -255,6 +258,36 @@ inline std::vector<TestCommand> parseScript(const std::string& path) {
             iss >> cmd.arg1;
         } else if (verb == "clear") {
             cmd.type = CommandType::Clear;
+        } else if (verb == "menu_open") {
+            cmd.type = CommandType::MenuOpen;
+            std::getline(iss >> std::ws, cmd.arg1);
+            // Remove quotes if present
+            if (!cmd.arg1.empty() && cmd.arg1.front() == '"') {
+                cmd.arg1 = cmd.arg1.substr(1);
+                if (!cmd.arg1.empty() && cmd.arg1.back() == '"') {
+                    cmd.arg1.pop_back();
+                }
+            }
+        } else if (verb == "menu_select") {
+            cmd.type = CommandType::MenuSelect;
+            std::getline(iss >> std::ws, cmd.arg1);
+            // Remove quotes if present
+            if (!cmd.arg1.empty() && cmd.arg1.front() == '"') {
+                cmd.arg1 = cmd.arg1.substr(1);
+                if (!cmd.arg1.empty() && cmd.arg1.back() == '"') {
+                    cmd.arg1.pop_back();
+                }
+            }
+        } else if (verb == "click_outline") {
+            cmd.type = CommandType::ClickOutline;
+            std::getline(iss >> std::ws, cmd.arg1);
+            // Remove quotes if present
+            if (!cmd.arg1.empty() && cmd.arg1.front() == '"') {
+                cmd.arg1 = cmd.arg1.substr(1);
+                if (!cmd.arg1.empty() && cmd.arg1.back() == '"') {
+                    cmd.arg1.pop_back();
+                }
+            }
         } else {
             cmd.type = CommandType::Unknown;
             cmd.arg1 = verb;
@@ -383,6 +416,18 @@ public:
     using DocumentClearer = std::function<void()>;
     void setDocumentClearer(DocumentClearer clearer) { documentClearer_ = clearer; }
     
+    // Set callback for opening a menu by name
+    using MenuOpener = std::function<bool(const std::string&)>;
+    void setMenuOpener(MenuOpener opener) { menuOpener_ = opener; }
+    
+    // Set callback for selecting a menu item by name
+    using MenuItemSelector = std::function<bool(const std::string&)>;
+    void setMenuItemSelector(MenuItemSelector selector) { menuItemSelector_ = selector; }
+    
+    // Set callback for clicking an outline entry by heading text
+    using OutlineClicker = std::function<bool(const std::string&)>;
+    void setOutlineClicker(OutlineClicker clicker) { outlineClicker_ = clicker; }
+    
     // Execute one frame of the script
     void tick() {
         if (finished_ || commands_.empty()) return;
@@ -473,6 +518,15 @@ public:
                 break;
             case CommandType::Clear:
                 executeClear(cmd);
+                break;
+            case CommandType::MenuOpen:
+                executeMenuOpen(cmd);
+                break;
+            case CommandType::MenuSelect:
+                executeMenuSelect(cmd);
+                break;
+            case CommandType::ClickOutline:
+                executeClickOutline(cmd);
                 break;
             case CommandType::Comment:
                 // Comments are ignored
@@ -677,6 +731,39 @@ private:
         waitFrames_ = 2;  // Wait for UI to update
     }
     
+    void executeMenuOpen(const TestCommand& cmd) {
+        if (!menuOpener_) {
+            reportError(cmd, "No menu opener configured");
+            return;
+        }
+        if (!menuOpener_(cmd.arg1)) {
+            reportError(cmd, "Failed to open menu: '" + cmd.arg1 + "'");
+        }
+        waitFrames_ = 2;  // Wait for menu to render
+    }
+    
+    void executeMenuSelect(const TestCommand& cmd) {
+        if (!menuItemSelector_) {
+            reportError(cmd, "No menu item selector configured");
+            return;
+        }
+        if (!menuItemSelector_(cmd.arg1)) {
+            reportError(cmd, "Failed to select menu item: '" + cmd.arg1 + "'");
+        }
+        waitFrames_ = 2;  // Wait for action to process
+    }
+    
+    void executeClickOutline(const TestCommand& cmd) {
+        if (!outlineClicker_) {
+            reportError(cmd, "No outline clicker configured");
+            return;
+        }
+        if (!outlineClicker_(cmd.arg1)) {
+            reportError(cmd, "Failed to click outline entry: '" + cmd.arg1 + "'");
+        }
+        waitFrames_ = 2;  // Wait for navigation to complete
+    }
+    
     void reportError(const TestCommand& cmd, const std::string& message) {
         ScriptError error;
         error.lineNumber = cmd.lineNumber;
@@ -709,6 +796,9 @@ private:
     ScreenshotTaker screenshotTaker_;
     DocumentDumper documentDumper_;
     DocumentClearer documentClearer_;
+    MenuOpener menuOpener_;
+    MenuItemSelector menuItemSelector_;
+    OutlineClicker outlineClicker_;
     
     // Batch mode tracking
     std::string currentScriptName_;
