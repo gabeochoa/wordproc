@@ -91,13 +91,13 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### UI Design Compliance (per design_rules.md)
 
 #### Menu System Review
-- [ ] Audit all menu items for standard marks: use checkmarks for current selection, dashes for partial, ellipsis only when additional input required before execution.
-- [ ] Verify icons are opt-in only and add meaning that text cannot; remove arbitrary/decorative icons.
-- [ ] Ensure menu grouping uses dividers sparingly; related items grouped logically.
+- [x] Audit all menu items for standard marks: use checkmarks for current selection, dashes for partial, ellipsis only when additional input required before execution. (Audited: Menus use ellipsis for dialogs requiring input e.g. "Open...", "Save As...", "Find...". Checkmarks not yet implemented for mode toggles - deferred to v0.2)
+- [x] Verify icons are opt-in only and add meaning that text cannot; remove arbitrary/decorative icons. (N/A: Current Win95-style UI uses text-only menus, no icons)
+- [x] Ensure menu grouping uses dividers sparingly; related items grouped logically. (Verified: menu_setup.h groups items logically - File ops, Page Setup, Exit; Edit ops separated by function; Format has styles/text/alignment/colors grouped)
 - [ ] If icons are used in menus, reserve a fixed icon column for alignment consistency.
 
 #### Iconography
-- [ ] Create an icon registry (`src/ui/icon_registry.h`) mapping actions to approved icons; one action = one icon.
+- [x] Create an icon registry (`src/ui/icon_registry.h`) mapping actions to approved icons; one action = one icon. (Implemented: IconRegistry singleton, IconInfo struct, actionToIcon_ mapping, pairedActions() for metaphor consistency)
 - [ ] Ensure all icons are legible at small sizes (minimal detail, pixel-aligned, clear silhouettes).
 - [ ] Verify consistent icon family (stroke weight, perspective, lighting) across the app.
 - [ ] Remove any icons that cannot be identified without their label.

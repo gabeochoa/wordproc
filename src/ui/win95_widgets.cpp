@@ -277,10 +277,30 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
         } else {
             bool hover = raylib::CheckCollisionPointRec(mousePos, itemRect) &&
                          item.enabled;
+            
+            // Reserve 20 pixels for mark column
+            const int markColumnWidth = 20;
+            const int textX = x + markColumnWidth;
 
             if (hover) {
                 raylib::DrawRectangleRec(itemRect, colors::MENU_HIGHLIGHT);
-                raylib::DrawText(item.label.c_str(), x + 8, itemY + 3, 14,
+                
+                // Draw mark if present
+                if (item.mark != MenuMark::None) {
+                    const char* markStr = nullptr;
+                    switch (item.mark) {
+                        case MenuMark::Checkmark: markStr = "\xE2\x9C\x93"; break;  // ✓
+                        case MenuMark::Radio: markStr = "\xE2\x80\xA2"; break;  // •
+                        case MenuMark::Dash: markStr = "-"; break;
+                        default: break;
+                    }
+                    if (markStr) {
+                        raylib::DrawText(markStr, x + 6, itemY + 3, 14,
+                                         colors::TITLE_TEXT);
+                    }
+                }
+                
+                raylib::DrawText(item.label.c_str(), textX, itemY + 3, 14,
                                  colors::TITLE_TEXT);
                 if (!item.shortcut.empty()) {
                     int shortcutX =
@@ -296,7 +316,22 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
             } else {
                 raylib::Color textColor =
                     item.enabled ? colors::TEXT_COLOR : colors::TEXT_DISABLED;
-                raylib::DrawText(item.label.c_str(), x + 8, itemY + 3, 14,
+                
+                // Draw mark if present
+                if (item.mark != MenuMark::None) {
+                    const char* markStr = nullptr;
+                    switch (item.mark) {
+                        case MenuMark::Checkmark: markStr = "\xE2\x9C\x93"; break;  // ✓
+                        case MenuMark::Radio: markStr = "\xE2\x80\xA2"; break;  // •
+                        case MenuMark::Dash: markStr = "-"; break;
+                        default: break;
+                    }
+                    if (markStr) {
+                        raylib::DrawText(markStr, x + 6, itemY + 3, 14, textColor);
+                    }
+                }
+                
+                raylib::DrawText(item.label.c_str(), textX, itemY + 3, 14,
                                  textColor);
                 if (!item.shortcut.empty()) {
                     int shortcutX =

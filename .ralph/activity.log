@@ -2759,3 +2759,6 @@ Ralph Session Started: Thu Jan 15 23:16:29 CST 2026
 [23:20:22] 🔴 ROTATE: Token threshold reached (605218 >= 80000)
 [23:20:26] 🔴 ROTATE: Token threshold reached (605218 >= 80000)
 [23:20:30] 🔴 ROTATE: Token threshold reached (605218 >= 80000)
+[23:20:35] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/win95_widgets.cpp (468 lines, ~45.7KB)
+[23:20:35] 🔴 ROTATE: Token threshold reached (616918 >= 80000)
+[23:20:35] 🟡 TOKENS: 57325 / 80000 (71%) [read:220KB write:0KB assist:0KB shell:0KB]
