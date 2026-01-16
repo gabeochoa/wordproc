@@ -29,7 +29,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 
 ### Future Work
 - [x] Use immediate-mode UI for the UI layer. (Foundation integrated: Win95 theme, UIContext, UI systems registered. Full widget conversion pending.)
-- [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
+- [x] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later. (IRenderer interface + RaylibRenderer created and initialized in main.cpp)
 - [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
 - [ ] Use Afterhours UI state context for test input handling.
 - [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
