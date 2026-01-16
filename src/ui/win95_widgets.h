@@ -26,6 +26,14 @@ constexpr raylib::Color BUTTON_FACE = {192, 192, 192, 255};
 // Button state for tracking interaction
 enum class ButtonState { Normal, Hover, Pressed, Disabled };
 
+// Menu mark type for standard menu conventions
+enum class MenuMark {
+    None,       // No mark - regular menu item
+    Checkmark,  // Checkmark - current selection or enabled toggle
+    Radio,      // Radio bullet - one of a group
+    Dash        // Dash - partial/mixed state
+};
+
 // Menu item structure
 struct MenuItem {
     std::string label;
@@ -33,6 +41,7 @@ struct MenuItem {
     bool enabled = true;
     bool separator = false;
     std::function<void()> action;
+    MenuMark mark = MenuMark::None;  // Standard mark (checkmark/radio/dash)
 };
 
 // Menu structure

@@ -2750,3 +2750,8 @@ Ralph Session Started: Thu Jan 15 23:16:29 CST 2026
 [23:19:48] 🔴 TOKENS: 595467 / 80000 (744%) - rotation imminent [read:2322KB write:0KB assist:0KB shell:0KB]
 [23:19:51] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/menu_setup.h (194 lines, ~18.9KB)
 [23:19:51] 🔴 ROTATE: Token threshold reached (600349 >= 80000)
+[23:19:54] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/menu_setup.h (194 lines, ~18.9KB)
+[23:19:54] 🔴 ROTATE: Token threshold reached (605199 >= 80000)
+[23:20:07] 🔴 ROTATE: Token threshold reached (605218 >= 80000)
+[23:20:13] 🔴 ROTATE: Token threshold reached (605218 >= 80000)
+[23:20:17] 🔴 ROTATE: Token threshold reached (605218 >= 80000)
