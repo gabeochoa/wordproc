@@ -425,7 +425,6 @@ void TextBuffer::setText(const std::string& text) {
     chars_.clear();
     line_spans_.clear();
     hyperlinks_.clear();  // Clear all hyperlinks when setting new text
-    bookmarks_.clear();   // Clear all bookmarks when setting new text
     version_++;  // Content changed - invalidate render cache
 
     if (!text.empty()) {
@@ -1716,4 +1715,89 @@ void TextBuffer::adjustHyperlinkOffsets(std::size_t pos, std::ptrdiff_t delta) {
             ++it;
         }
     }
+}
+
+// ============================================================================
+// Bookmark Management
+// ============================================================================
+
+bool TextBuffer::addBookmark(const std::string& name) {
+    if (name.empty()) {
+        return false;
+    }
+    std::size_t offset = positionToOffset(caret_);
+    return addBookmarkAt(name, offset);
+}
+
+bool TextBuffer::addBookmarkAt(const std::string& name, std::size_t offset) {
+    if (name.empty() || offset > chars_.size()) {
+        return false;
+    }
+    
+    // Check if bookmark with this name already exists
+    for (auto& bm : bookmarks_) {
+        if (bm.name == name) {
+            // Update existing bookmark
+            bm.offset = offset;
+            // Re-sort after update
+            std::sort(bookmarks_.begin(), bookmarks_.end(),
+                     [](const Bookmark& a, const Bookmark& b) {
+                         return a.offset < b.offset;
+                     });
+            version_++;
+            return true;
+        }
+    }
+    
+    // Add new bookmark
+    Bookmark bm;
+    bm.name = name;
+    bm.offset = offset;
+    bookmarks_.push_back(bm);
+    
+    // Keep bookmarks sorted by position
+    std::sort(bookmarks_.begin(), bookmarks_.end(),
+             [](const Bookmark& a, const Bookmark& b) {
+                 return a.offset < b.offset;
+             });
+    
+    version_++;
+    return true;
+}
+
+bool TextBuffer::removeBookmark(const std::string& name) {
+    for (auto it = bookmarks_.begin(); it != bookmarks_.end(); ++it) {
+        if (it->name == name) {
+            bookmarks_.erase(it);
+            version_++;
+            return true;
+        }
+    }
+    return false;
+}
+
+const Bookmark* TextBuffer::getBookmark(const std::string& name) const {
+    for (const auto& bm : bookmarks_) {
+        if (bm.name == name) {
+            return &bm;
+        }
+    }
+    return nullptr;
+}
+
+bool TextBuffer::goToBookmark(const std::string& name) {
+    const Bookmark* bm = getBookmark(name);
+    if (!bm) {
+        return false;
+    }
+    
+    // Convert offset to caret position
+    CaretPosition pos = offsetToPosition(bm->offset);
+    setCaret(pos);
+    clearSelection();
+    return true;
+}
+
+bool TextBuffer::hasBookmark(const std::string& name) const {
+    return getBookmark(name) != nullptr;
 }

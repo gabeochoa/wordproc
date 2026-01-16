@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../editor/document_settings.h"
+#include "../editor/image.h"
 #include "../editor/table.h"
 #include "../editor/text_buffer.h"
 #include "../input/action_map.h"
@@ -69,6 +70,26 @@ struct DocumentComponent : public afterhours::BaseComponent {
             std::remove_if(tables.begin(), tables.end(),
                 [atLine](const auto& p) { return p.first == atLine; }),
             tables.end());
+    }
+    
+    // Images embedded in the document
+    ImageCollection images;
+    
+    // Image helper methods
+    void insertImage(const DocumentImage& image) {
+        images.addImage(image);
+    }
+    
+    DocumentImage* imageById(std::size_t id) {
+        return images.getImage(id);
+    }
+    
+    const DocumentImage* imageById(std::size_t id) const {
+        return images.getImage(id);
+    }
+    
+    void removeImage(std::size_t id) {
+        images.removeImage(id);
     }
 };
 

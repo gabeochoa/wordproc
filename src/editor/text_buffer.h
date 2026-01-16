@@ -357,6 +357,17 @@ class TextBuffer {
     std::vector<const Hyperlink*> hyperlinksInRange(std::size_t startOffset, 
                                                      std::size_t endOffset) const;
 
+    // Bookmark methods for internal document navigation
+    bool addBookmark(const std::string& name);  // Add bookmark at current caret
+    bool addBookmarkAt(const std::string& name, std::size_t offset);  // Add at specific offset
+    bool removeBookmark(const std::string& name);  // Remove bookmark by name
+    const Bookmark* getBookmark(const std::string& name) const;  // Get bookmark by name
+    bool goToBookmark(const std::string& name);  // Navigate to bookmark
+    bool hasBookmark(const std::string& name) const;  // Check if bookmark exists
+    const Bookmark* bookmarkNear(std::size_t offset, std::size_t tolerance) const;  // Find nearby bookmark
+    const std::vector<Bookmark>& bookmarks() const { return bookmarks_; }  // All bookmarks
+    void clearBookmarks() { bookmarks_.clear(); version_++; }  // Remove all bookmarks
+
     // Performance metrics
     struct PerfStats {
         std::size_t total_inserts = 0;
@@ -402,9 +413,13 @@ class TextBuffer {
     // Adjust hyperlink offsets when text is inserted/deleted
     void adjustHyperlinkOffsets(std::size_t pos, std::ptrdiff_t delta);
 
+    // Adjust bookmark offsets when text is inserted/deleted
+    void adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta);
+
     GapBuffer chars_;                   // Contiguous character storage
     std::vector<LineSpan> line_spans_;  // SoA line metadata
     std::vector<Hyperlink> hyperlinks_; // Hyperlinks in the document
+    std::vector<Bookmark> bookmarks_;   // Bookmarks for internal navigation
     CaretPosition caret_;
     bool has_selection_ = false;
     CaretPosition selection_anchor_;

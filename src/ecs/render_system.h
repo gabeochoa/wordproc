@@ -5,6 +5,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../editor/document_io.h"
+#include "../editor/image.h"
 #include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
@@ -198,127 +199,6 @@ inline void renderDocumentTables(const std::vector<std::pair<std::size_t, Table>
         
         bool isEditing = (lineNum == editingLine);
         renderTable(table, static_cast<float>(x), static_cast<float>(y), currentCell, isEditing);
-    }
-}
-
-// Render a single image with its layout mode
-inline void renderImage(const DocumentImage& image, float anchorX, float anchorY,
-                        bool isSelected = false) {
-    // For now, we draw a placeholder rectangle since we don't have actual image loading
-    // In a full implementation, this would load and render the actual image texture
-    
-    DocumentImage::Bounds bounds = image.getBounds(anchorX, anchorY);
-    
-    // Draw border if present
-    if (image.borderWidth > 0.0f) {
-        raylib::Color borderColor = {image.borderR, image.borderG, image.borderB, image.borderA};
-        raylib::DrawRectangleLinesEx(
-            {bounds.x, bounds.y, bounds.width, bounds.height},
-            image.borderWidth, borderColor);
-    }
-    
-    // Draw image placeholder (light gray with image icon)
-    float imgX = bounds.x + image.marginLeft + image.borderWidth;
-    float imgY = bounds.y + image.marginTop + image.borderWidth;
-    raylib::Color placeholderColor = {230, 230, 230, 255};
-    raylib::DrawRectangle(static_cast<int>(imgX), static_cast<int>(imgY),
-                         static_cast<int>(image.displayWidth), 
-                         static_cast<int>(image.displayHeight), placeholderColor);
-    
-    // Draw a simple image icon in the center
-    float iconSize = std::min(image.displayWidth, image.displayHeight) * 0.3f;
-    float iconX = imgX + (image.displayWidth - iconSize) / 2.0f;
-    float iconY = imgY + (image.displayHeight - iconSize) / 2.0f;
-    
-    // Draw image icon (simplified mountain/sun icon)
-    raylib::Color iconColor = {150, 150, 150, 255};
-    // Sun (circle in upper right)
-    float sunX = iconX + iconSize * 0.7f;
-    float sunY = iconY + iconSize * 0.3f;
-    raylib::DrawCircle(static_cast<int>(sunX), static_cast<int>(sunY), 
-                      iconSize * 0.15f, iconColor);
-    // Mountain (triangle)
-    raylib::Vector2 v1 = {iconX + iconSize * 0.2f, iconY + iconSize * 0.9f};
-    raylib::Vector2 v2 = {iconX + iconSize * 0.5f, iconY + iconSize * 0.3f};
-    raylib::Vector2 v3 = {iconX + iconSize * 0.8f, iconY + iconSize * 0.9f};
-    raylib::DrawTriangle(v1, v2, v3, iconColor);
-    
-    // Draw filename/alt text below image if present
-    if (!image.filename.empty() && image.displayHeight > 30.0f) {
-        int fontSize = 10;
-        std::string label = image.filename;
-        if (label.length() > 20) {
-            label = label.substr(0, 17) + "...";
-        }
-        int textWidth = raylib::MeasureText(label.c_str(), fontSize);
-        float textX = imgX + (image.displayWidth - textWidth) / 2.0f;
-        float textY = imgY + image.displayHeight - fontSize - 4.0f;
-        raylib::DrawText(label.c_str(), static_cast<int>(textX), 
-                        static_cast<int>(textY), fontSize, iconColor);
-    }
-    
-    // Draw selection highlight
-    if (isSelected) {
-        raylib::DrawRectangleLinesEx(
-            {imgX - 2, imgY - 2, image.displayWidth + 4, image.displayHeight + 4},
-            2.0f, raylib::Color{0, 120, 215, 255});
-        
-        // Draw resize handles at corners
-        float handleSize = 6.0f;
-        raylib::Color handleColor = {0, 120, 215, 255};
-        // Top-left
-        raylib::DrawRectangle(static_cast<int>(imgX - handleSize/2), 
-                             static_cast<int>(imgY - handleSize/2),
-                             static_cast<int>(handleSize), static_cast<int>(handleSize), handleColor);
-        // Top-right
-        raylib::DrawRectangle(static_cast<int>(imgX + image.displayWidth - handleSize/2),
-                             static_cast<int>(imgY - handleSize/2),
-                             static_cast<int>(handleSize), static_cast<int>(handleSize), handleColor);
-        // Bottom-left
-        raylib::DrawRectangle(static_cast<int>(imgX - handleSize/2),
-                             static_cast<int>(imgY + image.displayHeight - handleSize/2),
-                             static_cast<int>(handleSize), static_cast<int>(handleSize), handleColor);
-        // Bottom-right
-        raylib::DrawRectangle(static_cast<int>(imgX + image.displayWidth - handleSize/2),
-                             static_cast<int>(imgY + image.displayHeight - handleSize/2),
-                             static_cast<int>(handleSize), static_cast<int>(handleSize), handleColor);
-    }
-}
-
-// Render all images in a document at their anchor positions
-inline void renderDocumentImages(const ImageCollection& images,
-                                 const LayoutComponent::Rect& textArea,
-                                 int baseLineHeight, int scrollOffset,
-                                 std::size_t selectedImageId = 0) {
-    for (const auto& image : images.images()) {
-        // Calculate anchor Y position based on line number
-        if (image.anchorLine < static_cast<std::size_t>(scrollOffset)) continue;
-        
-        float y = textArea.y + theme::layout::TEXT_PADDING +
-                  static_cast<float>(image.anchorLine - scrollOffset) * baseLineHeight;
-        float x = textArea.x + theme::layout::TEXT_PADDING;
-        
-        // For non-inline images, apply alignment
-        if (image.layoutMode != ImageLayoutMode::Inline) {
-            float availableWidth = textArea.width - 2 * theme::layout::TEXT_PADDING;
-            switch (image.alignment) {
-                case ImageAlignment::Left:
-                    // Already at left
-                    break;
-                case ImageAlignment::Center:
-                    x = textArea.x + (textArea.width - image.displayWidth) / 2.0f;
-                    break;
-                case ImageAlignment::Right:
-                    x = textArea.x + availableWidth - image.displayWidth - theme::layout::TEXT_PADDING;
-                    break;
-            }
-        }
-        
-        // Check if image is visible
-        if (y > textArea.y + textArea.height) continue;
-        
-        bool isSelected = (image.id == selectedImageId);
-        renderImage(image, x, y, isSelected);
     }
 }
 
@@ -1312,47 +1192,7 @@ struct MenuSystem
                 default:
                     break;
             }
-        } else if (menuIndex == 4) {  // Insert menu
-            switch (itemIndex) {
-                case 0: {  // Insert Image...
-                    // Create a placeholder image at the current line
-                    DocumentImage img;
-                    img.filename = "image.png";
-                    img.anchorLine = doc.buffer.caret().row;
-                    img.anchorColumn = doc.buffer.caret().column;
-                    img.originalWidth = 200.0f;
-                    img.originalHeight = 150.0f;
-                    img.displayWidth = 200.0f;
-                    img.displayHeight = 150.0f;
-                    img.layoutMode = ImageLayoutMode::Inline;
-                    doc.insertImage(img);
-                    doc.isDirty = true;
-                    status::set(status, "Image inserted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
-                    break;
-                }
-                case 2: {  // Insert Table (same as Table menu Insert Table)
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    doc.insertTable(currentLine, 3, 3);
-                    doc.isDirty = true;
-                    status::set(status, "Inserted 3x3 table");
-                    status.expiresAt = raylib::GetTime() + 2.0;
-                    break;
-                }
-                case 4:  // Page Break
-                    doc.buffer.insertChar('\f');  // Form feed character as page break
-                    doc.isDirty = true;
-                    status::set(status, "Page break inserted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
-                    break;
-                case 5:  // Line Break (soft break, not paragraph)
-                    doc.buffer.insertChar('\n');
-                    doc.isDirty = true;
-                    break;
-                default:
-                    break;
-            }
-        } else if (menuIndex == 5) {  // Table menu
+        } else if (menuIndex == 4) {  // Table menu
             switch (itemIndex) {
                 case 0: {  // Insert Table...
                     // Insert a default 3x3 table at current line
