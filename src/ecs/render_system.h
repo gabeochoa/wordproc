@@ -633,7 +633,7 @@ struct MenuSystem
         }
 
         // F1 to show help window
-        if (raylib::IsKeyPressed(raylib::KEY_F1)) {
+        if (IsKeyPressed(raylib::KEY_F1)) {
             menu.showHelpWindow = !menu.showHelpWindow;
             menu.helpScrollOffset = 0;
         }

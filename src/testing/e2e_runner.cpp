@@ -170,7 +170,7 @@ static void setupCallbacksEx(
         // Menu properties
         if (prop == "menu_open") {
             for (const auto& menu : menuComp.menus) {
-                if (menu.isOpen) return menu.name;
+                if (menu.open) return menu.label;
             }
             return "false";
         }
@@ -200,10 +200,34 @@ static void setupCallbacksEx(
             }
             return "0";
         }
+        if (prop == "cell_content") {
+            // Return content of current/selected table cell
+            if (!docComp.tables.empty()) {
+                const auto& table = docComp.tables[0].second;
+                // Return first cell content for simplicity
+                if (table.rowCount() > 0 && table.columnCount() > 0) {
+                    return table.getCell(0, 0).content;
+                }
+            }
+            return "";
+        }
         
         // Image properties
         if (prop == "has_image") return docComp.images.count() > 0 ? "true" : "false";
         if (prop == "image_count") return std::to_string(docComp.images.count());
+        if (prop == "image_layout") {
+            if (docComp.images.count() > 0) {
+                auto images = docComp.images.getAll();
+                if (!images.empty()) {
+                    switch (images[0].layoutMode) {
+                        case ImageLayoutMode::Inline: return "inline";
+                        case ImageLayoutMode::WrapSquare: return "wrap";
+                        case ImageLayoutMode::BreakText: return "break";
+                    }
+                }
+            }
+            return "none";
+        }
         
         // Drawing properties
         if (prop == "has_drawing") return docComp.drawings.count() > 0 ? "true" : "false";
@@ -400,12 +424,12 @@ static void setupCallbacksEx(
     runner.setMenuOpener([&menuComp](const std::string& menuName) -> bool {
         // Close any currently open menus first
         for (auto& menu : menuComp.menus) {
-            menu.isOpen = false;
+            menu.open = false;
         }
         // Open the requested menu
         for (auto& menu : menuComp.menus) {
-            if (menu.name == menuName) {
-                menu.isOpen = true;
+            if (menu.label == menuName) {
+                menu.open = true;
                 return true;
             }
         }
@@ -415,12 +439,14 @@ static void setupCallbacksEx(
     // Set up menu item selector
     runner.setMenuItemSelector([&menuComp](const std::string& itemName) -> bool {
         for (auto& menu : menuComp.menus) {
-            if (menu.isOpen) {
+            if (menu.open) {
                 for (std::size_t i = 0; i < menu.items.size(); ++i) {
                     if (menu.items[i].label == itemName) {
-                        menu.selectedItem = static_cast<int>(i);
-                        // Trigger the action via menu handler
-                        // Note: actual execution happens in the menu system
+                        // Execute the menu item's action
+                        if (menu.items[i].action) {
+                            menu.items[i].action();
+                        }
+                        menu.open = false;  // Close menu after selection
                         return true;
                     }
                 }
@@ -434,8 +460,7 @@ static void setupCallbacksEx(
         auto outline = docComp.buffer.getOutline();
         for (const auto& entry : outline) {
             if (entry.text == headingText || entry.text.find(headingText) != std::string::npos) {
-                docComp.buffer.goToOutlineEntry(entry);
-                return true;
+                return docComp.buffer.goToOutlineEntry(entry.lineNumber);
             }
         }
         return false;

@@ -21,14 +21,14 @@ struct TextInputSystem
                        CaretComponent& caret, const float) override {
         using input::Action;
 
-        int codepoint = raylib::GetCharPressed();
+        int codepoint = GetCharPressed();
         while (codepoint > 0) {
             if (codepoint >= 32) {
                 doc.buffer.insertChar(static_cast<char>(codepoint));
                 doc.isDirty = true;
                 caret::resetBlink(caret);
             }
-            codepoint = raylib::GetCharPressed();
+            codepoint = GetCharPressed();
         }
 
         if (actionMap_.isActionPressed(Action::InsertNewline)) {
@@ -387,7 +387,7 @@ struct NavigationSystem
         }
 
         // Mouse wheel scrolling
-        float wheelMove = raylib::GetMouseWheelMove();
+        float wheelMove = GetMouseWheelMove();
         if (wheelMove != 0.0f) {
             int scrollLines = static_cast<int>(-wheelMove * 3);
             scroll.offset += scrollLines;

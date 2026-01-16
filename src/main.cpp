@@ -232,11 +232,11 @@ int main(int argc, char* argv[]) {
     // Initialize E2E script runner if script specified
     e2e::ScriptRunner scriptRunner;
     if (!testScriptDir.empty()) {
-        // Batch mode: load all scripts from directory
-        e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, screenshotDir);
+        // Batch mode: load all scripts from directory (with menu/layout support)
+        e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, menuComp, layoutComp, screenshotDir);
     } else if (!testScriptPath.empty()) {
-        // Single script mode
-        e2e::initializeRunner(scriptRunner, testScriptPath, docComp, screenshotDir);
+        // Single script mode (with menu/layout support)
+        e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, screenshotDir);
     }
 
     while (!raylib::WindowShouldClose()) {

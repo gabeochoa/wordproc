@@ -151,9 +151,9 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ## E2E Framework Enhancements
 
 ### Missing E2E Commands
-- [ ] Add `menu_open "MenuName"` command to open a menu by name
-- [ ] Add `menu_select "ItemName"` command to select an item from open menu
-- [ ] Add `click_outline "HeadingName"` command to click an outline entry
+- [x] Add `menu_open "MenuName"` command to open a menu by name (implemented in e2e_script.h + e2e_runner.cpp)
+- [x] Add `menu_select "ItemName"` command to select an item from open menu (implemented in e2e_script.h + e2e_runner.cpp)
+- [x] Add `click_outline "HeadingName"` command to click an outline entry (implemented in e2e_script.h + e2e_runner.cpp)
 
 ### Missing E2E Validation Properties
 - [ ] Add `menu_open` property - returns name of currently open menu or "false"
