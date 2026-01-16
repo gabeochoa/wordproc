@@ -13,6 +13,20 @@ struct CaretPosition {
     std::size_t column = 0;
 };
 
+// Find options for search functionality
+struct FindOptions {
+    bool caseSensitive = false;
+    bool wholeWord = false;
+    bool wrapAround = true;
+};
+
+// Find result containing match position
+struct FindResult {
+    bool found = false;
+    CaretPosition start{0, 0};
+    CaretPosition end{0, 0};
+};
+
 // Forward declaration
 class TextBuffer;
 
@@ -285,18 +299,6 @@ class TextBuffer {
     void movePageDown(std::size_t linesPerPage);
     
     // Find and Replace
-    struct FindOptions {
-        bool caseSensitive = false;
-        bool wholeWord = false;
-        bool wrapAround = true;
-    };
-    
-    struct FindResult {
-        bool found = false;
-        CaretPosition start{0, 0};
-        CaretPosition end{0, 0};
-    };
-    
     // Find text from current caret position
     FindResult find(const std::string& needle, const FindOptions& options = {}) const;
     
