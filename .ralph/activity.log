@@ -2772,3 +2772,11 @@ Ralph Session Started: Thu Jan 15 23:16:29 CST 2026
 [23:21:14] 🔴 ROTATE: Token threshold reached (624143 >= 80000)
 [23:21:19] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/icon_registry.h (168 lines, ~16.4KB)
 [23:21:19] 🔴 ROTATE: Token threshold reached (628343 >= 80000)
+[23:21:33] 🔴 TOKENS: 628343 / 80000 (785%) - rotation imminent [read:2450KB write:0KB assist:1KB shell:0KB]
+[23:21:33] 🔴 ROTATE: Token threshold reached (628343 >= 80000)
+[23:21:37] 🟡 TOKENS: 57340 / 80000 (71%) [read:220KB write:0KB assist:0KB shell:0KB]
+[23:21:37] 🔴 SHELL ls /Users/gabeochoa/p/wordproc/tests/*.cpp 2>/dev/null | wc -l → exit 0
+[23:21:37] 🔴 ROTATE: Token threshold reached (628343 >= 80000)
+[23:21:40] 🔴 SHELL ls /Users/gabeochoa/p/wordproc/tests/*.cpp → exit 0
+[23:21:41] 🔴 ROTATE: Token threshold reached (628343 >= 80000)
+[23:21:44] 🔴 READ /Users/gabeochoa/p/wordproc/makefile (342 lines, ~33.3KB)
