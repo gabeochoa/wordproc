@@ -108,6 +108,11 @@ struct LineSpan {
     float lineSpacing = 1.0f;   // Line height multiplier (1.0 = single, 1.5 = 1.5x, 2.0 = double)
     int spaceBefore = 0;        // Extra pixels of space before this paragraph
     int spaceAfter = 0;         // Extra pixels of space after this paragraph
+    
+    // List properties
+    ListType listType = ListType::None;  // Bullet, numbered, or none
+    int listLevel = 0;                    // Nesting level for multi-level lists (0 = top level)
+    int listNumber = 1;                   // Current number for numbered lists
 };
 
 // Gap buffer for efficient text editing
@@ -235,6 +240,20 @@ class TextBuffer {
     int lineSpaceBefore(std::size_t row) const;
     int lineSpaceAfter(std::size_t row) const;
     
+    // List management for current line (where caret is)
+    ListType currentListType() const;
+    int currentListLevel() const;
+    void setCurrentListType(ListType type);
+    void toggleBulletedList();
+    void toggleNumberedList();
+    void increaseListLevel();
+    void decreaseListLevel();
+    
+    // Get list properties for a specific line
+    ListType lineListType(std::size_t row) const;
+    int lineListLevel(std::size_t row) const;
+    int lineListNumber(std::size_t row) const;
+    
     void backspace();
     void del();
 
@@ -303,6 +322,9 @@ class TextBuffer {
     // Used when inserting/deleting characters to maintain line_spans_
     // consistency
     void shiftLineOffsetsFrom(std::size_t startRow, std::ptrdiff_t delta);
+    
+    // Renumber lists from a starting row (for numbered lists)
+    void renumberListsFrom(std::size_t startRow);
 
     GapBuffer chars_;                   // Contiguous character storage
     std::vector<LineSpan> line_spans_;  // SoA line metadata

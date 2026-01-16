@@ -87,6 +87,33 @@ inline const char* textAlignmentName(TextAlignment align) {
     }
 }
 
+// List type for bulleted/numbered paragraphs
+enum class ListType {
+    None = 0,     // Not a list item
+    Bulleted,     // Bullet point (•, ◦, ▪)
+    Numbered      // Numbered list (1., 2., 3., or a., b., c., or i., ii., iii.)
+};
+
+// Get display name for list type
+inline const char* listTypeName(ListType type) {
+    switch (type) {
+        case ListType::None: return "None";
+        case ListType::Bulleted: return "Bulleted";
+        case ListType::Numbered: return "Numbered";
+        default: return "None";
+    }
+}
+
+// Get bullet character for a given list level (0-based)
+inline const char* bulletForLevel(int level) {
+    switch (level % 3) {
+        case 0: return "\xE2\x80\xA2";  // • (bullet)
+        case 1: return "\xE2\x97\xA6";  // ◦ (white bullet)
+        case 2: return "\xE2\x96\xAA";  // ▪ (small square)
+        default: return "\xE2\x80\xA2";
+    }
+}
+
 // Get display name for a paragraph style
 inline const char* paragraphStyleName(ParagraphStyle style) {
     switch (style) {

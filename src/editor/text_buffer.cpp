@@ -629,6 +629,129 @@ int TextBuffer::lineSpaceAfter(std::size_t row) const {
     return 0;
 }
 
+ListType TextBuffer::currentListType() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].listType;
+    }
+    return ListType::None;
+}
+
+int TextBuffer::currentListLevel() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].listLevel;
+    }
+    return 0;
+}
+
+void TextBuffer::setCurrentListType(ListType type) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].listType = type;
+        if (type == ListType::Numbered) {
+            // Renumber from this line forward
+            renumberListsFrom(caret_.row);
+        }
+        version_++;
+    }
+}
+
+void TextBuffer::toggleBulletedList() {
+    if (caret_.row < line_spans_.size()) {
+        if (line_spans_[caret_.row].listType == ListType::Bulleted) {
+            line_spans_[caret_.row].listType = ListType::None;
+            line_spans_[caret_.row].listLevel = 0;
+        } else {
+            line_spans_[caret_.row].listType = ListType::Bulleted;
+        }
+        version_++;
+    }
+}
+
+void TextBuffer::toggleNumberedList() {
+    if (caret_.row < line_spans_.size()) {
+        if (line_spans_[caret_.row].listType == ListType::Numbered) {
+            line_spans_[caret_.row].listType = ListType::None;
+            line_spans_[caret_.row].listLevel = 0;
+        } else {
+            line_spans_[caret_.row].listType = ListType::Numbered;
+            renumberListsFrom(caret_.row);
+        }
+        version_++;
+    }
+}
+
+void TextBuffer::increaseListLevel() {
+    if (caret_.row < line_spans_.size()) {
+        if (line_spans_[caret_.row].listType != ListType::None) {
+            line_spans_[caret_.row].listLevel = std::min(8, line_spans_[caret_.row].listLevel + 1);
+            if (line_spans_[caret_.row].listType == ListType::Numbered) {
+                renumberListsFrom(caret_.row);
+            }
+            version_++;
+        }
+    }
+}
+
+void TextBuffer::decreaseListLevel() {
+    if (caret_.row < line_spans_.size()) {
+        if (line_spans_[caret_.row].listType != ListType::None && line_spans_[caret_.row].listLevel > 0) {
+            line_spans_[caret_.row].listLevel--;
+            if (line_spans_[caret_.row].listType == ListType::Numbered) {
+                renumberListsFrom(caret_.row);
+            }
+            version_++;
+        }
+    }
+}
+
+ListType TextBuffer::lineListType(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].listType;
+    }
+    return ListType::None;
+}
+
+int TextBuffer::lineListLevel(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].listLevel;
+    }
+    return 0;
+}
+
+int TextBuffer::lineListNumber(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].listNumber;
+    }
+    return 1;
+}
+
+void TextBuffer::renumberListsFrom(std::size_t startRow) {
+    // Simple renumbering: count from startRow, respecting levels
+    // Each level maintains its own counter
+    std::vector<int> levelCounters(9, 0);  // Support up to 9 levels
+    
+    // Find the start of this list block (scan backwards)
+    std::size_t blockStart = startRow;
+    while (blockStart > 0 && line_spans_[blockStart - 1].listType == ListType::Numbered) {
+        blockStart--;
+    }
+    
+    // Reset counters and renumber from block start
+    for (std::size_t row = blockStart; row < line_spans_.size(); row++) {
+        if (line_spans_[row].listType != ListType::Numbered) {
+            // End of numbered list block
+            break;
+        }
+        int level = line_spans_[row].listLevel;
+        levelCounters[static_cast<size_t>(level)]++;
+        line_spans_[row].listNumber = levelCounters[static_cast<size_t>(level)];
+        
+        // Reset counters for deeper levels when we're at a shallower level
+        for (int i = level + 1; i < 9; i++) {
+            levelCounters[static_cast<size_t>(i)] = 0;
+        }
+    }
+}
+
 TextBuffer::PerfStats TextBuffer::perfStats() const {
     PerfStats stats;
     stats.total_inserts = stats_.total_inserts;

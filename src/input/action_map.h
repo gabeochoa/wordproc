@@ -83,6 +83,10 @@ enum class Action {
     LineSpacingSingle,
     LineSpacing1_5,
     LineSpacingDouble,
+    
+    // Lists
+    ToggleBulletedList,
+    ToggleNumberedList,
 
     // Count (for iteration)
     COUNT
