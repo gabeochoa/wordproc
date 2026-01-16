@@ -348,15 +348,27 @@ int main(int argc, char *argv[]) {
                      raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_S)) {
       std::string savePath = currentFilePath.empty() ? doc_path : currentFilePath;
-      if (saveTextFile(buffer, savePath)) {
+      auto result = saveTextFileEx(buffer, savePath);
+      if (result.success) {
         isDirty = false;
         currentFilePath = savePath;
+        setStatus("Saved: " + std::filesystem::path(savePath).filename().string());
+      } else {
+        setStatus("Save failed: " + result.error, true);
       }
     }
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_O)) {
-      if (loadTextFile(buffer, doc_path)) {
+      auto result = loadTextFileEx(buffer, doc_path);
+      if (result.success) {
         currentFilePath = doc_path;
         isDirty = false;
+        if (result.usedFallback) {
+          setStatus("Opened (plain text): " + std::filesystem::path(doc_path).filename().string(), false);
+        } else {
+          setStatus("Opened: " + std::filesystem::path(doc_path).filename().string());
+        }
+      } else {
+        setStatus("Open failed: " + result.error, true);
       }
     }
     if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_B)) {
@@ -591,17 +603,31 @@ int main(int argc, char *argv[]) {
             isDirty = false;
             break;
           case 1: // Open
-            if (loadTextFile(buffer, doc_path)) {
-              currentFilePath = doc_path;
-              isDirty = false;
+            {
+              auto result = loadTextFileEx(buffer, doc_path);
+              if (result.success) {
+                currentFilePath = doc_path;
+                isDirty = false;
+                if (result.usedFallback) {
+                  setStatus("Opened (plain text): " + std::filesystem::path(doc_path).filename().string());
+                } else {
+                  setStatus("Opened: " + std::filesystem::path(doc_path).filename().string());
+                }
+              } else {
+                setStatus("Open failed: " + result.error, true);
+              }
             }
             break;
           case 2: // Save
             {
               std::string savePath = currentFilePath.empty() ? doc_path : currentFilePath;
-              if (saveTextFile(buffer, savePath)) {
+              auto result = saveTextFileEx(buffer, savePath);
+              if (result.success) {
                 isDirty = false;
                 currentFilePath = savePath;
+                setStatus("Saved: " + std::filesystem::path(savePath).filename().string());
+              } else {
+                setStatus("Save failed: " + result.error, true);
               }
             }
             break;
