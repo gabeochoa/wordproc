@@ -1473,3 +1473,6 @@ Ralph Session Started: Thu Jan 15 20:54:32 CST 2026
 [20:57:48] 🔴 ROTATE: Token threshold reached (85801 >= 80000)
 [20:57:57] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make OBJ_DIR=/tmp/wordproc_objs 2>&1 | tail -10 → exit 0
 [20:57:57] 🔴 ROTATE: Token threshold reached (85801 >= 80000)
+[20:58:02] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && ./tests/run_e2e.sh 2>&1 | head -40 → exit 0
+[20:58:02] 🔴 ROTATE: Token threshold reached (85801 >= 80000)
+[20:58:02] 🔴 TOKENS: 85801 / 80000 (107%) - rotation imminent [read:331KB write:0KB assist:0KB shell:0KB]
