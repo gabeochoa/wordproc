@@ -10,6 +10,7 @@
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
 #include "../util/drawing.h"
+#include "../util/logging.h"
 #include "component_helpers.h"
 #include "components.h"
 
@@ -149,7 +150,35 @@ struct EditorRenderSystem
         raylib::ClearBackground(theme::WINDOW_BG);
     }
 
-    void after(const float) const override { raylib::EndDrawing(); }
+    void after(const float) const override {
+        // Take screenshots before EndDrawing (must be done while buffer is valid)
+        auto testConfigs = afterhours::EntityQuery({.force_merge = true})
+                               .whereHasComponent<TestConfigComponent>()
+                               .gen();
+        for (auto& ref : testConfigs) {
+            auto& testConfig = ref.get().get<TestConfigComponent>();
+            if (testConfig.enabled) {
+                testConfig.frameCount++;
+                // Take screenshot on frame 2 (frame 1 might not have rendered yet)
+                if (testConfig.frameCount == 2) {
+                    // Use absolute path for screenshot
+                    std::filesystem::path screenshotDir = std::filesystem::absolute(testConfig.screenshotDir);
+                    std::filesystem::create_directories(screenshotDir);
+                    std::filesystem::path pathObj = screenshotDir / "01_startup.png";
+                    std::string pathStr = pathObj.string();  // Store string to avoid dangling pointer
+                    LOG_INFO("Taking startup screenshot: %s", pathStr.c_str());
+                    raylib::TakeScreenshot(pathStr.c_str());
+                    // Verify screenshot was taken
+                    if (std::filesystem::exists(pathObj)) {
+                        LOG_INFO("Screenshot saved successfully");
+                    } else {
+                        LOG_WARNING("Screenshot file not found after TakeScreenshot");
+                    }
+                }
+            }
+        }
+        raylib::EndDrawing();
+    }
 
     void for_each_with(const afterhours::Entity& entity,
                        const DocumentComponent& doc,

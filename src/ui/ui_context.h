@@ -3,34 +3,14 @@
 #include "../../vendor/afterhours/src/plugins/ui.h"
 #include "../../vendor/afterhours/src/plugins/window_manager.h"
 #include "../rl.h"
+#include "../input_mapping.h"  // Use global InputAction enum
 
 namespace ui_imm {
 
-// InputAction enum required by Afterhours UIContext
-// Must have specific values that the UI systems check for
-enum class InputAction {
-    None = 0,
-
-    // Widget navigation (Tab/Shift+Tab)
-    WidgetNext,
-    WidgetBack,
-    WidgetMod,  // Shift modifier
-
-    // Widget activation (Enter/Space)
-    WidgetPress,
-
-    // Slider/list navigation
-    WidgetLeft,
-    WidgetRight,
-    WidgetUp,
-    WidgetDown,
-
-    // Common actions
-    Confirm,
-    Cancel,
-
-    COUNT
-};
+// Use the global InputAction enum (defined in input_mapping.h)
+// This ensures consistency with Preload::make_singleton() which registers
+// UIContext<::InputAction>
+using InputAction = ::InputAction;
 
 // Alias for the UIContext type
 using UIContextType = afterhours::ui::UIContext<InputAction>;
@@ -147,7 +127,11 @@ inline void registerUIRenderSystems(afterhours::SystemManager& manager) {
 
 // Get the UI context for immediate-mode widget calls
 inline UIContextType& getUIContext() {
-    return *afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
+    auto* ctx = afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
+    if (!ctx) {
+        throw std::runtime_error("UIContext singleton not found - did you call initUIContext()?");
+    }
+    return *ctx;
 }
 
 // Get the root UIComponent for parenting UI elements

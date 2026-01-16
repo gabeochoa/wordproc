@@ -51,6 +51,34 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
 - [x] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map). (Evaluated: ActionMap exists in action_map.h for keyboard shortcuts. Menu action registry refactoring deferred to v0.2 - current switch is readable)
 
+### Word Processing Features
+- [ ] Add styles for title, subtitle, and headings (H1-H6) with style picker UI.
+- [ ] Add font family and size selection for text runs.
+- [ ] Add basic text emphasis formatting (bold, italic, underline, strikethrough).
+- [ ] Add text color and highlight color formatting.
+- [ ] Add paragraph alignment controls (left, center, right, justify).
+- [ ] Add indentation controls (increase/decrease, first-line, hanging).
+- [ ] Add line spacing and paragraph spacing (before/after).
+- [ ] Add bulleted and numbered lists (including multi-level lists).
+- [ ] Add table insertion and editing (add/remove rows/cols, merge/split cells).
+- [ ] Add image insertion and layout modes (inline, wrap, break text).
+- [ ] Add drawing insertion (basic shapes/lines) with inline placement.
+- [ ] Add equation editor and special character insertion.
+- [ ] Add hyperlink creation and editing.
+- [ ] Add bookmarks/anchors for internal navigation.
+- [ ] Add find and replace with match options.
+- [ ] Add footnotes with auto-numbering.
+- [ ] Add spelling and grammar suggestions with per-word actions.
+- [ ] Add page setup controls (size, orientation, margins, page color).
+- [ ] Add headers and footers with page numbers.
+- [ ] Add section breaks with per-section layout settings.
+- [ ] Add manual page breaks.
+- [ ] Add multi-column layout and column breaks.
+- [ ] Add table of contents generation from headings.
+- [ ] Add outline view based on heading hierarchy.
+- [ ] Add line numbering for editing/review.
+- [ ] Add watermark support (text or image).
+
 ### Refactor Opportunities
 - [x] Centralize editor actions into a command table (keyboard + menu dispatch in one place). (Foundation exists: action_map.h defines Action enum and KeyBinding. Full unification of keyboard + menu dispatch deferred to v0.2)
 - [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere). (Already done: primitives defined in win95_widgets.cpp, used in render_system.h and throughout)
@@ -58,7 +86,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Remove or wire `RenderCache` (avoid unused code paths). (Evaluated: RenderCache defined but not wired into ECS render systems. Deferred: wire when performance optimization needed, or remove in cleanup pass)
 - [x] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper. (Added shiftLineOffsetsFrom() helper in text_buffer.cpp, replaced 5 loops with single function call)
 - [x] Make font loading table-driven instead of manual per-font wiring. (FontLoader module provides font table via getAvailableFonts(). Full iteration-based loading in preload.cpp deferred to v0.2)
-- [x] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`. (.clang-format exists with LLVM-based style. Full codebase formatting deferred to avoid large diff)
+- [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`. (.clang-format exists with LLVM-based style. Full codebase formatting deferred to avoid large diff)
 
 ---
 
@@ -71,4 +99,4 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 6. If stuck on the same issue 3+ times, output: `<ralph>GUTTER</ralph>`
 
 ### Commit Hygiene
-- [x] Rewrite existing commit history to have useful, descriptive messages using `git rebase -i` (Not recommended: destructive operation, all recent commits already have descriptive messages)
+- [ ]  Rewrite existing commit history to have useful, descriptive messages using `git rebase -i` (Not recommended: destructive operation, all recent commits already have descriptive messages)

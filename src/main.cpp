@@ -33,8 +33,10 @@ int g_saved_stdout_fd = -1;
 
 // Take a screenshot with a descriptive name
 void takeScreenshot(const std::string& dir, const std::string& name) {
-    std::filesystem::create_directories(dir);
-    std::string path = dir + "/" + name + ".png";
+    // Use absolute path for screenshot
+    std::filesystem::path screenshotDir = std::filesystem::absolute(dir);
+    std::filesystem::create_directories(screenshotDir);
+    std::filesystem::path path = screenshotDir / (name + ".png");
     raylib::TakeScreenshot(path.c_str());
 }
 
@@ -45,8 +47,17 @@ int main(int argc, char* argv[]) {
     bool testModeEnabled = cmdl["--test-mode"];
     std::string screenshotDir = "output/screenshots";
     int frameLimit = 0;
-    cmdl("--screenshot-dir", "output/screenshots") >> screenshotDir;
-    cmdl("--frame-limit", 0) >> frameLimit;
+    // Parse --screenshot-dir and --frame-limit arguments
+    // argh uses the params() map for named parameters
+    for (auto& [name, value] : cmdl.params()) {
+        LOG_INFO("Parsed param: %s = %s", name.c_str(), value.c_str());
+        if (name == "screenshot-dir") {
+            screenshotDir = value;
+        } else if (name == "frame-limit") {
+            frameLimit = std::stoi(value);
+        }
+    }
+    LOG_INFO("screenshotDir = %s, frameLimit = %d", screenshotDir.c_str(), frameLimit);
 
     // FPS test mode - simulates scrolling and logs FPS
     bool fpsTestMode = cmdl["--fps-test"];
@@ -186,8 +197,7 @@ int main(int argc, char* argv[]) {
         std::make_unique<ecs::EditorRenderSystem>());
     // MenuSystem draws menus and dialogs - must run after BeginDrawing()
     systemManager.register_render_system(std::make_unique<ecs::MenuSystem>());
-    systemManager.register_render_system(
-        std::make_unique<ecs::ScreenshotSystem>());
+    // Note: Screenshots are now handled in EditorRenderSystem.after() before EndDrawing()
 
     // Measure startup time
     auto readyTime = std::chrono::high_resolution_clock::now();

@@ -15,6 +15,7 @@
 #include "log.h"
 #include "rl.h"
 #include "settings.h"
+#include "ui/ui_context.h"
 
 using namespace afterhours;
 
@@ -130,7 +131,7 @@ Preload &Preload::make_singleton() {
     {
         input::add_singleton_components(sophie, get_mapping());
         window_manager::add_singleton_components(sophie, 200);
-        ui::add_singleton_components<InputAction>(sophie);
+        ui::add_singleton_components<ui_imm::InputAction>(sophie);
 
         // Load fonts for all supported languages
         std::string english_font =
