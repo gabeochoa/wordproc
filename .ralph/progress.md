@@ -525,6 +525,20 @@ All 199 tests pass.
 ### 2026-01-15 19:17:20
 **Session 6 started** (model: opus-4.5-thinking)
 
+### 2026-01-15 (Session 5 - Build Investigation)
+- Investigated E2E test failure (app crash on startup)
+- Root cause: duplicate singleton registration for ProvidesCurrentResolution
+- Fixed ui_context.h to not create duplicate entities (already committed in adc4b19)
+- Fixed logging.cpp: changed `info()` to `log_info()`
+- Fixed main.cpp: moved MenuSystem to render systems (after BeginDrawing())
+- Encountered build system issue: clang temp file rename failing consistently
+  - Error: "unable to rename temporary .o.tmp to output file .o: No such file or directory"
+  - Issue persists even after directory creation, with -j1, with different output paths
+  - Appears to be environmental (filesystem watcher interference?)
+- Committed partial fixes
+
+**Build Status**: BLOCKED - filesystem/environment issue with clang temp file renames
+
 ### Session 6 Work
 - Verified all 10 Success Criteria are [x] complete
 - Verified all Task Breakdown items (sections 1-11) are [x] complete

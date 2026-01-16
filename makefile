@@ -61,7 +61,9 @@ CXXFLAGS_SUPPRESS := -Wno-deprecated-volatile -Wno-missing-field-initializers \
     -Wno-volatile-register-var
 
 # Time tracing for ClangBuildAnalyzer
-CXXFLAGS_TIME_TRACE := -ftime-trace
+# Disabled due to temp file rename issues
+# CXXFLAGS_TIME_TRACE := -ftime-trace
+CXXFLAGS_TIME_TRACE :=
 
 # Coverage flags
 COVERAGE_CXXFLAGS :=
