@@ -92,6 +92,26 @@ struct DocumentComponent : public afterhours::BaseComponent {
     void removeImage(std::size_t id) {
         images.removeImage(id);
     }
+    
+    // Drawings/shapes embedded in the document
+    DrawingCollection drawings;
+    
+    // Drawing helper methods
+    void insertDrawing(const DocumentDrawing& drawing) {
+        drawings.addDrawing(drawing);
+    }
+    
+    DocumentDrawing* drawingById(std::size_t id) {
+        return drawings.getDrawing(id);
+    }
+    
+    const DocumentDrawing* drawingById(std::size_t id) const {
+        return drawings.getDrawing(id);
+    }
+    
+    void removeDrawing(std::size_t id) {
+        drawings.removeDrawing(id);
+    }
 };
 
 // Component for table editing state

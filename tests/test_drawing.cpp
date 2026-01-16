@@ -1,359 +1,298 @@
 #include "../src/editor/drawing.h"
 #include "catch2/catch.hpp"
 
-TEST_CASE("DocumentShape initialization", "[drawing]") {
-    DocumentShape shape;
+TEST_CASE("ShapeType names", "[drawing]") {
+    REQUIRE(std::string(shapeTypeName(ShapeType::Line)) == "Line");
+    REQUIRE(std::string(shapeTypeName(ShapeType::Rectangle)) == "Rectangle");
+    REQUIRE(std::string(shapeTypeName(ShapeType::Ellipse)) == "Ellipse");
+    REQUIRE(std::string(shapeTypeName(ShapeType::Arrow)) == "Arrow");
+    REQUIRE(std::string(shapeTypeName(ShapeType::RoundedRect)) == "Rounded Rectangle");
+    REQUIRE(std::string(shapeTypeName(ShapeType::Triangle)) == "Triangle");
+    REQUIRE(std::string(shapeTypeName(ShapeType::FreeformLine)) == "Freeform Line");
+}
+
+TEST_CASE("LineStyle names", "[drawing]") {
+    REQUIRE(std::string(lineStyleName(LineStyle::Solid)) == "Solid");
+    REQUIRE(std::string(lineStyleName(LineStyle::Dashed)) == "Dashed");
+    REQUIRE(std::string(lineStyleName(LineStyle::Dotted)) == "Dotted");
+    REQUIRE(std::string(lineStyleName(LineStyle::DashDot)) == "Dash-Dot");
+}
+
+TEST_CASE("DrawingLayoutMode names", "[drawing]") {
+    REQUIRE(std::string(drawingLayoutModeName(DrawingLayoutMode::Inline)) == "Inline with Text");
+    REQUIRE(std::string(drawingLayoutModeName(DrawingLayoutMode::Float)) == "Float");
+    REQUIRE(std::string(drawingLayoutModeName(DrawingLayoutMode::Behind)) == "Behind Text");
+    REQUIRE(std::string(drawingLayoutModeName(DrawingLayoutMode::InFront)) == "In Front of Text");
+}
+
+TEST_CASE("DrawingColor", "[drawing]") {
+    SECTION("default construction") {
+        DrawingColor color;
+        REQUIRE(color.r == 0);
+        REQUIRE(color.g == 0);
+        REQUIRE(color.b == 0);
+        REQUIRE(color.a == 255);
+    }
     
-    SECTION("default values") {
-        REQUIRE(shape.type == ShapeType::Rectangle);
-        REQUIRE(shape.position.x == 0.0f);
-        REQUIRE(shape.position.y == 0.0f);
-        REQUIRE(shape.width == 100.0f);
-        REQUIRE(shape.height == 100.0f);
-        REQUIRE(shape.rotation == 0.0f);
+    SECTION("equality") {
+        DrawingColor a = {100, 150, 200, 255};
+        DrawingColor b = {100, 150, 200, 255};
+        DrawingColor c = {100, 150, 201, 255};
+        REQUIRE(a == b);
+        REQUIRE(a != c);
     }
-
-    SECTION("default stroke properties") {
-        REQUIRE(shape.stroke.style == StrokeStyle::Solid);
-        REQUIRE(shape.stroke.width == 1.0f);
-        REQUIRE(shape.stroke.lineCap == LineCap::Flat);
-        REQUIRE(shape.stroke.startArrow == ArrowHead::None);
-        REQUIRE(shape.stroke.endArrow == ArrowHead::None);
+    
+    SECTION("transparency check") {
+        DrawingColor opaque = {0, 0, 0, 255};
+        DrawingColor transparent = {0, 0, 0, 0};
+        REQUIRE_FALSE(opaque.isTransparent());
+        REQUIRE(transparent.isTransparent());
     }
-
-    SECTION("default fill properties") {
-        REQUIRE(shape.fill.style == FillStyle::None);
-        REQUIRE(shape.fill.opacity == 255);
-    }
-}
-
-TEST_CASE("DocumentShape bounds and containment", "[drawing]") {
-    DocumentShape shape;
-    shape.position = {10.0f, 20.0f};
-    shape.width = 100.0f;
-    shape.height = 50.0f;
-
-    SECTION("getBounds returns correct values") {
-        auto bounds = shape.getBounds();
-        REQUIRE(bounds.x == 10.0f);
-        REQUIRE(bounds.y == 20.0f);
-        REQUIRE(bounds.width == 100.0f);
-        REQUIRE(bounds.height == 50.0f);
-    }
-
-    SECTION("getBounds includes offset") {
-        shape.offsetX = 5.0f;
-        shape.offsetY = -10.0f;
-        auto bounds = shape.getBounds();
-        REQUIRE(bounds.x == 15.0f);
-        REQUIRE(bounds.y == 10.0f);
-    }
-
-    SECTION("containsPoint inside shape") {
-        REQUIRE(shape.containsPoint(50.0f, 40.0f));
-        REQUIRE(shape.containsPoint(10.0f, 20.0f));  // Corner
-        REQUIRE(shape.containsPoint(110.0f, 70.0f)); // Opposite corner
-    }
-
-    SECTION("containsPoint outside shape") {
-        REQUIRE_FALSE(shape.containsPoint(5.0f, 40.0f));   // Left
-        REQUIRE_FALSE(shape.containsPoint(115.0f, 40.0f)); // Right
-        REQUIRE_FALSE(shape.containsPoint(50.0f, 10.0f));  // Above
-        REQUIRE_FALSE(shape.containsPoint(50.0f, 80.0f));  // Below
+    
+    SECTION("predefined colors") {
+        REQUIRE(DrawingColors::Black.r == 0);
+        REQUIRE(DrawingColors::White.r == 255);
+        REQUIRE(DrawingColors::Red.r == 255);
+        REQUIRE(DrawingColors::Green.g == 255);
+        REQUIRE(DrawingColors::Blue.b == 255);
+        REQUIRE(DrawingColors::Transparent.a == 0);
     }
 }
 
-TEST_CASE("Point2D", "[drawing]") {
-    SECTION("default constructor") {
-        Point2D p;
-        REQUIRE(p.x == 0.0f);
-        REQUIRE(p.y == 0.0f);
+TEST_CASE("DrawingPoint", "[drawing]") {
+    SECTION("default construction") {
+        DrawingPoint pt;
+        REQUIRE(pt.x == 0.0f);
+        REQUIRE(pt.y == 0.0f);
     }
-
-    SECTION("parameterized constructor") {
-        Point2D p(10.0f, 20.0f);
-        REQUIRE(p.x == 10.0f);
-        REQUIRE(p.y == 20.0f);
-    }
-
-    SECTION("equality comparison") {
-        Point2D a(5.0f, 10.0f);
-        Point2D b(5.0f, 10.0f);
-        Point2D c(5.0f, 11.0f);
+    
+    SECTION("equality") {
+        DrawingPoint a = {10.0f, 20.0f};
+        DrawingPoint b = {10.0f, 20.0f};
+        DrawingPoint c = {10.0f, 21.0f};
         REQUIRE(a == b);
         REQUIRE_FALSE(a == c);
     }
 }
 
-TEST_CASE("ShapeType names", "[drawing]") {
-    SECTION("all types have display names") {
-        REQUIRE(std::string(shapeTypeName(ShapeType::Line)) == "Line");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Arrow)) == "Arrow");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Rectangle)) == "Rectangle");
-        REQUIRE(std::string(shapeTypeName(ShapeType::RoundedRect)) == "Rounded Rectangle");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Ellipse)) == "Ellipse");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Triangle)) == "Triangle");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Diamond)) == "Diamond");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Pentagon)) == "Pentagon");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Hexagon)) == "Hexagon");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Star)) == "Star");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Callout)) == "Callout");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Bracket)) == "Bracket");
-        REQUIRE(std::string(shapeTypeName(ShapeType::Freeform)) == "Freeform");
+TEST_CASE("DocumentDrawing struct", "[drawing]") {
+    SECTION("default construction") {
+        DocumentDrawing drw;
+        REQUIRE(drw.id == 0);
+        REQUIRE(drw.shapeType == ShapeType::Line);
+        REQUIRE(drw.anchorLine == 0);
+        REQUIRE(drw.anchorColumn == 0);
+        REQUIRE(drw.width == Approx(100.0f));
+        REQUIRE(drw.height == Approx(50.0f));
+        REQUIRE(drw.layoutMode == DrawingLayoutMode::Inline);
+        REQUIRE(drw.strokeWidth == Approx(1.0f));
+        REQUIRE(drw.lineStyle == LineStyle::Solid);
+        REQUIRE_FALSE(drw.filled);
     }
-}
-
-TEST_CASE("ShapeCollection initialization", "[drawing]") {
-    ShapeCollection collection;
     
-    SECTION("starts empty") {
-        REQUIRE(collection.isEmpty());
-        REQUIRE(collection.count() == 0);
-        REQUIRE(collection.shapes().empty());
+    SECTION("set size") {
+        DocumentDrawing drw;
+        drw.setSize(200.0f, 100.0f);
+        REQUIRE(drw.getWidth() == Approx(200.0f));
+        REQUIRE(drw.getHeight() == Approx(100.0f));
     }
-}
-
-TEST_CASE("ShapeCollection add and get", "[drawing]") {
-    ShapeCollection collection;
     
-    SECTION("addShape assigns unique IDs") {
-        DocumentShape s1;
-        s1.type = ShapeType::Rectangle;
-        std::size_t id1 = collection.addShape(s1);
+    SECTION("get bounds") {
+        DocumentDrawing drw;
+        drw.x = 10.0f;
+        drw.y = 20.0f;
+        drw.width = 100.0f;
+        drw.height = 50.0f;
         
-        DocumentShape s2;
-        s2.type = ShapeType::Ellipse;
-        std::size_t id2 = collection.addShape(s2);
+        auto bounds = drw.getBounds();
+        REQUIRE(bounds.x == Approx(10.0f));
+        REQUIRE(bounds.y == Approx(20.0f));
+        REQUIRE(bounds.width == Approx(100.0f));
+        REQUIRE(bounds.height == Approx(50.0f));
+    }
+    
+    SECTION("contains point") {
+        DocumentDrawing drw;
+        drw.x = 10.0f;
+        drw.y = 20.0f;
+        drw.width = 100.0f;
+        drw.height = 50.0f;
+        
+        // Inside
+        REQUIRE(drw.containsPoint(50.0f, 40.0f));
+        // On edge
+        REQUIRE(drw.containsPoint(10.0f, 20.0f));
+        REQUIRE(drw.containsPoint(110.0f, 70.0f));
+        // Outside
+        REQUIRE_FALSE(drw.containsPoint(5.0f, 40.0f));
+        REQUIRE_FALSE(drw.containsPoint(50.0f, 80.0f));
+    }
+    
+    SECTION("freeform line points") {
+        DocumentDrawing drw;
+        drw.shapeType = ShapeType::FreeformLine;
+        drw.points.push_back({0.0f, 0.0f});
+        drw.points.push_back({10.0f, 10.0f});
+        drw.points.push_back({20.0f, 5.0f});
+        REQUIRE(drw.points.size() == 3);
+    }
+    
+    SECTION("arrow properties") {
+        DocumentDrawing drw;
+        drw.shapeType = ShapeType::Arrow;
+        drw.startArrow = ArrowStyle::None;
+        drw.endArrow = ArrowStyle::Standard;
+        REQUIRE(drw.startArrow == ArrowStyle::None);
+        REQUIRE(drw.endArrow == ArrowStyle::Standard);
+    }
+}
+
+TEST_CASE("DrawingCollection", "[drawing]") {
+    SECTION("add and get drawing") {
+        DrawingCollection coll;
+        REQUIRE(coll.isEmpty());
+        REQUIRE(coll.count() == 0);
+        
+        DocumentDrawing drw;
+        drw.shapeType = ShapeType::Rectangle;
+        drw.anchorLine = 5;
+        
+        std::size_t id = coll.addDrawing(drw);
+        REQUIRE(id > 0);
+        REQUIRE_FALSE(coll.isEmpty());
+        REQUIRE(coll.count() == 1);
+        
+        auto* retrieved = coll.getDrawing(id);
+        REQUIRE(retrieved != nullptr);
+        REQUIRE(retrieved->shapeType == ShapeType::Rectangle);
+        REQUIRE(retrieved->anchorLine == 5);
+    }
+    
+    SECTION("remove drawing") {
+        DrawingCollection coll;
+        DocumentDrawing drw;
+        std::size_t id = coll.addDrawing(drw);
+        REQUIRE(coll.count() == 1);
+        
+        REQUIRE(coll.removeDrawing(id));
+        REQUIRE(coll.count() == 0);
+        REQUIRE(coll.getDrawing(id) == nullptr);
+    }
+    
+    SECTION("remove nonexistent drawing returns false") {
+        DrawingCollection coll;
+        REQUIRE_FALSE(coll.removeDrawing(999));
+    }
+    
+    SECTION("drawings at line") {
+        DrawingCollection coll;
+        
+        DocumentDrawing drw1;
+        drw1.shapeType = ShapeType::Line;
+        drw1.anchorLine = 5;
+        coll.addDrawing(drw1);
+        
+        DocumentDrawing drw2;
+        drw2.shapeType = ShapeType::Ellipse;
+        drw2.anchorLine = 5;
+        coll.addDrawing(drw2);
+        
+        DocumentDrawing drw3;
+        drw3.shapeType = ShapeType::Rectangle;
+        drw3.anchorLine = 10;
+        coll.addDrawing(drw3);
+        
+        auto atLine5 = coll.drawingsAtLine(5);
+        REQUIRE(atLine5.size() == 2);
+        
+        auto atLine10 = coll.drawingsAtLine(10);
+        REQUIRE(atLine10.size() == 1);
+        REQUIRE(atLine10[0]->shapeType == ShapeType::Rectangle);
+        
+        auto atLine7 = coll.drawingsAtLine(7);
+        REQUIRE(atLine7.empty());
+    }
+    
+    SECTION("drawings in range") {
+        DrawingCollection coll;
+        
+        DocumentDrawing drw1;
+        drw1.anchorLine = 5;
+        coll.addDrawing(drw1);
+        
+        DocumentDrawing drw2;
+        drw2.anchorLine = 10;
+        coll.addDrawing(drw2);
+        
+        DocumentDrawing drw3;
+        drw3.anchorLine = 15;
+        coll.addDrawing(drw3);
+        
+        auto inRange = coll.drawingsInRange(4, 12);
+        REQUIRE(inRange.size() == 2);  // Lines 5 and 10
+    }
+    
+    SECTION("shift anchors from positive delta") {
+        DrawingCollection coll;
+        
+        DocumentDrawing drw1;
+        drw1.anchorLine = 5;
+        std::size_t id1 = coll.addDrawing(drw1);
+        
+        DocumentDrawing drw2;
+        drw2.anchorLine = 10;
+        std::size_t id2 = coll.addDrawing(drw2);
+        
+        DocumentDrawing drw3;
+        drw3.anchorLine = 15;
+        std::size_t id3 = coll.addDrawing(drw3);
+        
+        // Insert 3 lines at line 8
+        coll.shiftAnchorsFrom(8, 3);
+        
+        REQUIRE(coll.getDrawing(id1)->anchorLine == 5);   // Before line 8, unchanged
+        REQUIRE(coll.getDrawing(id2)->anchorLine == 13);  // 10 + 3
+        REQUIRE(coll.getDrawing(id3)->anchorLine == 18);  // 15 + 3
+    }
+    
+    SECTION("shift anchors negative delta") {
+        DrawingCollection coll;
+        
+        DocumentDrawing drw;
+        drw.anchorLine = 10;
+        std::size_t id = coll.addDrawing(drw);
+        
+        // Delete 3 lines starting at line 8
+        coll.shiftAnchorsFrom(8, -3);
+        
+        REQUIRE(coll.getDrawing(id)->anchorLine == 7);  // 10 - 3
+    }
+    
+    SECTION("clear collection") {
+        DrawingCollection coll;
+        
+        DocumentDrawing drw;
+        coll.addDrawing(drw);
+        coll.addDrawing(drw);
+        coll.addDrawing(drw);
+        REQUIRE(coll.count() == 3);
+        
+        coll.clear();
+        REQUIRE(coll.isEmpty());
+        REQUIRE(coll.count() == 0);
+    }
+    
+    SECTION("drawing IDs are unique and auto-incrementing") {
+        DrawingCollection coll;
+        
+        DocumentDrawing drw;
+        std::size_t id1 = coll.addDrawing(drw);
+        std::size_t id2 = coll.addDrawing(drw);
+        std::size_t id3 = coll.addDrawing(drw);
         
         REQUIRE(id1 != id2);
-        REQUIRE(collection.count() == 2);
-    }
-
-    SECTION("getShape retrieves by ID") {
-        DocumentShape s;
-        s.type = ShapeType::Line;
-        std::size_t id = collection.addShape(s);
-        
-        DocumentShape* retrieved = collection.getShape(id);
-        REQUIRE(retrieved != nullptr);
-        REQUIRE(retrieved->type == ShapeType::Line);
-    }
-
-    SECTION("getShape returns nullptr for invalid ID") {
-        REQUIRE(collection.getShape(999) == nullptr);
-    }
-
-    SECTION("const getShape works") {
-        DocumentShape s;
-        s.type = ShapeType::Arrow;
-        std::size_t id = collection.addShape(s);
-        
-        const ShapeCollection& constCollection = collection;
-        const DocumentShape* retrieved = constCollection.getShape(id);
-        REQUIRE(retrieved != nullptr);
-        REQUIRE(retrieved->type == ShapeType::Arrow);
-    }
-}
-
-TEST_CASE("ShapeCollection remove", "[drawing]") {
-    ShapeCollection collection;
-    DocumentShape s;
-    std::size_t id = collection.addShape(s);
-
-    SECTION("removeShape removes existing shape") {
-        REQUIRE(collection.count() == 1);
-        bool removed = collection.removeShape(id);
-        REQUIRE(removed);
-        REQUIRE(collection.count() == 0);
-        REQUIRE(collection.getShape(id) == nullptr);
-    }
-
-    SECTION("removeShape returns false for non-existent ID") {
-        bool removed = collection.removeShape(999);
-        REQUIRE_FALSE(removed);
-        REQUIRE(collection.count() == 1);
-    }
-}
-
-TEST_CASE("ShapeCollection shapesAtLine", "[drawing]") {
-    ShapeCollection collection;
-    
-    DocumentShape s1;
-    s1.anchorLine = 5;
-    collection.addShape(s1);
-    
-    DocumentShape s2;
-    s2.anchorLine = 5;
-    collection.addShape(s2);
-    
-    DocumentShape s3;
-    s3.anchorLine = 10;
-    collection.addShape(s3);
-
-    SECTION("returns shapes at specified line") {
-        auto atLine5 = collection.shapesAtLine(5);
-        REQUIRE(atLine5.size() == 2);
-    }
-
-    SECTION("returns empty for line with no shapes") {
-        auto atLine0 = collection.shapesAtLine(0);
-        REQUIRE(atLine0.empty());
-    }
-
-    SECTION("const version works") {
-        const ShapeCollection& constCollection = collection;
-        auto atLine5 = constCollection.shapesAtLine(5);
-        REQUIRE(atLine5.size() == 2);
-    }
-}
-
-TEST_CASE("ShapeCollection shiftAnchorsFrom", "[drawing]") {
-    ShapeCollection collection;
-    
-    DocumentShape s1;
-    s1.anchorLine = 5;
-    collection.addShape(s1);
-    
-    DocumentShape s2;
-    s2.anchorLine = 10;
-    collection.addShape(s2);
-
-    SECTION("positive shift moves anchors down") {
-        collection.shiftAnchorsFrom(5, 3);
-        
-        auto at8 = collection.shapesAtLine(8);
-        REQUIRE(at8.size() == 1);
-        
-        auto at13 = collection.shapesAtLine(13);
-        REQUIRE(at13.size() == 1);
-    }
-
-    SECTION("negative shift moves anchors up") {
-        collection.shiftAnchorsFrom(0, -2);
-        
-        auto at3 = collection.shapesAtLine(3);
-        REQUIRE(at3.size() == 1);
-    }
-
-    SECTION("shift only affects shapes at or after line") {
-        collection.shiftAnchorsFrom(8, 5);
-        
-        auto at5 = collection.shapesAtLine(5);
-        REQUIRE(at5.size() == 1);
-        
-        auto at15 = collection.shapesAtLine(15);
-        REQUIRE(at15.size() == 1);
-    }
-}
-
-TEST_CASE("ShapeCollection clear", "[drawing]") {
-    ShapeCollection collection;
-    DocumentShape s;
-    collection.addShape(s);
-    collection.addShape(s);
-    REQUIRE(collection.count() == 2);
-
-    SECTION("clear removes all shapes") {
-        collection.clear();
-        REQUIRE(collection.isEmpty());
-        REQUIRE(collection.count() == 0);
-    }
-
-    SECTION("ID counter resets after clear") {
-        collection.clear();
-        std::size_t newId = collection.addShape(s);
-        REQUIRE(newId == 1);
-    }
-}
-
-TEST_CASE("ShapeCollection shapeAtPoint", "[drawing]") {
-    ShapeCollection collection;
-    
-    DocumentShape s1;
-    s1.position = {0.0f, 0.0f};
-    s1.width = 100.0f;
-    s1.height = 100.0f;
-    collection.addShape(s1);
-    
-    DocumentShape s2;
-    s2.position = {50.0f, 50.0f};
-    s2.width = 100.0f;
-    s2.height = 100.0f;
-    collection.addShape(s2);
-
-    SECTION("finds topmost shape at point") {
-        // Point in overlapping region - should return s2 (added later)
-        auto* found = collection.shapeAtPoint(75.0f, 75.0f);
-        REQUIRE(found != nullptr);
-        REQUIRE(found->position.x == 50.0f);
-    }
-
-    SECTION("finds shape at non-overlapping point") {
-        auto* found = collection.shapeAtPoint(25.0f, 25.0f);
-        REQUIRE(found != nullptr);
-        REQUIRE(found->position.x == 0.0f);
-    }
-
-    SECTION("returns nullptr for point outside all shapes") {
-        auto* found = collection.shapeAtPoint(200.0f, 200.0f);
-        REQUIRE(found == nullptr);
-    }
-}
-
-TEST_CASE("Factory functions", "[drawing]") {
-    SECTION("createLine") {
-        auto line = createLine({0.0f, 0.0f}, {100.0f, 50.0f}, 2.0f);
-        REQUIRE(line.type == ShapeType::Line);
-        REQUIRE(line.lineStart.x == 0.0f);
-        REQUIRE(line.lineEnd.x == 100.0f);
-        REQUIRE(line.stroke.width == 2.0f);
-        REQUIRE(line.fill.style == FillStyle::None);
-    }
-
-    SECTION("createArrow") {
-        auto arrow = createArrow({0.0f, 0.0f}, {100.0f, 0.0f});
-        REQUIRE(arrow.type == ShapeType::Arrow);
-        REQUIRE(arrow.stroke.endArrow == ArrowHead::Triangle);
-    }
-
-    SECTION("createRectangle") {
-        auto rect = createRectangle(10.0f, 20.0f, 100.0f, 50.0f);
-        REQUIRE(rect.type == ShapeType::Rectangle);
-        REQUIRE(rect.position.x == 10.0f);
-        REQUIRE(rect.position.y == 20.0f);
-        REQUIRE(rect.width == 100.0f);
-        REQUIRE(rect.height == 50.0f);
-    }
-
-    SECTION("createEllipse") {
-        auto ellipse = createEllipse(0.0f, 0.0f, 80.0f, 40.0f);
-        REQUIRE(ellipse.type == ShapeType::Ellipse);
-        REQUIRE(ellipse.width == 80.0f);
-        REQUIRE(ellipse.height == 40.0f);
-    }
-
-    SECTION("createRoundedRect") {
-        auto rounded = createRoundedRect(0.0f, 0.0f, 100.0f, 50.0f, 12.0f);
-        REQUIRE(rounded.type == ShapeType::RoundedRect);
-        REQUIRE(rounded.cornerRadius == 12.0f);
-    }
-}
-
-TEST_CASE("Stroke and fill enums", "[drawing]") {
-    SECTION("StrokeStyle values") {
-        REQUIRE(static_cast<int>(StrokeStyle::None) == 0);
-        REQUIRE(static_cast<int>(StrokeStyle::Solid) == 1);
-        REQUIRE(static_cast<int>(StrokeStyle::Dashed) == 2);
-        REQUIRE(static_cast<int>(StrokeStyle::Dotted) == 3);
-    }
-
-    SECTION("FillStyle values") {
-        REQUIRE(static_cast<int>(FillStyle::None) == 0);
-        REQUIRE(static_cast<int>(FillStyle::Solid) == 1);
-    }
-
-    SECTION("ArrowHead values") {
-        REQUIRE(static_cast<int>(ArrowHead::None) == 0);
-        REQUIRE(static_cast<int>(ArrowHead::Triangle) == 1);
+        REQUIRE(id2 != id3);
+        REQUIRE(id1 < id2);
+        REQUIRE(id2 < id3);
     }
 }
