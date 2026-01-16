@@ -673,7 +673,7 @@ struct MenuSystem
                          theme::TEXT_COLOR);
 
         // Handle close button click
-        if (raylib::IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
+        if (IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
             raylib::Vector2 mousePos = raylib::GetMousePosition();
             if (mousePos.x >= closeBtn.x &&
                 mousePos.x <= closeBtn.x + closeBtn.width &&
@@ -685,7 +685,7 @@ struct MenuSystem
         }
 
         // Escape to close
-        if (raylib::IsKeyPressed(raylib::KEY_ESCAPE)) {
+        if (IsKeyPressed(raylib::KEY_ESCAPE)) {
             menu.showHelpWindow = false;
             return;
         }

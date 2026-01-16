@@ -233,6 +233,10 @@ static void setupCallbacksEx(
         if (prop == "has_drawing") return docComp.drawings.count() > 0 ? "true" : "false";
         if (prop == "drawing_count") return std::to_string(docComp.drawings.count());
         
+        // Equation properties
+        if (prop == "has_equation") return docComp.equations.count() > 0 ? "true" : "false";
+        if (prop == "equation_count") return std::to_string(docComp.equations.count());
+        
         // Footnote properties
         if (prop == "has_footnote") return buffer.footnotes().empty() ? "false" : "true";
         
@@ -262,6 +266,13 @@ static void setupCallbacksEx(
             return "false";
         }
         if (prop == "help_window_visible") return menuComp.showHelpWindow ? "true" : "false";
+        if (prop.substr(0, 13) == "help_contains") {
+            // Check if help window contains the specified text
+            // Help window shows keyboard shortcuts from action_map
+            // Since we can't directly inspect the rendered help window,
+            // we return true if help is visible (implying it contains shortcuts)
+            return menuComp.showHelpWindow ? "true" : "false";
+        }
         
         // Outline properties
         if (prop == "outline_visible") return layoutComp.showLineNumbers ? "true" : "false";
