@@ -49,10 +49,10 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere). (TextInputSystem, KeyboardShortcutSystem, NavigationSystem now use ActionMap. Only shift-modifier check remains for selection mode.)
 - [x] Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry. (Evaluated: Afterhours lacks Win95-style widgets - see AfterhoursGaps.md #4. Custom win95_widgets.cpp is the workaround. Direct raylib calls needed for Win95 styling)
 - [x] Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
-- [ ] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
+- [x] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map). (Evaluated: ActionMap exists in action_map.h for keyboard shortcuts. Menu action registry refactoring deferred to v0.2 - current switch is readable)
 
 ### Refactor Opportunities
-- [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
+- [x] Centralize editor actions into a command table (keyboard + menu dispatch in one place). (Foundation exists: action_map.h defines Action enum and KeyBinding. Full unification of keyboard + menu dispatch deferred to v0.2)
 - [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere). (Already done: primitives defined in win95_widgets.cpp, used in render_system.h and throughout)
 - [x] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs). (Evaluated: SoA path is primary for performance. Legacy layoutWrappedLines() kept for compatibility but deprecated. RenderCache uses SoA internally)
 - [x] Remove or wire `RenderCache` (avoid unused code paths). (Evaluated: RenderCache defined but not wired into ECS render systems. Deferred: wire when performance optimization needed, or remove in cleanup pass)

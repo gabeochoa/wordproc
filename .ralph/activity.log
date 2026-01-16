@@ -1464,3 +1464,7 @@ Ralph Session Started: Thu Jan 15 20:54:32 CST 2026
 [20:57:18] 🔴 READ /Users/gabeochoa/p/wordproc/vendor/afterhours/src/core/entity_query.h (482 lines, ~47.0KB)
 [20:57:23] 🔴 READ /Users/gabeochoa/p/wordproc/vendor/afterhours/src/core/entity_query.h (482 lines, ~47.0KB)
 [20:57:23] 🔴 ROTATE: Token threshold reached (80201 >= 80000)
+[20:57:28] 🔴 ROTATE: Token threshold reached (80201 >= 80000)
+[20:57:32] 🔴 READ /Users/gabeochoa/p/wordproc/src/ui/ui_context.h (224 lines, ~21.8KB)
+[20:57:32] 🔴 ROTATE: Token threshold reached (85801 >= 80000)
+[20:57:32] 🔴 TOKENS: 85801 / 80000 (107%) - rotation imminent [read:331KB write:0KB assist:0KB shell:0KB]
