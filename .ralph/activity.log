@@ -854,3 +854,26 @@ Ralph Session Started: Thu Jan 15 19:26:00 CST 2026
 [19:30:43] 🟡 SHELL make test 2>&1 → exit 0
 [19:30:58] 🟡 TOKENS: 49770 / 80000 (62%) [read:190KB write:0KB assist:1KB shell:0KB]
 [19:31:05] 🟡 READ /Users/gabeochoa/p/wordproc/RALPH_TASK.md (195 lines, ~19.0KB)
+[19:31:24] 🟡 SHELL git add -A && git commit -m "$(cat <<'EOF'
+ralph: refactor main loop to use ECS SystemManager
+
+- Created src/ecs/ directory with ECS components and systems:
+  - components.h: CaretComponent, ScrollComponent, DocumentComponent,
+    StatusComponent, MenuComponent, LayoutComponent, TestConfigComponent
+  - input_system.h: TextInputSystem, KeyboardShortcutSystem,
+    NavigationSystem, CaretBlinkSystem, LayoutUpdateSystem
+  - render_system.h: EditorRenderSystem, MenuSystem, ScreenshotSystem
+
+- Refactored main.cpp to use afterhours::SystemManager:
+  - Creates editor entity with all required components
+  - Registers update systems for input/logic
+  - Registers render systems for drawing
+  - Main loop now calls systemManager.run(dt)
+
+- Reduced main.cpp from 727 lines to 166 lines
+- All 321 tests pass
+EOF
+)" → exit 0
+[19:31:28] 🟡 TOKENS: 54670 / 80000 (68%) [read:209KB write:0KB assist:1KB shell:0KB]
+[19:31:28] 🟡 SHELL git status && git diff --stat HEAD~1 → exit 0
+[19:31:33] 🟡 SHELL git status --porcelain → exit 0
