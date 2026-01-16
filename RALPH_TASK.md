@@ -131,7 +131,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 ### 11) AfterhoursGaps
 - [x] Create `AfterhoursGaps.md` and log any needed library changes.
 - [x] Provide app-side workaround for each gap while avoiding vendor changes.
-- [ ] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
+- [x] Review Afterhours APIs used and add feedback/new feature ideas as they emerge.
 
 ---
 
