@@ -244,6 +244,27 @@ void TextBuffer::selectAll() {
   caret_ = selection_end_;
 }
 
+std::string TextBuffer::getSelectedText() const {
+  if (!has_selection_) {
+    return "";
+  }
+  
+  CaretPosition start = selectionStart();
+  CaretPosition end = selectionEnd();
+  
+  std::size_t startOffset = positionToOffset(start);
+  std::size_t endOffset = positionToOffset(end);
+  
+  if (endOffset <= startOffset) {
+    return "";
+  }
+  
+  std::size_t len = endOffset - startOffset;
+  std::string result(len, '\0');
+  chars_.copyTo(startOffset, len, &result[0]);
+  return result;
+}
+
 bool TextBuffer::deleteSelection() {
   if (!has_selection_) {
     return false;

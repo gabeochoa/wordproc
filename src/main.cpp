@@ -377,6 +377,43 @@ int main(int argc, char *argv[]) {
       style.fontSize = 16;
       buffer.setTextStyle(style);
     }
+    
+    // Clipboard operations
+    // Ctrl+C - Copy
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_C)) {
+      if (buffer.hasSelection()) {
+        std::string selected = buffer.getSelectedText();
+        if (!selected.empty()) {
+          raylib::SetClipboardText(selected.c_str());
+        }
+      }
+    }
+    
+    // Ctrl+X - Cut
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_X)) {
+      if (buffer.hasSelection()) {
+        std::string selected = buffer.getSelectedText();
+        if (!selected.empty()) {
+          raylib::SetClipboardText(selected.c_str());
+          buffer.deleteSelection();
+          isDirty = true;
+        }
+      }
+    }
+    
+    // Ctrl+V - Paste
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_V)) {
+      const char* clipText = raylib::GetClipboardText();
+      if (clipText && clipText[0] != '\0') {
+        buffer.insertText(clipText);
+        isDirty = true;
+      }
+    }
+    
+    // Ctrl+A - Select All
+    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_A)) {
+      buffer.selectAll();
+    }
 
     bool shift_down = raylib::IsKeyDown(raylib::KEY_LEFT_SHIFT) ||
                       raylib::IsKeyDown(raylib::KEY_RIGHT_SHIFT);

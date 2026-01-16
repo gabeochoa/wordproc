@@ -105,6 +105,9 @@ public:
   
   // Delete selected text and return true if there was a selection
   bool deleteSelection();
+  
+  // Get selected text as string (empty if no selection)
+  std::string getSelectedText() const;
 
   void moveLeft();
   void moveRight();

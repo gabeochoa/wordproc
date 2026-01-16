@@ -142,3 +142,111 @@ TEST_CASE("layoutWrappedLinesSoA (SoA layout)", "[text_layout][soa]") {
         REQUIRE(reconstructed == line);
     }
 }
+
+TEST_CASE("RenderCache invalidation", "[text_layout][cache]") {
+    TextBuffer buffer;
+    RenderCache cache;
+    
+    // Parameters for cache testing
+    const int fontSize = 16;
+    const int textAreaWidth = 800;
+    const int textAreaHeight = 600;
+    const int lineHeight = 20;
+    const int textPadding = 8;
+    
+    SECTION("cache starts needing rebuild") {
+        REQUIRE(cache.needsRebuild(buffer.version(), fontSize, 
+                                   textAreaWidth, textAreaHeight, lineHeight));
+    }
+    
+    SECTION("cache doesn't need rebuild after initial build") {
+        buffer.setText("Hello World");
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        
+        REQUIRE_FALSE(cache.needsRebuild(buffer.version(), fontSize,
+                                         textAreaWidth, textAreaHeight, lineHeight));
+    }
+    
+    SECTION("cache invalidates on buffer modification") {
+        buffer.setText("Hello");
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        
+        // Modify buffer
+        buffer.insertChar('!');
+        
+        REQUIRE(cache.needsRebuild(buffer.version(), fontSize,
+                                   textAreaWidth, textAreaHeight, lineHeight));
+    }
+    
+    SECTION("cache invalidates on font size change") {
+        buffer.setText("Hello");
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        
+        // Different font size should trigger rebuild
+        REQUIRE(cache.needsRebuild(buffer.version(), fontSize + 2,
+                                   textAreaWidth, textAreaHeight, lineHeight));
+    }
+    
+    SECTION("cache invalidates on window resize") {
+        buffer.setText("Hello");
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        
+        // Different width should trigger rebuild
+        REQUIRE(cache.needsRebuild(buffer.version(), fontSize,
+                                   textAreaWidth + 100, textAreaHeight, lineHeight));
+        
+        // Different height should trigger rebuild
+        REQUIRE(cache.needsRebuild(buffer.version(), fontSize,
+                                   textAreaWidth, textAreaHeight + 100, lineHeight));
+    }
+    
+    SECTION("cache stores visible lines") {
+        buffer.setText("Line1\nLine2\nLine3");
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        
+        const auto& lines = cache.visibleLines();
+        REQUIRE(lines.size() == 3);
+        REQUIRE(lines[0].text == "Line1");
+        REQUIRE(lines[1].text == "Line2");
+        REQUIRE(lines[2].text == "Line3");
+        REQUIRE(lines[0].source_row == 0);
+        REQUIRE(lines[1].source_row == 1);
+        REQUIRE(lines[2].source_row == 2);
+    }
+    
+    SECTION("cache tracks rebuild count") {
+        buffer.setText("Test");
+        cache.resetStats();
+        
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        REQUIRE(cache.rebuildCount() == 1);
+        
+        // Rebuild again
+        buffer.insertChar('!');
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        REQUIRE(cache.rebuildCount() == 2);
+    }
+    
+    SECTION("cache tracks hit count") {
+        buffer.setText("Test");
+        cache.resetStats();
+        
+        cache.rebuild(buffer, buffer.version(), fontSize, 0, 0,
+                      textAreaWidth, textAreaHeight, lineHeight, textPadding);
+        
+        // Multiple cache hit checks without modification
+        for (int i = 0; i < 5; ++i) {
+            REQUIRE_FALSE(cache.needsRebuild(buffer.version(), fontSize,
+                                             textAreaWidth, textAreaHeight, lineHeight));
+        }
+        
+        REQUIRE(cache.cacheHitCount() == 5);
+    }
+}
