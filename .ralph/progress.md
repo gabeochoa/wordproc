@@ -867,6 +867,9 @@ Summary:
 **Completed this session:**
 - [x] Use Afterhours UI state context for test input handling
 - [x] Add help window listing keybindings from action_map.h
+- [x] Separate app settings from document settings (added auto_save_enabled + save_if_auto())
+
+**Next unchecked task:** Re-evaluate file format (JSON vs wpdoc zip)
 
 ### 2026-01-15 (Session 7 - Color Type Fix)
 - **Fixed fundamental build error:** Color type conflict between raylib and afterhours

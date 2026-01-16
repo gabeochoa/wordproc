@@ -92,13 +92,22 @@ int main(int argc, char *argv[]) {
     return totalMs <= 100.0 ? 0 : 1;
   }
 
-  Settings::get().load_save_file(800, 600);
+  {
+    SCOPED_TIMER("Settings load");
+    Settings::get().load_save_file(800, 600);
+  }
 
-  Preload::get().init("Wordproc - Untitled").make_singleton();
-  Settings::get().refresh_settings();
+  {
+    SCOPED_TIMER("Preload and singletons");
+    Preload::get().init("Wordproc - Untitled").make_singleton();
+    Settings::get().refresh_settings();
+  }
 
-  // Initialize Afterhours immediate-mode UI context with Win95 theme
-  ui_imm::initUIContext(800, 600);
+  {
+    SCOPED_TIMER("UI context init");
+    // Initialize Afterhours immediate-mode UI context with Win95 theme
+    ui_imm::initUIContext(800, 600);
+  }
 
   // Create the editor entity with all required components
   using namespace afterhours;

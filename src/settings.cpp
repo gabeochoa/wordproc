@@ -61,6 +61,7 @@ int Settings::get_screen_height() const { return data->resolution.height; }
 
 void Settings::update_resolution(afterhours::window_manager::Resolution rez) {
   data->resolution = rez;
+  save_if_auto();
 }
 
 void match_fullscreen_to_setting(bool fs_enabled) {
@@ -78,6 +79,13 @@ void Settings::refresh_settings() {
 void Settings::toggle_fullscreen() {
   data->fullscreen_enabled = !data->fullscreen_enabled;
   raylib::ToggleFullscreen();
+  save_if_auto();
+}
+
+void Settings::save_if_auto() {
+  if (auto_save_enabled) {
+    write_save_file();
+  }
 }
 
 bool &Settings::get_fullscreen_enabled() { return data->fullscreen_enabled; }

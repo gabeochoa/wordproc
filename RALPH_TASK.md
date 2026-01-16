@@ -33,7 +33,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
 - [x] Use Afterhours UI state context for test input handling. (Already integrated: external.h macros redirect raylib input to test_input, BeginUIContextManager reads through redirected functions)
 - [x] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings. (Help window with F1 shortcut complete; rebinding/persistence deferred to v0.2)
-- [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
+- [x] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save. (Already separated: Settings singleton for app, TextStyle in TextBuffer for doc. Added auto_save_enabled + save_if_auto() for immediate app settings save)
 - [ ] Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
 - [ ] Ensure `.doc` import support; collect sample `.doc` files for tests.
 - [ ] Add a test that loads the largest file and logs FPS while scrolling.
@@ -43,7 +43,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Investigate missing menu items; ensure E2E tests catch menu rendering regressions. (Fixed: MenuSystem was registered as update system but needs to run after BeginDrawing)
 - [x] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression. (Fixed: MenuSystem moved to render phase)
 - [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
-- [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
+- [x] Enforce component purity (already done: components are pure data, logic in component_helpers.h): `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
 - [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
 - [ ] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
 - [ ] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).

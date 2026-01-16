@@ -32,4 +32,8 @@ struct Settings {
 
   bool &get_fullscreen_enabled();
   void toggle_fullscreen();
+  
+  // Auto-save support: when enabled, settings are written after each change
+  bool auto_save_enabled = true;
+  void save_if_auto();  // Call write_save_file() if auto_save_enabled
 };

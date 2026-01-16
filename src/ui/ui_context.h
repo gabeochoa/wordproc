@@ -184,17 +184,12 @@ inline afterhours::Entity& getUIRootEntity() {
     return roots[0].get();
 }
 
-// Forward declaration for test input system
-namespace test_input {
-    struct TestInputProvider;
-    template <typename InputAction>
-    struct TestInputSystem;
+}  // namespace ui_imm
 
-    inline void initTestInputProvider();
+// Include test input provider after ui_imm is fully defined (to avoid circular deps)
+#include "../testing/test_input_provider.h"
 
-    template <typename InputAction>
-    inline void registerTestInputSystem(afterhours::SystemManager& manager);
-}
+namespace ui_imm {
 
 // Initialize test input provider for UI context integration
 // Call this after initUIContext() when running in test mode
