@@ -50,7 +50,10 @@ static void load_gamepad_mappings() {
 Preload::Preload() {}
 
 Preload &Preload::init(const char *title) {
-    files::init("Prime Pressure", "resources");
+    {
+        SCOPED_TIMER("files::init");
+        files::init("Prime Pressure", "resources");
+    }
 
     int width = Settings::get().get_screen_width();
     int height = Settings::get().get_screen_height();
@@ -65,11 +68,14 @@ Preload &Preload::init(const char *title) {
     // Set log level BEFORE InitWindow to suppress init messages
     raylib::SetTraceLogLevel(raylib::LOG_ERROR);
 
+    // Set config flags BEFORE InitWindow for faster setup
+    // FLAG_WINDOW_RESIZABLE set here avoids SetWindowState call after
+    raylib::SetConfigFlags(raylib::FLAG_WINDOW_RESIZABLE);
+
     {
         SCOPED_TIMER("InitWindow");
         raylib::InitWindow(width, height, title);
-        raylib::SetWindowSize(width, height);
-        raylib::SetWindowState(raylib::FLAG_WINDOW_RESIZABLE);
+        // Note: SetWindowSize removed - redundant, size already in InitWindow
     }
 
     raylib::SetTargetFPS(200);

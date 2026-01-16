@@ -88,6 +88,64 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Make font loading table-driven instead of manual per-font wiring. (FontLoader module provides font table via getAvailableFonts(). Full iteration-based loading in preload.cpp deferred to v0.2)
 - [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`. (.clang-format exists with LLVM-based style. Full codebase formatting deferred to avoid large diff)
 
+### UI Design Compliance (per design_rules.md)
+
+#### Menu System Review
+- [ ] Audit all menu items for standard marks: use checkmarks for current selection, dashes for partial, ellipsis only when additional input required before execution.
+- [ ] Verify icons are opt-in only and add meaning that text cannot; remove arbitrary/decorative icons.
+- [ ] Ensure menu grouping uses dividers sparingly; related items grouped logically.
+- [ ] If icons are used in menus, reserve a fixed icon column for alignment consistency.
+
+#### Iconography
+- [ ] Create an icon registry (`src/ui/icon_registry.h`) mapping actions to approved icons; one action = one icon.
+- [ ] Ensure all icons are legible at small sizes (minimal detail, pixel-aligned, clear silhouettes).
+- [ ] Verify consistent icon family (stroke weight, perspective, lighting) across the app.
+- [ ] Remove any icons that cannot be identified without their label.
+- [ ] Ensure paired actions (undo/redo, etc.) use mirrored or symmetrical metaphors.
+
+#### Layout, Spacing & Alignment
+- [ ] Implement a coherent spacing scale (4/8/16-based rhythm) and apply consistently to margins, gutters, padding.
+- [ ] Verify pixel alignment and baseline consistency across all UI elements.
+- [ ] Preserve vertical scan lines in lists and menus; avoid excessive separators or micro-grouping.
+- [ ] Add safe margins from screen edges (minimum padding for readability/comfort).
+
+#### Screen Safety & Boundary Checks
+- [ ] Add automated test for screen-edge validation (no UI elements clipped or off-screen).
+- [ ] Verify safe-area compliance at multiple resolutions and aspect ratios.
+- [ ] Add overflow detection test (elements must not render outside their containers).
+- [ ] Ensure containers visually communicate their bounds and child elements are aligned.
+
+#### Color & Theme
+- [ ] Audit color usage: never rely on color alone to convey meaning; provide redundant cues.
+- [ ] Verify contrast ratios meet accessibility standards for readability in motion and at gameplay distance.
+- [ ] Limit accent colors to purposeful states (alert, selection, focus).
+- [ ] Document the color palette in `docs/ui_style_guide.md` with usage rules.
+
+#### Typography
+- [ ] Define and document a clear type scale with consistent hierarchy in `docs/ui_style_guide.md`.
+- [ ] Verify text is legible at small sizes; avoid effects that reduce legibility.
+- [ ] Ensure truncation/wrapping rules do not hide meaning (test with long strings).
+
+#### Controls & Dialogs
+- [ ] Prefer modeless UI when possible to preserve user control.
+- [ ] Ensure clear feedback for long-running actions (progress indicators, etc.).
+- [ ] Match dialog titles to their triggering menu item (minus ellipsis).
+- [ ] Use standard controls and states; avoid novel behaviors without strong user value.
+
+#### MCP/Screenshot-Based UI Verification
+- [ ] Capture baseline screenshots of all UI states: default, hovered, focused, open menus, modals, edge cases (long text, empty states).
+- [ ] Add E2E tests that simulate input (click, navigate menus, trigger transitions) and verify layout stability.
+- [ ] Add tests for interaction states (hover, pressed, disabled, selected) are visually clear and consistent.
+- [ ] Validate UI at multiple resolutions/aspect ratios with screenshots.
+
+#### Review Checklist (Quick Pass)
+- [ ] Menu items use only standard marks (checkmark/dash/ellipsis).
+- [ ] Icons are used only when they add meaning and are consistent across the app.
+- [ ] Actions have clear text labels; icons are not the only cue.
+- [ ] Small-size icons remain legible without micro-detail.
+- [ ] Visual scan lines are preserved; alignment is consistent.
+- [ ] Color is redundant, contrast is adequate, and states are unambiguous.
+
 ---
 
 ## Ralph Instructions
