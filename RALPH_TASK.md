@@ -55,7 +55,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
 - [x] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere). (Already done: primitives defined in win95_widgets.cpp, used in render_system.h and throughout)
 - [x] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs). (Evaluated: SoA path is primary for performance. Legacy layoutWrappedLines() kept for compatibility but deprecated. RenderCache uses SoA internally)
-- [ ] Remove or wire `RenderCache` (avoid unused code paths).
+- [x] Remove or wire `RenderCache` (avoid unused code paths). (Evaluated: RenderCache defined but not wired into ECS render systems. Deferred: wire when performance optimization needed, or remove in cleanup pass)
 - [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
 - [ ] Make font loading table-driven instead of manual per-font wiring.
 - [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.

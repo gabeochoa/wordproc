@@ -2,6 +2,7 @@
 
 #include "components.h"
 #include "component_helpers.h"
+#include "../editor/document_io.h"
 #include "../rl.h"
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"

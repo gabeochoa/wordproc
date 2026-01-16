@@ -101,6 +101,13 @@ struct TestConfigComponent : public afterhours::BaseComponent {
   std::string screenshotDir = "output/screenshots";
   int frameLimit = 0;
   int frameCount = 0;
+  
+  // FPS test mode - simulates scrolling and logs FPS
+  bool fpsTestMode = false;
+  float fpsSum = 0.0f;
+  float fpsMin = 999999.0f;
+  float fpsMax = 0.0f;
+  int fpsSamples = 0;
 };
 
 // Component for input handling (stores the action map for remappable shortcuts)
