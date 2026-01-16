@@ -317,6 +317,37 @@ class TextBuffer {
     // Replace all occurrences and return count
     std::size_t replaceAll(const std::string& needle, const std::string& replacement, const FindOptions& options = {});
 
+    // Hyperlink management
+    // Add a hyperlink to the current selection (requires active selection)
+    bool addHyperlink(const std::string& url, const std::string& tooltip = "");
+    
+    // Add a hyperlink at specific character offsets
+    bool addHyperlinkAt(std::size_t startOffset, std::size_t endOffset, 
+                        const std::string& url, const std::string& tooltip = "");
+    
+    // Edit an existing hyperlink's URL/tooltip
+    bool editHyperlink(std::size_t offset, const std::string& newUrl, 
+                       const std::string& newTooltip = "");
+    
+    // Remove hyperlink at given offset (keeps the text)
+    bool removeHyperlink(std::size_t offset);
+    
+    // Get hyperlink at a given character offset (nullptr if none)
+    const Hyperlink* hyperlinkAt(std::size_t offset) const;
+    
+    // Get hyperlink at caret position
+    const Hyperlink* hyperlinkAtCaret() const;
+    
+    // Get all hyperlinks in the document
+    const std::vector<Hyperlink>& hyperlinks() const { return hyperlinks_; }
+    
+    // Check if current selection has a hyperlink
+    bool selectionHasHyperlink() const;
+    
+    // Get all hyperlinks that overlap with a range
+    std::vector<const Hyperlink*> hyperlinksInRange(std::size_t startOffset, 
+                                                     std::size_t endOffset) const;
+
     // Performance metrics
     struct PerfStats {
         std::size_t total_inserts = 0;

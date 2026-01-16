@@ -217,6 +217,35 @@ namespace HighlightColors {
     constexpr TextColor Gray = {211, 211, 211, 255};
 }
 
+// Hyperlink structure for linking text ranges to URLs
+struct Hyperlink {
+    std::size_t startOffset = 0;  // Start position in document (character offset)
+    std::size_t endOffset = 0;    // End position (exclusive)
+    std::string url;              // Target URL (http://, https://, mailto:, file://)
+    std::string tooltip;          // Optional tooltip text
+    
+    // Check if this hyperlink contains a given position
+    bool contains(std::size_t pos) const {
+        return pos >= startOffset && pos < endOffset;
+    }
+    
+    // Check if this hyperlink overlaps with a range
+    bool overlaps(std::size_t start, std::size_t end) const {
+        return startOffset < end && endOffset > start;
+    }
+    
+    // Get the length of the hyperlink
+    std::size_t length() const {
+        return endOffset - startOffset;
+    }
+    
+    bool operator==(const Hyperlink& other) const {
+        return startOffset == other.startOffset && 
+               endOffset == other.endOffset && 
+               url == other.url;
+    }
+};
+
 // Text styling settings
 struct TextStyle {
     bool bold = false;
