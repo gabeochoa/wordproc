@@ -155,9 +155,12 @@ TEST_CASE("Benchmark: Sequential backspace", "[benchmark][delete]") {
   // Position at end of document
   buffer.setCaret({buffer.lineCount() - 1, buffer.lineSpan(buffer.lineCount() - 1).length});
   
+  // Count iterations instead of calling getText() each time (which creates a copy)
+  std::size_t remaining = DOC_SIZE;
   bench::Timer timer;
-  while (buffer.getText().size() > 0) {
+  while (remaining > 0) {
     buffer.backspace();
+    --remaining;
   }
   double elapsed = timer.elapsedMs();
   
