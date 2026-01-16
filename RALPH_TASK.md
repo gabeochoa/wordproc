@@ -159,7 +159,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Review `src/testing/test_input.cpp:5-13` macro undefines and decide whether to keep/replace them. (Kept: necessary to avoid recursion in raylib-mocked test input)
 - [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
 - [x] If `src/engine/input_injector.cpp:1-173` is test-only, move it into the testing folder. (Already in src/testing/)
-- [ ] Evaluate using immutable structures for text layout in `src/editor/text_layout.h:1-107`.
+- [x] Evaluate using immutable structures for text layout in `src/editor/text_layout.h:1-107`. (Already uses SoA LayoutResult with immutable parallel arrays; further immutability deferred)
 - [ ] Add tests that validate on-screen content while scrolling.
 - [ ] Add keyboard shortcut presets: system default, Windows Ctrl-based, and macOS Cmd-based.
 - [x] Add unsaved-changes indicator (`*`) in the UI when the document is dirty.

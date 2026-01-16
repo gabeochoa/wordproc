@@ -73,7 +73,7 @@ call_tool("screenshot")                # Capture frame
 
 ### Implementation Files
 - `vendor/afterhours/src/plugins/mcp_server.h` - MCP protocol handler
-- `src/engine/input_injector.h/cpp` - Input simulation
+- `src/testing/input_injector.h/cpp` - Input simulation (test-only)
 - `src/game.cpp` - MCP integration in game loop
 - `test_mcp.py` - Example Python client
 
