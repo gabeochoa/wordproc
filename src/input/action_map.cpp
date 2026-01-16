@@ -153,6 +153,14 @@ const char* ActionMap::actionName(Action action) {
             return "ToggleBulletedList";
         case Action::ToggleNumberedList:
             return "ToggleNumberedList";
+        case Action::IncreaseSpaceBefore:
+            return "IncreaseSpaceBefore";
+        case Action::DecreaseSpaceBefore:
+            return "DecreaseSpaceBefore";
+        case Action::IncreaseSpaceAfter:
+            return "IncreaseSpaceAfter";
+        case Action::DecreaseSpaceAfter:
+            return "DecreaseSpaceAfter";
         case Action::COUNT:
         default:
             return "NONE";
@@ -248,9 +256,20 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
     map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
     
+    // Line spacing: Ctrl+Shift+1/5/2 for single/1.5/double
+    map.bind({raylib::KEY_ONE, true, true, false}, Action::LineSpacingSingle);
+    map.bind({raylib::KEY_FIVE, true, true, false}, Action::LineSpacing1_5);
+    map.bind({raylib::KEY_TWO, true, true, false}, Action::LineSpacingDouble);
+    
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
+    
+    // Paragraph spacing: Ctrl+Alt+Up/Down for before, Ctrl+Shift+Alt+Up/Down for after
+    map.bind({raylib::KEY_UP, true, false, true}, Action::IncreaseSpaceBefore);
+    map.bind({raylib::KEY_DOWN, true, false, true}, Action::DecreaseSpaceBefore);
+    map.bind({raylib::KEY_UP, true, true, true}, Action::IncreaseSpaceAfter);
+    map.bind({raylib::KEY_DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
@@ -328,6 +347,12 @@ static void bindMacOSPreset(ActionMap& map) {
     // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
+    
+    // Paragraph spacing: Cmd+Alt+Up/Down for before, Cmd+Shift+Alt+Up/Down for after
+    map.bind({raylib::KEY_UP, true, false, true}, Action::IncreaseSpaceBefore);
+    map.bind({raylib::KEY_DOWN, true, false, true}, Action::DecreaseSpaceBefore);
+    map.bind({raylib::KEY_UP, true, true, true}, Action::IncreaseSpaceAfter);
+    map.bind({raylib::KEY_DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -469,6 +494,14 @@ const char* actionDisplayName(Action action) {
             return "Toggle Bullets";
         case Action::ToggleNumberedList:
             return "Toggle Numbering";
+        case Action::IncreaseSpaceBefore:
+            return "Increase Space Before";
+        case Action::DecreaseSpaceBefore:
+            return "Decrease Space Before";
+        case Action::IncreaseSpaceAfter:
+            return "Increase Space After";
+        case Action::DecreaseSpaceAfter:
+            return "Decrease Space After";
         case Action::COUNT:
         default:
             return "";
@@ -750,6 +783,12 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers (like some word processors)
     addBinding(Action::ToggleBulletedList, {raylib::KEY_EIGHT, true, true, false});
     addBinding(Action::ToggleNumberedList, {raylib::KEY_SEVEN, true, true, false});
+    
+    // Paragraph spacing
+    addBinding(Action::IncreaseSpaceBefore, {raylib::KEY_UP, true, false, true});
+    addBinding(Action::DecreaseSpaceBefore, {raylib::KEY_DOWN, true, false, true});
+    addBinding(Action::IncreaseSpaceAfter, {raylib::KEY_UP, true, true, true});
+    addBinding(Action::DecreaseSpaceAfter, {raylib::KEY_DOWN, true, true, true});
 
     return result;
 }

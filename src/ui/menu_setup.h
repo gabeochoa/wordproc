@@ -111,7 +111,13 @@ inline std::vector<win95::Menu> createMenuBar() {
         // Line spacing (45-47)
         {"Single Spacing", "Ctrl+Shift+1", true, false, nullptr},
         {"1.5 Line Spacing", "Ctrl+Shift+5", true, false, nullptr},
-        {"Double Spacing", "Ctrl+Shift+2", true, false, nullptr}
+        {"Double Spacing", "Ctrl+Shift+2", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator (48)
+        // Lists (49-52)
+        {"Bulleted List", "Ctrl+Shift+8", true, false, nullptr},
+        {"Numbered List", "Ctrl+Shift+7", true, false, nullptr},
+        {"Increase List Level", "", true, false, nullptr},
+        {"Decrease List Level", "", true, false, nullptr}
     };
     menus.push_back(formatMenu);
 

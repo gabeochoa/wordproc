@@ -1288,3 +1288,102 @@ TEST_CASE("Paragraph spacing", "[text_buffer][spacing]") {
         REQUIRE(buffer.lineSpaceAfter(2) == 0);
     }
 }
+
+TEST_CASE("Bulleted and numbered lists", "[text_buffer][lists]") {
+    TextBuffer buffer;
+    buffer.setText("Item 1\nItem 2\nItem 3");
+    
+    SECTION("default list type is None") {
+        REQUIRE(buffer.currentListType() == ListType::None);
+        REQUIRE(buffer.lineListType(0) == ListType::None);
+        REQUIRE(buffer.lineListType(1) == ListType::None);
+        REQUIRE(buffer.lineListType(2) == ListType::None);
+    }
+    
+    SECTION("toggle bulleted list") {
+        buffer.setCaret({0, 0});
+        buffer.toggleBulletedList();
+        
+        REQUIRE(buffer.currentListType() == ListType::Bulleted);
+        REQUIRE(buffer.lineListType(0) == ListType::Bulleted);
+        // Other lines unchanged
+        REQUIRE(buffer.lineListType(1) == ListType::None);
+        
+        // Toggle off
+        buffer.toggleBulletedList();
+        REQUIRE(buffer.currentListType() == ListType::None);
+    }
+    
+    SECTION("toggle numbered list") {
+        buffer.setCaret({1, 0});
+        buffer.toggleNumberedList();
+        
+        REQUIRE(buffer.currentListType() == ListType::Numbered);
+        REQUIRE(buffer.lineListType(1) == ListType::Numbered);
+        REQUIRE(buffer.lineListNumber(1) == 1);
+        
+        // Toggle off
+        buffer.toggleNumberedList();
+        REQUIRE(buffer.currentListType() == ListType::None);
+    }
+    
+    SECTION("multi-level lists with increase/decrease") {
+        buffer.setCaret({0, 0});
+        buffer.toggleBulletedList();
+        REQUIRE(buffer.currentListLevel() == 0);
+        
+        buffer.increaseListLevel();
+        REQUIRE(buffer.currentListLevel() == 1);
+        
+        buffer.increaseListLevel();
+        REQUIRE(buffer.currentListLevel() == 2);
+        
+        buffer.decreaseListLevel();
+        REQUIRE(buffer.currentListLevel() == 1);
+        
+        buffer.decreaseListLevel();
+        REQUIRE(buffer.currentListLevel() == 0);
+        
+        // Cannot go below 0
+        buffer.decreaseListLevel();
+        REQUIRE(buffer.currentListLevel() == 0);
+    }
+    
+    SECTION("numbered list renumbering") {
+        // Make all lines numbered
+        buffer.setCaret({0, 0});
+        buffer.toggleNumberedList();
+        buffer.setCaret({1, 0});
+        buffer.toggleNumberedList();
+        buffer.setCaret({2, 0});
+        buffer.toggleNumberedList();
+        
+        REQUIRE(buffer.lineListNumber(0) == 1);
+        REQUIRE(buffer.lineListNumber(1) == 2);
+        REQUIRE(buffer.lineListNumber(2) == 3);
+    }
+    
+    SECTION("list type changes increment version") {
+        uint64_t versionBefore = buffer.version();
+        buffer.toggleBulletedList();
+        REQUIRE(buffer.version() > versionBefore);
+        
+        versionBefore = buffer.version();
+        buffer.toggleNumberedList();
+        REQUIRE(buffer.version() > versionBefore);
+    }
+    
+    SECTION("each line can have different list type") {
+        buffer.setCaret({0, 0});
+        buffer.toggleBulletedList();
+        
+        buffer.setCaret({1, 0});
+        buffer.toggleNumberedList();
+        
+        // Line 2 stays none
+        
+        REQUIRE(buffer.lineListType(0) == ListType::Bulleted);
+        REQUIRE(buffer.lineListType(1) == ListType::Numbered);
+        REQUIRE(buffer.lineListType(2) == ListType::None);
+    }
+}

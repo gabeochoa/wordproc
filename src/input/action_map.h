@@ -84,6 +84,12 @@ enum class Action {
     LineSpacing1_5,
     LineSpacingDouble,
     
+    // Paragraph spacing
+    IncreaseSpaceBefore,
+    DecreaseSpaceBefore,
+    IncreaseSpaceAfter,
+    DecreaseSpaceAfter,
+    
     // Lists
     ToggleBulletedList,
     ToggleNumberedList,

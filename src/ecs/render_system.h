@@ -122,8 +122,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Note: firstLineIndent only applies to first line of paragraph
         // For now, we treat each line as its own paragraph
         int totalIndent = leftIndent + firstLineIndent;
-        int indentedBaseX = baseX + totalIndent;
-        int indentedWidth = availableWidth - totalIndent;
+        
+        // Get list properties for this line
+        ListType listType = buffer.lineListType(row);
+        int listLevel = buffer.lineListLevel(row);
+        int listNumber = buffer.lineListNumber(row);
+        
+        // Calculate list marker indent (each level adds 20px)
+        int listIndent = (listType != ListType::None) ? (listLevel + 1) * 20 : 0;
+        
+        int indentedBaseX = baseX + totalIndent + listIndent;
+        int indentedWidth = availableWidth - totalIndent - listIndent;
         
         // Calculate text width for alignment
         int textWidth = line.empty() ? 0 : raylib::MeasureText(line.c_str(), lineFontSize);
@@ -147,7 +156,26 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 x = indentedBaseX;
                 break;
         }
-
+        
+        // Draw list marker (bullet or number) before text
+        if (listType != ListType::None) {
+            // Calculate bullet position (hanging indent style)
+            int markerX = baseX + totalIndent + (listLevel * 20);
+            
+            TextStyle globalStyle = buffer.textStyle();
+            raylib::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
+                                       globalStyle.textColor.b, globalStyle.textColor.a};
+            
+            if (listType == ListType::Bulleted) {
+                const char* bullet = bulletForLevel(listLevel);
+                raylib::DrawText(bullet, markerX, y, lineFontSize, textColor);
+            } else if (listType == ListType::Numbered) {
+                char numberStr[16];
+                std::snprintf(numberStr, sizeof(numberStr), "%d.", listNumber);
+                raylib::DrawText(numberStr, markerX, y, lineFontSize, textColor);
+            }
+        }
+        
         // Draw selection highlight (with alignment offset)
         if (hasSelection) {
             bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
@@ -914,6 +942,27 @@ struct MenuSystem
                 case 52:  // Double Spacing
                     doc.buffer.setLineSpacingDouble();
                     status::set(status, "Line spacing: Double");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                // (53 is separator)
+                case 54:  // Bulleted List
+                    doc.buffer.toggleBulletedList();
+                    status::set(status, doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 55:  // Numbered List
+                    doc.buffer.toggleNumberedList();
+                    status::set(status, doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 56:  // Increase List Level
+                    doc.buffer.increaseListLevel();
+                    status::set(status, "List level increased");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 57:  // Decrease List Level
+                    doc.buffer.decreaseListLevel();
+                    status::set(status, "List level decreased");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 default:
