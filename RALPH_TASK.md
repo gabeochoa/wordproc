@@ -148,6 +148,7 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Move Win95 menu setup (`src/main.cpp:249-303`) into its own file.
 - [ ] Replace `std::printf` at `src/main.cpp:207-214` with the project's logging system.
 - [ ] Add a timing header around `src/main.cpp:188-199` for easier profiling without full setup.
+- [ ] Move the utility definitions in `src/main.cpp:15-165` (colors, config structs, drawing helpers, etc.) into separate files.
 
 ---
 
