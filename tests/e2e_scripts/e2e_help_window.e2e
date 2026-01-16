@@ -23,7 +23,7 @@ validate help_window_visible=false
 # Reopen via Help menu
 menu_open Help
 wait 2
-menu_select "Keyboard Shortcuts"
+menu_select "Keyboard Shortcuts..."
 wait 2
 validate help_window_visible=true
 

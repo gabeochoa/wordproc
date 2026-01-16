@@ -302,31 +302,39 @@ inline bool is_key_pressed(int key, BackendFn backend_fn) {
   // Check synthetic press first
   if (input_injector::consume_press(key)) return true;
   
-  if (!detail::test_mode || detail::key_queue.empty() || detail::key_consumed) {
-    return backend_fn(key);
+  // In test mode, block real input - only use synthetic/queued input
+  if (detail::test_mode) {
+    if (detail::key_queue.empty() || detail::key_consumed) {
+      return false;  // Block real input in test mode
+    }
+    if (!detail::key_queue.front().is_char && detail::key_queue.front().key == key) {
+      detail::key_queue.pop();
+      detail::key_consumed = true;
+      return true;
+    }
+    return false;  // Block real input in test mode
   }
   
-  if (!detail::key_queue.front().is_char && detail::key_queue.front().key == key) {
-    detail::key_queue.pop();
-    detail::key_consumed = true;
-    return true;
-  }
   return backend_fn(key);
 }
 
 /// Get next character (wraps backend call)
 template<typename BackendFn>
 inline int get_char_pressed(BackendFn backend_fn) {
-  if (!detail::test_mode || detail::key_queue.empty() || detail::char_consumed) {
-    return backend_fn();
+  // In test mode, block real input - only use queued input
+  if (detail::test_mode) {
+    if (detail::key_queue.empty() || detail::char_consumed) {
+      return 0;  // No character - block real input
+    }
+    if (detail::key_queue.front().is_char) {
+      char c = detail::key_queue.front().char_value;
+      detail::key_queue.pop();
+      detail::char_consumed = true;
+      return static_cast<int>(c);
+    }
+    return 0;  // Not a char in queue - block real input
   }
   
-  if (detail::key_queue.front().is_char) {
-    char c = detail::key_queue.front().char_value;
-    detail::key_queue.pop();
-    detail::char_consumed = true;
-    return static_cast<int>(c);
-  }
   return backend_fn();
 }
 
@@ -342,8 +350,10 @@ inline Vec2 get_mouse_position(BackendFn backend_fn) {
 /// Check mouse button pressed (wraps backend call)
 template<typename BackendFn>
 inline bool is_mouse_button_pressed(int button, BackendFn backend_fn) {
-  if (detail::test_mode && detail::mouse.active && button == 0) {
-    return detail::mouse.left_pressed;
+  // In test mode, block real input
+  if (detail::test_mode) {
+    if (button == 0) return detail::mouse.left_pressed;
+    return false;  // Block real input for other buttons
   }
   return backend_fn(button);
 }
@@ -351,8 +361,10 @@ inline bool is_mouse_button_pressed(int button, BackendFn backend_fn) {
 /// Check mouse button down (wraps backend call)
 template<typename BackendFn>
 inline bool is_mouse_button_down(int button, BackendFn backend_fn) {
-  if (detail::test_mode && detail::mouse.active && button == 0) {
-    return detail::mouse.left_held;
+  // In test mode, block real input
+  if (detail::test_mode) {
+    if (button == 0) return detail::mouse.left_held;
+    return false;  // Block real input for other buttons
   }
   return backend_fn(button);
 }
@@ -602,6 +614,7 @@ inline std::vector<TestCommand> parse_script(const std::string& path) {
     else if (verb == "clear") { cmd.type = CommandType::Clear; }
     else if (verb == "menu_open") { cmd.type = CommandType::MenuOpen; cmd.arg1 = parse_quoted(); }
     else if (verb == "menu_select") { cmd.type = CommandType::MenuSelect; cmd.arg1 = parse_quoted(); }
+    else if (verb == "select_all") { cmd.type = CommandType::Key; cmd.arg1 = "CTRL+A"; }  // Convenience alias
     else { cmd.type = CommandType::Unknown; cmd.arg1 = verb; }
     
     cmds.push_back(cmd);

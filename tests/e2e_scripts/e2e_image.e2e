@@ -21,10 +21,13 @@ wait 2
 validate has_image=true
 validate image_count=1
 
-# Test layout mode change
-menu_open Format
+# Test layout mode change (Image Layout is in Insert menu)
+menu_open Insert
 wait 2
 menu_select "Image Layout..."
+wait 2
+# Select wrap text option
+menu_open Insert
 wait 2
 menu_select "Wrap Text"
 wait 2

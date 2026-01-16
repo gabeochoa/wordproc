@@ -153,6 +153,7 @@ static void setupCallbacksEx(
         
         // Basic text properties
         if (prop == "text") return buffer.getText();
+        if (prop == "text_length") return std::to_string(buffer.getText().size());
         if (prop == "line_count") return std::to_string(buffer.lineCount());
         if (prop == "bold") return style.bold ? "true" : "false";
         if (prop == "italic") return style.italic ? "true" : "false";

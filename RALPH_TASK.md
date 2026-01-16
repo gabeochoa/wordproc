@@ -246,9 +246,9 @@ Singleton map is missing value for component 19 (test_input::TestInputProvider).
 ```
 
 **Fix**:
-- [ ] Register `TestInputProvider` as a singleton in ECS before any system queries it
+- [x] Register `TestInputProvider` as a singleton in ECS before any system queries it (ui_imm::initTestModeUI() in main.cpp)
 - [x] Or guard singleton queries with existence check to avoid warning spam (getProvider() now checks test_mode first)
-- [ ] Ensure `TestInputProvider` is only registered when in test mode (`--test-mode` or E2E)
+- [x] Ensure `TestInputProvider` is only registered when in test mode (`--test-mode` or E2E) (only called when testModeEnabled)
 
 ---
 

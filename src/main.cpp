@@ -151,6 +151,12 @@ int main(int argc, char* argv[]) {
         SCOPED_TIMER("UI context init");
         // Initialize Afterhours immediate-mode UI context with Win95 theme
         ui_imm::initUIContext(800, 600);
+        
+        // Initialize test input provider when in test mode
+        // This registers the TestInputProvider singleton for ECS systems to query
+        if (testModeEnabled) {
+            ui_imm::initTestModeUI();
+        }
     }
 
     // Create the editor entity with all required components

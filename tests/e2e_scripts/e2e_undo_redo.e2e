@@ -11,11 +11,16 @@ type " World"
 wait 2
 validate text=Hello World
 
-# Undo (Ctrl+Z)
+# Undo (Ctrl+Z) - undo 6 times to remove " World" (6 chars)
+key CTRL+Z
+key CTRL+Z
+key CTRL+Z
+key CTRL+Z
+key CTRL+Z
 key CTRL+Z
 wait 2
-# After undo, text should be shorter
-validate text_shorter_than=Hello World
+# After 6 undos, text should be back to "Hello"
+validate text=Hello
 
 # Redo (Ctrl+Y)
 key CTRL+Y

@@ -6,13 +6,9 @@ type "Document with shapes:"
 key ENTER
 wait 2
 
-# Insert drawing/shape
+# Insert rectangle shape directly from Insert menu
 menu_open Insert
 wait 2
-menu_select "Shape..."
-wait 2
-
-# Select rectangle shape
 menu_select "Rectangle"
 wait 2
 
@@ -24,10 +20,8 @@ wait 2
 validate has_drawing=true
 validate drawing_count=1
 
-# Insert another shape (circle)
+# Insert another shape (circle/ellipse) directly
 menu_open Insert
-wait 2
-menu_select "Shape..."
 wait 2
 menu_select "Circle"
 wait 2

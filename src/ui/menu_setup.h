@@ -38,7 +38,9 @@ inline std::vector<win95::Menu> createMenuBar() {
                       {"Find...", "Ctrl+F", true, false, nullptr},        // 9
                       {"Find Next", "F3", true, false, nullptr},          // 10
                       {"Find Previous", "Shift+F3", true, false, nullptr},// 11
-                      {"Replace...", "Ctrl+H", true, false, nullptr}};    // 12
+                      {"Replace...", "Ctrl+H", true, false, nullptr},     // 12
+                      {"", "", false, true, nullptr},                     // 13 Separator
+                      {"Go To Bookmark...", "", true, false, nullptr}};   // 14
     menus.push_back(editMenu);
 
     // View menu
@@ -51,7 +53,8 @@ inline std::vector<win95::Menu> createMenuBar() {
                       {"Line Width: Narrow", "", true, false, nullptr},  // 4
                       {"Line Width: Wide", "", true, false, nullptr},    // 5
                       {"", "", false, true, nullptr},                    // 6 Separator
-                      {"Show Line Numbers", "", true, false, nullptr}};  // 7
+                      {"Show Line Numbers", "", true, false, nullptr},   // 7
+                      {"Show Outline", "", true, false, nullptr}};       // 8
     menus.push_back(viewMenu);
 
     // Format menu
@@ -75,13 +78,17 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Underline", "Ctrl+U", true, false, nullptr},
         {"Strikethrough", "Ctrl+Shift+S", true, false, nullptr},
         {"", "", false, true, nullptr},  // Separator (14)
-        // Alignment (15-18)
+        // Text color and highlight dialogs
+        {"Text Color...", "", true, false, nullptr},
+        {"Highlight Color...", "", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator
+        // Alignment
         {"Align Left", "Ctrl+L", true, false, nullptr},
         {"Align Center", "Ctrl+E", true, false, nullptr},
         {"Align Right", "Ctrl+R", true, false, nullptr},
         {"Justify", "Ctrl+J", true, false, nullptr},
-        {"", "", false, true, nullptr},  // Separator (19)
-        // Text color (20-26)
+        {"", "", false, true, nullptr},  // Separator
+        // Text color quick pick
         {"Text: Black", "", true, false, nullptr},
         {"Text: Red", "", true, false, nullptr},
         {"Text: Orange", "", true, false, nullptr},
@@ -141,22 +148,37 @@ inline std::vector<win95::Menu> createMenuBar() {
     insertMenu.label = "Insert";
     insertMenu.items = {
         {"Page Break", "Ctrl+Enter", true, false, nullptr},      // 0
-        {"", "", false, true, nullptr},                          // 1 Separator
-        {"Hyperlink...", "Ctrl+K", true, false, nullptr},        // 2
-        {"Remove Hyperlink", "", true, false, nullptr},          // 3
-        {"", "", false, true, nullptr},                          // 4 Separator
-        {"Table...", "", true, false, nullptr},                  // 5
+        {"Section Break", "", true, false, nullptr},             // 1
+        {"", "", false, true, nullptr},                          // 2 Separator
+        {"Hyperlink...", "Ctrl+K", true, false, nullptr},        // 3
+        {"Remove Hyperlink", "", true, false, nullptr},          // 4
+        {"Bookmark...", "", true, false, nullptr},               // 5
         {"", "", false, true, nullptr},                          // 6 Separator
-        {"Image...", "", true, false, nullptr},                  // 7 (placeholder)
+        {"Table...", "", true, false, nullptr},                  // 7
         {"", "", false, true, nullptr},                          // 8 Separator
-        {"Line", "", true, false, nullptr},                      // 9 - Drawing: Line
-        {"Rectangle", "", true, false, nullptr},                 // 10 - Drawing: Rectangle
-        {"Ellipse", "", true, false, nullptr},                   // 11 - Drawing: Ellipse
-        {"Arrow", "", true, false, nullptr},                     // 12 - Drawing: Arrow
-        {"Rounded Rectangle", "", true, false, nullptr},         // 13 - Drawing: Rounded Rectangle
-        {"Triangle", "", true, false, nullptr},                  // 14 - Drawing: Triangle
-        {"", "", false, true, nullptr},                          // 15 Separator
-        {"Special Character...", "", true, false, nullptr}       // 16 (placeholder)
+        {"Image...", "", true, false, nullptr},                  // 9
+        {"Image Layout...", "", true, false, nullptr},           // 10
+        {"Wrap Text", "", true, false, nullptr},                 // 11
+        {"", "", false, true, nullptr},                          // 12 Separator
+        {"Shape...", "", true, false, nullptr},                  // 13
+        {"Line", "", true, false, nullptr},                      // 14 - Drawing: Line
+        {"Rectangle", "", true, false, nullptr},                 // 15 - Drawing: Rectangle
+        {"Circle", "", true, false, nullptr},                    // 16 - Drawing: Circle
+        {"Ellipse", "", true, false, nullptr},                   // 17 - Drawing: Ellipse
+        {"Arrow", "", true, false, nullptr},                     // 18 - Drawing: Arrow
+        {"Rounded Rectangle", "", true, false, nullptr},         // 19 - Drawing: Rounded Rectangle
+        {"Triangle", "", true, false, nullptr},                  // 20 - Drawing: Triangle
+        {"", "", false, true, nullptr},                          // 21 Separator
+        {"Equation...", "", true, false, nullptr},               // 22
+        {"Footnote", "", true, false, nullptr},                  // 23
+        {"Special Character...", "", true, false, nullptr},      // 24
+        {"", "", false, true, nullptr},                          // 25 Separator
+        {"Header", "", true, false, nullptr},                    // 26
+        {"Footer", "", true, false, nullptr},                    // 27
+        {"Page Number", "", true, false, nullptr},               // 28
+        {"Document Body", "", true, false, nullptr},             // 29
+        {"", "", false, true, nullptr},                          // 30 Separator
+        {"Table of Contents", "", true, false, nullptr}          // 31
     };
     menus.push_back(insertMenu);
 
