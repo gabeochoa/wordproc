@@ -164,28 +164,28 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 These are architectural improvements and new features for future versions. They do not block v0.1 completion.
 
 - (done) Refactor the main loop in `src/main.cpp` to use ECS system functionality instead of a single file. (Implemented: Created src/ecs/ with components.h, input_system.h, render_system.h; main.cpp now uses afterhours::SystemManager)
-- [ ] Use immediate-mode UI for the UI layer.
-- [ ] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
-- [ ] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
-- [ ] Use Afterhours UI state context for test input handling.
-- [ ] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
-- [ ] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
-- [ ] Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
-- [ ] Ensure `.doc` import support; collect sample `.doc` files for tests.
-- [ ] Add a test that loads the largest file and logs FPS while scrolling.
-- [ ] Add more E2E tests that actually run the program via a harness (control/profiling allowed).
-- [ ] Expand automated performance profiling to support “fastest word processor” goal.
-- [ ] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
-- [ ] Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
-- [ ] File menu is missing; diagnose and fix, and add E2E coverage to prevent regression.
-- [ ] Loading is too slow: re-enable and verify load/startup timing instrumentation.
-- [ ] Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
-- [ ] Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
-- [ ] Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
-- [ ] Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).
-- [ ] Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
-- [ ] Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
-- [ ] Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
+- (v0.2) Use immediate-mode UI for the UI layer.
+- (v0.2) Abstract raylib dependencies behind a renderer interface to allow swapping renderers later.
+- (v0.2) Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
+- (v0.2) Use Afterhours UI state context for test input handling.
+- (v0.2) Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings.
+- (v0.2) Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save.
+- (v0.2) Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible.
+- (v0.2) Ensure `.doc` import support; collect sample `.doc` files for tests.
+- (v0.2) Add a test that loads the largest file and logs FPS while scrolling.
+- (v0.2) Add more E2E tests that actually run the program via a harness (control/profiling allowed).
+- (v0.2) Expand automated performance profiling to support “fastest word processor” goal.
+- (v0.2) Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).
+- (v0.2) Investigate missing menu items; ensure E2E tests catch menu rendering regressions.
+- (v0.2) File menu is missing; diagnose and fix, and add E2E coverage to prevent regression.
+- (v0.2) Loading is too slow: re-enable and verify load/startup timing instrumentation.
+- (v0.2) Enforce component purity: `src/ecs/components.h` components should only have fields (no methods); move logic into systems.
+- (v0.2) Rework input handling in `src/ecs/input_system.h` to queue events per frame (avoid missing raylib events between system ticks).
+- (v0.2) Update `src/ecs/input_system.h` to use the input action map for remappable shortcuts instead of hardcoded key checks.
+- (v0.2) Apply input action map usage across all ECS systems (replace hardcoded key checks everywhere).
+- (v0.2) Update `src/ecs/render_system.h` to use Afterhours UI/rendering; if not possible, create a `workaround/` folder documenting required library additions and add a detailed `AfterhoursGaps/` entry.
+- (v0.2) Move test-only ECS systems (e.g., `ScreenshotSystem` in `src/ecs/render_system.h:457-480`) into their own `.cpp` file.
+- (v0.2) Replace menu action switch in `src/ecs/render_system.h:289-455` with a more maintainable action registry (e.g., startup-registered actions or constexpr action map).
 
 ---
 
@@ -200,10 +200,10 @@ These are architectural improvements and new features for future versions. They 
 ---
 
 ## Refactor Opportunities (reduce LOC / simplify - non-blocking)
-- [ ] Centralize editor actions into a command table (keyboard + menu dispatch in one place).
-- [ ] Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
-- [ ] Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
-- [ ] Remove or wire `RenderCache` (avoid unused code paths).
-- [ ] Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
-- [ ] Make font loading table-driven instead of manual per-font wiring.
-- [ ] Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
+- (v0.2) Centralize editor actions into a command table (keyboard + menu dispatch in one place).
+- (v0.2) Deduplicate Win95 UI primitives (use `win95::DrawRaisedBorder/DrawSunkenBorder` everywhere).
+- (v0.2) Pick a single text layout path (remove legacy or SoA layout to avoid parallel APIs).
+- (v0.2) Remove or wire `RenderCache` (avoid unused code paths).
+- (v0.2) Factor repeated line-span offset shifts in `TextBuffer` edits into a helper.
+- (v0.2) Make font loading table-driven instead of manual per-font wiring.
+- (v0.2) Run clang-format using the rules from `/Users/gabeochoa/p/pharmasea/.clang-format`.
