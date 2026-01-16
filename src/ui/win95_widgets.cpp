@@ -142,20 +142,6 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
 }
 
 int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
-    // #region agent log
-    {
-        static int logCount = 0;
-        if (logCount++ < 3) {
-            FILE* f = fopen("/Users/gabeochoa/p/wordproc/.cursor/debug.log", "a");
-            if (f) {
-                fprintf(f, "{\"hypothesisId\":\"A,E\",\"location\":\"win95_widgets.cpp:144\",\"message\":\"DrawMenuBar called\",\"data\":{\"menuCount\":%zu,\"menuBarY\":%d,\"menuBarHeight\":%d}}\n",
-                    menus.size(), menuBarY, menuBarHeight);
-                fclose(f);
-            }
-        }
-    }
-    // #endregion
-    
     int clickedMenu = -1;
     int x = 4;
 
@@ -167,20 +153,6 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
         Menu& menu = menus[i];
         int textWidth = raylib::MeasureText(menu.label.c_str(), 14);
         int itemWidth = textWidth + 16;  // Padding on each side
-        
-        // #region agent log
-        {
-            static int logCount2 = 0;
-            if (logCount2++ < 10) {
-                FILE* f = fopen("/Users/gabeochoa/p/wordproc/.cursor/debug.log", "a");
-                if (f) {
-                    fprintf(f, "{\"hypothesisId\":\"C,D\",\"location\":\"win95_widgets.cpp:155\",\"message\":\"Drawing menu item\",\"data\":{\"index\":%zu,\"label\":\"%s\",\"x\":%d,\"y\":%d,\"textWidth\":%d}}\n",
-                        i, menu.label.c_str(), x, menuBarY, textWidth);
-                    fclose(f);
-                }
-            }
-        }
-        // #endregion
 
         menu.bounds = {static_cast<float>(x), static_cast<float>(menuBarY),
                        static_cast<float>(itemWidth),

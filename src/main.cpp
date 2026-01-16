@@ -182,21 +182,6 @@ int main(int argc, char* argv[]) {
 
     auto& menuComp = editorEntity.addComponent<ecs::MenuComponent>();
     menuComp.menus = menu_setup::createMenuBar();
-    
-    // #region agent log
-    {
-        FILE* f = fopen("/Users/gabeochoa/p/wordproc/.cursor/debug.log", "a");
-        if (f) {
-            fprintf(f, "{\"hypothesisId\":\"A\",\"location\":\"main.cpp:184\",\"message\":\"Menus created\",\"data\":{\"menuCount\":%zu}}\n",
-                menuComp.menus.size());
-            if (!menuComp.menus.empty()) {
-                fprintf(f, "{\"hypothesisId\":\"A\",\"location\":\"main.cpp:184\",\"message\":\"First menu label\",\"data\":{\"label\":\"%s\",\"itemCount\":%zu}}\n",
-                    menuComp.menus[0].label.c_str(), menuComp.menus[0].items.size());
-            }
-            fclose(f);
-        }
-    }
-    // #endregion
 
     auto& testComp = editorEntity.addComponent<ecs::TestConfigComponent>();
     testComp.enabled = testModeEnabled;
