@@ -149,39 +149,29 @@ inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
         std::make_unique<ui::ComputeVisualFocusId<InputAction>>());
 }
 
-// Register Afterhours UI render systems with the SystemManager
+// Register the Afterhours UI render system
 inline void registerUIRenderSystems(afterhours::SystemManager& manager) {
     using namespace afterhours;
-
+    
+    // RenderImm draws all UI components based on their computed layout
     manager.register_render_system(
         std::make_unique<ui::RenderImm<InputAction>>());
 }
 
-// Get the UI context for immediate-mode widget calls
-inline UIContextType& getUIContext() {
-    return *afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
+// Get the UI context singleton for immediate-mode UI operations
+inline UIContextType* getUIContext() {
+    return afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
 }
 
-// Get the root UIComponent for parenting UI elements
-inline afterhours::ui::UIComponent& getUIRoot() {
+// Get the root entity for adding UI children
+inline afterhours::Entity* getRootUIEntity() {
     auto roots = afterhours::EntityQuery()
-                     .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
-                     .gen();
+        .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
+        .gen();
     if (roots.empty()) {
-        throw std::runtime_error("No UI root found");
+        return nullptr;
     }
-    return roots[0].get().get<afterhours::ui::UIComponent>();
-}
-
-// Get the root entity for parenting UI elements
-inline afterhours::Entity& getUIRootEntity() {
-    auto roots = afterhours::EntityQuery()
-                     .whereHasComponent<afterhours::ui::AutoLayoutRoot>()
-                     .gen();
-    if (roots.empty()) {
-        throw std::runtime_error("No UI root found");
-    }
-    return roots[0].get();
+    return &roots[0].get();
 }
 
 }  // namespace ui_imm
