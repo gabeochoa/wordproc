@@ -1760,3 +1760,14 @@ evaluation and test infrastructure setup.
 
 **Core word processor is COMPLETE.**
 Remaining work is polish/audit work not blocking v0.1 release.
+
+
+### 2026-01-15 23:22
+**Session (model: opus-4.5)**
+- Added MenuMark enum to MenuItem struct for standard menu marks (checkmark/radio/dash)
+- Updated menu rendering to show marks in dedicated 20px column
+- Fixed bookmark offset adjustment functions (ensured adjustBookmarkOffsets calls alongside adjustHyperlinkOffsets)
+- Cleaned up broken test files (test_icon_registry.cpp, test_spellcheck.cpp, test_watermark.cpp)
+- All 1173 tests pass in 95 test cases
+- Remaining unchecked tasks: 40 (mostly UI Design Compliance tasks)
+

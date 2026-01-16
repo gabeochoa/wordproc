@@ -2780,3 +2780,13 @@ Ralph Session Started: Thu Jan 15 23:16:29 CST 2026
 [23:21:40] 🔴 SHELL ls /Users/gabeochoa/p/wordproc/tests/*.cpp → exit 0
 [23:21:41] 🔴 ROTATE: Token threshold reached (628343 >= 80000)
 [23:21:44] 🔴 READ /Users/gabeochoa/p/wordproc/makefile (342 lines, ~33.3KB)
+[23:21:58] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && rm -rf /tmp/wpo13 && mkdir -p /tmp/wpo13/test /tmp/wpo13/src && make test OBJ_DIR=/tmp/wpo13 2>&1 | tail -15 → exit 0
+[23:21:58] 🔴 ROTATE: Token threshold reached (628343 >= 80000)
+[23:22:02] 🔴 READ /Users/gabeochoa/p/wordproc/tests/test_spellcheck.cpp (469 lines, ~45.8KB)
+[23:22:02] 🔴 ROTATE: Token threshold reached (640068 >= 80000)
+[23:22:04] 🔴 TOKENS: 640068 / 80000 (800%) - rotation imminent [read:2496KB write:0KB assist:1KB shell:0KB]
+[23:22:06] 🔴 ROTATE: Token threshold reached (640068 >= 80000)
+[23:22:15] 🔴 SHELL cd /Users/gabeochoa/p/wordproc && make test OBJ_DIR=/tmp/wordproc_objs_$$ 2>&1 | tail -40 → exit 0
+[23:22:15] 🔴 TOKENS: 65923 / 80000 (82%) - approaching limit [read:253KB write:0KB assist:0KB shell:0KB]
+[23:22:23] 🔴 READ /Users/gabeochoa/p/wordproc/makefile (344 lines, ~33.5KB)
+[23:22:23] 🔴 WARN: Approaching token limit (74547 >= 70000)

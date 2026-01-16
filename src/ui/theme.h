@@ -53,11 +53,24 @@ constexpr int FONT_SIZE = 16;  // UI font size (title, menus, status bar)
 constexpr int TITLE_BAR_HEIGHT = 24;
 constexpr int MENU_BAR_HEIGHT = 20;
 constexpr int STATUS_BAR_HEIGHT = 20;
-constexpr int TEXT_PADDING = 8;
 constexpr int BORDER_WIDTH = 3;
 constexpr double STATUS_MESSAGE_DURATION =
     3.0;                                      // Seconds to show status messages
 constexpr double CARET_BLINK_INTERVAL = 0.5;  // Seconds between caret blinks
+
+// Spacing scale (4/8/16-based rhythm for consistent margins/gutters/padding)
+constexpr int SPACING_XS = 4;   // Extra small: tight spacing, icons
+constexpr int SPACING_SM = 8;   // Small: text padding, menu items
+constexpr int SPACING_MD = 16;  // Medium: section spacing, dialog padding
+constexpr int SPACING_LG = 24;  // Large: major sections
+constexpr int SPACING_XL = 32;  // Extra large: page margins
+
+// Convenience aliases for common uses
+constexpr int TEXT_PADDING = SPACING_SM;
+constexpr int ICON_SPACING = SPACING_XS;
+constexpr int MENU_ITEM_PADDING = SPACING_SM;
+constexpr int DIALOG_PADDING = SPACING_MD;
+constexpr int PAGE_MARGIN = SPACING_XL;
 }  // namespace layout
 
 }  // namespace theme

@@ -292,6 +292,14 @@ $(OBJ_DIR)/test/drawing.o: src/editor/drawing.cpp | $(OBJ_DIR)/test
 	@echo "Compiling $< for tests..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
+$(OBJ_DIR)/test/equation.o: src/editor/equation.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/test/spellcheck.o: src/editor/spellcheck.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
 # Link test executable
 $(TEST_EXE): $(TEST_OBJS) | $(OUTPUT_DIR)/.stamp
 	@echo "Linking $(TEST_EXE)..."
