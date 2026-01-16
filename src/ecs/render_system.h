@@ -100,13 +100,21 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Get paragraph style for this line
         ParagraphStyle paraStyle = buffer.lineParagraphStyle(row);
         int lineFontSize = paragraphStyleFontSize(paraStyle);
-        int lineHeight = lineFontSize + 4;
+        int baseLineHeightForStyle = lineFontSize + 4;
         
         // Use base font size as minimum if paragraph style would be smaller
         if (lineFontSize < baseFontSize && paraStyle == ParagraphStyle::Normal) {
             lineFontSize = baseFontSize;
-            lineHeight = baseLineHeight;
+            baseLineHeightForStyle = baseLineHeight;
         }
+        
+        // Apply line spacing multiplier
+        float spacingMultiplier = buffer.lineSpacing(row);
+        int lineHeight = static_cast<int>(baseLineHeightForStyle * spacingMultiplier);
+        
+        // Apply paragraph spacing before
+        int paragraphSpaceBefore = buffer.lineSpaceBefore(row);
+        y += paragraphSpaceBefore;
         
         // Apply indentation
         int leftIndent = buffer.lineLeftIndent(row);
@@ -216,7 +224,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             raylib::DrawRectangle(caretX, y, 2, lineHeight, theme::CARET_COLOR);
         }
 
-        y += lineHeight;
+        // Advance y by line height plus paragraph spacing after
+        int paragraphSpaceAfter = buffer.lineSpaceAfter(row);
+        y += lineHeight + paragraphSpaceAfter;
 
         if (y > static_cast<int>(textArea.y + textArea.height)) {
             break;

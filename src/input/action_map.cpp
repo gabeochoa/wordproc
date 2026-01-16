@@ -725,6 +725,11 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // Indentation
     addBinding(Action::IndentIncrease, {raylib::KEY_RIGHT_BRACKET, true, false, false});
     addBinding(Action::IndentDecrease, {raylib::KEY_LEFT_BRACKET, true, false, false});
+    
+    // Line spacing: Ctrl+Shift+1/5/2 (Word-like shortcuts with Shift modifier)
+    addBinding(Action::LineSpacingSingle, {raylib::KEY_ONE, true, true, false});
+    addBinding(Action::LineSpacing1_5, {raylib::KEY_FIVE, true, true, false});
+    addBinding(Action::LineSpacingDouble, {raylib::KEY_TWO, true, true, false});
 
     return result;
 }

@@ -216,6 +216,17 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::IndentDecrease)) {
             doc.buffer.decreaseIndent();
         }
+        
+        // Line spacing
+        if (actionMap_.isActionPressed(Action::LineSpacingSingle)) {
+            doc.buffer.setLineSpacingSingle();
+        }
+        if (actionMap_.isActionPressed(Action::LineSpacing1_5)) {
+            doc.buffer.setLineSpacing1_5();
+        }
+        if (actionMap_.isActionPressed(Action::LineSpacingDouble)) {
+            doc.buffer.setLineSpacingDouble();
+        }
 
         // Copy
         if (actionMap_.isActionPressed(Action::Copy)) {
