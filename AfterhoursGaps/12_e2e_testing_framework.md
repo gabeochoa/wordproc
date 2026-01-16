@@ -1,17 +1,52 @@
 # E2E Testing Framework
 
 ## Working Implementation
-See these files for a complete working example:
-- `src/testing/e2e_script.h` - Script parser and runner (main file)
-- `src/testing/e2e_runner.h/.cpp` - Runner initialization helpers
-- `src/testing/test_input.h/.cpp` - Input injection layer
-- `src/testing/input_injector.h/.cpp` - Low-level input simulation
-- `src/testing/test_input_provider.h` - Afterhours UIContext integration
-- `src/testing/visible_text_registry.h` - Track rendered text for assertions
+
+The full implementation spans multiple files with a layered architecture:
+
+### Layer 1: Low-Level Input Injection
+- `src/testing/input_injector.h/.cpp` - Synthetic key/mouse state management
+  - `set_key_down()`/`set_key_up()` - Hold keys down
+  - `hold_key_for_duration()` - Timed key holds
+  - `schedule_mouse_click_at()` - Queue clicks at coordinates
+  - `inject_scheduled_click()`/`release_scheduled_click()` - Execute clicks
+  - Tracks synthetic key state in arrays for multi-key combos
+
+### Layer 2: High-Level Input Queue  
+- `src/testing/test_input.h/.cpp` - Queue-based input simulation
+  - `push_key()`/`push_char()` - Queue keyboard input
+  - `simulate_mouse_button_press()`/`release()` - Mouse simulation
+  - `simulate_tab()`, `simulate_enter()`, `simulate_escape()` - Helpers
+  - Frame-aware state (pressed vs held vs released)
+  - Integrates with both raw raylib AND Afterhours UIContext
+
+### Layer 3: Afterhours UIContext Integration
+- `src/testing/test_input_provider.h` - ECS component for UIContext
+  - `TestInputProvider` component stores simulated state
+  - `TestInputSystem<InputAction>` injects into `UIContext`
+  - Overrides `context.mouse`, `context.last_action`, `context.all_actions`
+  - Works with custom `InputAction` enums per-game
+
+### Layer 4: UI Assertions
+- `src/testing/visible_text_registry.h` - Track rendered text
+  - `registerText()` - Call when drawing any text
+  - `containsText()` - Check if text visible (substring match)
+  - Thread-safe with mutex
+
+### Layer 5: Script Runner
+- `src/testing/e2e_script.h` - DSL parser and runner (~900 lines)
+  - Parses `.e2e` script files
+  - Executes commands frame-by-frame
+  - Handles timeouts, batch mode, screenshots
+  - Extensible via callbacks (property getter, screenshot taker, etc.)
+- `src/testing/e2e_runner.h/.cpp` - Initialization helpers
+
+### Supporting Files
+- `src/testing/test_input_fwd.h` - Forward declarations to break circular deps
 - `tests/e2e_scripts/*.e2e` - 67 example test scripts
 
-Extracted clean version:
-- `src/extracted/e2e_testing.h` - Standalone E2E framework ready for PR
+### Extracted Simplified Version
+- `src/extracted/e2e_testing.h` - Single-file version for quick integration
 
 ## Problem
 Afterhours does not provide an E2E testing framework for UI applications.
