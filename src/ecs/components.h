@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../editor/text_buffer.h"
+#include "../input/action_map.h"
 #include "../ui/win95_widgets.h"
 #include <string>
 #include <vector>
@@ -99,7 +100,11 @@ struct TestConfigComponent : public afterhours::BaseComponent {
   int frameCount = 0;
 };
 
-// Forward declaration - actual ActionMap in input/action_map.h
-// Component will be defined after action_map.h is included in relevant files
+// Component for input handling (stores the action map for remappable shortcuts)
+struct InputComponent : public afterhours::BaseComponent {
+  input::ActionMap actionMap;
+  
+  InputComponent() : actionMap(input::createDefaultActionMap()) {}
+};
 
 } // namespace ecs

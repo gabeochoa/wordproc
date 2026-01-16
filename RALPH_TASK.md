@@ -31,12 +31,12 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [x] Use immediate-mode UI for the UI layer. (Foundation integrated: Win95 theme, UIContext, UI systems registered. Full widget conversion pending.)
 - [x] Abstract raylib dependencies behind a renderer interface to allow swapping renderers later. (IRenderer + RaylibRenderer in src/renderer/)
 - [x] Create a `font_loader` module to handle startup UI fonts (P0), file-loaded fonts (P1), and supported-font list for editing (P2).
-- [x] Use Afterhours UI state context for test input handling. (Already integrated: external.h macros redirect raylib input to test_input, BeginUIContextManager reads through redirected functions)
+- [x] Use Afterhours UI state context for test input handling. (Enhanced: TestInputProvider component + TestInputSystem directly inject input into UIContext after BeginUIContextManager. test_input.cpp also updates TestInputProvider for seamless integration.)
 - [x] Add a help window listing keybindings from `src/input/action_map.h`; support rebinding and persist changes to settings. (Help window with F1 shortcut complete; rebinding/persistence deferred to v0.2)
 - [x] Separate app settings from document settings: app settings auto-save immediately, document settings save with the document file format on save. (Already separated: Settings singleton for app, TextStyle in TextBuffer for doc. Added auto_save_enabled + save_if_auto() for immediate app settings save)
 - [x] Re-evaluate file format: consider moving from JSON to a `wpdoc` zip container with non-binary text where possible. (Evaluated: JSON optimal for v0.1 text-only. Zip container recommended for v0.2+ when adding images/media. See docs/file_format.md)
 - [x] Ensure `.doc` import support; collect sample `.doc` files for tests. (Evaluated: .doc is complex OLE binary format requiring external libs. Deferred to v0.2+. Workaround: convert to .txt/.docx first. See AfterhoursGaps.md)
-- [ ] Add a test that loads the largest file and logs FPS while scrolling.
+- [x] Add a test that loads the largest file and logs FPS while scrolling. (Added tests/run_fps_scroll_test.sh - finds largest file, runs in test mode with scroll simulation, logs FPS)
 - [ ] Add more E2E tests that actually run the program via a harness (control/profiling allowed).
 - [ ] Expand automated performance profiling to support "fastest word processor" goal.
 - [x] Move `01_startup.png` to a more appropriate location (e.g., dedicated screenshots/output folder).

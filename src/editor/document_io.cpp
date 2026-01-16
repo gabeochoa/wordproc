@@ -90,6 +90,14 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
 }
 
 DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
+  // Use the new function with default settings (discards loaded settings)
+  DocumentSettings settings;
+  return loadDocumentEx(buffer, settings, path);
+}
+
+DocumentResult loadDocumentEx(TextBuffer &buffer, 
+                              DocumentSettings &settings,
+                              const std::string &path) {
   DocumentResult result;
   
   std::ifstream ifs(path);
@@ -108,7 +116,7 @@ DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
     // Check version
     if (doc.contains("version")) {
       int version = doc.at("version").get<int>();
-      if (version != 1) {
+      if (version != DocumentSettings::VERSION) {
         result.error = "Unsupported document version: " + std::to_string(version);
         result.usedFallback = true;
         // Still try to load
@@ -123,8 +131,9 @@ DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
       result.usedFallback = true;
     }
 
+    // Load text style (document-specific settings)
     if (doc.contains("style")) {
-      TextStyle style = buffer.textStyle();
+      TextStyle &style = settings.textStyle;
       const nlohmann::json &style_json = doc.at("style");
       if (style_json.contains("bold")) {
         style.bold = style_json.at("bold").get<bool>();
@@ -141,6 +150,27 @@ DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
         style.fontSize = std::max(8, std::min(72, fontSize));
       }
       buffer.setTextStyle(style);
+    }
+    
+    // Load page layout settings (document-specific settings)
+    if (doc.contains("pageLayout")) {
+      PageSettings &page = settings.pageSettings;
+      const nlohmann::json &page_json = doc.at("pageLayout");
+      if (page_json.contains("mode")) {
+        page.mode = pageModeFromString(page_json.at("mode").get<std::string>());
+      }
+      if (page_json.contains("pageWidth")) {
+        page.pageWidth = page_json.at("pageWidth").get<float>();
+      }
+      if (page_json.contains("pageHeight")) {
+        page.pageHeight = page_json.at("pageHeight").get<float>();
+      }
+      if (page_json.contains("pageMargin")) {
+        page.pageMargin = page_json.at("pageMargin").get<float>();
+      }
+      if (page_json.contains("lineWidthLimit")) {
+        page.lineWidthLimit = page_json.at("lineWidthLimit").get<float>();
+      }
     }
     
     result.success = true;

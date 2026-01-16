@@ -43,18 +43,19 @@ struct TextInputSystem : public afterhours::System<DocumentComponent, CaretCompo
   }
 };
 
-// System for handling keyboard shortcuts
+// System for handling keyboard shortcuts using remappable ActionMap
 struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, CaretComponent, StatusComponent> {
+  input::ActionMap actionMap_ = input::createDefaultActionMap();
+  
   void for_each_with(afterhours::Entity& entity,
                      DocumentComponent& doc,
                      CaretComponent& caret,
                      StatusComponent& status,
                      const float) override {
-    bool ctrl_down = raylib::IsKeyDown(raylib::KEY_LEFT_CONTROL) ||
-                     raylib::IsKeyDown(raylib::KEY_RIGHT_CONTROL);
-
-    // Save: Ctrl+S
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_S)) {
+    using input::Action;
+    
+    // Save
+    if (actionMap_.isActionPressed(Action::Save)) {
       std::string savePath = doc.filePath.empty() ? doc.defaultPath : doc.filePath;
       auto result = saveTextFileEx(doc.buffer, savePath);
       if (result.success) {
@@ -68,8 +69,8 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
       }
     }
 
-    // Open: Ctrl+O
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_O)) {
+    // Open
+    if (actionMap_.isActionPressed(Action::Open)) {
       auto result = loadTextFileEx(doc.buffer, doc.defaultPath);
       if (result.success) {
         doc.filePath = doc.defaultPath;
@@ -82,53 +83,51 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
       }
     }
 
-    // Bold: Ctrl+B
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_B)) {
+    // Bold
+    if (actionMap_.isActionPressed(Action::ToggleBold)) {
       TextStyle style = doc.buffer.textStyle();
       style.bold = !style.bold;
       doc.buffer.setTextStyle(style);
     }
 
-    // Italic: Ctrl+I
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_I)) {
+    // Italic
+    if (actionMap_.isActionPressed(Action::ToggleItalic)) {
       TextStyle style = doc.buffer.textStyle();
       style.italic = !style.italic;
       doc.buffer.setTextStyle(style);
     }
 
-    // Font selection: Ctrl+1/2
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ONE)) {
+    // Font selection
+    if (actionMap_.isActionPressed(Action::FontGaegu)) {
       TextStyle style = doc.buffer.textStyle();
       style.font = "Gaegu-Bold";
       doc.buffer.setTextStyle(style);
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_TWO)) {
+    if (actionMap_.isActionPressed(Action::FontGaramond)) {
       TextStyle style = doc.buffer.textStyle();
       style.font = "EBGaramond-Regular";
       doc.buffer.setTextStyle(style);
     }
 
-    // Font size: Ctrl+Plus/Minus
-    if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_EQUAL) ||
-                      raylib::IsKeyPressed(raylib::KEY_KP_ADD))) {
+    // Font size
+    if (actionMap_.isActionPressed(Action::IncreaseFontSize)) {
       TextStyle style = doc.buffer.textStyle();
       style.fontSize = std::min(72, style.fontSize + 2);
       doc.buffer.setTextStyle(style);
     }
-    if (ctrl_down && (raylib::IsKeyPressed(raylib::KEY_MINUS) ||
-                      raylib::IsKeyPressed(raylib::KEY_KP_SUBTRACT))) {
+    if (actionMap_.isActionPressed(Action::DecreaseFontSize)) {
       TextStyle style = doc.buffer.textStyle();
       style.fontSize = std::max(8, style.fontSize - 2);
       doc.buffer.setTextStyle(style);
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_ZERO)) {
+    if (actionMap_.isActionPressed(Action::ResetFontSize)) {
       TextStyle style = doc.buffer.textStyle();
       style.fontSize = 16;
       doc.buffer.setTextStyle(style);
     }
 
-    // Clipboard: Ctrl+C/X/V/A
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_C)) {
+    // Copy
+    if (actionMap_.isActionPressed(Action::Copy)) {
       if (doc.buffer.hasSelection()) {
         std::string selected = doc.buffer.getSelectedText();
         if (!selected.empty()) {
@@ -136,7 +135,8 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
         }
       }
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_X)) {
+    // Cut
+    if (actionMap_.isActionPressed(Action::Cut)) {
       if (doc.buffer.hasSelection()) {
         std::string selected = doc.buffer.getSelectedText();
         if (!selected.empty()) {
@@ -146,26 +146,29 @@ struct KeyboardShortcutSystem : public afterhours::System<DocumentComponent, Car
         }
       }
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_V)) {
+    // Paste
+    if (actionMap_.isActionPressed(Action::Paste)) {
       const char* clipText = raylib::GetClipboardText();
       if (clipText && clipText[0] != '\0') {
         doc.buffer.insertText(clipText);
         doc.isDirty = true;
       }
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_A)) {
+    // Select All
+    if (actionMap_.isActionPressed(Action::SelectAll)) {
       doc.buffer.selectAll();
     }
 
-    // Undo/Redo: Ctrl+Z/Y
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Z)) {
+    // Undo
+    if (actionMap_.isActionPressed(Action::Undo)) {
       if (doc.buffer.canUndo()) {
         doc.buffer.undo();
         doc.isDirty = true;
         caret::resetBlink(caret);
       }
     }
-    if (ctrl_down && raylib::IsKeyPressed(raylib::KEY_Y)) {
+    // Redo
+    if (actionMap_.isActionPressed(Action::Redo)) {
       if (doc.buffer.canRedo()) {
         doc.buffer.redo();
         doc.isDirty = true;
