@@ -207,11 +207,23 @@ Build a word processor using the vendored Afterhours library and dependencies. S
 - [ ] Add `has_page_number` property - returns "true" if page numbers enabled
 - [ ] Add `caret_at_heading` property - returns heading text if caret is at heading
 
-### E2E Core Fixes
-- [ ] Fix `type` command not injecting text correctly (text shows as empty)
-- [ ] Fix keyboard shortcuts (Ctrl+B, Ctrl+I, etc.) not applying formatting
-- [ ] Fix selection commands (select_all, drag) not selecting text
+### E2E Core Fixes (ROOT CAUSE: raylib:: namespace bypasses test macros)
+
+The test input system uses macros like `#define GetCharPressed GetCharPressed_Test` but code using
+`raylib::GetCharPressed()` bypasses these macros. All raylib input calls must use bare function names.
+
+#### Critical: Fix namespace-qualified raylib calls
+- [ ] `src/ecs/input_system.h:24,31` - Change `raylib::GetCharPressed()` to `GetCharPressed()`
+- [ ] `src/ecs/render_system.h:633` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()`
+- [ ] `src/ecs/render_system.h:673,755` - Change `raylib::IsMouseButtonPressed()` to `IsMouseButtonPressed()`
+- [ ] `src/ecs/render_system.h:685` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()`
+- [ ] `src/input/action_map.cpp:31` - Change `raylib::IsKeyPressed()` to `IsKeyPressed()`
+- [ ] `src/ui/win95_widgets.cpp:59,66,114,163,213,314` - Change `raylib::IsMouseButton*()` to bare names
+- [ ] `src/ui/win95_widgets.cpp:448,456,460,465,470` - Change `raylib::GetCharPressed/IsKeyPressed()` to bare names
+
+#### Validation fixes
 - [ ] Fix case sensitivity in validation (e.g., "Left" vs "left", "None" vs "none")
+- [ ] Normalize property values to lowercase in e2e_runner.cpp property getter
 
 ---
 
