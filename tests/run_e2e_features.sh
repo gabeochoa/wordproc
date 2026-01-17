@@ -1,10 +1,13 @@
 #!/bin/bash
-# E2E Feature Validation Test Runner
-# Runs all E2E test scripts to validate that features actually work
+# E2E Feature Validation Test Runner (Batch Mode)
+# Runs all E2E test scripts in a single application window for speed
 #
 # Test naming convention:
 #   pass_<name>.e2e - Test expected to pass (exit code 0)
 #   fail_<name>.e2e - Test expected to fail (exit code non-zero, validates error handling)
+#
+# This uses batch mode to avoid window creation overhead between tests.
+# The E2E runner automatically handles per-script pass/fail tracking.
 
 set -e
 
@@ -21,12 +24,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-
-# Counters
-TESTS_RUN=0
-TESTS_PASSED=0
-TESTS_FAILED=0
-FAILED_TESTS=""
 
 echo "=============================================="
 echo "   Wordproc E2E Feature Validation Suite     "
@@ -53,92 +50,24 @@ fi
 SCRIPT_COUNT=$(find "$E2E_SCRIPTS_DIR" -name "*.e2e" | wc -l | tr -d ' ')
 echo "Found $SCRIPT_COUNT E2E test scripts"
 echo ""
-
-# Run each E2E script
-for script in "$E2E_SCRIPTS_DIR"/*.e2e; do
-    [ -f "$script" ] || continue
-    
-    script_name=$(basename "$script" .e2e)
-    ((TESTS_RUN++))
-    
-    # Determine expected outcome based on prefix
-    if [[ "$script_name" == pass_* ]]; then
-        expected_to_pass=true
-        display_name="${script_name#pass_}"
-        echo -e "${BLUE}[TEST]${NC} Running: $display_name (expect: pass)"
-    elif [[ "$script_name" == fail_* ]]; then
-        expected_to_pass=false
-        display_name="${script_name#fail_}"
-        echo -e "${BLUE}[TEST]${NC} Running: $display_name (expect: fail)"
-    else
-        # Legacy format - assume pass
-        expected_to_pass=true
-        display_name="$script_name"
-        echo -e "${BLUE}[TEST]${NC} Running: $display_name"
-    fi
-    
-    # Create script-specific screenshot dir
-    script_screenshot_dir="$SCREENSHOT_DIR/$script_name"
-    mkdir -p "$script_screenshot_dir"
-    
-    # Run the test (from project root, not output dir, to fix resource path issues)
-    set +e
-    output=$(cd "$PROJECT_DIR" && "$EXECUTABLE" \
-        --test-mode \
-        --test-script="$script" \
-        --frame-limit=600 \
-        --screenshot-dir="$script_screenshot_dir" \
-        2>&1)
-    exit_code=$?
-    set -e
-    
-    # Check result based on expected outcome
-    if [ "$expected_to_pass" = true ]; then
-        # Test should pass (exit code 0)
-        if [ $exit_code -eq 0 ]; then
-            echo -e "${GREEN}[PASS]${NC} $display_name"
-            ((TESTS_PASSED++))
-        else
-            echo -e "${RED}[FAIL]${NC} $display_name (expected pass, got exit code: $exit_code)"
-            echo "Output:"
-            echo "$output" | sed 's/^/  /'
-            ((TESTS_FAILED++))
-            FAILED_TESTS="$FAILED_TESTS\n  - $display_name (expected pass)"
-        fi
-    else
-        # Test should fail (exit code non-zero)
-        if [ $exit_code -ne 0 ]; then
-            echo -e "${GREEN}[PASS]${NC} $display_name (correctly detected errors)"
-            ((TESTS_PASSED++))
-        else
-            echo -e "${RED}[FAIL]${NC} $display_name (expected fail, but passed)"
-            echo "Output:"
-            echo "$output" | sed 's/^/  /'
-            ((TESTS_FAILED++))
-            FAILED_TESTS="$FAILED_TESTS\n  - $display_name (expected fail)"
-        fi
-    fi
-done
-
+echo -e "${BLUE}Running all tests in single window (batch mode)...${NC}"
 echo ""
-echo "=============================================="
-echo "           E2E Feature Test Summary           "
-echo "=============================================="
-echo ""
-echo "Tests run:    $TESTS_RUN"
-echo -e "Tests passed: ${GREEN}$TESTS_PASSED${NC}"
-echo -e "Tests failed: ${RED}$TESTS_FAILED${NC}"
 
-if [ $TESTS_FAILED -gt 0 ]; then
-    echo ""
-    echo -e "${RED}Failed tests:${NC}"
-    echo -e "$FAILED_TESTS"
-fi
+# Run all scripts in batch mode from project root (for resource path consistency)
+set +e
+cd "$PROJECT_DIR" && "$EXECUTABLE" \
+    --test-mode \
+    --test-script-dir="$E2E_SCRIPTS_DIR" \
+    --screenshot-dir="$SCREENSHOT_DIR" \
+    2>&1 | tee "$OUTPUT_DIR/e2e_features.log"
+exit_code=${PIPESTATUS[0]}
+set -e
 
 echo ""
 echo "Screenshots saved to: $SCREENSHOT_DIR"
+echo "Full log: $OUTPUT_DIR/e2e_features.log"
 
-if [ $TESTS_FAILED -eq 0 ]; then
+if [ $exit_code -eq 0 ]; then
     echo ""
     echo -e "${GREEN}All E2E feature tests passed!${NC}"
     exit 0

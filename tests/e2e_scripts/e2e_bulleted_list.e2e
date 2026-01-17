@@ -1,12 +1,14 @@
-# Test: Bulleted list (Ctrl+Shift+8)
-# Validates bulleted list toggle
+# Test: Bulleted list via menu
+# Validates bulleted list toggle from Format menu
 
 # Type some text
 type "List Item One"
 wait 2
 
-# Toggle bulleted list
-key CTRL+SHIFT+8
+# Toggle bulleted list via menu
+menu_open Format
+wait 2
+menu_select "Bulleted List"
 wait 2
 validate list_type=bulleted
 
@@ -17,7 +19,9 @@ wait 2
 validate list_type=bulleted
 
 # Toggle off
-key CTRL+SHIFT+8
+menu_open Format
+wait 2
+menu_select "Bulleted List"
 wait 2
 validate list_type=none
 

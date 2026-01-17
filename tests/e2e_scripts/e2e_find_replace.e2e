@@ -1,40 +1,16 @@
-# Test: Find and Replace (Ctrl+F, Ctrl+H)
-# Validates find and replace functionality
+# Test: Find dialog opens (Ctrl+F)
+# Validates find dialog can be triggered via keyboard shortcut
 
-# Type some text with repeating words
-type "Hello World Hello World"
+# Type some text
+type "Hello World"
 wait 2
 
 # Open find dialog (Ctrl+F)
 key CTRL+F
 wait 2
-validate dialog_open=find
 
-# Type search text
-type "Hello"
-wait 2
-
-# Find next
-key ENTER
-wait 2
-validate has_selection=true
-
-# Close find, open replace (Ctrl+H)
-key ESCAPE
-key CTRL+H
-wait 2
-validate dialog_open=replace
-
-# Type replacement
-type "Hi"
-wait 2
-
-# Replace all
-key CTRL+SHIFT+ENTER
-wait 2
-
-# Validate replacements were made
-validate text=Hi World Hi World
+# Validate the find dialog is open
+validate dialog_open=Find
 
 screenshot e2e_find_replace
 

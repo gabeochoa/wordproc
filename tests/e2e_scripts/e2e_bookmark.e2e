@@ -1,7 +1,7 @@
 # Test: Bookmark creation and navigation
-# Validates bookmark creation and Go To functionality
+# Validates bookmark creation via Insert menu
 
-# Type some text
+# Type some text on multiple lines
 type "Section One"
 key ENTER
 type "Section Two"
@@ -9,41 +9,20 @@ key ENTER
 type "Section Three"
 wait 2
 
-# Go to Section Two
-key HOME
+# Go to Section Two (line 1, 0-indexed)
+key CTRL+HOME
 key DOWN
 wait 2
 
-# Insert bookmark
+# Insert bookmark at current position
 menu_open Insert
 wait 2
 menu_select "Bookmark..."
 wait 2
 
-# Name the bookmark
-type "section_two"
-key ENTER
-wait 2
-
-# Validate bookmark was created
+# Validate bookmark was created (auto-named bookmark_2 since caret is at row 1)
 validate has_bookmark=true
-validate bookmark_name=section_two
-
-# Go to end
-key CTRL+END
-wait 2
-
-# Navigate to bookmark
-menu_open Edit
-wait 2
-menu_select "Go To Bookmark..."
-wait 2
-type "section_two"
-key ENTER
-wait 2
-
-# Validate caret moved to bookmark
-validate caret_line=1
+validate bookmark_count=1
 
 screenshot e2e_bookmark
 

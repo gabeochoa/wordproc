@@ -257,6 +257,14 @@ static void bindNavigationKeys(ActionMap& map) {
     map.bind({raylib::KEY_DOWN, false, false, false}, Action::MoveDown);
     map.bind({raylib::KEY_PAGE_UP, false, false, false}, Action::PageUp);
     map.bind({raylib::KEY_PAGE_DOWN, false, false, false}, Action::PageDown);
+    
+    // Also bind with shift for selection (shift is handled separately in NavigationSystem)
+    map.bind({raylib::KEY_LEFT, false, true, false}, Action::MoveLeft);
+    map.bind({raylib::KEY_RIGHT, false, true, false}, Action::MoveRight);
+    map.bind({raylib::KEY_UP, false, true, false}, Action::MoveUp);
+    map.bind({raylib::KEY_DOWN, false, true, false}, Action::MoveDown);
+    map.bind({raylib::KEY_PAGE_UP, false, true, false}, Action::PageUp);
+    map.bind({raylib::KEY_PAGE_DOWN, false, true, false}, Action::PageDown);
 
     // Editing (same across presets)
     map.bind({raylib::KEY_ENTER, false, false, false}, Action::InsertNewline);
@@ -277,6 +285,14 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_END, false, false, false}, Action::MoveLineEnd);
     map.bind({raylib::KEY_HOME, true, false, false}, Action::MoveDocumentStart);
     map.bind({raylib::KEY_END, true, false, false}, Action::MoveDocumentEnd);
+    
+    // Word/line navigation with shift (for selection)
+    map.bind({raylib::KEY_LEFT, true, true, false}, Action::MoveWordLeft);
+    map.bind({raylib::KEY_RIGHT, true, true, false}, Action::MoveWordRight);
+    map.bind({raylib::KEY_HOME, false, true, false}, Action::MoveLineStart);
+    map.bind({raylib::KEY_END, false, true, false}, Action::MoveLineEnd);
+    map.bind({raylib::KEY_HOME, true, true, false}, Action::MoveDocumentStart);
+    map.bind({raylib::KEY_END, true, true, false}, Action::MoveDocumentEnd);
 
     // Selection, clipboard, undo/redo: Ctrl+key
     map.bind({raylib::KEY_A, true, false, false}, Action::SelectAll);

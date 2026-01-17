@@ -16,6 +16,8 @@
 #include "../editor/export/export_html.h"
 #include "../editor/export/export_pdf.h"
 #include "../editor/export/export_rtf.h"
+#include "../editor/drawing.h"
+#include "../editor/equation.h"
 #include "../editor/image.h"
 #include "../editor/table.h"
 #include "../input/action_map.h"
@@ -1737,6 +1739,56 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     doc.images.addImage(img);
                     doc.isDirty = true;
                     status::set(status, "Image placeholder inserted");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 15:  // Line (drawing)
+                case 16:  // Rectangle (drawing)
+                case 17:  // Circle (drawing)
+                case 18:  // Ellipse (drawing)
+                case 19:  // Arrow (drawing)
+                case 20:  // Rounded Rectangle (drawing)
+                case 21:  // Triangle (drawing)
+                {
+                    DocumentDrawing drawing;
+                    drawing.anchorLine = doc.buffer.caret().row;
+                    drawing.anchorColumn = doc.buffer.caret().column;
+                    drawing.x = 10.0f;
+                    drawing.y = 10.0f;
+                    drawing.width = 100.0f;
+                    drawing.height = 50.0f;
+                    drawing.strokeColor = DrawingColors::Black;
+                    drawing.fillColor = DrawingColors::LightGray;
+                    drawing.strokeWidth = 2.0f;
+                    drawing.layoutMode = DrawingLayoutMode::Inline;
+                    
+                    switch (itemIndex) {
+                        case 15: drawing.shapeType = ShapeType::Line; break;
+                        case 16: drawing.shapeType = ShapeType::Rectangle; break;
+                        case 17: drawing.shapeType = ShapeType::Ellipse; break;  // Circle is an ellipse
+                        case 18: drawing.shapeType = ShapeType::Ellipse; break;
+                        case 19: drawing.shapeType = ShapeType::Arrow; break;
+                        case 20: drawing.shapeType = ShapeType::RoundedRect; break;
+                        case 21: drawing.shapeType = ShapeType::Triangle; break;
+                        default: break;
+                    }
+                    
+                    doc.drawings.addDrawing(drawing);
+                    doc.isDirty = true;
+                    status::set(status, std::format("{} inserted", shapeTypeName(drawing.shapeType)));
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 23:  // Equation...
+                {
+                    DocumentEquation eq;
+                    eq.anchorLine = doc.buffer.caret().row;
+                    eq.anchorColumn = doc.buffer.caret().column;
+                    eq.source = "f(x) = x^2";  // Default sample equation
+                    eq.style = EquationStyle::Inline;
+                    doc.equations.addEquation(eq);
+                    doc.isDirty = true;
+                    status::set(status, "Equation inserted");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
