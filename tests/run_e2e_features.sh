@@ -81,11 +81,12 @@ for script in "$E2E_SCRIPTS_DIR"/*.e2e; do
     script_screenshot_dir="$SCREENSHOT_DIR/$script_name"
     mkdir -p "$script_screenshot_dir"
     
-    # Run the test
+    # Run the test (from project root, not output dir, to fix resource path issues)
     set +e
-    output=$(cd "$OUTPUT_DIR" && ./wordproc.exe \
+    output=$(cd "$PROJECT_DIR" && "$EXECUTABLE" \
         --test-mode \
         --test-script="$script" \
+        --frame-limit=600 \
         --screenshot-dir="$script_screenshot_dir" \
         2>&1)
     exit_code=$?

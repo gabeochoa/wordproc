@@ -5,10 +5,13 @@
 #include "../ecs/components.h"
 #include "../editor/document_settings.h"
 #include "../rl.h"
+#include "../ui/theme.h"
 #include "../util/logging.h"
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 
@@ -56,6 +59,25 @@ static void setupCallbacks(
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
         if (prop == "caret_row") return std::to_string(buffer.caret().row);
         if (prop == "caret_col") return std::to_string(buffer.caret().column);
+        if (prop == "superscript") return style.superscript ? "true" : "false";
+        if (prop == "subscript") return style.subscript ? "true" : "false";
+
+        if (prop == "word_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.words);
+        }
+        if (prop == "char_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.characters);
+        }
+        if (prop == "paragraph_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.paragraphs);
+        }
+        if (prop == "sentence_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.sentences);
+        }
         
         return "<unknown>";
     });
@@ -291,6 +313,40 @@ static void setupCallbacksEx(
             auto outline = buffer.getOutline();
             return std::to_string(outline.size());
         }
+
+        if (prop == "comment_count") return std::to_string(docComp.comments.size());
+        if (prop == "track_changes_enabled") return docComp.trackChangesEnabled ? "true" : "false";
+        if (prop == "revision_count") return std::to_string(docComp.revisions.size());
+        if (prop == "tab_width") return std::to_string(docComp.docSettings.tabWidth);
+        if (prop == "drop_cap") return buffer.currentLineHasDropCap() ? "true" : "false";
+        if (prop == "smart_quotes_enabled") {
+            return docComp.docSettings.smartQuotesEnabled ? "true" : "false";
+        }
+        if (prop == "autosave_enabled") return docComp.autoSaveEnabled ? "true" : "false";
+        if (prop == "autosave_path_exists") {
+            return std::filesystem::exists(docComp.autoSavePath) ? "true" : "false";
+        }
+        if (prop == "zoom_level") {
+            int pct = static_cast<int>(std::round(layoutComp.zoomLevel * 100.0f));
+            return std::to_string(pct);
+        }
+        if (prop == "focus_mode") return layoutComp.focusMode ? "true" : "false";
+        if (prop == "split_view") return layoutComp.splitViewEnabled ? "true" : "false";
+        if (prop == "dark_mode") return theme::DARK_MODE_ENABLED ? "true" : "false";
+
+        if (prop == "export_pdf_exists" || prop == "export_html_exists" ||
+            prop == "export_rtf_exists") {
+            std::filesystem::path basePath =
+                docComp.filePath.empty() ? docComp.defaultPath : docComp.filePath;
+            if (prop == "export_pdf_exists") {
+                basePath.replace_extension(".pdf");
+            } else if (prop == "export_html_exists") {
+                basePath.replace_extension(".html");
+            } else {
+                basePath.replace_extension(".rtf");
+            }
+            return std::filesystem::exists(basePath) ? "true" : "false";
+        }
         
         // Status bar properties (always visible)
         if (prop == "status_bar_visible") return "true";
@@ -375,6 +431,13 @@ static void setupCallbacksEx(
             int maxLen = std::stoi(prop.substr(17));
             return buffer.getText().size() < static_cast<std::size_t>(maxLen) ? "true" : "false";
         }
+        if (prop.substr(0, 10) == "regex_find") {
+            std::string pattern = prop.substr(11);
+            FindOptions options;
+            options.useRegex = true;
+            FindResult result = buffer.find(pattern, options);
+            return result.found ? "true" : "false";
+        }
         
         // Formatting properties
         if (prop == "has_text_color") {
@@ -441,7 +504,7 @@ static void setupCallbacksEx(
     });
     
     // Set up document clearer (for batch mode)
-    runner.set_clear_callback([&docComp]() {
+    runner.set_clear_callback([&docComp, &menuComp, &layoutComp]() {
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
         docComp.buffer.clearBookmarks();
@@ -449,10 +512,34 @@ static void setupCallbacksEx(
         docComp.buffer.clearSections();
         docComp.buffer.clearHistory();
         docComp.buffer.setTextStyle(TextStyle{});
+        docComp.comments.clear();
+        docComp.revisions.clear();
+        docComp.trackChangesEnabled = false;
+        docComp.trackChangesBaseline.clear();
+        docComp.docSettings = DocumentSettings{};
         docComp.tables.clear();
         docComp.images.clear();
         docComp.drawings.clear();
         docComp.isDirty = false;
+        menuComp.showAboutDialog = false;
+        menuComp.showHelpWindow = false;
+        menuComp.showFindDialog = false;
+        menuComp.findReplaceMode = false;
+        menuComp.lastSearchTerm.clear();
+        menuComp.replaceTerm.clear();
+        std::memset(menuComp.findInputBuffer, 0, sizeof(menuComp.findInputBuffer));
+        std::memset(menuComp.replaceInputBuffer, 0, sizeof(menuComp.replaceInputBuffer));
+        menuComp.showCommentDialog = false;
+        menuComp.commentInputBuffer[0] = '\0';
+        menuComp.showTemplateDialog = false;
+        menuComp.templateInputBuffer[0] = '\0';
+        menuComp.showTabWidthDialog = false;
+        menuComp.tabWidthInputBuffer[0] = '\0';
+        layoutComp.zoomLevel = 1.0f;
+        layoutComp.focusMode = false;
+        layoutComp.splitViewEnabled = false;
+        layoutComp.splitViewHorizontal = true;
+        theme::applyDarkMode(false);
     });
     
     // Set up menu opener

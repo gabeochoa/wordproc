@@ -4,8 +4,10 @@
 #include <filesystem>
 #include <fstream>
 #include <format>
+#include <sstream>
 #include <string>
 
+#include "ecs/component_helpers.h"
 #include "ecs/components.h"
 #include "ecs/input_system.h"
 #include "ecs/menu_ui_system.h"
@@ -44,6 +46,24 @@ void takeScreenshot(const std::string& dir, const std::string& name) {
     raylib::TakeScreenshot(path.c_str());
 }
 
+// #region agent log
+static void debugLog(const char* location, const char* message,
+                     const char* hypothesisId, const char* runId,
+                     const std::string& dataJson) {
+    const char* logPath = "/Users/gabeochoa/p/wordproc/.cursor/debug.log";
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  now.time_since_epoch())
+                  .count();
+    std::ofstream out(logPath, std::ios::app);
+    if (!out.is_open()) return;
+    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
+        << "\",\"hypothesisId\":\"" << hypothesisId << "\",\"location\":\""
+        << location << "\",\"message\":\"" << message << "\",\"data\":"
+        << dataJson << ",\"timestamp\":" << ms << "}\n";
+}
+// #endregion agent log
+
 int main(int argc, char* argv[]) {
     argh::parser cmdl(argc, argv);
 
@@ -70,6 +90,18 @@ int main(int argc, char* argv[]) {
             // This is handled below after scriptRunner is set up
         }
     }
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"frameLimit\":" << frameLimit << ",\"testScriptPathLen\":"
+             << testScriptPath.size() << ",\"testScriptDirLen\":"
+             << testScriptDir.size() << ",\"testModeFlag\":"
+             << (cmdl["--test-mode"] ? "true" : "false") << "}";
+        debugLog("main.cpp:73", "Parsed test args", "H1", "e2e-hang-pre",
+                 data.str());
+    }
+    // #endregion agent log
     
     // Check for e2e-debug flag (can be --e2e-debug or --e2e-debug=true)
     bool e2eDebugOverlay = cmdl["e2e-debug"] || cmdl("e2e-debug");
@@ -167,6 +199,10 @@ int main(int argc, char* argv[]) {
     // Add document component
     auto& docComp = editorEntity.addComponent<ecs::DocumentComponent>();
     docComp.filePath = loadFile;
+    if (testModeEnabled) {
+        docComp.autoSaveIntervalSeconds = 0.0;
+        docComp.lastAutoSaveTime = -1.0;
+    }
 
     // Load file if specified
     if (!loadFile.empty() && std::filesystem::exists(loadFile)) {
@@ -180,7 +216,7 @@ int main(int argc, char* argv[]) {
     editorEntity.addComponent<ecs::CaretComponent>();
     editorEntity.addComponent<ecs::ScrollComponent>();
 
-    editorEntity.addComponent<ecs::StatusComponent>();
+    auto& statusComp = editorEntity.addComponent<ecs::StatusComponent>();
 
     auto& layoutComp = editorEntity.addComponent<ecs::LayoutComponent>();
     layoutComp.titleBarHeight =
@@ -193,7 +229,21 @@ int main(int argc, char* argv[]) {
     layoutComp.textPadding = static_cast<float>(theme::layout::TEXT_PADDING);
 
     auto& menuComp = editorEntity.addComponent<ecs::MenuComponent>();
-    menuComp.menus = menu_setup::createMenuBar();
+    menuComp.menus = menu_setup::createMenuBar(Settings::get().get_recent_files());
+    menuComp.recentFilesCount =
+        static_cast<int>(Settings::get().get_recent_files().size());
+
+    // Auto-save recovery (only when no file is explicitly opened, skip in test mode)
+    if (!testModeEnabled && docComp.filePath.empty() &&
+        std::filesystem::exists(docComp.autoSavePath)) {
+        auto result = loadDocumentEx(docComp.buffer, docComp.docSettings,
+                                     docComp.autoSavePath);
+        if (result.success) {
+            docComp.isDirty = true;
+            ecs::status::set(statusComp, "Recovered auto-save");
+            statusComp.expiresAt = raylib::GetTime() + 3.0;
+        }
+    }
 
     auto& testComp = editorEntity.addComponent<ecs::TestConfigComponent>();
     testComp.enabled = testModeEnabled;
@@ -224,6 +274,8 @@ int main(int argc, char* argv[]) {
         std::make_unique<ecs::TextInputSystem>());
     systemManager.register_update_system(
         std::make_unique<ecs::KeyboardShortcutSystem>());
+    systemManager.register_update_system(
+        std::make_unique<ecs::AutoSaveSystem>());
     systemManager.register_update_system(
         std::make_unique<ecs::NavigationSystem>());
 
@@ -266,8 +318,45 @@ int main(int argc, char* argv[]) {
         scriptRunner.setDebugOverlay(true);
     }
 
+    if ((!testScriptPath.empty() || !testScriptDir.empty()) && frameLimit == 0) {
+        frameLimit = 600;  // Safety net for E2E runs (~10s at 60fps)
+    }
+    if (!testScriptPath.empty() && !scriptRunner.hasCommands()) {
+        LOG_WARNING("E2E script has no commands: %s", testScriptPath.c_str());
+        // #region agent log
+        debugLog("main.cpp:286", "No commands loaded for script", "H2",
+                 "e2e-hang-pre", "{\"hasCommands\":false}");
+        // #endregion agent log
+        return 1;
+    }
+    if (!testScriptDir.empty() && !scriptRunner.hasCommands()) {
+        LOG_WARNING("E2E script directory has no commands: %s", testScriptDir.c_str());
+        // #region agent log
+        debugLog("main.cpp:293", "No commands loaded for directory", "H2",
+                 "e2e-hang-pre", "{\"hasCommands\":false}");
+        // #endregion agent log
+        return 1;
+    }
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"hasCommands\":" << (scriptRunner.hasCommands() ? "true" : "false")
+             << ",\"frameLimit\":" << frameLimit
+             << ",\"testScriptPath\":\"" << testScriptPath
+             << "\",\"testScriptDir\":\"" << testScriptDir
+             << "\",\"screenshotDir\":\"" << screenshotDir << "\"}";
+        debugLog("main.cpp:301", "Runner initialized", "H5", "e2e-hang-suite",
+                 data.str());
+    }
+    // #endregion agent log
+
+    int loopFrames = 0;
+    const bool e2eActive = !testScriptPath.empty() || !testScriptDir.empty();
+    const auto e2eStartTime = std::chrono::steady_clock::now();
     while (!raylib::WindowShouldClose()) {
         float dt = raylib::GetFrameTime();
+        loopFrames++;
         
         // Reset test input frame state (but keep mouse state from pending simulation)
         test_input::reset_frame();
@@ -316,6 +405,13 @@ int main(int argc, char* argv[]) {
             
             // If script finished, print results and exit
             if (scriptRunner.isFinished()) {
+                // #region agent log
+                debugLog("main.cpp:404", "Script finished", "H3",
+                         "e2e-hang-pre",
+                         std::string("{\"hasFailed\":") +
+                             (scriptRunner.hasFailed() ? "true" : "false") +
+                             "}");
+                // #endregion agent log
                 scriptRunner.printResults();
                 takeScreenshot(screenshotDir, "final");
                 
@@ -329,7 +425,18 @@ int main(int argc, char* argv[]) {
 
         // Check for test mode exit
         if (testComp.enabled && testComp.frameLimit > 0 &&
-            testComp.frameCount >= testComp.frameLimit) {
+            loopFrames >= testComp.frameLimit) {
+            // #region agent log
+            {
+                std::ostringstream data;
+                data << "{\"loopFrames\":" << loopFrames
+                     << ",\"frameLimit\":" << testComp.frameLimit
+                     << ",\"scriptFinished\":"
+                     << (scriptRunner.isFinished() ? "true" : "false") << "}";
+                debugLog("main.cpp:418", "Frame limit reached", "H1",
+                         "e2e-hang-pre", data.str());
+            }
+            // #endregion agent log
             takeScreenshot(testComp.screenshotDir, "final");
 
             // Output FPS test results
@@ -346,6 +453,31 @@ int main(int argc, char* argv[]) {
             }
 
             break;
+        }
+
+        if (e2eActive) {
+            auto elapsed =
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::steady_clock::now() - e2eStartTime)
+                    .count();
+            if (elapsed > 8) {
+                LOG_WARNING("E2E timeout after %lld seconds",
+                            static_cast<long long>(elapsed));
+                // #region agent log
+                {
+                    std::ostringstream data;
+                    data << "{\"elapsedSeconds\":" << elapsed
+                         << ",\"loopFrames\":" << loopFrames
+                         << ",\"scriptFinished\":"
+                         << (scriptRunner.isFinished() ? "true" : "false")
+                         << "}";
+                    debugLog("main.cpp:442", "E2E timeout", "H4",
+                             "e2e-hang-pre", data.str());
+                }
+                // #endregion agent log
+                takeScreenshot(testComp.screenshotDir, "final");
+                break;
+            }
         }
     }
 

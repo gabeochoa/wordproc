@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <bitset>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -30,6 +31,24 @@
 
 namespace afterhours {
 namespace testing {
+
+// #region agent log
+inline void debug_log(const char* location, const char* message,
+                      const char* hypothesisId, const char* runId,
+                      const std::string& dataJson) {
+  const char* logPath = "/Users/gabeochoa/p/wordproc/.cursor/debug.log";
+  auto now = std::chrono::system_clock::now();
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch())
+                .count();
+  std::ofstream out(logPath, std::ios::app);
+  if (!out.is_open()) return;
+  out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
+      << "\",\"hypothesisId\":\"" << hypothesisId << "\",\"location\":\""
+      << location << "\",\"message\":\"" << message << "\",\"data\":"
+      << dataJson << ",\"timestamp\":" << ms << "}\n";
+}
+// #endregion agent log
 
 //=============================================================================
 // LAYER 1: LOW-LEVEL INPUT INJECTOR
@@ -674,6 +693,22 @@ public:
   void tick() {
     if (finished_ || commands_.empty()) return;
     frame_count_++;
+
+    // #region agent log
+    if (frame_count_ == 1 || (frame_count_ % 120 == 0)) {
+      std::ostringstream data;
+      data << "{\"frameCount\":" << frame_count_
+           << ",\"index\":" << index_
+           << ",\"waitFrames\":" << wait_frames_
+           << ",\"pendingRelease\":"
+           << (pending_release_ ? "true" : "false")
+           << ",\"commands\":" << commands_.size()
+           << ",\"timeout\":" << timeout_
+           << ",\"finished\":" << (finished_ ? "true" : "false") << "}";
+      debug_log("e2e_testing.h:686", "Tick state", "H3", "e2e-hang-pre",
+                data.str());
+    }
+    // #endregion agent log
     
     // Timeout check
     if (timeout_ > 0 && (frame_count_ - script_start_) > timeout_) {
@@ -681,6 +716,16 @@ public:
       ScriptError err; err.command = "timeout";
       err.message = "Timed out after " + std::to_string(timeout_) + " frames";
       errors_.push_back(err);
+      // #region agent log
+      {
+        std::ostringstream data;
+        data << "{\"frameCount\":" << frame_count_
+             << ",\"scriptStart\":" << script_start_
+             << ",\"timeout\":" << timeout_ << "}";
+        debug_log("e2e_testing.h:699", "Runner timeout", "H4", "e2e-hang-pre",
+                  data.str());
+      }
+      // #endregion agent log
       return;
     }
     
