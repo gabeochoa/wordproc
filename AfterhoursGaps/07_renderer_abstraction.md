@@ -410,6 +410,72 @@ struct RenderCommandBuffer {
 | `AFTERHOURS_USE_SOKOL` + `SOKOL_WGPU` | WebGPU | Browser (native WebGPU), Dawn |
 | `AFTERHOURS_USE_HEADLESS` | No-op | Any (for testing) |
 
+## Missing from GraphicsBackend Concept: Clipping & Matrix Operations
+
+The `GraphicsBackend` concept above is missing scissor/clipping and matrix operations 
+required by **08_scrollable_containers.md** for scroll container rendering.
+
+**Add to the concept:**
+
+```cpp
+template<typename T>
+concept GraphicsBackend = requires(T t, T const ct,
+    /* ...existing parameters... */
+    Rectangle clip_rect,
+    float tx, float ty) 
+{
+  // ... existing requirements ...
+  
+  // Clipping support (for scroll containers, modals)
+  { t.begin_scissor_mode(clip_rect) } -> std::same_as<void>;
+  { t.end_scissor_mode() } -> std::same_as<void>;
+  
+  // Matrix operations (for scroll content translation)
+  { t.push_matrix() } -> std::same_as<void>;
+  { t.pop_matrix() } -> std::same_as<void>;
+  { t.translate(tx, ty) } -> std::same_as<void>;
+};
+```
+
+**Add to `graphics.h` free functions:**
+
+```cpp
+inline void BeginScissorMode(Rectangle r) { 
+  detail::g_backend.begin_scissor_mode(r); 
+}
+inline void EndScissorMode() { 
+  detail::g_backend.end_scissor_mode(); 
+}
+inline void PushMatrix() { detail::g_backend.push_matrix(); }
+inline void PopMatrix() { detail::g_backend.pop_matrix(); }
+inline void Translate(float x, float y) { detail::g_backend.translate(x, y); }
+```
+
+**Raylib backend implementation:**
+
+```cpp
+struct RaylibBackend {
+  // ...existing...
+  
+  void begin_scissor_mode(Rectangle rect) {
+    raylib::BeginScissorMode(
+      static_cast<int>(rect.x), static_cast<int>(rect.y),
+      static_cast<int>(rect.width), static_cast<int>(rect.height));
+  }
+  
+  void end_scissor_mode() { raylib::EndScissorMode(); }
+  
+  void push_matrix() { raylib::rlPushMatrix(); }
+  void pop_matrix() { raylib::rlPopMatrix(); }
+  void translate(float x, float y) { raylib::rlTranslatef(x, y, 0.f); }
+};
+```
+
+## Related Gaps
+
+- **08_scrollable_containers.md** - Primary consumer of scissor/clipping API
+- **09_modal_dialogs.md** - Modals may use scissor for backdrop clipping
+
 ## Notes
 - **Zero overhead** with concepts: no virtual dispatch, no heap allocation, all calls inline
 - **Header-only**: The entire abstraction can live in headers, no `.cpp` needed

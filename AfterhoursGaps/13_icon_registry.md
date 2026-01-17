@@ -135,6 +135,127 @@ void draw_button(const std::string& action_id, const std::string& label) {
 }
 ```
 
+## Relationship to `image_button`
+
+Afterhours already has an `image_button` primitive in `imm_components.h`:
+
+```cpp
+inline ElementResult
+image_button(HasUIContext auto &ctx, EntityParent ep_pair,
+             afterhours::texture_manager::Texture texture,
+             afterhours::texture_manager::Rectangle source_rect,
+             ComponentConfig config = ComponentConfig()) {
+  // Adds HasImage + HasClickListener components
+  auto &img = entity.addComponentIfMissing<ui::HasImage>(texture, source_rect, alignment);
+  entity.addComponentIfMissing<HasClickListener>([](Entity &) {});
+  return ElementResult{entity.get<HasClickListener>().down, entity};
+}
+```
+
+### Are They the Same Thing?
+
+**No.** They serve different purposes at different abstraction layers:
+
+| Aspect | `image_button` | `IconRegistry` |
+|--------|---------------|----------------|
+| **Layer** | UI primitive (rendering) | Data management (lookup) |
+| **Purpose** | "Display this texture as clickable" | "What visual represents this action?" |
+| **Input** | Raw `Texture` + `Rectangle` | Icon ID → IconInfo |
+| **Text support** | None | Fallback symbols, labels |
+| **Mirroring** | Not handled | Paired icon relationships |
+| **Semantics** | None - just pixels | Full metadata (name, resource, fallback) |
+
+### Why Both Are Needed
+
+- `image_button` = **low-level primitive** for "how to render a clickable image"
+- `IconRegistry` = **data layer** for "what visual represents this action"
+
+They should **compose together** via a higher-level helper.
+
+## Proposed Composition: `icon_button`
+
+A new component that bridges both systems:
+
+```cpp
+// Higher-level component that uses IconRegistry + image_button
+inline ElementResult icon_button(
+    HasUIContext auto &ctx, 
+    EntityParent ep_pair,
+    const std::string& icon_id,  // Lookup from registry
+    const std::string& label,     // Always shown (design rule #3)
+    ComponentConfig config = ComponentConfig()) {
+  
+  auto [entity, parent] = deref(ep_pair);
+  auto icon = icons().get(icon_id);
+  
+  // Create a row container: [icon/symbol] [label]
+  auto container = div(ctx, ep_pair, 
+      ComponentConfig::inherit_from(config, "icon_button")
+          .with_flex_direction(FlexDirection::Row)
+          .with_gap(Spacing::xs));
+  
+  if (icon && !icon->resource_path.empty()) {
+    // Use sprite primitive for the icon portion
+    auto tex = load_texture(icon->resource_path);
+    Rectangle src = {0, 0, 
+        icon->is_mirrored ? -(float)tex.width : (float)tex.width, 
+        (float)tex.height};
+    sprite(ctx, mk(container.ent(), 0), tex, src,
+           ComponentConfig{}.with_size({pixels(16), pixels(16)}));
+  } else if (icon) {
+    // Fallback to text symbol
+    text(ctx, mk(container.ent(), 0), 
+         std::string(1, icon->fallback_symbol),
+         ComponentConfig{}.with_size({pixels(16), pixels(16)}));
+  }
+  
+  // Always show label
+  text(ctx, mk(container.ent(), 1), label, ComponentConfig{});
+  
+  // Make the whole container clickable
+  container.ent().addComponentIfMissing<HasClickListener>([](Entity&){});
+  
+  return ElementResult{container.ent().get<HasClickListener>().down, 
+                       container.ent()};
+}
+```
+
+### Composition Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     icon_button()                           │  ← High-level: action-aware
+│  Uses IconRegistry to resolve what to show                  │
+├─────────────────────────────────────────────────────────────┤
+│         ┌──────────────┐    ┌───────────────────┐          │
+│         │    sprite    │ OR │ text (fallback)   │          │  ← Low-level primitives
+│         │  (texture)   │    │  (text symbol)    │          │
+│         └──────────────┘    └───────────────────┘          │
+├─────────────────────────────────────────────────────────────┤
+│                      + text label                           │  ← Always present
+├─────────────────────────────────────────────────────────────┤
+│                   HasClickListener                          │  ← Interaction
+└─────────────────────────────────────────────────────────────┘
+```
+
+### When to Use Each
+
+| Component | Use Case |
+|-----------|----------|
+| `image_button` | Custom spritesheets, game-specific buttons, raw texture clicks |
+| `icon_button` | Toolbar buttons, menu items, any action with semantic meaning |
+| `IconRegistry` | Centralized icon data, fallback logic, mirrored pairs |
+
+## What Should Go Into Afterhours
+
+Two additions to the library:
+
+1. **`IconRegistry`** (data layer) - see `src/extracted/icon_registry.h`
+2. **`icon_button`** component - composes registry lookup with existing primitives
+
+This keeps `image_button` as the low-level primitive for raw texture clicks, while
+`icon_button` provides the higher-level semantic pattern for toolbars and menus.
+
 ## Design Principles
 
 1. **Icons are opt-in** - Add meaning that text cannot convey
@@ -143,4 +264,5 @@ void draw_button(const std::string& action_id, const std::string& label) {
 4. **Minimal detail** - Icons must be legible at 16x16
 5. **Paired actions mirror** - Undo/redo, indent/outdent, prev/next
 6. **Central registry** - Single source of truth prevents duplicates
+7. **Layered composition** - Registry (data) + primitives (rendering) = icon_button (semantic)
 

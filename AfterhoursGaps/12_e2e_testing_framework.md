@@ -79,6 +79,8 @@ screenshot menu_open
 | `click x y` | Click at position | `click 100 200` |
 | `double_click x y` | Double-click | `double_click 100 200` |
 | `drag x1 y1 x2 y2` | Drag mouse | `drag 10 10 100 100` |
+| `scroll delta` | Mouse wheel scroll | `scroll -3` |
+| `scroll_to x y` | Scroll to position | `scroll_to 0 500` |
 | `wait N` | Wait N frames | `wait 5` |
 | `validate prop=val` | Check property | `validate text=Hello` |
 | `expect_text "text"` | Check visible text | `expect_text "Save"` |
@@ -87,6 +89,44 @@ screenshot menu_open
 | `menu_select "item"` | Select menu item | `menu_select "Save"` |
 | `clear` | Reset document | `clear` |
 | `# comment` | Comment line | `# This is a comment` |
+
+### Scroll Commands (see 08_scrollable_containers.md)
+
+The `scroll` and `scroll_to` commands require mouse wheel injection from 
+**01_test_input_hooks.md**:
+
+```cpp
+case CommandType::Scroll: {
+  float delta = std::stof(cmd.args[0]);
+  test_input::scroll_wheel(delta);
+  break;
+}
+
+case CommandType::ScrollTo: {
+  float x = std::stof(cmd.args[0]);
+  float y = std::stof(cmd.args[1]);
+  // Find focused scroll container and set position
+  if (auto* scroll = get_focused_scroll_view()) {
+    scroll->scroll_to(x, y);
+  }
+  break;
+}
+```
+
+**Example scroll test:**
+```
+# Test: Scroll through long document
+type "Line 1\n"
+type "Line 2\n"
+# ... many lines ...
+wait 5
+scroll -10
+expect_text "Line 50"
+screenshot scrolled_down
+scroll 10
+expect_text "Line 1"
+screenshot scrolled_up
+```
 
 ### Input Injection
 Works at two levels:

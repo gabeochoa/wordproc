@@ -174,6 +174,57 @@ struct UIContext {
 This allows swapping input sources without macro hacks and enables
 per-context configuration.
 
+## Missing: Mouse Wheel Input
+
+The current API proposal is missing mouse wheel simulation, which is needed for 
+testing scrollable containers (see **08_scrollable_containers.md**).
+
+**Add to the API:**
+
+```cpp
+namespace afterhours::ui::test {
+
+// Existing API...
+void push_key(int keycode);
+void push_char(char32_t c);
+void set_mouse_position(float x, float y);
+void press_mouse_button(int button);
+void hold_mouse_button(int button);
+void release_mouse_button(int button);
+
+// NEW: Mouse wheel simulation
+void scroll_wheel(float delta);            // Vertical wheel
+void scroll_wheel_v(float dx, float dy);   // 2D trackpad scrolling
+
+}
+```
+
+**Internal state addition:**
+
+```cpp
+struct MouseState {
+  // ...existing members...
+  float wheel_delta = 0.f;
+  Vector2Type wheel_delta_v = {0.f, 0.f};
+  int frames_until_clear_wheel = 0;  // Same timing pattern as clicks
+};
+```
+
+**InputProvider interface extension:**
+
+```cpp
+struct InputProvider {
+  // ...existing...
+  virtual float get_mouse_wheel_move() = 0;
+  virtual Vector2 get_mouse_wheel_move_v() = 0;
+};
+```
+
+## Related Gaps
+
+- **08_scrollable_containers.md** - Scroll testing requires wheel input injection
+- **12_e2e_testing_framework.md** - E2E DSL needs `scroll` command using this API
+
 ## Notes
 
 - The current workaround requires careful coordination between E2E script
