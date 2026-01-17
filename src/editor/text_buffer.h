@@ -18,6 +18,7 @@ struct FindOptions {
     bool caseSensitive = false;
     bool wholeWord = false;
     bool wrapAround = true;
+    bool useRegex = false;
 };
 
 // Find result containing match position
@@ -130,6 +131,19 @@ struct LineSpan {
     
     // Page break
     bool hasPageBreakBefore = false;  // Insert page break before this line (Ctrl+Enter)
+
+    // Drop cap formatting
+    bool hasDropCap = false;
+    int dropCapLines = 2;  // Number of lines the drop cap spans
+};
+
+// Word count and document statistics
+struct TextStats {
+    std::size_t characters = 0;  // Excludes newlines
+    std::size_t words = 0;
+    std::size_t lines = 0;
+    std::size_t paragraphs = 0;
+    std::size_t sentences = 0;
 };
 
 // Gap buffer for efficient text editing
@@ -210,6 +224,7 @@ class TextBuffer {
     void insertText(const std::string& text);
     void setText(const std::string& text);
     std::string getText() const;
+    TextStats stats() const;
     TextStyle textStyle() const;
     void setTextStyle(const TextStyle& style);
     
@@ -276,6 +291,11 @@ class TextBuffer {
     bool hasPageBreakBefore(std::size_t row) const;  // Check if line has page break before it
     void togglePageBreak();  // Toggle page break before current line
     void clearPageBreak();   // Remove page break before current line
+
+    // Drop cap formatting
+    bool currentLineHasDropCap() const;
+    void setCurrentLineDropCap(bool enabled, int spanLines = 2);
+    void toggleCurrentLineDropCap();
     
     void backspace();
     void del();
@@ -425,6 +445,12 @@ class TextBuffer {
     void insertCharAt(CaretPosition pos, char ch);
     void deleteCharAt(CaretPosition pos);
     void insertTextAt(CaretPosition pos, const std::string& text);
+
+    // Offset/position helpers
+    std::size_t caretOffset() const;
+    std::size_t offsetForPosition(const CaretPosition& pos) const;
+    CaretPosition positionForOffset(std::size_t offset) const;
+    char charAtOffset(std::size_t offset) const;
 
    private:
     void ensureNonEmpty();

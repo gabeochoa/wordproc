@@ -7,20 +7,34 @@
 namespace menu_setup {
 
 // Create the standard Win95-style menu bar for the word processor
-inline std::vector<win95::Menu> createMenuBar() {
+inline std::vector<win95::Menu> createMenuBar(
+    const std::vector<std::string>& recentFiles = {}) {
     std::vector<win95::Menu> menus;
 
     // File menu
     win95::Menu fileMenu;
     fileMenu.label = "File";
-    fileMenu.items = {{"New", "Ctrl+N", true, false, nullptr},          // 0
-                      {"Open...", "Ctrl+O", true, false, nullptr},      // 1
-                      {"Save", "Ctrl+S", true, false, nullptr},         // 2
-                      {"Save As...", "", true, false, nullptr},         // 3
-                      {"", "", false, true, nullptr},                   // 4 Separator
-                      {"Page Setup...", "", true, false, nullptr},      // 5
-                      {"", "", false, true, nullptr},                   // 6 Separator
-                      {"Exit", "Alt+F4", true, false, nullptr}};        // 7
+    fileMenu.items = {{"New", "Ctrl+N", true, false, nullptr},              // 0
+                      {"New from Template...", "", true, false, nullptr},  // 1
+                      {"Open...", "Ctrl+O", true, false, nullptr},          // 2
+                      {"Save", "Ctrl+S", true, false, nullptr},             // 3
+                      {"Save As...", "", true, false, nullptr},             // 4
+                      {"", "", false, true, nullptr},                       // 5 Separator
+                      {"Export PDF...", "", true, false, nullptr},          // 6
+                      {"Export HTML...", "", true, false, nullptr},         // 7
+                      {"Export RTF...", "", true, false, nullptr},          // 8
+                      {"", "", false, true, nullptr},                       // 9 Separator
+                      {"Page Setup...", "", true, false, nullptr},          // 10
+                      {"", "", false, true, nullptr}};                      // 11 Separator
+
+    if (!recentFiles.empty()) {
+        for (const auto& path : recentFiles) {
+            fileMenu.items.push_back({"Recent: " + path, "", true, false, nullptr});
+        }
+        fileMenu.items.push_back({"", "", false, true, nullptr});  // Separator
+    }
+
+    fileMenu.items.push_back({"Exit", "Alt+F4", true, false, nullptr});  // Last
     menus.push_back(fileMenu);
 
     // Edit menu
@@ -29,18 +43,22 @@ inline std::vector<win95::Menu> createMenuBar() {
     editMenu.items = {{"Undo", "Ctrl+Z", true, false, nullptr},           // 0
                       {"Redo", "Ctrl+Y", true, false, nullptr},           // 1
                       {"", "", false, true, nullptr},                     // 2 Separator
-                      {"Cut", "Ctrl+X", true, false, nullptr},            // 3
-                      {"Copy", "Ctrl+C", true, false, nullptr},           // 4
-                      {"Paste", "Ctrl+V", true, false, nullptr},          // 5
+                      {"Track Changes", "", true, false, nullptr},        // 3
+                      {"Accept All Changes", "", true, false, nullptr},   // 4
+                      {"Reject All Changes", "", true, false, nullptr},   // 5
                       {"", "", false, true, nullptr},                     // 6 Separator
-                      {"Select All", "Ctrl+A", true, false, nullptr},     // 7
-                      {"", "", false, true, nullptr},                     // 8 Separator
-                      {"Find...", "Ctrl+F", true, false, nullptr},        // 9
-                      {"Find Next", "F3", true, false, nullptr},          // 10
-                      {"Find Previous", "Shift+F3", true, false, nullptr},// 11
-                      {"Replace...", "Ctrl+H", true, false, nullptr},     // 12
-                      {"", "", false, true, nullptr},                     // 13 Separator
-                      {"Go To Bookmark...", "", true, false, nullptr}};   // 14
+                      {"Cut", "Ctrl+X", true, false, nullptr},            // 7
+                      {"Copy", "Ctrl+C", true, false, nullptr},           // 8
+                      {"Paste", "Ctrl+V", true, false, nullptr},          // 9
+                      {"", "", false, true, nullptr},                     // 10 Separator
+                      {"Select All", "Ctrl+A", true, false, nullptr},     // 11
+                      {"", "", false, true, nullptr},                     // 12 Separator
+                      {"Find...", "Ctrl+F", true, false, nullptr},        // 13
+                      {"Find Next", "F3", true, false, nullptr},          // 14
+                      {"Find Previous", "Shift+F3", true, false, nullptr},// 15
+                      {"Replace...", "Ctrl+H", true, false, nullptr},     // 16
+                      {"", "", false, true, nullptr},                     // 17 Separator
+                      {"Go To Bookmark...", "", true, false, nullptr}};   // 18
     menus.push_back(editMenu);
 
     // View menu
@@ -49,12 +67,20 @@ inline std::vector<win95::Menu> createMenuBar() {
     viewMenu.items = {{"Pageless Mode", "", true, false, nullptr},       // 0
                       {"Paged Mode", "", true, false, nullptr},          // 1
                       {"", "", false, true, nullptr},                    // 2 Separator
-                      {"Line Width: Normal", "", true, false, nullptr},  // 3
-                      {"Line Width: Narrow", "", true, false, nullptr},  // 4
-                      {"Line Width: Wide", "", true, false, nullptr},    // 5
+                      {"Zoom In", "Ctrl+Alt+=", true, false, nullptr},   // 3
+                      {"Zoom Out", "Ctrl+Alt+-", true, false, nullptr},  // 4
+                      {"Zoom Reset", "Ctrl+Alt+0", true, false, nullptr},// 5
                       {"", "", false, true, nullptr},                    // 6 Separator
-                      {"Show Line Numbers", "", true, false, nullptr},   // 7
-                      {"Show Outline", "", true, false, nullptr}};       // 8
+                      {"Focus Mode", "F11", true, false, nullptr},       // 7
+                      {"Split View", "", true, false, nullptr},          // 8
+                      {"Dark Mode", "", true, false, nullptr},           // 9
+                      {"", "", false, true, nullptr},                    // 10 Separator
+                      {"Line Width: Normal", "", true, false, nullptr},  // 11
+                      {"Line Width: Narrow", "", true, false, nullptr},  // 12
+                      {"Line Width: Wide", "", true, false, nullptr},    // 13
+                      {"", "", false, true, nullptr},                    // 14 Separator
+                      {"Show Line Numbers", "", true, false, nullptr},   // 15
+                      {"Show Outline", "", true, false, nullptr}};       // 16
     menus.push_back(viewMenu);
 
     // Format menu
@@ -77,6 +103,8 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Italic", "Ctrl+I", true, false, nullptr},
         {"Underline", "Ctrl+U", true, false, nullptr},
         {"Strikethrough", "Ctrl+Shift+S", true, false, nullptr},
+        {"Superscript", "Ctrl+Shift+=", true, false, nullptr},
+        {"Subscript", "Ctrl+Shift+-", true, false, nullptr},
         {"", "", false, true, nullptr},  // Separator (14)
         // Text color and highlight dialogs
         {"Text Color...", "", true, false, nullptr},
@@ -139,7 +167,10 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Increase Space Before", "Ctrl+Alt+Up", true, false, nullptr},
         {"Decrease Space Before", "Ctrl+Alt+Down", true, false, nullptr},
         {"Increase Space After", "Ctrl+Shift+Alt+Up", true, false, nullptr},
-        {"Decrease Space After", "Ctrl+Shift+Alt+Down", true, false, nullptr}
+        {"Decrease Space After", "Ctrl+Shift+Alt+Down", true, false, nullptr},
+        {"", "", false, true, nullptr},  // Separator
+        {"Drop Cap", "", true, false, nullptr},
+        {"Tab Width...", "", true, false, nullptr}
     };
     menus.push_back(formatMenu);
 
@@ -153,7 +184,8 @@ inline std::vector<win95::Menu> createMenuBar() {
         {"Hyperlink...", "Ctrl+K", true, false, nullptr},        // 3
         {"Remove Hyperlink", "", true, false, nullptr},          // 4
         {"Bookmark...", "", true, false, nullptr},               // 5
-        {"", "", false, true, nullptr},                          // 6 Separator
+        {"Comment...", "", true, false, nullptr},                // 6
+        {"", "", false, true, nullptr},                          // 7 Separator
         {"Table...", "", true, false, nullptr},                  // 7
         {"", "", false, true, nullptr},                          // 8 Separator
         {"Image...", "", true, false, nullptr},                  // 9
@@ -208,6 +240,12 @@ inline std::vector<win95::Menu> createMenuBar() {
                       {"", "", false, true, nullptr},  // Separator
                       {"About Wordproc", "", true, false, nullptr}};
     menus.push_back(helpMenu);
+
+    // Tools menu
+    win95::Menu toolsMenu;
+    toolsMenu.label = "Tools";
+    toolsMenu.items = {{"Word Count...", "", true, false, nullptr}};
+    menus.push_back(toolsMenu);
 
     return menus;
 }

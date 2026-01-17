@@ -5,6 +5,8 @@
 #include <afterhours/src/singleton.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 struct S_Data;
 
@@ -36,4 +38,9 @@ struct Settings {
     // Auto-save support: when enabled, settings are written after each change
     bool auto_save_enabled = true;
     void save_if_auto();  // Call write_save_file() if auto_save_enabled
+
+    // Recent files
+    const std::vector<std::string>& get_recent_files() const;
+    void add_recent_file(const std::string& path);
+    void clear_recent_files();
 };

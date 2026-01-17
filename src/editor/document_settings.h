@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <ctime>
 #include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <vector>
@@ -288,10 +289,34 @@ struct TextStyle {
     bool italic = false;
     bool underline = false;
     bool strikethrough = false;
+    bool superscript = false;
+    bool subscript = false;
     std::string font = "Gaegu-Bold";
     int fontSize = 16;  // Default size in pixels
     TextColor textColor = TextColors::Black;  // Text color (default black)
     TextColor highlightColor = HighlightColors::None;  // Highlight/background color (default none)
+};
+
+// Comment/annotation on a text range
+struct Comment {
+    std::size_t startOffset = 0;
+    std::size_t endOffset = 0;
+    std::string author;
+    std::string text;
+    std::time_t createdAt = 0;
+};
+
+// Track changes revisions
+enum class RevisionType {
+    Insert,
+    Delete
+};
+
+struct Revision {
+    RevisionType type = RevisionType::Insert;
+    std::size_t startOffset = 0;
+    std::string text;
+    std::time_t timestamp = 0;
 };
 
 // Page layout mode
@@ -610,6 +635,10 @@ struct DocumentSettings {
     HeaderFooter header;    // Document header configuration
     HeaderFooter footer;    // Document footer configuration
     Watermark watermark;    // Document watermark configuration
+
+    // Text input options
+    bool smartQuotesEnabled = true;
+    int tabWidth = 4;
 
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed

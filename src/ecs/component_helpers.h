@@ -64,16 +64,19 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
     layout.screenWidth = w;
     layout.screenHeight = h;
 
+    float menuHeight = layout.focusMode ? 0.0f : layout.menuBarHeight;
+    float statusHeight = layout.focusMode ? 0.0f : layout.statusBarHeight;
+
     layout.titleBar = {0, 0, static_cast<float>(w), layout.titleBarHeight};
     layout.menuBar = {0, layout.titleBarHeight, static_cast<float>(w),
-                      layout.menuBarHeight};
-    layout.statusBar = {0, static_cast<float>(h - layout.statusBarHeight),
-                        static_cast<float>(w), layout.statusBarHeight};
+                      menuHeight};
+    layout.statusBar = {0, static_cast<float>(h - statusHeight),
+                        static_cast<float>(w), statusHeight};
 
     float textTop =
-        layout.titleBarHeight + layout.menuBarHeight + layout.borderWidth;
+        layout.titleBarHeight + menuHeight + layout.borderWidth;
     float textHeight = static_cast<float>(h) - layout.titleBarHeight -
-                       layout.menuBarHeight - layout.statusBarHeight -
+                       menuHeight - statusHeight -
                        2 * layout.borderWidth;
     layout.textArea = {layout.borderWidth, textTop,
                        static_cast<float>(w) - 2 * layout.borderWidth,

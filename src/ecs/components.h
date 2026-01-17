@@ -29,6 +29,7 @@ struct ScrollComponent : public afterhours::BaseComponent {
     int offset = 0;         // Scroll offset in lines
     int visibleLines = 20;  // Number of visible lines
     int maxScroll = 0;      // Maximum scroll value
+    int secondaryOffset = 0;  // Secondary scroll offset for split view
 };
 
 // Component for document state
@@ -40,6 +41,18 @@ struct DocumentComponent : public afterhours::BaseComponent {
     // Document settings (saved with the document file, not with app settings)
     // This includes text style, page mode, margins, etc.
     DocumentSettings docSettings;
+
+    // Comments and revisions
+    std::vector<Comment> comments;
+    std::vector<Revision> revisions;
+    bool trackChangesEnabled = false;
+    std::string trackChangesBaseline;
+
+    // Auto-save state
+    bool autoSaveEnabled = true;
+    double lastAutoSaveTime = 0.0;
+    double autoSaveIntervalSeconds = 60.0;
+    std::string autoSavePath = "output/autosave.wpdoc";
 
     // Tables embedded in the document (indexed by position in text)
     // Each table is associated with a line number where it appears
@@ -143,6 +156,7 @@ struct MenuComponent : public afterhours::BaseComponent {
     bool showAboutDialog = false;
     bool showHelpWindow = false;  // Keybindings help window
     int helpScrollOffset = 0;     // Scroll position in help window
+    int recentFilesCount = 0;     // Cache count for menu refresh
     
     // Consume the clicked result (returns it and clears it)
     int consumeClickedResult() {
@@ -159,6 +173,23 @@ struct MenuComponent : public afterhours::BaseComponent {
     FindOptions findOptions;       // Case sensitive, whole word, wrap around
     char findInputBuffer[256] = {0};
     char replaceInputBuffer[256] = {0};
+
+    // Word count dialog
+    bool showWordCountDialog = false;
+
+    // Comment dialog
+    bool showCommentDialog = false;
+    std::size_t pendingCommentStart = 0;
+    std::size_t pendingCommentEnd = 0;
+    char commentInputBuffer[256] = {0};
+
+    // Template selection dialog
+    bool showTemplateDialog = false;
+    char templateInputBuffer[128] = {0};
+
+    // Tab width dialog
+    bool showTabWidthDialog = false;
+    char tabWidthInputBuffer[16] = {0};
     
     // Page Setup dialog state
     bool showPageSetup = false;
@@ -182,6 +213,12 @@ struct LayoutComponent : public afterhours::BaseComponent {
     float statusBarHeight = 18.0f;
     float borderWidth = 2.0f;
     float textPadding = 4.0f;
+
+    // View options
+    float zoomLevel = 1.0f;
+    bool focusMode = false;
+    bool splitViewEnabled = false;
+    bool splitViewHorizontal = true;
 
     // Page mode settings
     PageMode pageMode =

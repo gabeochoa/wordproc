@@ -2,6 +2,7 @@
 
 #include <afterhours/src/plugins/files.h>
 
+#include <algorithm>
 #include <memory>
 #include <nlohmann/json.hpp>
 
@@ -16,6 +17,7 @@ struct S_Data {
     };
 
     bool fullscreen_enabled = false;
+    std::vector<std::string> recent_files;
 
     std::filesystem::path loaded_from;
 };
@@ -39,12 +41,16 @@ void to_json(nlohmann::json &j, const S_Data &data) {
     to_json(rez_j, data.resolution);
     j["resolution"] = rez_j;
     j["fullscreen_enabled"] = data.fullscreen_enabled;
+    j["recent_files"] = data.recent_files;
 }
 
 void from_json(const nlohmann::json &j, S_Data &data) {
     from_json(j.at("resolution"), data.resolution);
     if (j.contains("fullscreen_enabled")) {
         data.fullscreen_enabled = j.at("fullscreen_enabled");
+    }
+    if (j.contains("recent_files")) {
+        data.recent_files = j.at("recent_files").get<std::vector<std::string>>();
     }
 }
 
@@ -88,6 +94,30 @@ void Settings::save_if_auto() {
 }
 
 bool &Settings::get_fullscreen_enabled() { return data->fullscreen_enabled; }
+
+const std::vector<std::string>& Settings::get_recent_files() const {
+    return data->recent_files;
+}
+
+void Settings::add_recent_file(const std::string& path) {
+    if (path.empty()) return;
+    // Remove duplicates
+    data->recent_files.erase(
+        std::remove(data->recent_files.begin(), data->recent_files.end(), path),
+        data->recent_files.end());
+    // Insert at front
+    data->recent_files.insert(data->recent_files.begin(), path);
+    // Keep last 10
+    if (data->recent_files.size() > 10) {
+        data->recent_files.resize(10);
+    }
+    save_if_auto();
+}
+
+void Settings::clear_recent_files() {
+    data->recent_files.clear();
+    save_if_auto();
+}
 
 bool Settings::load_save_file(int width, int height) {
     this->data->resolution.width = width;

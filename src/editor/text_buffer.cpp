@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <regex>
 
 // ============================================================================
 // GapBuffer implementation
@@ -355,34 +356,76 @@ CaretPosition TextBuffer::offsetToPosition(std::size_t offset) const {
 }
 
 void TextBuffer::rebuildLineIndex() {
-  // Preserve existing line styles by offset before clearing
-  std::vector<std::pair<std::size_t, ParagraphStyle>> savedStyles;
+  struct LineMetaSnapshot {
+    std::size_t offset = 0;
+    ParagraphStyle style = ParagraphStyle::Normal;
+    TextAlignment alignment = TextAlignment::Left;
+    int leftIndent = 0;
+    int firstLineIndent = 0;
+    float lineSpacing = 1.0f;
+    int spaceBefore = 0;
+    int spaceAfter = 0;
+    ListType listType = ListType::None;
+    int listLevel = 0;
+    int listNumber = 1;
+    bool hasPageBreakBefore = false;
+    bool hasDropCap = false;
+    int dropCapLines = 2;
+  };
+
+  std::vector<LineMetaSnapshot> savedMeta;
+  savedMeta.reserve(line_spans_.size());
   for (const auto& span : line_spans_) {
-    if (span.style != ParagraphStyle::Normal) {
-      savedStyles.push_back({span.offset, span.style});
-    }
+    LineMetaSnapshot snapshot;
+    snapshot.offset = span.offset;
+    snapshot.style = span.style;
+    snapshot.alignment = span.alignment;
+    snapshot.leftIndent = span.leftIndent;
+    snapshot.firstLineIndent = span.firstLineIndent;
+    snapshot.lineSpacing = span.lineSpacing;
+    snapshot.spaceBefore = span.spaceBefore;
+    snapshot.spaceAfter = span.spaceAfter;
+    snapshot.listType = span.listType;
+    snapshot.listLevel = span.listLevel;
+    snapshot.listNumber = span.listNumber;
+    snapshot.hasPageBreakBefore = span.hasPageBreakBefore;
+    snapshot.hasDropCap = span.hasDropCap;
+    snapshot.dropCapLines = span.dropCapLines;
+    savedMeta.push_back(snapshot);
   }
-  
+
   line_spans_.clear();
-  
+
   std::size_t total = chars_.size();
   std::size_t line_start = 0;
-  
+
   for (std::size_t i = 0; i < total; ++i) {
     if (chars_.at(i) == '\n') {
       line_spans_.push_back({line_start, i - line_start});
       line_start = i + 1;
     }
   }
-  
+
   // Add final line (may be empty)
   line_spans_.push_back({line_start, total - line_start});
-  
-  // Restore styles based on line start offsets
-  for (const auto& [offset, style] : savedStyles) {
+
+  // Restore metadata based on line start offsets
+  for (const auto& snapshot : savedMeta) {
     for (auto& span : line_spans_) {
-      if (span.offset == offset) {
-        span.style = style;
+      if (span.offset == snapshot.offset) {
+        span.style = snapshot.style;
+        span.alignment = snapshot.alignment;
+        span.leftIndent = snapshot.leftIndent;
+        span.firstLineIndent = snapshot.firstLineIndent;
+        span.lineSpacing = snapshot.lineSpacing;
+        span.spaceBefore = snapshot.spaceBefore;
+        span.spaceAfter = snapshot.spaceAfter;
+        span.listType = snapshot.listType;
+        span.listLevel = snapshot.listLevel;
+        span.listNumber = snapshot.listNumber;
+        span.hasPageBreakBefore = snapshot.hasPageBreakBefore;
+        span.hasDropCap = snapshot.hasDropCap;
+        span.dropCapLines = snapshot.dropCapLines;
         break;
       }
     }
@@ -499,6 +542,40 @@ void TextBuffer::setText(const std::string& text) {
 }
 
 std::string TextBuffer::getText() const { return chars_.toString(); }
+
+TextStats TextBuffer::stats() const {
+    TextStats stats;
+    std::string text = getText();
+    stats.lines = line_spans_.size();
+
+    bool inWord = false;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        char ch = text[i];
+        if (ch != '\n') {
+            stats.characters++;
+        }
+        if (std::isalnum(static_cast<unsigned char>(ch))) {
+            if (!inWord) {
+                stats.words++;
+                inWord = true;
+            }
+        } else {
+            inWord = false;
+        }
+        if (ch == '.' || ch == '!' || ch == '?') {
+            stats.sentences++;
+        }
+    }
+
+    // Paragraphs: count non-empty lines
+    for (const auto& span : line_spans_) {
+        if (span.length > 0) {
+            stats.paragraphs++;
+        }
+    }
+
+    return stats;
+}
 
 TextStyle TextBuffer::textStyle() const { return style_; }
 
@@ -816,6 +893,29 @@ void TextBuffer::clearPageBreak() {
     if (caret_.row < line_spans_.size()) {
         line_spans_[caret_.row].hasPageBreakBefore = false;
         version_++;  // Content changed - invalidate render cache
+    }
+}
+
+bool TextBuffer::currentLineHasDropCap() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].hasDropCap;
+    }
+    return false;
+}
+
+void TextBuffer::setCurrentLineDropCap(bool enabled, int spanLines) {
+    ensureNonEmpty();
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].hasDropCap = enabled;
+        line_spans_[caret_.row].dropCapLines = std::max(2, spanLines);
+        version_++;  // Invalidate render cache
+    }
+}
+
+void TextBuffer::toggleCurrentLineDropCap() {
+    if (caret_.row < line_spans_.size()) {
+        bool enabled = !line_spans_[caret_.row].hasDropCap;
+        setCurrentLineDropCap(enabled, line_spans_[caret_.row].dropCapLines);
     }
 }
 
@@ -1352,6 +1452,25 @@ void TextBuffer::insertTextAt(CaretPosition pos, const std::string& text) {
     recordingHistory_ = true;
 }
 
+std::size_t TextBuffer::caretOffset() const {
+    return positionToOffset(caret_);
+}
+
+std::size_t TextBuffer::offsetForPosition(const CaretPosition& pos) const {
+    return positionToOffset(pos);
+}
+
+CaretPosition TextBuffer::positionForOffset(std::size_t offset) const {
+    return offsetToPosition(offset);
+}
+
+char TextBuffer::charAtOffset(std::size_t offset) const {
+    if (offset >= chars_.size()) {
+        return '\0';
+    }
+    return chars_.at(offset);
+}
+
 // ============================================================================
 // Find and Replace
 // ============================================================================
@@ -1376,11 +1495,55 @@ static bool isWordBoundary(const std::string& text, std::size_t pos, bool atStar
     }
 }
 
+static bool regexFindForward(const std::string& text, const std::string& pattern,
+                             std::size_t startOffset, bool wrapAround,
+                             bool caseSensitive, std::size_t& outStart,
+                             std::size_t& outLen) {
+    std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+    if (!caseSensitive) {
+        flags |= std::regex_constants::icase;
+    }
+    std::regex re(pattern, flags);
+
+    auto searchFrom = [&](std::size_t offset) -> bool {
+        if (offset > text.size()) return false;
+        std::cmatch match;
+        const char* startPtr = text.c_str() + offset;
+        if (std::regex_search(startPtr, text.c_str() + text.size(), match, re)) {
+            outStart = offset + static_cast<std::size_t>(match.position());
+            outLen = static_cast<std::size_t>(match.length());
+            return true;
+        }
+        return false;
+    };
+
+    if (searchFrom(startOffset)) {
+        return true;
+    }
+    if (wrapAround && startOffset > 0) {
+        return searchFrom(0);
+    }
+    return false;
+}
+
 FindResult TextBuffer::find(const std::string& needle, const FindOptions& options) const {
     if (needle.empty()) return {false, {0, 0}, {0, 0}};
     
     std::string text = getText();
     std::size_t startOffset = positionToOffset(caret_);
+
+    if (options.useRegex) {
+        std::string pattern = options.wholeWord ? ("\\b(?:" + needle + ")\\b") : needle;
+        std::size_t matchStart = 0;
+        std::size_t matchLen = 0;
+        if (regexFindForward(text, pattern, startOffset, options.wrapAround,
+                             options.caseSensitive, matchStart, matchLen)) {
+            CaretPosition start = offsetToPosition(matchStart);
+            CaretPosition end = offsetToPosition(matchStart + matchLen);
+            return {true, start, end};
+        }
+        return {false, {0, 0}, {0, 0}};
+    }
     
     // Search forward from caret position
     for (std::size_t i = startOffset; i + needle.length() <= text.length(); ++i) {
@@ -1445,6 +1608,19 @@ FindResult TextBuffer::findNext(const std::string& needle, const FindOptions& op
     if (startOffset < text.length()) {
         startOffset++;
     }
+
+    if (options.useRegex) {
+        std::string pattern = options.wholeWord ? ("\\b(?:" + needle + ")\\b") : needle;
+        std::size_t matchStart = 0;
+        std::size_t matchLen = 0;
+        if (regexFindForward(text, pattern, startOffset, options.wrapAround,
+                             options.caseSensitive, matchStart, matchLen)) {
+            CaretPosition start = offsetToPosition(matchStart);
+            CaretPosition end = offsetToPosition(matchStart + matchLen);
+            return {true, start, end};
+        }
+        return {false, {0, 0}, {0, 0}};
+    }
     
     // Search forward
     for (std::size_t i = startOffset; i + needle.length() <= text.length(); ++i) {
@@ -1499,6 +1675,46 @@ FindResult TextBuffer::findPrevious(const std::string& needle, const FindOptions
     std::string text = getText();
     std::size_t endOffset = positionToOffset(caret_);
     if (endOffset > 0) endOffset--;  // Start before current position
+
+    if (options.useRegex) {
+        std::string pattern = options.wholeWord ? ("\\b(?:" + needle + ")\\b") : needle;
+        std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+        if (!options.caseSensitive) {
+            flags |= std::regex_constants::icase;
+        }
+        std::regex re(pattern, flags);
+
+        std::size_t matchStart = std::string::npos;
+        std::size_t matchLen = 0;
+        for (std::sregex_iterator it(text.begin(), text.end(), re), end; it != end; ++it) {
+            std::size_t pos = static_cast<std::size_t>(it->position());
+            if (pos <= endOffset) {
+                matchStart = pos;
+                matchLen = static_cast<std::size_t>(it->length());
+            } else {
+                break;
+            }
+        }
+        if (matchStart != std::string::npos) {
+            CaretPosition start = offsetToPosition(matchStart);
+            CaretPosition end = offsetToPosition(matchStart + matchLen);
+            return {true, start, end};
+        }
+        if (options.wrapAround) {
+            std::size_t lastStart = std::string::npos;
+            std::size_t lastLen = 0;
+            for (std::sregex_iterator it(text.begin(), text.end(), re), end; it != end; ++it) {
+                lastStart = static_cast<std::size_t>(it->position());
+                lastLen = static_cast<std::size_t>(it->length());
+            }
+            if (lastStart != std::string::npos) {
+                CaretPosition start = offsetToPosition(lastStart);
+                CaretPosition end = offsetToPosition(lastStart + lastLen);
+                return {true, start, end};
+            }
+        }
+        return {false, {0, 0}, {0, 0}};
+    }
     
     // Search backward
     for (std::size_t i = endOffset; i != static_cast<std::size_t>(-1); --i) {
@@ -1555,6 +1771,23 @@ std::vector<FindResult> TextBuffer::findAll(const std::string& needle, const Fin
     if (needle.empty()) return results;
     
     std::string text = getText();
+
+    if (options.useRegex) {
+        std::string pattern = options.wholeWord ? ("\\b(?:" + needle + ")\\b") : needle;
+        std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+        if (!options.caseSensitive) {
+            flags |= std::regex_constants::icase;
+        }
+        std::regex re(pattern, flags);
+        for (std::sregex_iterator it(text.begin(), text.end(), re), end; it != end; ++it) {
+            std::size_t pos = static_cast<std::size_t>(it->position());
+            std::size_t len = static_cast<std::size_t>(it->length());
+            CaretPosition start = offsetToPosition(pos);
+            CaretPosition endPos = offsetToPosition(pos + len);
+            results.push_back({true, start, endPos});
+        }
+        return results;
+    }
     
     for (std::size_t i = 0; i + needle.length() <= text.length(); ++i) {
         bool match = true;
@@ -1585,7 +1818,24 @@ bool TextBuffer::replace(const std::string& needle, const std::string& replaceme
     
     // Check if selection matches needle
     std::string selected = getSelectedText();
-    
+
+    if (options.useRegex) {
+        std::string pattern = options.wholeWord ? ("\\b(?:" + needle + ")\\b") : needle;
+        std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+        if (!options.caseSensitive) {
+            flags |= std::regex_constants::icase;
+        }
+        std::regex re(pattern, flags);
+        if (!std::regex_match(selected, re)) {
+            return false;
+        }
+        deleteSelection();
+        std::string replaced = std::regex_replace(selected, re, replacement,
+                                                  std::regex_constants::format_first_only);
+        insertText(replaced);
+        return true;
+    }
+
     bool matches = (selected.length() == needle.length());
     if (matches) {
         for (std::size_t i = 0; i < needle.length() && matches; ++i) {
@@ -1594,7 +1844,6 @@ bool TextBuffer::replace(const std::string& needle, const std::string& replaceme
             }
         }
     }
-    
     if (!matches) return false;
     
     // Delete selection and insert replacement
@@ -1621,8 +1870,22 @@ std::size_t TextBuffer::replaceAll(const std::string& needle, const std::string&
         updateSelectionToCaret();
         
         // Replace
+        std::string selected = getSelectedText();
         deleteSelection();
-        insertText(replacement);
+        if (options.useRegex) {
+            std::string pattern = options.wholeWord ? ("\\b(?:" + needle + ")\\b") : needle;
+            std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+            if (!options.caseSensitive) {
+                flags |= std::regex_constants::icase;
+            }
+            std::regex re(pattern, flags);
+            std::string replaced =
+                std::regex_replace(selected, re, replacement,
+                                   std::regex_constants::format_first_only);
+            insertText(replaced);
+        } else {
+            insertText(replacement);
+        }
         count++;
     }
     
