@@ -1,0 +1,15 @@
+# Test: Dark mode toggle
+# Validates dark mode can be toggled on and off
+
+menu_open View
+menu_select "Dark Mode"
+wait 1
+validate dark_mode=true
+
+menu_open View
+menu_select "Dark Mode"
+wait 1
+validate dark_mode=false
+
+screenshot e2e_dark_mode
+

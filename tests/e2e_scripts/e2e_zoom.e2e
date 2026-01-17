@@ -1,0 +1,15 @@
+# Test: Zoom controls
+# Validates zoom in/out/reset updates zoom level
+
+menu_open View
+menu_select "Zoom In"
+wait 1
+validate zoom_level=110
+
+menu_open View
+menu_select "Zoom Reset"
+wait 1
+validate zoom_level=100
+
+screenshot e2e_zoom
+

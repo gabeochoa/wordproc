@@ -1,0 +1,13 @@
+# Test: Drop caps
+# Validates drop cap toggle on the current line
+
+type "Hello"
+wait 1
+
+menu_open Format
+menu_select "Drop Cap"
+wait 1
+validate drop_cap=true
+
+screenshot e2e_drop_caps
+

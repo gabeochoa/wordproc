@@ -1,0 +1,14 @@
+# Test: Tab width setting
+# Validates tab width dialog updates document settings
+
+menu_open Format
+menu_select "Tab Width..."
+wait 1
+type "6"
+key ENTER
+wait 1
+
+validate tab_width=6
+
+screenshot e2e_tab_width
+

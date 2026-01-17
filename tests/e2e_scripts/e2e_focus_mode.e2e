@@ -1,0 +1,15 @@
+# Test: Focus mode
+# Validates focus mode toggle
+
+menu_open View
+menu_select "Focus Mode"
+wait 1
+validate focus_mode=true
+
+menu_open View
+menu_select "Focus Mode"
+wait 1
+validate focus_mode=false
+
+screenshot e2e_focus_mode
+

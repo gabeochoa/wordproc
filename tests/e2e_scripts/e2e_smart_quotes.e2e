@@ -1,0 +1,10 @@
+# Test: Smart quotes
+# Validates straight quotes are converted to curly quotes
+
+validate smart_quotes_enabled=true
+type "\"Hello\""
+wait 2
+validate text_contains=“Hello”
+
+screenshot e2e_smart_quotes
+

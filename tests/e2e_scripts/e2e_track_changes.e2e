@@ -1,0 +1,19 @@
+# Test: Track changes
+# Validates revision tracking and accept-all behavior
+
+menu_open Edit
+menu_select "Track Changes"
+wait 1
+validate track_changes_enabled=true
+
+type "ok"
+wait 1
+validate revision_count=2
+
+menu_open Edit
+menu_select "Accept All Changes"
+wait 1
+validate revision_count=0
+
+screenshot e2e_track_changes
+

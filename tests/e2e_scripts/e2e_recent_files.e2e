@@ -1,0 +1,15 @@
+# Test: Recent files tracking
+# Validates that Save adds an entry to the recent files menu
+
+type "Recent file test"
+wait 1
+
+menu_open File
+menu_select "Save"
+wait 2
+
+menu_open File
+validate menu_contains=Recent: output/document.wpdoc=true
+
+screenshot e2e_recent_files
+

@@ -1,0 +1,10 @@
+# Test: Auto-save
+# Validates auto-save writes a recovery file in test mode
+
+type "Autosave test"
+wait 2
+validate autosave_enabled=true
+validate autosave_path_exists=true
+
+screenshot e2e_autosave
+

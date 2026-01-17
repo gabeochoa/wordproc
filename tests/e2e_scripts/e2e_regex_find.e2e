@@ -1,0 +1,9 @@
+# Test: Regex find
+# Validates regex-based search via property getter
+
+type "abc 123"
+wait 1
+validate regex_find=[0-9]+=true
+
+screenshot e2e_regex_find
+

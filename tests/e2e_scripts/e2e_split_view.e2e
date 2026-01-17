@@ -1,0 +1,15 @@
+# Test: Split view
+# Validates split view toggle
+
+menu_open View
+menu_select "Split View"
+wait 1
+validate split_view=true
+
+menu_open View
+menu_select "Split View"
+wait 1
+validate split_view=false
+
+screenshot e2e_split_view
+

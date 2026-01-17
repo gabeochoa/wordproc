@@ -1,0 +1,12 @@
+# Test: Word count statistics
+# Validates word/char/paragraph/sentence counts
+
+type "One two three."
+wait 2
+validate word_count=3
+validate char_count=14
+validate paragraph_count=1
+validate sentence_count=1
+
+screenshot e2e_word_count
+

@@ -1,0 +1,14 @@
+# Test: Superscript/Subscript toggles
+# Validates toggling text style flags
+
+key CTRL+SHIFT+=
+wait 1
+validate superscript=true
+
+key CTRL+SHIFT+-
+wait 1
+validate subscript=true
+validate superscript=false
+
+screenshot e2e_supersubscript
+

@@ -1,0 +1,23 @@
+# Test: Export file formats
+# Validates PDF/HTML/RTF exports create output files
+
+type "Export test"
+wait 1
+
+menu_open File
+menu_select "Export PDF..."
+wait 2
+validate export_pdf_exists=true
+
+menu_open File
+menu_select "Export HTML..."
+wait 2
+validate export_html_exists=true
+
+menu_open File
+menu_select "Export RTF..."
+wait 2
+validate export_rtf_exists=true
+
+screenshot e2e_export_files
+
