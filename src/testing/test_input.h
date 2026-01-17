@@ -53,9 +53,12 @@ inline void clear_mouse_simulation() {
 }
 
 inline vec2 get_mouse_position() {
-    float x, y;
-    afterhours::testing::input_injector::get_mouse_position(x, y);
-    return {x, y};
+    if (afterhours::testing::test_input::is_test_mode()) {
+        float x, y;
+        afterhours::testing::input_injector::get_mouse_position(x, y);
+        return {x, y};
+    }
+    return raylib::GetMousePosition_Real();
 }
 
 inline test_input_vec2 get_mouse_position_fwd() {
