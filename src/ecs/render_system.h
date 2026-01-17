@@ -1,18 +1,30 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <fstream>
+#include <sstream>
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../../vendor/afterhours/src/plugins/clipboard.h"
 #include "../editor/document_io.h"
+#include "../editor/export/export_html.h"
+#include "../editor/export/export_pdf.h"
+#include "../editor/export/export_rtf.h"
 #include "../editor/image.h"
 #include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
+#include "../settings.h"
 #include "../testing/test_input.h"
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
+#include "../ui/menu_setup.h"
 #include "../util/drawing.h"
 #include "../util/logging.h"
 #include "component_helpers.h"
@@ -242,7 +254,8 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              const LayoutComponent::Rect& textArea,
                              bool caretVisible, int baseFontSize, int baseLineHeight,
                              int scrollOffset, bool showLineNumbers = false,
-                             float lineNumberGutterWidth = 50.0f) {
+                             float lineNumberGutterWidth = 50.0f,
+                             int tabWidth = 4, float zoomLevel = 1.0f) {
     std::size_t lineCount = buffer.lineCount();
     CaretPosition caret = buffer.caret();
     bool hasSelection = buffer.hasSelection();
@@ -263,10 +276,28 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int availableWidth = static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
 
         std::string line = (span.length > 0) ? buffer.lineString(row) : "";
+        auto expandTabs = [tabWidth](const std::string& input) {
+            if (tabWidth <= 0) return input;
+            std::string expanded;
+            expanded.reserve(input.size());
+            int col = 0;
+            for (char ch : input) {
+                if (ch == '\t') {
+                    int spaces = tabWidth - (col % tabWidth);
+                    expanded.append(static_cast<std::size_t>(spaces), ' ');
+                    col += spaces;
+                } else {
+                    expanded.push_back(ch);
+                    col += 1;
+                }
+            }
+            return expanded;
+        };
+        std::string displayLine = expandTabs(line);
         
         // Get paragraph style for this line
         ParagraphStyle paraStyle = buffer.lineParagraphStyle(row);
-        int lineFontSize = paragraphStyleFontSize(paraStyle);
+        int lineFontSize = static_cast<int>(paragraphStyleFontSize(paraStyle) * zoomLevel);
         int baseLineHeightForStyle = lineFontSize + 4;
         
         // Use base font size as minimum if paragraph style would be smaller
@@ -344,7 +375,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int indentedWidth = availableWidth - totalIndent - listIndent;
         
         // Calculate text width for alignment
-        int textWidth = line.empty() ? 0 : raylib::MeasureText(line.c_str(), lineFontSize);
+        int textWidth = displayLine.empty() ? 0 : raylib::MeasureText(displayLine.c_str(), lineFontSize);
         
         // Apply text alignment (within the indented area)
         TextAlignment alignment = buffer.lineAlignment(row);
@@ -395,9 +426,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     (row == selEnd.row) ? selEnd.column : span.length;
 
                 if (startCol < endCol && !line.empty()) {
-                    std::string beforeSel = line.substr(0, startCol);
+                    std::string beforeSel = expandTabs(line.substr(0, startCol));
                     std::string selectedText =
-                        line.substr(startCol, endCol - startCol);
+                        expandTabs(line.substr(startCol, endCol - startCol));
 
                     int selX =
                         x + raylib::MeasureText(beforeSel.c_str(), lineFontSize);
@@ -412,7 +443,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Draw text with paragraph style applied
         if (!line.empty()) {
             // Register document text for E2E tests
-            test_input::registerVisibleText(line);
+            test_input::registerVisibleText(displayLine);
             
             // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
@@ -428,19 +459,41 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 raylib::DrawRectangle(x, y, textWidth, lineHeight, highlightColor);
             }
             
+            int textFontSize = lineFontSize;
+            int textYOffset = 0;
+            if (globalStyle.superscript || globalStyle.subscript) {
+                textFontSize = std::max(8, static_cast<int>(lineFontSize * 0.75f));
+                textYOffset = globalStyle.superscript ? -lineFontSize / 3 : lineFontSize / 4;
+            }
+
+            std::string textToDraw = displayLine;
+
+            // Drop cap support: draw first character larger
+            if (span.hasDropCap && !textToDraw.empty()) {
+                std::string dropChar = textToDraw.substr(0, 1);
+                int dropFontSize = lineFontSize * span.dropCapLines;
+                raylib::DrawText(dropChar.c_str(), x, y - lineFontSize / 2,
+                                 dropFontSize, textColor);
+                int dropWidth = raylib::MeasureText(dropChar.c_str(), dropFontSize);
+                textToDraw = textToDraw.substr(1);
+                if (!textToDraw.empty()) {
+                    x += dropWidth + 4;
+                }
+            }
+
             // For headings and titles, draw bold text (simulated by drawing twice with offset)
             if (paragraphStyleIsBold(paraStyle) || globalStyle.bold) {
                 // Draw bold effect by drawing text twice with 1px offset
-                raylib::DrawText(line.c_str(), x, y, lineFontSize, textColor);
-                raylib::DrawText(line.c_str(), x + 1, y, lineFontSize, textColor);
+                raylib::DrawText(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
+                raylib::DrawText(textToDraw.c_str(), x + 1, y + textYOffset, textFontSize, textColor);
             } else if (paragraphStyleIsItalic(paraStyle) || globalStyle.italic) {
                 // For subtitle italic style, draw in a slightly different shade
                 raylib::Color italicColor = {static_cast<unsigned char>(textColor.r / 2 + 64),
                                              static_cast<unsigned char>(textColor.g / 2 + 64),
                                              static_cast<unsigned char>(textColor.b / 2 + 64), textColor.a};
-                raylib::DrawText(line.c_str(), x, y, lineFontSize, italicColor);
+                raylib::DrawText(textToDraw.c_str(), x, y + textYOffset, textFontSize, italicColor);
             } else {
-                raylib::DrawText(line.c_str(), x, y, lineFontSize, textColor);
+                raylib::DrawText(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
             }
             
             // Draw underline if enabled
@@ -459,7 +512,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Draw caret
         if (caretVisible && row == caret.row) {
             std::string beforeCaret =
-                line.substr(0, std::min(caret.column, line.length()));
+                expandTabs(line.substr(0, std::min(caret.column, line.length())));
             int caretX = x + raylib::MeasureText(beforeCaret.c_str(), lineFontSize);
             raylib::DrawRectangle(caretX, y, 2, lineHeight, theme::CARET_COLOR);
         }
@@ -581,11 +634,13 @@ struct EditorRenderSystem
                              theme::TITLE_TEXT);
 
         // Draw menu bar background (menus are drawn later after text area)
-        raylib::Rectangle menuBarRect = {layout.menuBar.x, layout.menuBar.y,
-                                         layout.menuBar.width,
-                                         layout.menuBar.height};
-        raylib::DrawRectangleRec(menuBarRect, theme::WINDOW_BG);
-        util::drawRaisedBorder(menuBarRect);
+        if (!layout.focusMode) {
+            raylib::Rectangle menuBarRect = {layout.menuBar.x, layout.menuBar.y,
+                                             layout.menuBar.width,
+                                             layout.menuBar.height};
+            raylib::DrawRectangleRec(menuBarRect, theme::WINDOW_BG);
+            util::drawRaisedBorder(menuBarRect);
+        }
 
         // Get mutable refs for later use
         auto& mutableDoc = const_cast<DocumentComponent&>(doc);
@@ -619,52 +674,97 @@ struct EditorRenderSystem
 
         // Render text buffer using effective text area (respects page margins)
         TextStyle style = doc.buffer.textStyle();
-        int fontSize = style.fontSize;
+        int fontSize = std::max(8, static_cast<int>(std::round(style.fontSize * layout.zoomLevel)));
         int lineHeight = fontSize + 4;
         LayoutComponent::Rect effectiveArea = layout::effectiveTextArea(layout);
-        renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
-                         lineHeight, scroll.offset, layout.showLineNumbers,
-                         layout.lineNumberGutterWidth);
 
-        // Draw status bar
-        raylib::Rectangle statusBarRect = {
-            layout.statusBar.x, layout.statusBar.y, layout.statusBar.width,
-            layout.statusBar.height};
-        raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
-        util::drawRaisedBorder(statusBarRect);
+        if (layout.splitViewEnabled) {
+            float splitHeight = effectiveArea.height * 0.5f;
+            LayoutComponent::Rect topArea = {effectiveArea.x, effectiveArea.y,
+                                             effectiveArea.width, splitHeight - 4.0f};
+            LayoutComponent::Rect bottomArea = {effectiveArea.x, effectiveArea.y + splitHeight + 4.0f,
+                                                effectiveArea.width, splitHeight - 4.0f};
+            renderTextBuffer(doc.buffer, topArea, caret.visible, fontSize,
+                             lineHeight, scroll.offset, layout.showLineNumbers,
+                             layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
+                             layout.zoomLevel);
+            renderTextBuffer(doc.buffer, bottomArea, caret.visible, fontSize,
+                             lineHeight, scroll.secondaryOffset, layout.showLineNumbers,
+                             layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
+                             layout.zoomLevel);
 
-        double currentTime = raylib::GetTime();
-        if (!status.text.empty() && currentTime < status.expiresAt) {
-            raylib::Color msgColor =
-                status.isError ? theme::STATUS_ERROR : theme::STATUS_SUCCESS;
-            raylib::DrawText(
-                status.text.c_str(), 4,
-                layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
-                theme::layout::FONT_SIZE - 2, msgColor);
+            // Split divider
+            raylib::DrawLine(static_cast<int>(effectiveArea.x),
+                             static_cast<int>(effectiveArea.y + splitHeight),
+                             static_cast<int>(effectiveArea.x + effectiveArea.width),
+                             static_cast<int>(effectiveArea.y + splitHeight),
+                             theme::BORDER_DARK);
         } else {
-            CaretPosition caretPos = doc.buffer.caret();
-            ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
-            std::string statusText = std::format(
-                "Ln {}, Col {} | {} | {}{}{}{}| {}pt | {}", caretPos.row + 1,
-                caretPos.column + 1, paragraphStyleName(paraStyle),
-                style.bold ? "B " : "",
-                style.italic ? "I " : "",
-                style.underline ? "U " : "",
-                style.strikethrough ? "S " : "",
-                style.fontSize, style.font);
-            drawTextWithRegistry(
-                statusText.c_str(), 4,
-                layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
-                theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
+            renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
+                             lineHeight, scroll.offset, layout.showLineNumbers,
+                             layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
+                             layout.zoomLevel);
         }
 
-        // Draw interactive menus ON TOP of everything except dialogs
-        // (drawn last so dropdowns appear above the text area)
-        int menuResult =
-            win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
-                               theme::layout::MENU_BAR_HEIGHT);
-        if (menuResult >= 0) {
-            handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableStatus, mutableLayout);
+        // Draw comment markers in the right margin
+        if (!doc.comments.empty()) {
+            for (const auto& comment : doc.comments) {
+                CaretPosition pos = doc.buffer.positionForOffset(comment.startOffset);
+                if (pos.row < static_cast<std::size_t>(scroll.offset)) continue;
+                int markerY = static_cast<int>(effectiveArea.y) + theme::layout::TEXT_PADDING +
+                              static_cast<int>(pos.row - scroll.offset) * lineHeight;
+                int markerX = static_cast<int>(effectiveArea.x + effectiveArea.width) - 8;
+                if (markerY > static_cast<int>(effectiveArea.y + effectiveArea.height)) continue;
+                raylib::DrawRectangle(markerX, markerY, 6, 6, raylib::Color{255, 200, 0, 255});
+            }
+        }
+
+        // Draw status bar
+        if (!layout.focusMode) {
+            raylib::Rectangle statusBarRect = {
+                layout.statusBar.x, layout.statusBar.y, layout.statusBar.width,
+                layout.statusBar.height};
+            raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
+            util::drawRaisedBorder(statusBarRect);
+
+            double currentTime = raylib::GetTime();
+            if (!status.text.empty() && currentTime < status.expiresAt) {
+                raylib::Color msgColor =
+                    status.isError ? theme::STATUS_ERROR : theme::STATUS_SUCCESS;
+                raylib::DrawText(
+                    status.text.c_str(), 4,
+                    layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
+                    theme::layout::FONT_SIZE - 2, msgColor);
+            } else {
+                CaretPosition caretPos = doc.buffer.caret();
+                ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
+                TextStats stats = doc.buffer.stats();
+                std::string statusText = std::format(
+                    "Ln {}, Col {} | {} | {}{}{}{}| {}pt | {} | Words: {} | Zoom: {}%",
+                    caretPos.row + 1, caretPos.column + 1,
+                    paragraphStyleName(paraStyle),
+                    style.bold ? "B " : "",
+                    style.italic ? "I " : "",
+                    style.underline ? "U " : "",
+                    style.strikethrough ? "S " : "",
+                    style.fontSize, style.font, stats.words,
+                    static_cast<int>(layout.zoomLevel * 100.0f));
+                drawTextWithRegistry(
+                    statusText.c_str(), 4,
+                    layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
+                    theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
+            }
+        }
+
+        if (!layout.focusMode) {
+            // Draw interactive menus ON TOP of everything except dialogs
+            // (drawn last so dropdowns appear above the text area)
+            int menuResult =
+                win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
+                                   theme::layout::MENU_BAR_HEIGHT);
+            if (menuResult >= 0) {
+                handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableStatus, mutableLayout);
+            }
         }
 
         // Draw About dialog if active
@@ -743,6 +843,114 @@ struct MenuSystem
             }
         }
 
+        // Word count dialog
+        if (menu.showWordCountDialog) {
+            TextStats stats = doc.buffer.stats();
+            std::string msg = std::format(
+                "Words: {}\nCharacters: {}\nLines: {}\nParagraphs: {}\nSentences: {}",
+                stats.words, stats.characters, stats.lines, stats.paragraphs,
+                stats.sentences);
+            raylib::Rectangle dialogRect = {
+                static_cast<float>(raylib::GetScreenWidth() / 2 - 160),
+                static_cast<float>(raylib::GetScreenHeight() / 2 - 90), 320,
+                180};
+            int result = win95::DrawMessageDialog(dialogRect, "Word Count",
+                                                  msg.c_str(), false);
+            if (result >= 0) {
+                menu.showWordCountDialog = false;
+            }
+        }
+
+        // Comment dialog
+        if (menu.showCommentDialog) {
+            raylib::Rectangle dialogRect = {
+                static_cast<float>(raylib::GetScreenWidth() / 2 - 180),
+                static_cast<float>(raylib::GetScreenHeight() / 2 - 90), 360,
+                180};
+            int result = win95::DrawInputDialog(
+                dialogRect, "Add Comment", "Comment:", menu.commentInputBuffer,
+                static_cast<int>(sizeof(menu.commentInputBuffer)));
+            if (result == 0) {
+                Comment comment;
+                comment.startOffset = menu.pendingCommentStart;
+                comment.endOffset = menu.pendingCommentEnd;
+                comment.author = "User";
+                comment.text = menu.commentInputBuffer;
+                comment.createdAt = std::time(nullptr);
+                doc.comments.push_back(comment);
+                menu.commentInputBuffer[0] = '\0';
+                menu.showCommentDialog = false;
+                status::set(status, "Comment added");
+                status.expiresAt = raylib::GetTime() + 2.0;
+            } else if (result > 0) {
+                menu.commentInputBuffer[0] = '\0';
+                menu.showCommentDialog = false;
+            }
+        }
+
+        // Template dialog
+        if (menu.showTemplateDialog) {
+            raylib::Rectangle dialogRect = {
+                static_cast<float>(raylib::GetScreenWidth() / 2 - 180),
+                static_cast<float>(raylib::GetScreenHeight() / 2 - 90), 360,
+                180};
+            int result = win95::DrawInputDialog(
+                dialogRect, "New from Template",
+                "Template (letter/memo/report/resume/essay):",
+                menu.templateInputBuffer,
+                static_cast<int>(sizeof(menu.templateInputBuffer)));
+            if (result == 0) {
+                std::string name = menu.templateInputBuffer;
+                for (auto& ch : name) ch = static_cast<char>(std::tolower(ch));
+                std::filesystem::path templatePath =
+                    std::filesystem::current_path() / "resources/templates" /
+                    (name + ".txt");
+                if (std::filesystem::exists(templatePath)) {
+                    std::ifstream ifs(templatePath);
+                    std::stringstream buffer;
+                    buffer << ifs.rdbuf();
+                    doc.buffer.setText(buffer.str());
+                    doc.isDirty = true;
+                    status::set(status, "Template loaded: " + name);
+                } else {
+                    status::set(status, "Template not found: " + name, true);
+                }
+                status.expiresAt = raylib::GetTime() + 2.0;
+                menu.templateInputBuffer[0] = '\0';
+                menu.showTemplateDialog = false;
+            } else if (result > 0) {
+                menu.templateInputBuffer[0] = '\0';
+                menu.showTemplateDialog = false;
+            }
+        }
+
+        // Tab width dialog
+        if (menu.showTabWidthDialog) {
+            raylib::Rectangle dialogRect = {
+                static_cast<float>(raylib::GetScreenWidth() / 2 - 160),
+                static_cast<float>(raylib::GetScreenHeight() / 2 - 90), 320,
+                180};
+            int result = win95::DrawInputDialog(
+                dialogRect, "Tab Width", "Spaces per tab:",
+                menu.tabWidthInputBuffer,
+                static_cast<int>(sizeof(menu.tabWidthInputBuffer)));
+            if (result == 0) {
+                int width = std::atoi(menu.tabWidthInputBuffer);
+                if (width >= 1 && width <= 16) {
+                    doc.docSettings.tabWidth = width;
+                    status::set(status, "Tab width set");
+                } else {
+                    status::set(status, "Tab width must be 1-16", true);
+                }
+                status.expiresAt = raylib::GetTime() + 2.0;
+                menu.tabWidthInputBuffer[0] = '\0';
+                menu.showTabWidthDialog = false;
+            } else if (result > 0) {
+                menu.tabWidthInputBuffer[0] = '\0';
+                menu.showTabWidthDialog = false;
+            }
+        }
+
         // F1 to show help window
         if (IsKeyPressed(raylib::KEY_F1)) {
             menu.showHelpWindow = !menu.showHelpWindow;
@@ -775,13 +983,61 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
         int itemIndex = menuResult % 100;
 
         if (menuIndex == 0) {  // File menu
+            if (itemIndex >= 0 &&
+                itemIndex < static_cast<int>(menu.menus[0].items.size())) {
+                const std::string& label = menu.menus[0].items[itemIndex].label;
+                if (label.rfind("Recent: ", 0) == 0) {
+                    std::string path = label.substr(std::string("Recent: ").size());
+                    auto result = loadDocumentEx(doc.buffer, doc.docSettings, path);
+                    if (result.success) {
+                        doc.filePath = path;
+                        doc.isDirty = false;
+                        doc.comments.clear();
+                        doc.revisions.clear();
+                        layout.pageMode = doc.docSettings.pageSettings.mode;
+                        layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
+                        layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
+                        layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
+                        layout.lineWidthLimit =
+                            doc.docSettings.pageSettings.lineWidthLimit;
+                        Settings::get().add_recent_file(path);
+                        menu.menus = menu_setup::createMenuBar(
+                            Settings::get().get_recent_files());
+                        menu.recentFilesCount = static_cast<int>(
+                            Settings::get().get_recent_files().size());
+                        if (doc.trackChangesEnabled &&
+                            menu.menus.size() > 1 &&
+                            menu.menus[1].items.size() > 3) {
+                            menu.menus[1].items[3].mark =
+                                win95::MenuMark::Checkmark;
+                        }
+                        ecs::status::set(
+                            status,
+                            "Opened: " + std::filesystem::path(path).filename().string());
+                        status.expiresAt = raylib::GetTime() + 3.0;
+                    } else {
+                        ecs::status::set(status, "Open failed: " + result.error, true);
+                        status.expiresAt = raylib::GetTime() + 3.0;
+                    }
+                    return;
+                }
+                if (label == "Exit") {
+                    return;
+                }
+            }
             switch (itemIndex) {
                 case 0:  // New
                     doc.buffer.setText("");
                     doc.filePath.clear();
                     doc.isDirty = false;
+                    doc.comments.clear();
+                    doc.revisions.clear();
+                    doc.trackChangesBaseline.clear();
                     break;
-                case 1:  // Open
+                case 1:  // New from Template...
+                    menu.showTemplateDialog = true;
+                    break;
+                case 2:  // Open
                 {
                     // Load document with settings (document settings saved with
                     // file)
@@ -790,6 +1046,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (result.success) {
                         doc.filePath = doc.defaultPath;
                         doc.isDirty = false;
+                        doc.comments.clear();
+                        doc.revisions.clear();
                         // Sync loaded document settings to layout component
                         layout.pageMode = doc.docSettings.pageSettings.mode;
                         layout.pageWidth =
@@ -800,6 +1058,17 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             doc.docSettings.pageSettings.pageMargin;
                         layout.lineWidthLimit =
                             doc.docSettings.pageSettings.lineWidthLimit;
+                        Settings::get().add_recent_file(doc.defaultPath);
+                        menu.menus = menu_setup::createMenuBar(
+                            Settings::get().get_recent_files());
+                        menu.recentFilesCount = static_cast<int>(
+                            Settings::get().get_recent_files().size());
+                        if (doc.trackChangesEnabled &&
+                            menu.menus.size() > 1 &&
+                            menu.menus[1].items.size() > 3) {
+                            menu.menus[1].items[3].mark =
+                                win95::MenuMark::Checkmark;
+                        }
                         ecs::status::set(
                             status,
                             "Opened: " + std::filesystem::path(doc.defaultPath)
@@ -812,7 +1081,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         status.expiresAt = raylib::GetTime() + 3.0;
                     }
                 } break;
-                case 2:  // Save
+                case 3:  // Save
                 {
                     std::string savePath =
                         doc.filePath.empty() ? doc.defaultPath : doc.filePath;
@@ -830,6 +1099,20 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (result.success) {
                         doc.isDirty = false;
                         doc.filePath = savePath;
+                        if (!doc.autoSavePath.empty()) {
+                            std::filesystem::remove(doc.autoSavePath);
+                        }
+                        Settings::get().add_recent_file(savePath);
+                        menu.menus = menu_setup::createMenuBar(
+                            Settings::get().get_recent_files());
+                        menu.recentFilesCount = static_cast<int>(
+                            Settings::get().get_recent_files().size());
+                        if (doc.trackChangesEnabled &&
+                            menu.menus.size() > 1 &&
+                            menu.menus[1].items.size() > 3) {
+                            menu.menus[1].items[3].mark =
+                                win95::MenuMark::Checkmark;
+                        }
                         ecs::status::set(
                             status, "Saved: " + std::filesystem::path(savePath)
                                                     .filename()
@@ -841,13 +1124,62 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         status.expiresAt = raylib::GetTime() + 3.0;
                     }
                 } break;
-                case 5:  // Page Setup
+                case 6:  // Export PDF
+                {
+                    std::filesystem::path basePath =
+                        doc.filePath.empty() ? doc.defaultPath : doc.filePath;
+                    basePath.replace_extension(".pdf");
+                    auto result = exportDocumentPdf(doc.buffer, doc.docSettings,
+                                                    basePath.string());
+                    if (result.success) {
+                        ecs::status::set(
+                            status,
+                            "Exported PDF: " + basePath.filename().string());
+                    } else {
+                        ecs::status::set(status, "Export PDF failed: " + result.error,
+                                         true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 3.0;
+                } break;
+                case 7:  // Export HTML
+                {
+                    std::filesystem::path basePath =
+                        doc.filePath.empty() ? doc.defaultPath : doc.filePath;
+                    basePath.replace_extension(".html");
+                    auto result = exportDocumentHtml(doc.buffer, doc.docSettings,
+                                                     basePath.string());
+                    if (result.success) {
+                        ecs::status::set(
+                            status,
+                            "Exported HTML: " + basePath.filename().string());
+                    } else {
+                        ecs::status::set(status, "Export HTML failed: " + result.error,
+                                         true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 3.0;
+                } break;
+                case 8:  // Export RTF
+                {
+                    std::filesystem::path basePath =
+                        doc.filePath.empty() ? doc.defaultPath : doc.filePath;
+                    basePath.replace_extension(".rtf");
+                    auto result = exportDocumentRtf(doc.buffer, doc.docSettings,
+                                                    basePath.string());
+                    if (result.success) {
+                        ecs::status::set(
+                            status,
+                            "Exported RTF: " + basePath.filename().string());
+                    } else {
+                        ecs::status::set(status, "Export RTF failed: " + result.error,
+                                         true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 3.0;
+                } break;
+                case 10:  // Page Setup
                 {
                     // Toggle the page setup dialog (for now, just toggle to Paged mode with presets)
                     menu.showPageSetup = !menu.showPageSetup;
                 } break;
-                case 7:  // Exit
-                    break;
                 default:
                     break;
             }
@@ -865,7 +1197,34 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         doc.isDirty = true;
                     }
                     break;
-                case 3:  // Cut
+                case 3:  // Track Changes
+                    doc.trackChangesEnabled = !doc.trackChangesEnabled;
+                    if (doc.trackChangesEnabled) {
+                        doc.trackChangesBaseline = doc.buffer.getText();
+                        menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
+                        status::set(status, "Track Changes: On");
+                    } else {
+                        menu.menus[1].items[3].mark = win95::MenuMark::None;
+                        status::set(status, "Track Changes: Off");
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 4:  // Accept All Changes
+                    doc.revisions.clear();
+                    doc.trackChangesBaseline = doc.buffer.getText();
+                    status::set(status, "All changes accepted");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 5:  // Reject All Changes
+                    if (!doc.trackChangesBaseline.empty()) {
+                        doc.buffer.setText(doc.trackChangesBaseline);
+                        doc.isDirty = true;
+                    }
+                    doc.revisions.clear();
+                    status::set(status, "All changes rejected");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 7:  // Cut
                     if (doc.buffer.hasSelection()) {
                         std::string selected = doc.buffer.getSelectedText();
                         if (!selected.empty()) {
@@ -875,7 +1234,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         }
                     }
                     break;
-                case 4:  // Copy
+                case 8:  // Copy
                     if (doc.buffer.hasSelection()) {
                         std::string selected = doc.buffer.getSelectedText();
                         if (!selected.empty()) {
@@ -883,7 +1242,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         }
                     }
                     break;
-                case 5:  // Paste
+                case 9:  // Paste
                 {
                     if (afterhours::clipboard::has_text()) {
                         std::string clipText = afterhours::clipboard::get_text();
@@ -891,16 +1250,16 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         doc.isDirty = true;
                     }
                 } break;
-                case 7:  // Select All
+                case 11:  // Select All
                     doc.buffer.selectAll();
                     break;
-                case 9:  // Find...
+                case 13:  // Find...
                     menu.showFindDialog = true;
                     menu.findReplaceMode = false;
                     status::set(status, "Find: Ctrl+G next, Ctrl+Shift+G prev");
                     status.expiresAt = raylib::GetTime() + 3.0;
                     break;
-                case 10:  // Find Next
+                case 14:  // Find Next
                     if (!menu.lastSearchTerm.empty()) {
                         FindResult result = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
                         if (result.found) {
@@ -915,7 +1274,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         status.expiresAt = raylib::GetTime() + 2.0;
                     }
                     break;
-                case 11:  // Find Previous
+                case 15:  // Find Previous
                     if (!menu.lastSearchTerm.empty()) {
                         FindResult result = doc.buffer.findPrevious(menu.lastSearchTerm, menu.findOptions);
                         if (result.found) {
@@ -930,7 +1289,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         status.expiresAt = raylib::GetTime() + 2.0;
                     }
                     break;
-                case 12:  // Replace...
+                case 16:  // Replace...
                     menu.showFindDialog = true;
                     menu.findReplaceMode = true;
                     status::set(status, "Replace mode");
@@ -955,22 +1314,54 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     status::set(status, "Switched to Paged mode");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 3:  // Line Width: Normal (no limit)
+                case 3:  // Zoom In
+                    layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
+                    status::set(status, "Zoom in");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 4:  // Zoom Out
+                    layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
+                    status::set(status, "Zoom out");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 5:  // Zoom Reset
+                    layout.zoomLevel = 1.0f;
+                    status::set(status, "Zoom reset");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 7:  // Focus Mode
+                    layout.focusMode = !layout.focusMode;
+                    layout::updateLayout(layout, layout.screenWidth,
+                                         layout.screenHeight);
+                    status::set(status, layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 8:  // Split View
+                    layout.splitViewEnabled = !layout.splitViewEnabled;
+                    status::set(status, layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 9:  // Dark Mode
+                    theme::applyDarkMode(!theme::DARK_MODE_ENABLED);
+                    status::set(status, theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 11:  // Line Width: Normal (no limit)
                     layout::setLineWidthLimit(layout, 0.0f);
                     status::set(status, "Line width: Normal");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 4:  // Line Width: Narrow (60 chars)
+                case 12:  // Line Width: Narrow (60 chars)
                     layout::setLineWidthLimit(layout, 60.0f);
                     status::set(status, "Line width: Narrow (60 chars)");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 5:  // Line Width: Wide (100 chars)
+                case 13:  // Line Width: Wide (100 chars)
                     layout::setLineWidthLimit(layout, 100.0f);
                     status::set(status, "Line width: Wide (100 chars)");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 7:  // Show Line Numbers
+                case 15:  // Show Line Numbers
                     layout.showLineNumbers = !layout.showLineNumbers;
                     status::set(status, layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     status.expiresAt = raylib::GetTime() + 2.0;
@@ -1044,177 +1435,215 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     style.strikethrough = !style.strikethrough;
                     doc.buffer.setTextStyle(style);
                     break;
+                case 14:  // Superscript
+                    style.superscript = !style.superscript;
+                    if (style.superscript) style.subscript = false;
+                    doc.buffer.setTextStyle(style);
+                    break;
+                case 15:  // Subscript
+                    style.subscript = !style.subscript;
+                    if (style.subscript) style.superscript = false;
+                    doc.buffer.setTextStyle(style);
+                    break;
                 // (14 is separator)
                 // Alignment (15-18)
-                case 15:  // Align Left
+                case 20:  // Align Left
                     doc.buffer.setCurrentAlignment(TextAlignment::Left);
                     status::set(status, "Align: Left");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 16:  // Align Center
+                case 21:  // Align Center
                     doc.buffer.setCurrentAlignment(TextAlignment::Center);
                     status::set(status, "Align: Center");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 17:  // Align Right
+                case 22:  // Align Right
                     doc.buffer.setCurrentAlignment(TextAlignment::Right);
                     status::set(status, "Align: Right");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 18:  // Justify
+                case 23:  // Justify
                     doc.buffer.setCurrentAlignment(TextAlignment::Justify);
                     status::set(status, "Align: Justify");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 // (19 is separator)
                 // Text colors (20-26)
-                case 20:  // Text: Black
+                case 25:  // Text: Black
                     style.textColor = TextColors::Black;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 21:  // Text: Red
+                case 26:  // Text: Red
                     style.textColor = TextColors::Red;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 22:  // Text: Orange
+                case 27:  // Text: Orange
                     style.textColor = TextColors::Orange;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 23:  // Text: Green
+                case 28:  // Text: Green
                     style.textColor = TextColors::Green;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 24:  // Text: Blue
+                case 29:  // Text: Blue
                     style.textColor = TextColors::Blue;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 25:  // Text: Purple
+                case 30:  // Text: Purple
                     style.textColor = TextColors::Purple;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 26:  // Text: Gray
+                case 31:  // Text: Gray
                     style.textColor = TextColors::Gray;
                     doc.buffer.setTextStyle(style);
                     break;
                 // (27 is separator)
                 // Highlight colors (28-33)
-                case 28:  // Highlight: None
+                case 33:  // Highlight: None
                     style.highlightColor = HighlightColors::None;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 29:  // Highlight: Yellow
+                case 34:  // Highlight: Yellow
                     style.highlightColor = HighlightColors::Yellow;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 30:  // Highlight: Green
+                case 35:  // Highlight: Green
                     style.highlightColor = HighlightColors::Green;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 31:  // Highlight: Cyan
+                case 36:  // Highlight: Cyan
                     style.highlightColor = HighlightColors::Cyan;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 32:  // Highlight: Pink
+                case 37:  // Highlight: Pink
                     style.highlightColor = HighlightColors::Pink;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 33:  // Highlight: Orange
+                case 38:  // Highlight: Orange
                     style.highlightColor = HighlightColors::Orange;
                     doc.buffer.setTextStyle(style);
                     break;
                 // (34 is separator)
                 // Fonts (35-36)
-                case 35:  // Font: Gaegu
+                case 40:  // Font: Gaegu
                     style.font = "Gaegu-Bold";
                     doc.buffer.setTextStyle(style);
                     break;
-                case 36:  // Font: Garamond
+                case 41:  // Font: Garamond
                     style.font = "EBGaramond-Regular";
                     doc.buffer.setTextStyle(style);
                     break;
                 // (37 is separator)
                 // Font size (38-40)
-                case 38:  // Increase Size
+                case 43:  // Increase Size
                     style.fontSize = std::min(72, style.fontSize + 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 39:  // Decrease Size
+                case 44:  // Decrease Size
                     style.fontSize = std::max(8, style.fontSize - 2);
                     doc.buffer.setTextStyle(style);
                     break;
-                case 40:  // Reset Size
+                case 45:  // Reset Size
                     style.fontSize = 16;
                     doc.buffer.setTextStyle(style);
                     break;
                 // (41 is separator)
                 // Alignment (42-45)
-                case 42:  // Align Left
+                case 47:  // Align Left
                     doc.buffer.setCurrentAlignment(TextAlignment::Left);
                     status::set(status, "Align: Left");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 43:  // Align Center
+                case 48:  // Align Center
                     doc.buffer.setCurrentAlignment(TextAlignment::Center);
                     status::set(status, "Align: Center");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 44:  // Align Right
+                case 49:  // Align Right
                     doc.buffer.setCurrentAlignment(TextAlignment::Right);
                     status::set(status, "Align: Right");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 45:  // Justify
+                case 50:  // Justify
                     doc.buffer.setCurrentAlignment(TextAlignment::Justify);
                     status::set(status, "Align: Justify");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 // (46 is separator)
-                case 47:  // Increase Indent
+                case 52:  // Increase Indent
                     doc.buffer.increaseIndent();
                     status::set(status, "Indent increased");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 48:  // Decrease Indent
+                case 53:  // Decrease Indent
                     doc.buffer.decreaseIndent();
                     status::set(status, "Indent decreased");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                // (49 is separator)
-                case 50:  // Single Spacing
+                // (54 is separator)
+                case 55:  // Single Spacing
                     doc.buffer.setLineSpacingSingle();
                     status::set(status, "Line spacing: Single");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 51:  // 1.5 Line Spacing
+                case 56:  // 1.5 Line Spacing
                     doc.buffer.setLineSpacing1_5();
                     status::set(status, "Line spacing: 1.5");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 52:  // Double Spacing
+                case 57:  // Double Spacing
                     doc.buffer.setLineSpacingDouble();
                     status::set(status, "Line spacing: Double");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                // (53 is separator)
-                case 54:  // Bulleted List
+                // (58 is separator)
+                case 59:  // Bulleted List
                     doc.buffer.toggleBulletedList();
                     status::set(status, doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 55:  // Numbered List
+                case 60:  // Numbered List
                     doc.buffer.toggleNumberedList();
                     status::set(status, doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 56:  // Increase List Level
+                case 61:  // Increase List Level
                     doc.buffer.increaseListLevel();
                     status::set(status, "List level increased");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 57:  // Decrease List Level
+                case 62:  // Decrease List Level
                     doc.buffer.decreaseListLevel();
                     status::set(status, "List level decreased");
                     status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 64:  // Increase Space Before
+                    doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() + 6);
+                    status::set(status, "Space before increased");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 65:  // Decrease Space Before
+                    doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() - 6);
+                    status::set(status, "Space before decreased");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 66:  // Increase Space After
+                    doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() + 6);
+                    status::set(status, "Space after increased");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 67:  // Decrease Space After
+                    doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
+                    status::set(status, "Space after decreased");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 69:  // Drop Cap
+                    doc.buffer.toggleCurrentLineDropCap();
+                    status::set(status, doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 70:  // Tab Width...
+                    menu.showTabWidthDialog = true;
                     break;
                 default:
                     break;
@@ -1227,7 +1656,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     status::set(status, "Page break inserted");
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 2:  // Hyperlink...
+                case 1:  // Section Break
+                    doc.buffer.insertSectionBreak();
+                    doc.isDirty = true;
+                    status::set(status, "Section break inserted");
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                case 3:  // Hyperlink...
                     // For now, just add hyperlink to selection if any
                     if (doc.buffer.hasSelection()) {
                         // Would need a dialog for URL input - placeholder for now
@@ -1240,9 +1675,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 3:  // Remove Hyperlink
+                case 4:  // Remove Hyperlink
                     if (doc.buffer.hyperlinkAtCaret()) {
-                        std::size_t caretOffset = doc.buffer.caret().row * 100 + doc.buffer.caret().column;
+                        std::size_t caretOffset = doc.buffer.caretOffset();
                         if (doc.buffer.removeHyperlink(caretOffset)) {
                             doc.isDirty = true;
                             status::set(status, "Hyperlink removed");
@@ -1252,7 +1687,32 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
-                case 5:  // Table...
+                case 5:  // Bookmark...
+                {
+                    std::string name =
+                        std::format("bookmark_{}", doc.buffer.caret().row + 1);
+                    if (doc.buffer.addBookmark(name)) {
+                        status::set(status, "Bookmark added");
+                    } else {
+                        status::set(status, "Bookmark not added", true);
+                    }
+                    status.expiresAt = raylib::GetTime() + 2.0;
+                    break;
+                }
+                case 6:  // Comment...
+                    if (doc.buffer.hasSelection()) {
+                        CaretPosition start = doc.buffer.selectionStart();
+                        CaretPosition end = doc.buffer.selectionEnd();
+                        menu.pendingCommentStart =
+                            doc.buffer.offsetForPosition(start);
+                        menu.pendingCommentEnd = doc.buffer.offsetForPosition(end);
+                        menu.showCommentDialog = true;
+                    } else {
+                        status::set(status, "Select text to comment", true);
+                        status.expiresAt = raylib::GetTime() + 2.0;
+                    }
+                    break;
+                case 8:  // Table...
                 {
                     std::size_t currentLine = doc.buffer.caret().row;
                     doc.insertTable(currentLine, 3, 3);
@@ -1261,7 +1721,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
-                case 7:  // Image...
+                case 10:  // Image...
                 {
                     // Insert a placeholder image at the current line
                     DocumentImage img;
@@ -1417,6 +1877,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 menu.showHelpWindow = true;
             } else if (itemIndex == 2) {  // About (after separator)
                 menu.showAboutDialog = true;
+            }
+        } else if (menuIndex == 7) {  // Tools menu
+            if (itemIndex == 0) {
+                menu.showWordCountDialog = true;
             }
         }
     }

@@ -509,4 +509,34 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
     return result;
 }
 
+void applyDarkMode(bool enabled) {
+    if (enabled) {
+        colors::WINDOW_BG = {48, 48, 48, 255};
+        colors::TITLE_BAR_ACTIVE = {32, 32, 64, 255};
+        colors::TITLE_BAR_INACTIVE = {64, 64, 64, 255};
+        colors::TITLE_TEXT = {255, 255, 255, 255};
+        colors::TEXT_AREA_BG = {24, 24, 24, 255};
+        colors::TEXT_COLOR = {230, 230, 230, 255};
+        colors::TEXT_DISABLED = {120, 120, 120, 255};
+        colors::BORDER_LIGHT = {90, 90, 90, 255};
+        colors::BORDER_DARK = {20, 20, 20, 255};
+        colors::BORDER_DARKER = {10, 10, 10, 255};
+        colors::MENU_HIGHLIGHT = {64, 64, 128, 255};
+        colors::BUTTON_FACE = {64, 64, 64, 255};
+    } else {
+        colors::WINDOW_BG = {192, 192, 192, 255};
+        colors::TITLE_BAR_ACTIVE = {0, 0, 128, 255};
+        colors::TITLE_BAR_INACTIVE = {128, 128, 128, 255};
+        colors::TITLE_TEXT = {255, 255, 255, 255};
+        colors::TEXT_AREA_BG = {255, 255, 255, 255};
+        colors::TEXT_COLOR = {0, 0, 0, 255};
+        colors::TEXT_DISABLED = {128, 128, 128, 255};
+        colors::BORDER_LIGHT = {255, 255, 255, 255};
+        colors::BORDER_DARK = {128, 128, 128, 255};
+        colors::BORDER_DARKER = {64, 64, 64, 255};
+        colors::MENU_HIGHLIGHT = {0, 0, 128, 255};
+        colors::BUTTON_FACE = {192, 192, 192, 255};
+    }
+}
+
 }  // namespace win95

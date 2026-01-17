@@ -9,18 +9,18 @@
 // Win95-style color palette
 namespace win95 {
 namespace colors {
-constexpr raylib::Color WINDOW_BG = {192, 192, 192, 255};
-constexpr raylib::Color TITLE_BAR_ACTIVE = {0, 0, 128, 255};
-constexpr raylib::Color TITLE_BAR_INACTIVE = {128, 128, 128, 255};
-constexpr raylib::Color TITLE_TEXT = {255, 255, 255, 255};
-constexpr raylib::Color TEXT_AREA_BG = {255, 255, 255, 255};
-constexpr raylib::Color TEXT_COLOR = {0, 0, 0, 255};
-constexpr raylib::Color TEXT_DISABLED = {128, 128, 128, 255};
-constexpr raylib::Color BORDER_LIGHT = {255, 255, 255, 255};
-constexpr raylib::Color BORDER_DARK = {128, 128, 128, 255};
-constexpr raylib::Color BORDER_DARKER = {64, 64, 64, 255};
-constexpr raylib::Color MENU_HIGHLIGHT = {0, 0, 128, 255};
-constexpr raylib::Color BUTTON_FACE = {192, 192, 192, 255};
+inline raylib::Color WINDOW_BG = {192, 192, 192, 255};
+inline raylib::Color TITLE_BAR_ACTIVE = {0, 0, 128, 255};
+inline raylib::Color TITLE_BAR_INACTIVE = {128, 128, 128, 255};
+inline raylib::Color TITLE_TEXT = {255, 255, 255, 255};
+inline raylib::Color TEXT_AREA_BG = {255, 255, 255, 255};
+inline raylib::Color TEXT_COLOR = {0, 0, 0, 255};
+inline raylib::Color TEXT_DISABLED = {128, 128, 128, 255};
+inline raylib::Color BORDER_LIGHT = {255, 255, 255, 255};
+inline raylib::Color BORDER_DARK = {128, 128, 128, 255};
+inline raylib::Color BORDER_DARKER = {64, 64, 64, 255};
+inline raylib::Color MENU_HIGHLIGHT = {0, 0, 128, 255};
+inline raylib::Color BUTTON_FACE = {192, 192, 192, 255};
 }  // namespace colors
 
 // Button state for tracking interaction
@@ -84,6 +84,9 @@ int DrawMessageDialog(raylib::Rectangle dialogRect, const char* title,
 // Returns: 0 = OK, 1 = Cancel, -1 = still open
 int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
                     const char* prompt, char* buffer, int bufferSize);
+
+// Apply dark mode color scheme to Win95 widgets
+void applyDarkMode(bool enabled);
 
 // Dialog state management
 struct DialogState {

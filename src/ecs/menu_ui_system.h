@@ -11,6 +11,8 @@
 #include "../testing/test_input.h"  // For E2E testing
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"  // For ui_imm::getUIRootEntity()
+#include "../ui/menu_setup.h"
+#include "../settings.h"
 
 namespace ecs {
 
@@ -27,15 +29,9 @@ using afterhours::ui::imm::mk;
 using afterhours::ui::pixels;
 using afterhours::ui::percent;
 
-// Menu UI colors (Win95 style)
-namespace menu_colors {
-constexpr afterhours::Color MENU_BG = {192, 192, 192, 255};
-constexpr afterhours::Color MENU_HIGHLIGHT = {0, 0, 128, 255};
-constexpr afterhours::Color TEXT_DARK = {0, 0, 0, 255};
-constexpr afterhours::Color TEXT_LIGHT = {255, 255, 255, 255};
-constexpr afterhours::Color TEXT_DISABLED = {128, 128, 128, 255};
-constexpr afterhours::Color SEPARATOR = {128, 128, 128, 255};
-}  // namespace menu_colors
+inline afterhours::Color toAhColor(const raylib::Color& color) {
+    return {color.r, color.g, color.b, color.a};
+}
 
 // Menu UI System - runs during update phase to handle menu interactions
 // Queries only for UIContext singleton, then manually finds MenuComponent entities
@@ -49,23 +45,53 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (menuEntities.empty()) return;
         
         MenuComponent& menu = menuEntities[0].get().get<MenuComponent>();
+
+        // Skip rendering menus in focus mode
+        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
+                                 .whereHasComponent<LayoutComponent>()
+                                 .gen();
+        if (!layoutEntities.empty()) {
+            auto& layout = layoutEntities[0].get().get<LayoutComponent>();
+            if (layout.focusMode) {
+                return;
+            }
+        }
+
+        // Refresh menus if recent file count changed
+        const auto& recentFiles = Settings::get().get_recent_files();
+        if (static_cast<int>(recentFiles.size()) != menu.recentFilesCount) {
+            menu.menus = menu_setup::createMenuBar(recentFiles);
+            menu.recentFilesCount = static_cast<int>(recentFiles.size());
+
+            auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                   .whereHasComponent<DocumentComponent>()
+                                   .gen();
+            if (!docEntities.empty()) {
+                auto& doc = docEntities[0].get().get<DocumentComponent>();
+                if (doc.trackChangesEnabled &&
+                    menu.menus.size() > 1 &&
+                    menu.menus[1].items.size() > 3) {
+                    menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
+                }
+            }
+        }
         
         // Get the UI root entity for parenting UI elements
         Entity& entity = ui_imm::getUIRootEntity();
         
         // Set up Win95 theme
-        Theme theme;
-        theme.font = menu_colors::TEXT_LIGHT;
-        theme.darkfont = menu_colors::TEXT_DARK;
-        theme.font_muted = menu_colors::TEXT_DISABLED;
-        theme.background = menu_colors::MENU_BG;
-        theme.surface = menu_colors::MENU_BG;
-        theme.primary = menu_colors::MENU_HIGHLIGHT;
-        theme.secondary = menu_colors::MENU_BG;
-        theme.accent = menu_colors::MENU_HIGHLIGHT;
-        theme.roundness = 0.0f;
-        theme.segments = 0;
-        ctx.theme = theme;
+        Theme menuTheme;
+        menuTheme.font = toAhColor(theme::MENU_TEXT_HOVER);
+        menuTheme.darkfont = toAhColor(theme::MENU_TEXT);
+        menuTheme.font_muted = toAhColor(theme::MENU_DISABLED);
+        menuTheme.background = toAhColor(theme::MENU_BG);
+        menuTheme.surface = toAhColor(theme::MENU_BG);
+        menuTheme.primary = toAhColor(theme::MENU_HOVER);
+        menuTheme.secondary = toAhColor(theme::MENU_BG);
+        menuTheme.accent = toAhColor(theme::MENU_HOVER);
+        menuTheme.roundness = 0.0f;
+        menuTheme.segments = 0;
+        ctx.theme = menuTheme;
 
         int screenWidth = 800;  // TODO: get from layout component
         
@@ -78,7 +104,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 .with_absolute_position()
                 .with_translate(0.0f, static_cast<float>(theme::layout::TITLE_BAR_HEIGHT))
                 .with_flex_direction(FlexDirection::Row)
-                .with_custom_background(menu_colors::MENU_BG));
+                .with_custom_background(toAhColor(theme::MENU_BG)));
 
         Entity& menuBar = menuBarContainer.ent();
         (void)menuBar;  // Menu bar container used for background only
@@ -108,8 +134,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                             pixels(static_cast<float>(theme::layout::MENU_BAR_HEIGHT))})
                     .with_absolute_position()
                     .with_translate(headerX, headerY)
-                    .with_custom_background(isOpen ? menu_colors::MENU_HIGHLIGHT : menu_colors::MENU_BG)
-                    .with_custom_text_color(isOpen ? menu_colors::TEXT_LIGHT : menu_colors::TEXT_DARK)
+                    .with_custom_background(isOpen ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
+                    .with_custom_text_color(isOpen ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
                     .with_render_layer(1));
             
             // Update X position for next header
@@ -152,7 +178,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_absolute_position()
                     .with_translate(dropdownX, dropdownY)
                     .with_flex_direction(FlexDirection::Column)
-                    .with_custom_background(menu_colors::MENU_BG)
+                    .with_custom_background(toAhColor(theme::MENU_BG))
                     .with_render_layer(10));  // Render on top
             
             Entity& dropdown = dropdownContainer.ent();
@@ -173,7 +199,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_size(ComponentSize{pixels(maxWidth), pixels(8.0f)})
                             .with_absolute_position()
                             .with_translate(dropdownX, itemY)
-                            .with_custom_background(menu_colors::SEPARATOR)
+                    .with_custom_background(toAhColor(theme::MENU_SEPARATOR))
                             .with_render_layer(11));
                     itemY += 8.0f;
                 } else {
@@ -201,9 +227,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_size(ComponentSize{pixels(maxWidth), pixels(20.0f)})
                             .with_absolute_position()
                             .with_translate(dropdownX, itemY)
-                            .with_custom_background(menu_colors::MENU_BG)
-                            .with_custom_text_color(item.enabled ? menu_colors::TEXT_DARK 
-                                                                  : menu_colors::TEXT_DISABLED)
+                            .with_custom_background(toAhColor(theme::MENU_BG))
+                            .with_custom_text_color(item.enabled ? toAhColor(theme::MENU_TEXT)
+                                                                  : toAhColor(theme::MENU_DISABLED))
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(11));
                     

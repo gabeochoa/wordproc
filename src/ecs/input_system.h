@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
+#include <ctime>
 #include <filesystem>
 
 #include "../../vendor/afterhours/src/core/system.h"
@@ -7,11 +10,35 @@
 #include "../editor/document_io.h"
 #include "../input/action_map.h"
 #include "../rl.h"
+#include "../settings.h"
 #include "../testing/test_input.h"
+#include "../ui/theme.h"
 #include "component_helpers.h"
 #include "components.h"
 
 namespace ecs {
+
+inline void recordInsertRevision(DocumentComponent& doc, std::size_t offset,
+                                 const std::string& text) {
+    if (!doc.trackChangesEnabled || text.empty()) return;
+    Revision rev;
+    rev.type = RevisionType::Insert;
+    rev.startOffset = offset;
+    rev.text = text;
+    rev.timestamp = std::time(nullptr);
+    doc.revisions.push_back(rev);
+}
+
+inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
+                                 const std::string& text) {
+    if (!doc.trackChangesEnabled || text.empty()) return;
+    Revision rev;
+    rev.type = RevisionType::Delete;
+    rev.startOffset = offset;
+    rev.text = text;
+    rev.timestamp = std::time(nullptr);
+    doc.revisions.push_back(rev);
+}
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
@@ -25,23 +52,87 @@ struct TextInputSystem
         int codepoint = GetCharPressed();
         while (codepoint > 0) {
             if (codepoint >= 32) {
-                doc.buffer.insertChar(static_cast<char>(codepoint));
-                doc.isDirty = true;
-                caret::resetBlink(caret);
+                char ch = static_cast<char>(codepoint);
+                if (doc.docSettings.smartQuotesEnabled &&
+                    (ch == '"' || ch == '\'')) {
+                    auto insertSmartQuote = [&](char ascii, const char* openQuote,
+                                                const char* closeQuote) {
+                        std::size_t offset = doc.buffer.caretOffset();
+                        bool opening = true;
+                        if (offset > 0) {
+                            char prev = doc.buffer.charAtOffset(offset - 1);
+                            if (!(std::isspace(static_cast<unsigned char>(prev)) ||
+                                  prev == '(' || prev == '[' || prev == '{' ||
+                                  prev == '<' || prev == '\n' || prev == '\t')) {
+                                opening = false;
+                            }
+                        }
+                        const char* quote = opening ? openQuote : closeQuote;
+                        recordInsertRevision(doc, offset, quote);
+                        doc.buffer.insertText(quote);
+                        doc.isDirty = true;
+                        caret::resetBlink(caret);
+                    };
+                    if (ch == '"') {
+                        insertSmartQuote(ch, "\xE2\x80\x9C", "\xE2\x80\x9D");
+                    } else {
+                        insertSmartQuote(ch, "\xE2\x80\x98", "\xE2\x80\x99");
+                    }
+                } else {
+                    std::size_t offset = doc.buffer.caretOffset();
+                    recordInsertRevision(doc, offset, std::string(1, ch));
+                    doc.buffer.insertChar(ch);
+                    doc.isDirty = true;
+                    caret::resetBlink(caret);
+                }
             }
             codepoint = GetCharPressed();
         }
 
         if (actionMap_.isActionPressed(Action::InsertNewline)) {
+            std::size_t offset = doc.buffer.caretOffset();
+            recordInsertRevision(doc, offset, "\n");
             doc.buffer.insertChar('\n');
             doc.isDirty = true;
         }
         if (actionMap_.isActionPressed(Action::Backspace)) {
+            if (doc.buffer.hasSelection()) {
+                CaretPosition start = doc.buffer.selectionStart();
+                std::string selected = doc.buffer.getSelectedText();
+                recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
+            } else {
+                std::size_t offset = doc.buffer.caretOffset();
+                if (offset > 0) {
+                    char deleted = doc.buffer.charAtOffset(offset - 1);
+                    recordDeleteRevision(doc, offset - 1, std::string(1, deleted));
+                }
+            }
             doc.buffer.backspace();
             doc.isDirty = true;
         }
         if (actionMap_.isActionPressed(Action::Delete)) {
+            if (doc.buffer.hasSelection()) {
+                CaretPosition start = doc.buffer.selectionStart();
+                std::string selected = doc.buffer.getSelectedText();
+                recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
+            } else {
+                std::size_t offset = doc.buffer.caretOffset();
+                if (offset < doc.buffer.getText().size()) {
+                    char deleted = doc.buffer.charAtOffset(offset);
+                    recordDeleteRevision(doc, offset, std::string(1, deleted));
+                }
+            }
             doc.buffer.del();
+            doc.isDirty = true;
+        }
+
+        // Tab inserts spaces (tab stops)
+        if (IsKeyPressed(raylib::KEY_TAB)) {
+            int width = std::max(1, doc.docSettings.tabWidth);
+            std::string spaces(static_cast<std::size_t>(width), ' ');
+            std::size_t offset = doc.buffer.caretOffset();
+            recordInsertRevision(doc, offset, spaces);
+            doc.buffer.insertText(spaces);
             doc.isDirty = true;
         }
     }
@@ -57,6 +148,18 @@ struct KeyboardShortcutSystem
                        CaretComponent& caret, StatusComponent& status,
                        LayoutComponent& layout, const float) override {
         using input::Action;
+
+        // New document
+        if (actionMap_.isActionPressed(Action::New)) {
+            doc.buffer.setText("");
+            doc.filePath.clear();
+            doc.isDirty = false;
+            doc.comments.clear();
+            doc.revisions.clear();
+            doc.trackChangesBaseline.clear();
+            status::set(status, "New document");
+            status.expiresAt = raylib::GetTime() + 2.0;
+        }
 
         // Save
         if (actionMap_.isActionPressed(Action::Save)) {
@@ -74,6 +177,10 @@ struct KeyboardShortcutSystem
             if (result.success) {
                 doc.isDirty = false;
                 doc.filePath = savePath;
+                if (!doc.autoSavePath.empty()) {
+                    std::filesystem::remove(doc.autoSavePath);
+                }
+                Settings::get().add_recent_file(savePath);
                 status::set(
                     status,
                     "Saved: " +
@@ -93,6 +200,8 @@ struct KeyboardShortcutSystem
             if (result.success) {
                 doc.filePath = doc.defaultPath;
                 doc.isDirty = false;
+                doc.comments.clear();
+                doc.revisions.clear();
                 // Sync loaded document settings to layout component
                 layout.pageMode = doc.docSettings.pageSettings.mode;
                 layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
@@ -100,6 +209,7 @@ struct KeyboardShortcutSystem
                 layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
                 layout.lineWidthLimit =
                     doc.docSettings.pageSettings.lineWidthLimit;
+                Settings::get().add_recent_file(doc.defaultPath);
                 status::set(status,
                             "Opened: " + std::filesystem::path(doc.defaultPath)
                                              .filename()
@@ -136,6 +246,26 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::ToggleStrikethrough)) {
             TextStyle style = doc.buffer.textStyle();
             style.strikethrough = !style.strikethrough;
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Superscript
+        if (actionMap_.isActionPressed(Action::ToggleSuperscript)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.superscript = !style.superscript;
+            if (style.superscript) {
+                style.subscript = false;
+            }
+            doc.buffer.setTextStyle(style);
+        }
+
+        // Subscript
+        if (actionMap_.isActionPressed(Action::ToggleSubscript)) {
+            TextStyle style = doc.buffer.textStyle();
+            style.subscript = !style.subscript;
+            if (style.subscript) {
+                style.superscript = false;
+            }
             doc.buffer.setTextStyle(style);
         }
 
@@ -251,6 +381,27 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::DecreaseSpaceAfter)) {
             doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
         }
+
+        // View controls
+        if (actionMap_.isActionPressed(Action::ZoomIn)) {
+            layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
+        }
+        if (actionMap_.isActionPressed(Action::ZoomOut)) {
+            layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
+        }
+        if (actionMap_.isActionPressed(Action::ZoomReset)) {
+            layout.zoomLevel = 1.0f;
+        }
+        if (actionMap_.isActionPressed(Action::ToggleFocusMode)) {
+            layout.focusMode = !layout.focusMode;
+            layout::updateLayout(layout, layout.screenWidth, layout.screenHeight);
+        }
+        if (actionMap_.isActionPressed(Action::ToggleSplitView)) {
+            layout.splitViewEnabled = !layout.splitViewEnabled;
+        }
+        if (actionMap_.isActionPressed(Action::ToggleDarkMode)) {
+            theme::applyDarkMode(!theme::DARK_MODE_ENABLED);
+        }
         
         // Page breaks
         if (actionMap_.isActionPressed(Action::InsertPageBreak)) {
@@ -276,6 +427,8 @@ struct KeyboardShortcutSystem
             if (doc.buffer.hasSelection()) {
                 std::string selected = doc.buffer.getSelectedText();
                 if (!selected.empty()) {
+                    CaretPosition start = doc.buffer.selectionStart();
+                    recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
                     afterhours::clipboard::set_text(selected);
                     doc.buffer.deleteSelection();
                     doc.isDirty = true;
@@ -286,6 +439,8 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::Paste)) {
             if (afterhours::clipboard::has_text()) {
                 std::string clipText = afterhours::clipboard::get_text();
+                std::size_t offset = doc.buffer.caretOffset();
+                recordInsertRevision(doc, offset, clipText);
                 doc.buffer.insertText(clipText);
                 doc.isDirty = true;
             }
@@ -317,12 +472,12 @@ struct KeyboardShortcutSystem
 // System for handling navigation keys using remappable ActionMap
 struct NavigationSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                ScrollComponent> {
+                                ScrollComponent, LayoutComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, ScrollComponent& scroll,
-                       const float) override {
+                       LayoutComponent& layout, const float) override {
         using input::Action;
 
         auto isKeyDownOrSynthetic = [](int key) {
@@ -376,28 +531,92 @@ struct NavigationSystem
             navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
         }
 
+        auto clampSecondary = [&]() {
+            int lineCount = static_cast<int>(doc.buffer.lineCount());
+            int maxScroll = lineCount - scroll.visibleLines;
+            if (maxScroll < 0) maxScroll = 0;
+            scroll.secondaryOffset = std::clamp(scroll.secondaryOffset, 0, maxScroll);
+        };
+
         // Page Up/Down
         constexpr std::size_t LINES_PER_PAGE = 20;
         if (actionMap_.isActionPressed(Action::PageUp)) {
-            navigateWithSelection(
-                [&]() { doc.buffer.movePageUp(LINES_PER_PAGE); });
+            if (layout.splitViewEnabled && shift_down) {
+                scroll.secondaryOffset -= static_cast<int>(LINES_PER_PAGE);
+                clampSecondary();
+            } else {
+                navigateWithSelection(
+                    [&]() { doc.buffer.movePageUp(LINES_PER_PAGE); });
+            }
         }
         if (actionMap_.isActionPressed(Action::PageDown)) {
-            navigateWithSelection(
-                [&]() { doc.buffer.movePageDown(LINES_PER_PAGE); });
+            if (layout.splitViewEnabled && shift_down) {
+                scroll.secondaryOffset += static_cast<int>(LINES_PER_PAGE);
+                clampSecondary();
+            } else {
+                navigateWithSelection(
+                    [&]() { doc.buffer.movePageDown(LINES_PER_PAGE); });
+            }
         }
 
         // Mouse wheel scrolling
         float wheelMove = GetMouseWheelMove();
         if (wheelMove != 0.0f) {
             int scrollLines = static_cast<int>(-wheelMove * 3);
-            scroll.offset += scrollLines;
+            if (layout.splitViewEnabled && shift_down) {
+                scroll.secondaryOffset += scrollLines;
+                clampSecondary();
+            } else {
+                scroll.offset += scrollLines;
+            }
         }
 
         // Auto-scroll to keep caret visible
         CaretPosition caretPos = doc.buffer.caret();
         scroll::scrollToRow(scroll, static_cast<int>(caretPos.row));
         scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
+    }
+};
+
+// System for auto-saving documents periodically
+struct AutoSaveSystem
+    : public afterhours::System<DocumentComponent, StatusComponent, LayoutComponent> {
+    void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
+                       StatusComponent& status, LayoutComponent& layout,
+                       const float) override {
+        if (!doc.autoSaveEnabled || !doc.isDirty) {
+            return;
+        }
+
+        double now = raylib::GetTime();
+        if ((now - doc.lastAutoSaveTime) < doc.autoSaveIntervalSeconds) {
+            return;
+        }
+
+        if (doc.autoSavePath.empty()) {
+            doc.autoSavePath = "output/autosave.wpdoc";
+        }
+
+        std::filesystem::create_directories(
+            std::filesystem::path(doc.autoSavePath).parent_path());
+
+        // Sync layout settings to document settings before save
+        doc.docSettings.textStyle = doc.buffer.textStyle();
+        doc.docSettings.pageSettings.mode = layout.pageMode;
+        doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
+        doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
+        doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
+        doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
+
+        auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.autoSavePath);
+        if (result.success) {
+            doc.lastAutoSaveTime = now;
+            status::set(status, "Auto-saved");
+            status.expiresAt = now + 2.0;
+        } else {
+            status::set(status, "Auto-save failed: " + result.error, true);
+            status.expiresAt = now + 2.0;
+        }
     }
 };
 
