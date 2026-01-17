@@ -252,12 +252,20 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         {"italic", style.italic},
         {"underline", style.underline},
         {"strikethrough", style.strikethrough},
+        {"superscript", style.superscript},
+        {"subscript", style.subscript},
         {"font", style.font},
         {"fontSize", style.fontSize},
         {"textColor", {{"r", style.textColor.r}, {"g", style.textColor.g},
                        {"b", style.textColor.b}, {"a", style.textColor.a}}},
         {"highlightColor", {{"r", style.highlightColor.r}, {"g", style.highlightColor.g},
                             {"b", style.highlightColor.b}, {"a", style.highlightColor.a}}},
+    };
+
+    // Text options
+    doc["options"] = {
+        {"smartQuotesEnabled", settings.smartQuotesEnabled},
+        {"tabWidth", settings.tabWidth}
     };
 
     // Page layout settings (document-specific, saved with file)
@@ -316,6 +324,17 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
     contents << ifs.rdbuf();
     std::string raw = contents.str();
 
+    const std::filesystem::path input_path(path);
+    std::string extension = input_path.extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    if (extension == ".txt" || extension == ".md") {
+        buffer.setText(raw);
+        result.success = true;
+        result.usedFallback = true;
+        return result;
+    }
+
     try {
         nlohmann::json doc = nlohmann::json::parse(raw);
 
@@ -354,6 +373,12 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             if (style_json.contains("strikethrough")) {
                 style.strikethrough = style_json.at("strikethrough").get<bool>();
             }
+            if (style_json.contains("superscript")) {
+                style.superscript = style_json.at("superscript").get<bool>();
+            }
+            if (style_json.contains("subscript")) {
+                style.subscript = style_json.at("subscript").get<bool>();
+            }
             if (style_json.contains("font")) {
                 style.font = style_json.at("font").get<std::string>();
             }
@@ -377,6 +402,17 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                 if (color.contains("a")) style.highlightColor.a = color.at("a").get<unsigned char>();
             }
             buffer.setTextStyle(style);
+        }
+
+        // Load text options
+        if (doc.contains("options")) {
+            const nlohmann::json &opts = doc.at("options");
+            if (opts.contains("smartQuotesEnabled")) {
+                settings.smartQuotesEnabled = opts.at("smartQuotesEnabled").get<bool>();
+            }
+            if (opts.contains("tabWidth")) {
+                settings.tabWidth = opts.at("tabWidth").get<int>();
+            }
         }
 
         // Load page layout settings (document-specific settings)
