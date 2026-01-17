@@ -11,7 +11,7 @@
 #include <sstream>
 
 #include "../../vendor/afterhours/src/core/system.h"
-#include "../../vendor/afterhours/src/plugins/clipboard.h"
+#include "../util/clipboard.h"
 #include "../editor/document_io.h"
 #include "../editor/export/export_html.h"
 #include "../editor/export/export_pdf.h"
@@ -1228,7 +1228,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (doc.buffer.hasSelection()) {
                         std::string selected = doc.buffer.getSelectedText();
                         if (!selected.empty()) {
-                            afterhours::clipboard::set_text(selected);
+                            app::clipboard::set_text(selected);
                             doc.buffer.deleteSelection();
                             doc.isDirty = true;
                         }
@@ -1238,14 +1238,14 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (doc.buffer.hasSelection()) {
                         std::string selected = doc.buffer.getSelectedText();
                         if (!selected.empty()) {
-                            afterhours::clipboard::set_text(selected);
+                            app::clipboard::set_text(selected);
                         }
                     }
                     break;
                 case 9:  // Paste
                 {
-                    if (afterhours::clipboard::has_text()) {
-                        std::string clipText = afterhours::clipboard::get_text();
+                    if (app::clipboard::has_text()) {
+                        std::string clipText = app::clipboard::get_text();
                         doc.buffer.insertText(clipText);
                         doc.isDirty = true;
                     }

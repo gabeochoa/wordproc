@@ -6,7 +6,7 @@
 #include <filesystem>
 
 #include "../../vendor/afterhours/src/core/system.h"
-#include "../../vendor/afterhours/src/plugins/clipboard.h"
+#include "../util/clipboard.h"
 #include "../editor/document_io.h"
 #include "../input/action_map.h"
 #include "../rl.h"
@@ -428,7 +428,7 @@ struct KeyboardShortcutSystem
             if (doc.buffer.hasSelection()) {
                 std::string selected = doc.buffer.getSelectedText();
                 if (!selected.empty()) {
-                    afterhours::clipboard::set_text(selected);
+                    app::clipboard::set_text(selected);
                 }
             }
         }
@@ -439,7 +439,7 @@ struct KeyboardShortcutSystem
                 if (!selected.empty()) {
                     CaretPosition start = doc.buffer.selectionStart();
                     recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
-                    afterhours::clipboard::set_text(selected);
+                    app::clipboard::set_text(selected);
                     doc.buffer.deleteSelection();
                     doc.isDirty = true;
                 }
@@ -447,8 +447,8 @@ struct KeyboardShortcutSystem
         }
         // Paste
         if (actionMap_.isActionPressed(Action::Paste)) {
-            if (afterhours::clipboard::has_text()) {
-                std::string clipText = afterhours::clipboard::get_text();
+            if (app::clipboard::has_text()) {
+                std::string clipText = app::clipboard::get_text();
                 std::size_t offset = doc.buffer.caretOffset();
                 recordInsertRevision(doc, offset, clipText);
                 doc.buffer.insertText(clipText);
