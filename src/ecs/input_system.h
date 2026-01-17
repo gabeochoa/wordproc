@@ -42,14 +42,24 @@ inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
-    : public afterhours::System<DocumentComponent, CaretComponent> {
+    : public afterhours::System<DocumentComponent, CaretComponent, MenuComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
-                       CaretComponent& caret, const float) override {
+                       CaretComponent& caret, MenuComponent& menu, const float) override {
         using input::Action;
+        
+        // Find/Replace keyboard shortcuts
+        if (actionMap_.isActionPressed(Action::Find)) {
+            menu.showFindDialog = true;
+            menu.findReplaceMode = false;
+        }
+        if (actionMap_.isActionPressed(Action::Replace)) {
+            menu.showFindDialog = true;
+            menu.findReplaceMode = true;
+        }
 
-        int codepoint = GetCharPressed();
+        int codepoint = test_input::get_char_pressed();
         while (codepoint > 0) {
             if (codepoint >= 32) {
                 char ch = static_cast<char>(codepoint);
@@ -86,7 +96,7 @@ struct TextInputSystem
                     caret::resetBlink(caret);
                 }
             }
-            codepoint = GetCharPressed();
+            codepoint = test_input::get_char_pressed();
         }
 
         if (actionMap_.isActionPressed(Action::InsertNewline)) {

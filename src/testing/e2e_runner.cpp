@@ -5,6 +5,7 @@
 #include "../ecs/components.h"
 #include "../editor/document_settings.h"
 #include "../rl.h"
+#include "../settings.h"
 #include "../ui/theme.h"
 #include "../util/logging.h"
 
@@ -106,7 +107,16 @@ static void setupCallbacks(
         docComp.buffer.clearHistory();
         // Reset text style to defaults
         docComp.buffer.setTextStyle(TextStyle{});
+        docComp.tables.clear();
+        docComp.images.clear();
+        docComp.drawings.clear();
+        docComp.equations.clear();
+        docComp.comments.clear();
         docComp.isDirty = false;
+        docComp.filePath.clear();
+        
+        // Reset settings
+        Settings::get().reset();
     });
 }
 
@@ -505,6 +515,7 @@ static void setupCallbacksEx(
     
     // Set up document clearer (for batch mode)
     runner.set_clear_callback([&docComp, &menuComp, &layoutComp]() {
+        // Reset document state
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
         docComp.buffer.clearBookmarks();
@@ -520,7 +531,11 @@ static void setupCallbacksEx(
         docComp.tables.clear();
         docComp.images.clear();
         docComp.drawings.clear();
+        docComp.equations.clear();
         docComp.isDirty = false;
+        docComp.filePath.clear();
+        
+        // Reset menu state
         menuComp.showAboutDialog = false;
         menuComp.showHelpWindow = false;
         menuComp.showFindDialog = false;
@@ -535,11 +550,19 @@ static void setupCallbacksEx(
         menuComp.templateInputBuffer[0] = '\0';
         menuComp.showTabWidthDialog = false;
         menuComp.tabWidthInputBuffer[0] = '\0';
+        menuComp.showPageSetup = false;
+        
+        // Reset layout state
         layoutComp.zoomLevel = 1.0f;
         layoutComp.focusMode = false;
         layoutComp.splitViewEnabled = false;
         layoutComp.splitViewHorizontal = true;
+        
+        // Reset theme
         theme::applyDarkMode(false);
+        
+        // Reset settings to defaults
+        Settings::get().reset();
     });
     
     // Set up menu opener
@@ -560,14 +583,14 @@ static void setupCallbacksEx(
     
     // Set up menu item selector
     runner.set_menu_selector([&menuComp](const std::string& itemName) -> bool {
-        for (auto& menu : menuComp.menus) {
+        for (std::size_t menuIdx = 0; menuIdx < menuComp.menus.size(); ++menuIdx) {
+            auto& menu = menuComp.menus[menuIdx];
             if (menu.open) {
                 for (std::size_t i = 0; i < menu.items.size(); ++i) {
                     if (menu.items[i].label == itemName) {
-                        // Execute the menu item's action
-                        if (menu.items[i].action) {
-                            menu.items[i].action();
-                        }
+                        // Set the clicked result for handleMenuActionImpl to process
+                        // Menu result code is menuIndex * 100 + itemIndex
+                        menuComp.lastClickedResult = static_cast<int>(menuIdx * 100 + i);
                         menu.open = false;  // Close menu after selection
                         return true;
                     }

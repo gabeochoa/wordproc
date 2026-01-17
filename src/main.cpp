@@ -27,6 +27,7 @@
 #include "ui/ui_context.h"
 #include "ui/win95_widgets.h"
 #include "util/drawing.h"
+#include "../vendor/afterhours/src/plugins/clipboard.h"
 #include "util/logging.h"
 
 // Include afterhours ECS
@@ -111,6 +112,7 @@ int main(int argc, char* argv[]) {
     if (!testScriptPath.empty() || !testScriptDir.empty()) {
         testModeEnabled = true;
         test_input::test_mode = true;
+        afterhours::clipboard::enable_test_mode();  // Use in-memory clipboard
     }
 
     // FPS test mode - simulates scrolling and logs FPS

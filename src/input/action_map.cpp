@@ -16,6 +16,15 @@ static bool isKeyDown(int key) {
     return raylib::IsKeyDown(key) || input_injector::is_key_synthetically_down(key);
 }
 
+// Helper to check if a key was just pressed (real or synthetic)
+static bool isKeyPressed(int key) {
+    // Check synthetic key press first
+    if (input_injector::consume_press(key)) return true;
+    // Fall back to raylib (unless in test mode where we block real input)
+    if (test_input::is_test_mode()) return false;
+    return raylib::IsKeyPressed(key);
+}
+
 bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
     bool ctrl = isKeyDown(raylib::KEY_LEFT_CONTROL) ||
                 isKeyDown(raylib::KEY_RIGHT_CONTROL);
@@ -28,7 +37,7 @@ bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
         return false;
     }
 
-    return IsKeyPressed(binding.key);
+    return isKeyPressed(binding.key);
 }
 
 bool ActionMap::isActionPressed(Action action) const {

@@ -345,6 +345,13 @@ inline int get_char_pressed(BackendFn backend_fn) {
     if (detail::key_queue.empty() || detail::char_consumed) {
       return 0;  // No character - block real input
     }
+    // Skip non-char entries in the queue (they're handled by is_key_pressed)
+    while (!detail::key_queue.empty() && !detail::key_queue.front().is_char) {
+      detail::key_queue.pop();
+    }
+    if (detail::key_queue.empty()) {
+      return 0;  // No char left after skipping keys
+    }
     if (detail::key_queue.front().is_char) {
       char c = detail::key_queue.front().char_value;
       detail::key_queue.pop();
@@ -546,6 +553,15 @@ struct ScriptError {
   std::string command, message;
 };
 
+struct ScriptResult {
+  std::string name;
+  std::string path;
+  bool expected_to_pass = true;  // Based on pass_* or fail_* prefix
+  bool passed = true;
+  int error_count = 0;
+  int validation_failures = 0;
+};
+
 struct KeyCombo {
   bool ctrl = false, shift = false, alt = false;
   int key = 0;
@@ -653,6 +669,8 @@ public:
   
   void load_scripts_from_directory(const std::string& dir) {
     commands_.clear();
+    script_results_.clear();
+    script_boundaries_.clear();
     reset();
     
     std::vector<std::string> scripts;
@@ -664,14 +682,36 @@ public:
     std::sort(scripts.begin(), scripts.end());
     
     for (size_t i = 0; i < scripts.size(); ++i) {
+      // Record script boundary (command index where this script starts)
+      script_boundaries_.push_back(commands_.size());
+      
+      // Parse script name and expected outcome
+      std::string script_name = std::filesystem::path(scripts[i]).stem().string();
+      ScriptResult result;
+      result.path = scripts[i];
+      result.name = script_name;
+      
+      // Determine expected outcome based on prefix
+      if (script_name.substr(0, 5) == "pass_") {
+        result.expected_to_pass = true;
+      } else if (script_name.substr(0, 5) == "fail_") {
+        result.expected_to_pass = false;
+      } else {
+        result.expected_to_pass = true;  // Default to expecting pass
+      }
+      script_results_.push_back(result);
+      
       auto script_cmds = parse_script(scripts[i]);
       for (auto& cmd : script_cmds) commands_.push_back(cmd);
-      if (i < scripts.size() - 1) {
-        TestCommand clear_cmd;
-        clear_cmd.type = CommandType::Clear;
-        commands_.push_back(clear_cmd);
-      }
+      
+      // Add clear command between scripts (always, to reset state)
+      TestCommand clear_cmd;
+      clear_cmd.type = CommandType::Clear;
+      commands_.push_back(clear_cmd);
     }
+    // Add sentinel for last script boundary
+    script_boundaries_.push_back(commands_.size());
+    
     printf("[BATCH] Loaded %zu scripts with %zu commands\n", scripts.size(), commands_.size());
   }
   
@@ -679,6 +719,12 @@ public:
     index_ = 0; wait_frames_ = 0; frame_count_ = 0; script_start_ = 0;
     results_.clear(); errors_.clear();
     finished_ = failed_ = timed_out_ = pending_release_ = false;
+    pending_key_release_ = false;
+    pending_key_ = 0;
+    pending_ctrl_ = pending_shift_ = pending_alt_ = false;
+    current_script_idx_ = 0;
+    current_script_errors_ = 0;
+    current_script_validation_failures_ = 0;
   }
   
   void set_timeout_frames(int frames) { timeout_ = frames; }
@@ -712,6 +758,8 @@ public:
     
     // Timeout check
     if (timeout_ > 0 && (frame_count_ - script_start_) > timeout_) {
+      current_script_errors_++;  // Count timeout as an error
+      finalize_batch();
       timed_out_ = failed_ = finished_ = true;
       ScriptError err; err.command = "timeout";
       err.message = "Timed out after " + std::to_string(timeout_) + " frames";
@@ -732,27 +780,78 @@ public:
     // Handle wait
     if (wait_frames_ > 0) {
       wait_frames_--;
-      if (wait_frames_ == 0 && pending_release_) {
-        test_input::simulate_mouse_release();
-        pending_release_ = false;
-        wait_frames_ = 2;
+      if (wait_frames_ == 0) {
+        // Release mouse if pending
+        if (pending_release_) {
+          test_input::simulate_mouse_release();
+          pending_release_ = false;
+          wait_frames_ = 2;
+          return;
+        }
+        // Release key modifiers if pending
+        if (pending_key_release_) {
+          if (pending_ctrl_) input_injector::set_key_up(341);  // KEY_LEFT_CONTROL
+          if (pending_shift_) input_injector::set_key_up(340); // KEY_LEFT_SHIFT
+          if (pending_alt_) input_injector::set_key_up(342);   // KEY_LEFT_ALT
+          input_injector::set_key_up(pending_key_);
+          pending_key_release_ = false;
+          pending_ctrl_ = pending_shift_ = pending_alt_ = false;
+        }
       }
       return;
     }
     
-    if (index_ >= commands_.size()) { finished_ = true; return; }
+    if (index_ >= commands_.size()) { finalize_batch(); finished_ = true; return; }
     
     execute(commands_[index_]);
     index_++;
-    if (index_ >= commands_.size()) finished_ = true;
+    if (index_ >= commands_.size()) { finalize_batch(); finished_ = true; }
+  }
+  
+  // Finalize the current script in batch mode (called when all commands done or on timeout)
+  void finalize_batch() {
+    if (script_results_.empty() || current_script_idx_ >= script_results_.size()) return;
+    
+    auto& result = script_results_[current_script_idx_];
+    result.error_count = current_script_errors_;
+    result.validation_failures = current_script_validation_failures_;
+    
+    bool actually_passed = (current_script_errors_ == 0 && current_script_validation_failures_ == 0);
+    
+    if (result.expected_to_pass) {
+      result.passed = actually_passed;
+    } else {
+      result.passed = !actually_passed;
+    }
+    
+    if (result.passed) {
+      printf("[PASS] %s\n", result.name.c_str());
+    } else {
+      if (result.expected_to_pass) {
+        printf("[FAIL] %s (expected pass, got %d errors, %d validation failures)\n", 
+               result.name.c_str(), current_script_errors_, current_script_validation_failures_);
+      } else {
+        printf("[FAIL] %s (expected fail, but passed)\n", result.name.c_str());
+      }
+    }
   }
   
   bool is_finished() const { return finished_; }
-  bool has_failed() const { return failed_; }
+  bool has_failed() const {
+    // In batch mode, check if any script failed its expectations
+    if (!script_results_.empty()) {
+      for (const auto& sr : script_results_) {
+        if (!sr.passed) return true;
+      }
+      return false;
+    }
+    return failed_;
+  }
   bool has_timed_out() const { return timed_out_; }
   int frame_count() const { return frame_count_; }
   const std::vector<ValidationResult>& results() const { return results_; }
   const std::vector<ScriptError>& errors() const { return errors_; }
+  const std::vector<ScriptResult>& script_results() const { return script_results_; }
   
   // camelCase aliases for backward compatibility
   bool isFinished() const { return is_finished(); }
@@ -801,6 +900,40 @@ public:
   }
   
   void print_results() const {
+    // If in batch mode, print per-script summary
+    if (!script_results_.empty()) {
+      printf("\n============================================\n");
+      printf("          E2E Batch Test Summary            \n");
+      printf("============================================\n\n");
+      
+      int scripts_passed = 0, scripts_failed = 0;
+      std::vector<std::string> failed_names;
+      
+      for (const auto& sr : script_results_) {
+        if (sr.passed) {
+          scripts_passed++;
+        } else {
+          scripts_failed++;
+          failed_names.push_back(sr.name);
+        }
+      }
+      
+      printf("Scripts run:    %zu\n", script_results_.size());
+      printf("Scripts passed: %d\n", scripts_passed);
+      printf("Scripts failed: %d\n", scripts_failed);
+      
+      if (!failed_names.empty()) {
+        printf("\nFailed tests:\n");
+        for (const auto& name : failed_names) {
+          printf("  - %s\n", name.c_str());
+        }
+      }
+      
+      printf("\n");
+      return;
+    }
+    
+    // Single script mode - show validation details
     int passed = 0, failed_count = 0;
     for (const auto& r : results_) {
       if (r.success) passed++;
@@ -831,7 +964,16 @@ private:
         if (combo.ctrl) input_injector::set_key_down(341);  // KEY_LEFT_CONTROL
         if (combo.shift) input_injector::set_key_down(340); // KEY_LEFT_SHIFT
         if (combo.alt) input_injector::set_key_down(342);   // KEY_LEFT_ALT
+        // Use input_injector for main key too (for ActionMap to detect it)
+        input_injector::set_key_down(combo.key);
+        // Also push to queue for legacy handlers that use test_input::is_key_pressed
         test_input::push_key(combo.key);
+        // Store key info for release after wait
+        pending_key_release_ = true;
+        pending_key_ = combo.key;
+        pending_ctrl_ = combo.ctrl;
+        pending_shift_ = combo.shift;
+        pending_alt_ = combo.alt;
         wait_frames_ = 2;
         break;
       }
@@ -857,7 +999,10 @@ private:
           r.property = cmd.arg1; r.expected = cmd.arg2; r.line_number = cmd.line_number;
           r.actual = property_getter_(cmd.arg1);
           r.success = (r.actual == r.expected);
-          if (!r.success) failed_ = true;
+          if (!r.success) {
+            failed_ = true;
+            current_script_validation_failures_++;
+          }
           results_.push_back(r);
         }
         break;
@@ -867,7 +1012,10 @@ private:
         r.property = "visible_text"; r.expected = cmd.arg1; r.line_number = cmd.line_number;
         r.success = visible_text::contains(cmd.arg1);
         r.actual = r.success ? cmd.arg1 : visible_text::get_all().substr(0, 200);
-        if (!r.success) failed_ = true;
+        if (!r.success) {
+          failed_ = true;
+          current_script_validation_failures_++;
+        }
         results_.push_back(r);
         break;
       }
@@ -877,6 +1025,41 @@ private:
         break;
         
       case CommandType::Clear:
+        // Finalize current script results before clearing
+        if (!script_results_.empty() && current_script_idx_ < script_results_.size()) {
+          auto& result = script_results_[current_script_idx_];
+          result.error_count = current_script_errors_;
+          result.validation_failures = current_script_validation_failures_;
+          
+          // A script "passed" if no errors/failures occurred
+          bool actually_passed = (current_script_errors_ == 0 && current_script_validation_failures_ == 0);
+          
+          // Check against expectation
+          if (result.expected_to_pass) {
+            result.passed = actually_passed;
+          } else {
+            // Expected to fail: we "pass" the test if it actually failed
+            result.passed = !actually_passed;
+          }
+          
+          // Print per-script result
+          if (result.passed) {
+            printf("[PASS] %s\n", result.name.c_str());
+          } else {
+            if (result.expected_to_pass) {
+              printf("[FAIL] %s (expected pass, got %d errors, %d validation failures)\n", 
+                     result.name.c_str(), current_script_errors_, current_script_validation_failures_);
+            } else {
+              printf("[FAIL] %s (expected fail, but passed)\n", result.name.c_str());
+            }
+          }
+          
+          // Move to next script
+          current_script_idx_++;
+          current_script_errors_ = 0;
+          current_script_validation_failures_ = 0;
+        }
+        
         if (clear_fn_) clear_fn_();
         script_start_ = frame_count_;
         wait_frames_ = 2;
@@ -930,6 +1113,7 @@ private:
     err.message = msg;
     errors_.push_back(err);
     failed_ = true;
+    current_script_errors_++;
     printf("[ERROR] Line %d: %s\n", cmd.line_number, msg.c_str());
   }
   
@@ -939,6 +1123,9 @@ private:
   int wait_frames_ = 0, frame_count_ = 0, script_start_ = 0;
   int timeout_ = DEFAULT_TIMEOUT;
   bool pending_release_ = false;
+  bool pending_key_release_ = false;
+  int pending_key_ = 0;
+  bool pending_ctrl_ = false, pending_shift_ = false, pending_alt_ = false;
   bool finished_ = false, failed_ = false, timed_out_ = false;
   bool debug_overlay_ = false;
   
@@ -951,6 +1138,13 @@ private:
   std::function<bool(const std::string&)> menu_selector_;
   std::function<void(const std::string&)> document_dumper_;
   std::function<bool(const std::string&)> outline_clicker_;
+  
+  // Per-script tracking for batch mode
+  std::vector<ScriptResult> script_results_;
+  std::vector<std::size_t> script_boundaries_;  // Command index where each script starts
+  std::size_t current_script_idx_ = 0;
+  int current_script_errors_ = 0;
+  int current_script_validation_failures_ = 0;
 };
 
 } // namespace testing
