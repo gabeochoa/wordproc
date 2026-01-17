@@ -1,0 +1,18 @@
+Your Name
+Your Address
+City, State ZIP
+
+Date
+
+Recipient Name
+Recipient Address
+City, State ZIP
+
+Dear [Recipient],
+
+Thank you for your time. This letter template provides a basic structure for
+formal correspondence.
+
+Sincerely,
+Your Name
+

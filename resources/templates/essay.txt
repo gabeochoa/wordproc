@@ -1,0 +1,18 @@
+Essay Title
+
+Introduction
+------------
+[Introduce topic and thesis]
+
+Body Paragraph 1
+----------------
+[Topic sentence and supporting details]
+
+Body Paragraph 2
+----------------
+[Topic sentence and supporting details]
+
+Conclusion
+----------
+[Restate thesis and summarize points]
+

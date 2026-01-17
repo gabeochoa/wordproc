@@ -1,0 +1,22 @@
+Your Name
+City, State | email@example.com | (555) 555-5555
+
+Summary
+-------
+[Short professional summary]
+
+Experience
+----------
+Role, Company — Dates
+- Achievement or responsibility
+- Achievement or responsibility
+
+Education
+---------
+Degree, School — Dates
+
+Skills
+------
+- Skill 1
+- Skill 2
+

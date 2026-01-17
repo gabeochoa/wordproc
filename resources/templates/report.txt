@@ -1,0 +1,22 @@
+Report Title
+
+Author: [Name]
+Date: [Date]
+
+Executive Summary
+----------------
+[Summary paragraph]
+
+Introduction
+------------
+[Background and scope]
+
+Findings
+--------
+1. [Finding]
+2. [Finding]
+
+Conclusion
+----------
+[Wrap-up and recommendations]
+
