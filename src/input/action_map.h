@@ -52,6 +52,8 @@ enum class Action {
     ToggleItalic,
     ToggleUnderline,
     ToggleStrikethrough,
+    ToggleSuperscript,
+    ToggleSubscript,
     FontGaegu,
     FontGaramond,
     IncreaseFontSize,
@@ -83,6 +85,14 @@ enum class Action {
     LineSpacingSingle,
     LineSpacing1_5,
     LineSpacingDouble,
+
+    // View controls
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
+    ToggleFocusMode,
+    ToggleSplitView,
+    ToggleDarkMode,
     
     // Paragraph spacing
     IncreaseSpaceBefore,

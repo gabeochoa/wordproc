@@ -109,6 +109,10 @@ const char* ActionMap::actionName(Action action) {
             return "ToggleUnderline";
         case Action::ToggleStrikethrough:
             return "ToggleStrikethrough";
+        case Action::ToggleSuperscript:
+            return "ToggleSuperscript";
+        case Action::ToggleSubscript:
+            return "ToggleSubscript";
         case Action::FontGaegu:
             return "FontGaegu";
         case Action::FontGaramond:
@@ -155,6 +159,18 @@ const char* ActionMap::actionName(Action action) {
             return "LineSpacing1_5";
         case Action::LineSpacingDouble:
             return "LineSpacingDouble";
+        case Action::ZoomIn:
+            return "ZoomIn";
+        case Action::ZoomOut:
+            return "ZoomOut";
+        case Action::ZoomReset:
+            return "ZoomReset";
+        case Action::ToggleFocusMode:
+            return "ToggleFocusMode";
+        case Action::ToggleSplitView:
+            return "ToggleSplitView";
+        case Action::ToggleDarkMode:
+            return "ToggleDarkMode";
         case Action::ToggleBulletedList:
             return "ToggleBulletedList";
         case Action::ToggleNumberedList:
@@ -271,6 +287,8 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_I, true, false, false}, Action::ToggleItalic);
     map.bind({raylib::KEY_U, true, false, false}, Action::ToggleUnderline);
     map.bind({raylib::KEY_S, true, true, false}, Action::ToggleStrikethrough);  // Ctrl+Shift+S
+    map.bind({raylib::KEY_EQUAL, true, true, false}, Action::ToggleSuperscript);
+    map.bind({raylib::KEY_MINUS, true, true, false}, Action::ToggleSubscript);
     map.bind({raylib::KEY_ONE, true, false, false}, Action::FontGaegu);
     map.bind({raylib::KEY_TWO, true, false, false}, Action::FontGaramond);
     map.bind({raylib::KEY_EQUAL, true, false, false}, Action::IncreaseFontSize);
@@ -304,6 +322,14 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({raylib::KEY_ONE, true, true, false}, Action::LineSpacingSingle);
     map.bind({raylib::KEY_FIVE, true, true, false}, Action::LineSpacing1_5);
     map.bind({raylib::KEY_TWO, true, true, false}, Action::LineSpacingDouble);
+
+    // View controls
+    map.bind({raylib::KEY_EQUAL, true, false, true}, Action::ZoomIn);
+    map.bind({raylib::KEY_MINUS, true, false, true}, Action::ZoomOut);
+    map.bind({raylib::KEY_ZERO, true, false, true}, Action::ZoomReset);
+    map.bind({raylib::KEY_F11, false, false, false}, Action::ToggleFocusMode);
+    map.bind({raylib::KEY_V, true, false, true}, Action::ToggleSplitView);
+    map.bind({raylib::KEY_D, true, false, true}, Action::ToggleDarkMode);
     
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
@@ -367,6 +393,8 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({raylib::KEY_I, true, false, false}, Action::ToggleItalic);
     map.bind({raylib::KEY_U, true, false, false}, Action::ToggleUnderline);
     map.bind({raylib::KEY_S, true, true, false}, Action::ToggleStrikethrough);  // Cmd+Shift+S
+    map.bind({raylib::KEY_EQUAL, true, true, false}, Action::ToggleSuperscript);
+    map.bind({raylib::KEY_MINUS, true, true, false}, Action::ToggleSubscript);
     map.bind({raylib::KEY_ONE, true, false, false}, Action::FontGaegu);
     map.bind({raylib::KEY_TWO, true, false, false}, Action::FontGaramond);
     map.bind({raylib::KEY_EQUAL, true, false, false}, Action::IncreaseFontSize);
@@ -400,6 +428,14 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({raylib::KEY_ONE, true, true, false}, Action::LineSpacingSingle);
     map.bind({raylib::KEY_FIVE, true, true, false}, Action::LineSpacing1_5);
     map.bind({raylib::KEY_TWO, true, true, false}, Action::LineSpacingDouble);
+
+    // View controls
+    map.bind({raylib::KEY_EQUAL, true, false, true}, Action::ZoomIn);
+    map.bind({raylib::KEY_MINUS, true, false, true}, Action::ZoomOut);
+    map.bind({raylib::KEY_ZERO, true, false, true}, Action::ZoomReset);
+    map.bind({raylib::KEY_F11, false, false, false}, Action::ToggleFocusMode);
+    map.bind({raylib::KEY_V, true, false, true}, Action::ToggleSplitView);
+    map.bind({raylib::KEY_D, true, false, true}, Action::ToggleDarkMode);
     
     // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
     map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
@@ -509,6 +545,10 @@ const char* actionDisplayName(Action action) {
             return "Toggle Underline";
         case Action::ToggleStrikethrough:
             return "Toggle Strikethrough";
+        case Action::ToggleSuperscript:
+            return "Toggle Superscript";
+        case Action::ToggleSubscript:
+            return "Toggle Subscript";
         case Action::FontGaegu:
             return "Font: Gaegu";
         case Action::FontGaramond:
@@ -555,6 +595,18 @@ const char* actionDisplayName(Action action) {
             return "1.5 Line Spacing";
         case Action::LineSpacingDouble:
             return "Double Spacing";
+        case Action::ZoomIn:
+            return "Zoom In";
+        case Action::ZoomOut:
+            return "Zoom Out";
+        case Action::ZoomReset:
+            return "Zoom Reset";
+        case Action::ToggleFocusMode:
+            return "Toggle Focus Mode";
+        case Action::ToggleSplitView:
+            return "Toggle Split View";
+        case Action::ToggleDarkMode:
+            return "Toggle Dark Mode";
         case Action::ToggleBulletedList:
             return "Toggle Bullets";
         case Action::ToggleNumberedList:
@@ -853,6 +905,8 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::ToggleItalic, {raylib::KEY_I, true, false, false});
     addBinding(Action::ToggleUnderline, {raylib::KEY_U, true, false, false});
     addBinding(Action::ToggleStrikethrough, {raylib::KEY_S, true, true, false});
+    addBinding(Action::ToggleSuperscript, {raylib::KEY_EQUAL, true, true, false});
+    addBinding(Action::ToggleSubscript, {raylib::KEY_MINUS, true, true, false});
     addBinding(Action::IncreaseFontSize,
                {raylib::KEY_EQUAL, true, false, false});
     addBinding(Action::DecreaseFontSize,
@@ -882,6 +936,14 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::LineSpacingSingle, {raylib::KEY_ONE, true, true, false});
     addBinding(Action::LineSpacing1_5, {raylib::KEY_FIVE, true, true, false});
     addBinding(Action::LineSpacingDouble, {raylib::KEY_TWO, true, true, false});
+
+    // View controls
+    addBinding(Action::ZoomIn, {raylib::KEY_EQUAL, true, false, true});
+    addBinding(Action::ZoomOut, {raylib::KEY_MINUS, true, false, true});
+    addBinding(Action::ZoomReset, {raylib::KEY_ZERO, true, false, true});
+    addBinding(Action::ToggleFocusMode, {raylib::KEY_F11, false, false, false});
+    addBinding(Action::ToggleSplitView, {raylib::KEY_V, true, false, true});
+    addBinding(Action::ToggleDarkMode, {raylib::KEY_D, true, false, true});
     
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers (like some word processors)
     addBinding(Action::ToggleBulletedList, {raylib::KEY_EIGHT, true, true, false});
