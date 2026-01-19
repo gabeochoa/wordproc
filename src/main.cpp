@@ -284,6 +284,9 @@ int main(int argc, char* argv[]) {
     
     // Toast notification systems (update and layout)
     ui_imm::registerToastSystems(systemManager);
+    
+    // Modal dialog systems (input blocking, focus trapping)
+    ui_imm::registerModalSystems(systemManager);
 
     // Render systems (run after update for drawing)
     // EditorRenderSystem must be first - it calls BeginDrawing() in once()
@@ -291,6 +294,8 @@ int main(int argc, char* argv[]) {
         std::make_unique<ecs::EditorRenderSystem>());
     // Afterhours UI render systems (renders buttons, divs, etc.)
     ui_imm::registerUIRenderSystems(systemManager);
+    // Modal backdrop rendering (draws dimmed overlay behind modals)
+    ui_imm::registerModalRenderSystems(systemManager);
     // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
     systemManager.register_render_system(std::make_unique<ecs::MenuSystem>());
     // Note: Screenshots are now handled in EditorRenderSystem.after() before EndDrawing()

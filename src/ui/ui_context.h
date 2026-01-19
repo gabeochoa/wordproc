@@ -3,6 +3,7 @@
 #include "../../vendor/afterhours/src/plugins/ui.h"
 #include "../../vendor/afterhours/src/plugins/window_manager.h"
 #include "../../vendor/afterhours/src/plugins/toast.h"
+#include "../../vendor/afterhours/src/plugins/modal.h"
 #include "../rl.h"
 #include "../input_mapping.h"  // Use global InputAction enum
 
@@ -147,6 +148,17 @@ inline void registerToastSystems(afterhours::SystemManager& manager) {
     afterhours::toast::enforce_singletons(manager);
     afterhours::toast::register_update_systems(manager);
     afterhours::toast::register_layout_systems<InputAction>(manager);
+}
+
+// Register modal dialog systems
+inline void registerModalSystems(afterhours::SystemManager& manager) {
+    afterhours::modal::enforce_singletons(manager);
+    afterhours::modal::register_update_systems<InputAction>(manager);
+}
+
+// Register modal render systems (call after other render systems)
+inline void registerModalRenderSystems(afterhours::SystemManager& manager) {
+    afterhours::modal::register_render_systems<InputAction>(manager);
 }
 
 // Get the UI context for immediate-mode widget calls

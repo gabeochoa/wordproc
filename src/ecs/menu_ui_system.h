@@ -5,6 +5,7 @@
 
 #include <afterhours/ah.h>
 #include <afterhours/src/plugins/ui.h>
+#include <afterhours/src/plugins/modal.h>
 
 #include "components.h"
 #include "../input_mapping.h"  // For InputAction enum
@@ -249,6 +250,43 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             // Check if click was on menu bar or dropdown
             // For now, just close menus on any click that wasn't handled by a button
             // This is simplified - a full implementation would track bounds
+        }
+        
+        // ============================================================
+        // Modal Dialogs (using afterhours modal.h)
+        // ============================================================
+        
+        // About dialog
+        if (menu.showAboutDialog) {
+            constexpr int ABOUT_MODAL_ID = 50000;
+            afterhours::modal::info(ctx, mk(entity, ABOUT_MODAL_ID),
+                menu.showAboutDialog,
+                "About Wordproc",
+                "Wordproc v0.1\n\nA Windows 95 style word processor\nbuilt with Afterhours.",
+                "OK");
+        }
+        
+        // Word Count dialog
+        if (menu.showWordCountDialog) {
+            // Need to get document stats - query for DocumentComponent
+            auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                  .whereHasComponent<DocumentComponent>()
+                                  .gen();
+            if (!docEntities.empty()) {
+                auto& doc = docEntities[0].get().get<DocumentComponent>();
+                TextStats stats = doc.buffer.stats();
+                std::string msg = std::format(
+                    "Words: {}\nCharacters: {}\nLines: {}\nParagraphs: {}\nSentences: {}",
+                    stats.words, stats.characters, stats.lines, stats.paragraphs,
+                    stats.sentences);
+                
+                constexpr int WORDCOUNT_MODAL_ID = 50001;
+                afterhours::modal::info(ctx, mk(entity, WORDCOUNT_MODAL_ID),
+                    menu.showWordCountDialog,
+                    "Word Count",
+                    msg,
+                    "OK");
+            }
         }
     }
 };
