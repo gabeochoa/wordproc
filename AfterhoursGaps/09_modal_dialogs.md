@@ -1,50 +1,61 @@
 # Modal Dialogs
 
-## Working Implementation
-See these files for a complete working example:
-- `src/ui/win95_widgets.h` - DrawMessageDialog, DrawInputDialog, DialogState
-- `src/ui/win95_widgets.cpp` - Dialog rendering implementation
-- `src/ecs/components.h` - MenuComponent with dialog state flags (showAboutDialog, showFindDialog, etc.)
+## ✅ PARTIALLY RESOLVED - Afterhours Now Has modal.h
 
-## Problem
-Afterhours UI does not provide modal dialog components for common UI patterns like 
-message boxes, confirmation dialogs, input prompts, or complex multi-field dialogs.
+**Status**: Afterhours added `src/plugins/modal.h` which provides modal dialog support.
 
-## Current Workaround
-Custom `win95_widgets.cpp` implements:
+### Migration Progress
+Wordproc is migrating from `win95::DrawMessageDialog` to afterhours modals:
 
+**Migrated:**
+- ✅ About dialog - uses `modal::info()`
+- ✅ Word Count dialog - uses `modal::info()`
+
+**Still Using Legacy win95_widgets:**
+- Comment dialog (input dialog)
+- Template dialog (input dialog)
+- Tab Width dialog (input dialog)
+- Find/Replace dialog (complex multi-field)
+- Page Setup dialog (complex multi-field)
+- Help window (custom scrollable list)
+
+### Afterhours modal.h Features
+- **DialogResult enum**: Pending, Confirmed, Cancelled, Dismissed, Custom
+- **ClosedBy modes**: Any (light dismiss), CloseRequest (escape only), None (manual)
+- **Convenience helpers**: `modal::info()`, `modal::confirm()`, `modal::fyi()`
+- **System support**: Input blocking, focus trapping, backdrop rendering
+- **Resolution-aware sizing**: Uses `ui::h720()` pattern
+
+### API Example
 ```cpp
-// Draw a message dialog
-// Returns: 0 = OK, 1 = Cancel, -1 = still open
-int DrawMessageDialog(raylib::Rectangle dialogRect, const char* title,
-                      const char* message, bool hasCancel = false);
+// Simple info dialog
+if (menu.showAboutDialog) {
+    afterhours::modal::info(ctx, mk(entity, ABOUT_MODAL_ID),
+        menu.showAboutDialog,  // bool& open
+        "About Wordproc",
+        "Wordproc v0.1\n\nA Windows 95 style word processor",
+        "OK");
+}
 
-// Draw a simple input dialog
-// Returns: 0 = OK, 1 = Cancel, -1 = still open
-int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
-                    const char* prompt, char* buffer, int bufferSize);
+// Confirm dialog (returns ModalResult with dialog_result)
+auto result = afterhours::modal::confirm(ctx, mk(entity, CONFIRM_ID),
+    showConfirm,
+    "Confirm",
+    "Are you sure?",
+    "Yes", "No");
+if (result.confirmed()) { /* handle confirm */ }
 ```
 
-Plus manual dialog state management in `MenuComponent`:
-- `showAboutDialog`, `showHelpWindow`, `showFindDialog`, `showPageSetup`
-- Input buffers for each dialog
-- Manual modal blocking logic in render/input systems
+### Remaining Gaps
 
-**Why This Workaround Works:**
-The win95_widgets approach bypasses Afterhours' layout system entirely by:
-1. Drawing directly with raylib primitives (not ECS entities)
-2. Managing its own input handling (checking mouse positions manually)
-3. Returning simple integer results instead of using components/state
-
-This is effective but doesn't integrate with the existing UI framework.
-
-## What Afterhours Currently Provides
-- No modal/dialog component
-- No focus trapping for modal interactions
-- No backdrop/overlay rendering
-- No built-in message box, confirm, or prompt dialogs
+1. **No built-in input dialog**: Need to compose manually with text input field
+2. **Complex dialogs require custom composition**: Multi-field forms need manual layout
+3. **Minor warnings** (upstream fix candidates):
+   - Missing switch cases for `Dim::None`, `Dim::Text`, `Dim::Children` (line 200)
 
 ---
+
+## Legacy Implementation (For Reference)
 
 ## PR #26 Attempt: Lessons Learned
 

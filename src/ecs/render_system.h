@@ -759,21 +759,9 @@ struct EditorRenderSystem
             }
         }
 
-        // Draw About dialog if active
-        if (menu.showAboutDialog) {
-            raylib::Rectangle dialogRect = {
-                static_cast<float>(layout.screenWidth / 2 - 150),
-                static_cast<float>(layout.screenHeight / 2 - 75), 300, 150};
-            int result = win95::DrawMessageDialog(dialogRect, "About Wordproc",
-                                     "Wordproc v0.1\n\nA Windows 95 style word "
-                                     "processor\nbuilt with Afterhours.",
-                                     false);
-            if (result >= 0) {
-                mutableMenu.showAboutDialog = false;
-            }
-        }
-
-        // Draw Help window if active
+        // Note: About and Word Count dialogs now rendered by MenuUISystem using afterhours modal.h
+        
+        // Draw Help window if active (still uses legacy rendering for now)
         if (menu.showHelpWindow) {
             drawHelpWindowImpl(mutableMenu, layout);
         }
@@ -817,39 +805,7 @@ struct MenuSystem
             handleMenuAction(menuResult, doc, menu, layout);
         }
 
-        // Handle About dialog dismissal
-        if (menu.showAboutDialog) {
-            raylib::Rectangle dialogRect = {
-                static_cast<float>(raylib::GetScreenWidth() / 2 - 150),
-                static_cast<float>(raylib::GetScreenHeight() / 2 - 75), 300,
-                150};
-            int result = win95::DrawMessageDialog(
-                dialogRect, "About Wordproc",
-                "Wordproc v0.1\n\nA Windows 95 style word processor\nbuilt "
-                "with Afterhours.",
-                false);
-            if (result >= 0) {
-                menu.showAboutDialog = false;
-            }
-        }
-
-        // Word count dialog
-        if (menu.showWordCountDialog) {
-            TextStats stats = doc.buffer.stats();
-            std::string msg = std::format(
-                "Words: {}\nCharacters: {}\nLines: {}\nParagraphs: {}\nSentences: {}",
-                stats.words, stats.characters, stats.lines, stats.paragraphs,
-                stats.sentences);
-            raylib::Rectangle dialogRect = {
-                static_cast<float>(raylib::GetScreenWidth() / 2 - 160),
-                static_cast<float>(raylib::GetScreenHeight() / 2 - 90), 320,
-                180};
-            int result = win95::DrawMessageDialog(dialogRect, "Word Count",
-                                                  msg.c_str(), false);
-            if (result >= 0) {
-                menu.showWordCountDialog = false;
-            }
-        }
+        // Note: About and Word Count dialogs are now rendered by MenuUISystem using afterhours modal.h
 
         // Comment dialog
         if (menu.showCommentDialog) {
