@@ -486,7 +486,8 @@ struct NavigationSystem
         using input::Action;
 
         auto isKeyDownOrSynthetic = [](int key) {
-            return raylib::IsKeyDown(key) || input_injector::is_key_synthetically_down(key);
+            // Use test_input which handles both real and synthetic keys
+            return test_input::is_key_down(key);
         };
         bool shift_down = isKeyDownOrSynthetic(raylib::KEY_LEFT_SHIFT) ||
                           isKeyDownOrSynthetic(raylib::KEY_RIGHT_SHIFT);

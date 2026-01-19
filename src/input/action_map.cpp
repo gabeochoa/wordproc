@@ -11,33 +11,29 @@ void ActionMap::bind(const KeyBinding& binding, Action action) {
 
 void ActionMap::unbind(const KeyBinding& binding) { bindings_.erase(binding); }
 
-// Helper to check if a key is down (real or synthetic)
-static bool isKeyDown(int key) {
-    return raylib::IsKeyDown(key) || input_injector::is_key_synthetically_down(key);
+// Helper to check if a key is down (test-aware via test_input)
+static bool isKeyDownHelper(int key) {
+    return test_input::is_key_down(key);
 }
 
-// Helper to check if a key was just pressed (real or synthetic)
-static bool isKeyPressed(int key) {
-    // Check synthetic key press first
-    if (input_injector::consume_press(key)) return true;
-    // Fall back to raylib (unless in test mode where we block real input)
-    if (test_input::is_test_mode()) return false;
-    return raylib::IsKeyPressed(key);
+// Helper to check if a key was just pressed (test-aware via test_input)
+static bool isKeyPressedHelper(int key) {
+    return test_input::is_key_pressed(key);
 }
 
 bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
-    bool ctrl = isKeyDown(raylib::KEY_LEFT_CONTROL) ||
-                isKeyDown(raylib::KEY_RIGHT_CONTROL);
-    bool shift = isKeyDown(raylib::KEY_LEFT_SHIFT) ||
-                 isKeyDown(raylib::KEY_RIGHT_SHIFT);
-    bool alt = isKeyDown(raylib::KEY_LEFT_ALT) ||
-               isKeyDown(raylib::KEY_RIGHT_ALT);
+    bool ctrl = isKeyDownHelper(raylib::KEY_LEFT_CONTROL) ||
+                isKeyDownHelper(raylib::KEY_RIGHT_CONTROL);
+    bool shift = isKeyDownHelper(raylib::KEY_LEFT_SHIFT) ||
+                 isKeyDownHelper(raylib::KEY_RIGHT_SHIFT);
+    bool alt = isKeyDownHelper(raylib::KEY_LEFT_ALT) ||
+               isKeyDownHelper(raylib::KEY_RIGHT_ALT);
 
     if (ctrl != binding.ctrl || shift != binding.shift || alt != binding.alt) {
         return false;
     }
 
-    return isKeyPressed(binding.key);
+    return isKeyPressedHelper(binding.key);
 }
 
 bool ActionMap::isActionPressed(Action action) const {

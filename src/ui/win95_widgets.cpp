@@ -4,6 +4,7 @@
 #include <cstring>
 
 // test_input:: available via rl.h -> external.h
+#include "input.h"  // For input:: wrappers
 
 namespace win95 {
 
@@ -55,7 +56,7 @@ bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled) {
     bool clicked = false;
     ButtonState state = enabled ? ButtonState::Normal : ButtonState::Disabled;
 
-    raylib::Vector2 mousePos = raylib::GetMousePosition();
+    raylib::Vector2 mousePos = input::getMousePosition();
     bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
     bool pressing =
         hover && IsMouseButtonDown(raylib::MOUSE_LEFT_BUTTON);
@@ -109,7 +110,7 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
     raylib::Rectangle boxRect = {rect.x, rect.y + (rect.height - BOX_SIZE) / 2,
                                  BOX_SIZE, BOX_SIZE};
 
-    raylib::Vector2 mousePos = raylib::GetMousePosition();
+    raylib::Vector2 mousePos = input::getMousePosition();
     bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
 
     if (enabled && hover &&
@@ -147,7 +148,7 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
     int clickedMenu = -1;
     int x = 4;
 
-    raylib::Vector2 mousePos = raylib::GetMousePosition();
+    raylib::Vector2 mousePos = input::getMousePosition();
     bool mouseInMenuBar =
         mousePos.y >= menuBarY && mousePos.y < menuBarY + menuBarHeight;
 
@@ -263,7 +264,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
     DrawRaisedBorder(dropdownRect, 2);
 
     // Draw items
-    raylib::Vector2 mousePos = raylib::GetMousePosition();
+    raylib::Vector2 mousePos = input::getMousePosition();
     int itemY = y;
 
     for (std::size_t i = 0; i < menu.items.size(); ++i) {

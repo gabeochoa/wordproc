@@ -29,6 +29,7 @@
 #include "../ui/win95_widgets.h"
 #include "../ui/menu_setup.h"
 #include "../ui/drawing.h"  // Centralized afterhours drawing wrappers
+#include "../ui/input.h"    // Centralized afterhours input wrappers
 #include "../util/drawing.h"
 #include "../util/logging.h"
 #include "component_helpers.h"
@@ -1740,7 +1741,7 @@ inline void drawHelpWindowImpl(MenuComponent& menu, const LayoutComponent& layou
 
     // Handle close button click
     if (IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
-        raylib::Vector2 mousePos = raylib::GetMousePosition();
+        raylib::Vector2 mousePos = input::getMousePosition();
         if (mousePos.x >= closeBtn.x &&
             mousePos.x <= closeBtn.x + closeBtn.width &&
             mousePos.y >= closeBtn.y &&
@@ -1822,7 +1823,7 @@ inline void drawHelpWindowImpl(MenuComponent& menu, const LayoutComponent& layou
 
     // Handle OK button click
     if (IsMouseButtonPressed(raylib::MOUSE_BUTTON_LEFT)) {
-        raylib::Vector2 mousePos = raylib::GetMousePosition();
+        raylib::Vector2 mousePos = input::getMousePosition();
         if (mousePos.x >= okBtn.x && mousePos.x <= okBtn.x + okBtn.width &&
             mousePos.y >= okBtn.y && mousePos.y <= okBtn.y + okBtn.height) {
             menu.showHelpWindow = false;
