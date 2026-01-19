@@ -2,6 +2,7 @@
 
 #include "../../vendor/afterhours/src/plugins/ui.h"
 #include "../../vendor/afterhours/src/plugins/window_manager.h"
+#include "../../vendor/afterhours/src/plugins/toast.h"
 #include "../rl.h"
 #include "../input_mapping.h"  // Use global InputAction enum
 
@@ -141,6 +142,13 @@ inline void registerUIRenderSystems(afterhours::SystemManager& manager) {
         std::make_unique<ui::RenderImm<InputAction>>());
 }
 
+// Register toast notification systems
+inline void registerToastSystems(afterhours::SystemManager& manager) {
+    afterhours::toast::enforce_singletons(manager);
+    afterhours::toast::register_update_systems(manager);
+    afterhours::toast::register_layout_systems<InputAction>(manager);
+}
+
 // Get the UI context for immediate-mode widget calls
 inline UIContextType& getUIContext() {
     auto* ctx = afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
@@ -189,3 +197,32 @@ inline void initTestModeUI() {
 // raylib input calls when test_input::test_mode is true.
 
 }  // namespace ui_imm
+
+// Toast notification helpers - provides static API without needing context parameter
+namespace toast_notify {
+
+// Send an info notification (blue, 3 seconds)
+inline void info(const std::string& message, float duration = 3.0f) {
+    auto& ctx = ui_imm::getUIContext();
+    afterhours::toast::send_info(ctx, message, duration);
+}
+
+// Send a success notification (green, 3 seconds)
+inline void success(const std::string& message, float duration = 3.0f) {
+    auto& ctx = ui_imm::getUIContext();
+    afterhours::toast::send_success(ctx, message, duration);
+}
+
+// Send a warning notification (yellow/orange, 5 seconds)
+inline void warning(const std::string& message, float duration = 5.0f) {
+    auto& ctx = ui_imm::getUIContext();
+    afterhours::toast::send_warning(ctx, message, duration);
+}
+
+// Send an error notification (red, 7 seconds)
+inline void error(const std::string& message, float duration = 7.0f) {
+    auto& ctx = ui_imm::getUIContext();
+    afterhours::toast::send_error(ctx, message, duration);
+}
+
+}  // namespace toast_notify

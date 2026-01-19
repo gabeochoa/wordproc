@@ -13,6 +13,7 @@
 #include "../settings.h"
 // test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
+#include "../ui/ui_context.h"  // for toast_notify
 #include "component_helpers.h"
 #include "components.h"
 
@@ -151,11 +152,11 @@ struct TextInputSystem
 // System for handling keyboard shortcuts using remappable ActionMap
 struct KeyboardShortcutSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                StatusComponent, LayoutComponent> {
+                                LayoutComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
-                       CaretComponent& caret, StatusComponent& status,
+                       CaretComponent& caret,
                        LayoutComponent& layout, const float) override {
         using input::Action;
 
@@ -167,8 +168,7 @@ struct KeyboardShortcutSystem
             doc.comments.clear();
             doc.revisions.clear();
             doc.trackChangesBaseline.clear();
-            status::set(status, "New document");
-            status.expiresAt = raylib::GetTime() + 2.0;
+            toast_notify::info("New document");
         }
 
         // Save
@@ -191,14 +191,11 @@ struct KeyboardShortcutSystem
                     std::filesystem::remove(doc.autoSavePath);
                 }
                 Settings::get().add_recent_file(savePath);
-                status::set(
-                    status,
+                toast_notify::success(
                     "Saved: " +
                         std::filesystem::path(savePath).filename().string());
-                status.expiresAt = raylib::GetTime() + 3.0;
             } else {
-                status::set(status, "Save failed: " + result.error, true);
-                status.expiresAt = raylib::GetTime() + 3.0;
+                toast_notify::error("Save failed: " + result.error);
             }
         }
 
@@ -220,14 +217,12 @@ struct KeyboardShortcutSystem
                 layout.lineWidthLimit =
                     doc.docSettings.pageSettings.lineWidthLimit;
                 Settings::get().add_recent_file(doc.defaultPath);
-                status::set(status,
-                            "Opened: " + std::filesystem::path(doc.defaultPath)
+                toast_notify::success(
+                    "Opened: " + std::filesystem::path(doc.defaultPath)
                                              .filename()
                                              .string());
-                status.expiresAt = raylib::GetTime() + 3.0;
             } else {
-                status::set(status, "Open failed: " + result.error, true);
-                status.expiresAt = raylib::GetTime() + 3.0;
+                toast_notify::error("Open failed: " + result.error);
             }
         }
 
@@ -590,9 +585,9 @@ struct NavigationSystem
 
 // System for auto-saving documents periodically
 struct AutoSaveSystem
-    : public afterhours::System<DocumentComponent, StatusComponent, LayoutComponent> {
+    : public afterhours::System<DocumentComponent, LayoutComponent> {
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
-                       StatusComponent& status, LayoutComponent& layout,
+                       LayoutComponent& layout,
                        const float) override {
         if (!doc.autoSaveEnabled || !doc.isDirty) {
             return;
@@ -621,11 +616,9 @@ struct AutoSaveSystem
         auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.autoSavePath);
         if (result.success) {
             doc.lastAutoSaveTime = now;
-            status::set(status, "Auto-saved");
-            status.expiresAt = now + 2.0;
+            toast_notify::info("Auto-saved", 2.0f);
         } else {
-            status::set(status, "Auto-save failed: " + result.error, true);
-            status.expiresAt = now + 2.0;
+            toast_notify::error("Auto-save failed: " + result.error);
         }
     }
 };

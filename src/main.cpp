@@ -217,7 +217,8 @@ int main(int argc, char* argv[]) {
     editorEntity.addComponent<ecs::CaretComponent>();
     editorEntity.addComponent<ecs::ScrollComponent>();
 
-    auto& statusComp = editorEntity.addComponent<ecs::StatusComponent>();
+    // StatusComponent kept for status bar text (word count, etc.)
+    editorEntity.addComponent<ecs::StatusComponent>();
 
     auto& layoutComp = editorEntity.addComponent<ecs::LayoutComponent>();
     layoutComp.titleBarHeight =
@@ -235,14 +236,15 @@ int main(int argc, char* argv[]) {
         static_cast<int>(Settings::get().get_recent_files().size());
 
     // Auto-save recovery (only when no file is explicitly opened, skip in test mode)
+    // Note: Toast notification is deferred until after systems are registered
+    bool recoveredAutoSave = false;
     if (!testModeEnabled && docComp.filePath.empty() &&
         std::filesystem::exists(docComp.autoSavePath)) {
         auto result = loadDocumentEx(docComp.buffer, docComp.docSettings,
                                      docComp.autoSavePath);
         if (result.success) {
             docComp.isDirty = true;
-            ecs::status::set(statusComp, "Recovered auto-save");
-            statusComp.expiresAt = raylib::GetTime() + 3.0;
+            recoveredAutoSave = true;
         }
     }
 
@@ -279,6 +281,9 @@ int main(int argc, char* argv[]) {
         std::make_unique<ecs::AutoSaveSystem>());
     systemManager.register_update_system(
         std::make_unique<ecs::NavigationSystem>());
+    
+    // Toast notification systems (update and layout)
+    ui_imm::registerToastSystems(systemManager);
 
     // Render systems (run after update for drawing)
     // EditorRenderSystem must be first - it calls BeginDrawing() in once()
@@ -358,6 +363,12 @@ int main(int argc, char* argv[]) {
                  data.str());
     }
     // #endregion agent log
+
+    // Send deferred toast notification for auto-save recovery
+    // (must happen after toast systems are registered)
+    if (recoveredAutoSave) {
+        toast_notify::success("Recovered auto-save");
+    }
 
     int loopFrames = 0;
     const bool e2eActive = !testScriptPath.empty() || !testScriptDir.empty();

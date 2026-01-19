@@ -25,6 +25,7 @@
 #include "../settings.h"
 // test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
+#include "../ui/ui_context.h"  // for toast_notify
 #include "../ui/win95_widgets.h"
 #include "../ui/menu_setup.h"
 #include "../util/drawing.h"
@@ -531,14 +532,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
 // Forward declarations - implemented after MenuSystem
 void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
-                          MenuComponent& menu, StatusComponent& status,
+                          MenuComponent& menu,
                           LayoutComponent& layout);
 void drawHelpWindowImpl(MenuComponent& menu, const LayoutComponent& layout);
 
 // System for rendering the complete editor UI
 struct EditorRenderSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                ScrollComponent, StatusComponent,
+                                ScrollComponent,
                                 LayoutComponent, MenuComponent> {
     void once(const float) const override {
         raylib::BeginDrawing();
@@ -613,7 +614,6 @@ struct EditorRenderSystem
                        const DocumentComponent& doc,
                        const CaretComponent& caret,
                        const ScrollComponent& scroll,
-                       const StatusComponent& status,
                        const LayoutComponent& layout, const MenuComponent& menu,
                        const float) const override {
         // Draw title bar
@@ -647,7 +647,6 @@ struct EditorRenderSystem
         // Get mutable refs for later use
         auto& mutableDoc = const_cast<DocumentComponent&>(doc);
         auto& mutableMenu = const_cast<MenuComponent&>(menu);
-        auto& mutableStatus = const_cast<StatusComponent&>(status);
         auto& mutableLayout = const_cast<LayoutComponent&>(layout);
 
         // F1 to show help window
@@ -721,7 +720,7 @@ struct EditorRenderSystem
             }
         }
 
-        // Draw status bar
+        // Draw status bar (notifications now use toast system)
         if (!layout.focusMode) {
             raylib::Rectangle statusBarRect = {
                 layout.statusBar.x, layout.statusBar.y, layout.statusBar.width,
@@ -729,33 +728,24 @@ struct EditorRenderSystem
             raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
             util::drawRaisedBorder(statusBarRect);
 
-            double currentTime = raylib::GetTime();
-            if (!status.text.empty() && currentTime < status.expiresAt) {
-                raylib::Color msgColor =
-                    status.isError ? theme::STATUS_ERROR : theme::STATUS_SUCCESS;
-                raylib::DrawText(
-                    status.text.c_str(), 4,
-                    layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
-                    theme::layout::FONT_SIZE - 2, msgColor);
-            } else {
-                CaretPosition caretPos = doc.buffer.caret();
-                ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
-                TextStats stats = doc.buffer.stats();
-                std::string statusText = std::format(
-                    "Ln {}, Col {} | {} | {}{}{}{}| {}pt | {} | Words: {} | Zoom: {}%",
-                    caretPos.row + 1, caretPos.column + 1,
-                    paragraphStyleName(paraStyle),
-                    style.bold ? "B " : "",
-                    style.italic ? "I " : "",
-                    style.underline ? "U " : "",
-                    style.strikethrough ? "S " : "",
-                    style.fontSize, style.font, stats.words,
-                    static_cast<int>(layout.zoomLevel * 100.0f));
-                drawTextWithRegistry(
-                    statusText.c_str(), 4,
-                    layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
-                    theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
-            }
+            // Always show document info in status bar
+            CaretPosition caretPos = doc.buffer.caret();
+            ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
+            TextStats stats = doc.buffer.stats();
+            std::string statusText = std::format(
+                "Ln {}, Col {} | {} | {}{}{}{}| {}pt | {} | Words: {} | Zoom: {}%",
+                caretPos.row + 1, caretPos.column + 1,
+                paragraphStyleName(paraStyle),
+                style.bold ? "B " : "",
+                style.italic ? "I " : "",
+                style.underline ? "U " : "",
+                style.strikethrough ? "S " : "",
+                style.fontSize, style.font, stats.words,
+                static_cast<int>(layout.zoomLevel * 100.0f));
+            drawTextWithRegistry(
+                statusText.c_str(), 4,
+                layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
+                theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
         }
 
         if (!layout.focusMode) {
@@ -765,7 +755,7 @@ struct EditorRenderSystem
                 win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
                                    theme::layout::MENU_BAR_HEIGHT);
             if (menuResult >= 0) {
-                handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableStatus, mutableLayout);
+                handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableLayout);
             }
         }
 
@@ -795,38 +785,36 @@ struct EditorRenderSystem
 // We use const_cast to allow immediate-mode UI state updates during rendering.
 struct MenuSystem
     : public afterhours::System<DocumentComponent, MenuComponent,
-                                StatusComponent, LayoutComponent> {
+                                LayoutComponent> {
 
     // Const version called by render systems - uses const_cast for immediate-mode UI
     void for_each_with(const afterhours::Entity& /*entity*/,
                        const DocumentComponent& docConst,
                        const MenuComponent& menuConst,
-                       const StatusComponent& statusConst,
                        const LayoutComponent& layoutConst,
                        const float) const override {
         // const_cast for immediate-mode UI that needs to update state during draw
         auto& doc = const_cast<DocumentComponent&>(docConst);
         auto& menu = const_cast<MenuComponent&>(menuConst);
-        auto& status = const_cast<StatusComponent&>(statusConst);
         auto& layout = const_cast<LayoutComponent&>(layoutConst);
-        renderMenus(doc, menu, status, layout);
+        renderMenus(doc, menu, layout);
     }
 
     // Mutable version (not called by render systems, but kept for compatibility)
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
-                       MenuComponent& menu, StatusComponent& status,
+                       MenuComponent& menu,
                        LayoutComponent& layout, const float) override {
-        renderMenus(doc, menu, status, layout);
+        renderMenus(doc, menu, layout);
     }
 
     void renderMenus(DocumentComponent& doc, MenuComponent& menu,
-                     StatusComponent& status, LayoutComponent& layout) const {
+                     LayoutComponent& layout) const {
         // Menu bar is now rendered by MenuUISystem using Afterhours UI
         // Just consume any click results and handle actions here
         int menuResult = menu.consumeClickedResult();
 
         if (menuResult >= 0) {
-            handleMenuAction(menuResult, doc, menu, status, layout);
+            handleMenuAction(menuResult, doc, menu, layout);
         }
 
         // Handle About dialog dismissal
@@ -882,8 +870,7 @@ struct MenuSystem
                 doc.comments.push_back(comment);
                 menu.commentInputBuffer[0] = '\0';
                 menu.showCommentDialog = false;
-                status::set(status, "Comment added");
-                status.expiresAt = raylib::GetTime() + 2.0;
+                toast_notify::success("Comment added");
             } else if (result > 0) {
                 menu.commentInputBuffer[0] = '\0';
                 menu.showCommentDialog = false;
@@ -913,11 +900,10 @@ struct MenuSystem
                     buffer << ifs.rdbuf();
                     doc.buffer.setText(buffer.str());
                     doc.isDirty = true;
-                    status::set(status, "Template loaded: " + name);
+                    toast_notify::success("Template loaded: " + name);
                 } else {
-                    status::set(status, "Template not found: " + name, true);
+                    toast_notify::error("Template not found: " + name);
                 }
-                status.expiresAt = raylib::GetTime() + 2.0;
                 menu.templateInputBuffer[0] = '\0';
                 menu.showTemplateDialog = false;
             } else if (result > 0) {
@@ -940,11 +926,10 @@ struct MenuSystem
                 int width = std::atoi(menu.tabWidthInputBuffer);
                 if (width >= 1 && width <= 16) {
                     doc.docSettings.tabWidth = width;
-                    status::set(status, "Tab width set");
+                    toast_notify::success("Tab width set");
                 } else {
-                    status::set(status, "Tab width must be 1-16", true);
+                    toast_notify::error("Tab width must be 1-16");
                 }
-                status.expiresAt = raylib::GetTime() + 2.0;
                 menu.tabWidthInputBuffer[0] = '\0';
                 menu.showTabWidthDialog = false;
             } else if (result > 0) {
@@ -971,15 +956,15 @@ struct MenuSystem
 
    private:
     void handleMenuAction(int menuResult, DocumentComponent& doc,
-                          MenuComponent& menu, StatusComponent& status,
+                          MenuComponent& menu,
                           LayoutComponent& layout) const {
-        handleMenuActionImpl(menuResult, doc, menu, status, layout);
+        handleMenuActionImpl(menuResult, doc, menu, layout);
     }
 };
 
 // Implementation of menu action handler (called by both EditorRenderSystem and MenuSystem)
 inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
-                          MenuComponent& menu, StatusComponent& status,
+                          MenuComponent& menu,
                           LayoutComponent& layout) {
         int menuIndex = menuResult / 100;
         int itemIndex = menuResult % 100;
@@ -1013,13 +998,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             menu.menus[1].items[3].mark =
                                 win95::MenuMark::Checkmark;
                         }
-                        ecs::status::set(
-                            status,
+                        toast_notify::success(
                             "Opened: " + std::filesystem::path(path).filename().string());
-                        status.expiresAt = raylib::GetTime() + 3.0;
                     } else {
-                        ecs::status::set(status, "Open failed: " + result.error, true);
-                        status.expiresAt = raylib::GetTime() + 3.0;
+                        toast_notify::error("Open failed: " + result.error);
                     }
                     return;
                 }
@@ -1071,16 +1053,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             menu.menus[1].items[3].mark =
                                 win95::MenuMark::Checkmark;
                         }
-                        ecs::status::set(
-                            status,
+                        toast_notify::success(
                             "Opened: " + std::filesystem::path(doc.defaultPath)
                                              .filename()
                                              .string());
-                        status.expiresAt = raylib::GetTime() + 3.0;
                     } else {
-                        ecs::status::set(status, "Open failed: " + result.error,
-                                         true);
-                        status.expiresAt = raylib::GetTime() + 3.0;
+                        toast_notify::error("Open failed: " + result.error);
                     }
                 } break;
                 case 3:  // Save
@@ -1115,15 +1093,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             menu.menus[1].items[3].mark =
                                 win95::MenuMark::Checkmark;
                         }
-                        ecs::status::set(
-                            status, "Saved: " + std::filesystem::path(savePath)
+                        toast_notify::success(
+                            "Saved: " + std::filesystem::path(savePath)
                                                     .filename()
                                                     .string());
-                        status.expiresAt = raylib::GetTime() + 3.0;
                     } else {
-                        ecs::status::set(status, "Save failed: " + result.error,
-                                         true);
-                        status.expiresAt = raylib::GetTime() + 3.0;
+                        toast_notify::error("Save failed: " + result.error);
                     }
                 } break;
                 case 6:  // Export PDF
@@ -1134,14 +1109,11 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     auto result = exportDocumentPdf(doc.buffer, doc.docSettings,
                                                     basePath.string());
                     if (result.success) {
-                        ecs::status::set(
-                            status,
+                        toast_notify::success(
                             "Exported PDF: " + basePath.filename().string());
                     } else {
-                        ecs::status::set(status, "Export PDF failed: " + result.error,
-                                         true);
+                        toast_notify::error("Export PDF failed: " + result.error);
                     }
-                    status.expiresAt = raylib::GetTime() + 3.0;
                 } break;
                 case 7:  // Export HTML
                 {
@@ -1151,14 +1123,11 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     auto result = exportDocumentHtml(doc.buffer, doc.docSettings,
                                                      basePath.string());
                     if (result.success) {
-                        ecs::status::set(
-                            status,
+                        toast_notify::success(
                             "Exported HTML: " + basePath.filename().string());
                     } else {
-                        ecs::status::set(status, "Export HTML failed: " + result.error,
-                                         true);
+                        toast_notify::error("Export HTML failed: " + result.error);
                     }
-                    status.expiresAt = raylib::GetTime() + 3.0;
                 } break;
                 case 8:  // Export RTF
                 {
@@ -1168,14 +1137,11 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     auto result = exportDocumentRtf(doc.buffer, doc.docSettings,
                                                     basePath.string());
                     if (result.success) {
-                        ecs::status::set(
-                            status,
+                        toast_notify::success(
                             "Exported RTF: " + basePath.filename().string());
                     } else {
-                        ecs::status::set(status, "Export RTF failed: " + result.error,
-                                         true);
+                        toast_notify::error("Export RTF failed: " + result.error);
                     }
-                    status.expiresAt = raylib::GetTime() + 3.0;
                 } break;
                 case 10:  // Page Setup
                 {
@@ -1204,18 +1170,16 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (doc.trackChangesEnabled) {
                         doc.trackChangesBaseline = doc.buffer.getText();
                         menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
-                        status::set(status, "Track Changes: On");
+                        toast_notify::info("Track Changes: On");
                     } else {
                         menu.menus[1].items[3].mark = win95::MenuMark::None;
-                        status::set(status, "Track Changes: Off");
+                        toast_notify::info("Track Changes: Off");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 case 4:  // Accept All Changes
                     doc.revisions.clear();
                     doc.trackChangesBaseline = doc.buffer.getText();
-                    status::set(status, "All changes accepted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::success("All changes accepted");
                     break;
                 case 5:  // Reject All Changes
                     if (!doc.trackChangesBaseline.empty()) {
@@ -1223,8 +1187,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         doc.isDirty = true;
                     }
                     doc.revisions.clear();
-                    status::set(status, "All changes rejected");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::success("All changes rejected");
                     break;
                 case 7:  // Cut
                     if (doc.buffer.hasSelection()) {
@@ -1258,8 +1221,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 13:  // Find...
                     menu.showFindDialog = true;
                     menu.findReplaceMode = false;
-                    status::set(status, "Find: Ctrl+G next, Ctrl+Shift+G prev");
-                    status.expiresAt = raylib::GetTime() + 3.0;
+                    toast_notify::info("Find: Ctrl+G next, Ctrl+Shift+G prev");
                     break;
                 case 14:  // Find Next
                     if (!menu.lastSearchTerm.empty()) {
@@ -1269,11 +1231,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             doc.buffer.setSelectionAnchor(result.start);
                             doc.buffer.setCaret(result.end);
                             doc.buffer.updateSelectionToCaret();
-                            status::set(status, "Found");
+                            toast_notify::info("Found", 2.0f);
                         } else {
-                            status::set(status, "Not found");
+                            toast_notify::warning("Not found");
                         }
-                        status.expiresAt = raylib::GetTime() + 2.0;
                     }
                     break;
                 case 15:  // Find Previous
@@ -1284,18 +1245,16 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             doc.buffer.setSelectionAnchor(result.start);
                             doc.buffer.setCaret(result.end);
                             doc.buffer.updateSelectionToCaret();
-                            status::set(status, "Found");
+                            toast_notify::info("Found", 2.0f);
                         } else {
-                            status::set(status, "Not found");
+                            toast_notify::warning("Not found");
                         }
-                        status.expiresAt = raylib::GetTime() + 2.0;
                     }
                     break;
                 case 16:  // Replace...
                     menu.showFindDialog = true;
                     menu.findReplaceMode = true;
-                    status::set(status, "Replace mode");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Replace mode");
                     break;
                 default:
                     break;
@@ -1306,67 +1265,55 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     layout.pageMode = PageMode::Pageless;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    status::set(status, "Switched to Pageless mode");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Switched to Pageless mode");
                     break;
                 case 1:  // Paged Mode
                     layout.pageMode = PageMode::Paged;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    status::set(status, "Switched to Paged mode");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Switched to Paged mode");
                     break;
                 case 3:  // Zoom In
                     layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
-                    status::set(status, "Zoom in");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Zoom in");
                     break;
                 case 4:  // Zoom Out
                     layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
-                    status::set(status, "Zoom out");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Zoom out");
                     break;
                 case 5:  // Zoom Reset
                     layout.zoomLevel = 1.0f;
-                    status::set(status, "Zoom reset");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Zoom reset");
                     break;
                 case 7:  // Focus Mode
                     layout.focusMode = !layout.focusMode;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    status::set(status, layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
                     break;
                 case 8:  // Split View
                     layout.splitViewEnabled = !layout.splitViewEnabled;
-                    status::set(status, layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
                     break;
                 case 9:  // Dark Mode
                     theme::applyDarkMode(!theme::DARK_MODE_ENABLED);
-                    status::set(status, theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
                     break;
                 case 11:  // Line Width: Normal (no limit)
                     layout::setLineWidthLimit(layout, 0.0f);
-                    status::set(status, "Line width: Normal");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Line width: Normal");
                     break;
                 case 12:  // Line Width: Narrow (60 chars)
                     layout::setLineWidthLimit(layout, 60.0f);
-                    status::set(status, "Line width: Narrow (60 chars)");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Line width: Narrow (60 chars)");
                     break;
                 case 13:  // Line Width: Wide (100 chars)
                     layout::setLineWidthLimit(layout, 100.0f);
-                    status::set(status, "Line width: Wide (100 chars)");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Line width: Wide (100 chars)");
                     break;
                 case 15:  // Show Line Numbers
                     layout.showLineNumbers = !layout.showLineNumbers;
-                    status::set(status, layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     break;
                 default:
                     break;
@@ -1377,48 +1324,39 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 // Paragraph styles (0-8)
                 case 0:  // Normal
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
-                    status::set(status, "Style: Normal");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Normal");
                     break;
                 case 1:  // Title
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
-                    status::set(status, "Style: Title");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Title");
                     break;
                 case 2:  // Subtitle
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
-                    status::set(status, "Style: Subtitle");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Subtitle");
                     break;
                 case 3:  // Heading 1
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
-                    status::set(status, "Style: Heading 1");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Heading 1");
                     break;
                 case 4:  // Heading 2
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
-                    status::set(status, "Style: Heading 2");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Heading 2");
                     break;
                 case 5:  // Heading 3
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading3);
-                    status::set(status, "Style: Heading 3");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Heading 3");
                     break;
                 case 6:  // Heading 4
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading4);
-                    status::set(status, "Style: Heading 4");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Heading 4");
                     break;
                 case 7:  // Heading 5
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading5);
-                    status::set(status, "Style: Heading 5");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Heading 5");
                     break;
                 case 8:  // Heading 6
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
-                    status::set(status, "Style: Heading 6");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Style: Heading 6");
                     break;
                 // (9 is separator)
                 case 10:  // Bold
@@ -1451,23 +1389,19 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 // Alignment (15-18)
                 case 20:  // Align Left
                     doc.buffer.setCurrentAlignment(TextAlignment::Left);
-                    status::set(status, "Align: Left");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Left");
                     break;
                 case 21:  // Align Center
                     doc.buffer.setCurrentAlignment(TextAlignment::Center);
-                    status::set(status, "Align: Center");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Center");
                     break;
                 case 22:  // Align Right
                     doc.buffer.setCurrentAlignment(TextAlignment::Right);
-                    status::set(status, "Align: Right");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Right");
                     break;
                 case 23:  // Justify
                     doc.buffer.setCurrentAlignment(TextAlignment::Justify);
-                    status::set(status, "Align: Justify");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Justify");
                     break;
                 // (19 is separator)
                 // Text colors (20-26)
@@ -1553,96 +1487,78 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 // Alignment (42-45)
                 case 47:  // Align Left
                     doc.buffer.setCurrentAlignment(TextAlignment::Left);
-                    status::set(status, "Align: Left");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Left");
                     break;
                 case 48:  // Align Center
                     doc.buffer.setCurrentAlignment(TextAlignment::Center);
-                    status::set(status, "Align: Center");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Center");
                     break;
                 case 49:  // Align Right
                     doc.buffer.setCurrentAlignment(TextAlignment::Right);
-                    status::set(status, "Align: Right");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Right");
                     break;
                 case 50:  // Justify
                     doc.buffer.setCurrentAlignment(TextAlignment::Justify);
-                    status::set(status, "Align: Justify");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Align: Justify");
                     break;
                 // (46 is separator)
                 case 52:  // Increase Indent
                     doc.buffer.increaseIndent();
-                    status::set(status, "Indent increased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Indent increased");
                     break;
                 case 53:  // Decrease Indent
                     doc.buffer.decreaseIndent();
-                    status::set(status, "Indent decreased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Indent decreased");
                     break;
                 // (54 is separator)
                 case 55:  // Single Spacing
                     doc.buffer.setLineSpacingSingle();
-                    status::set(status, "Line spacing: Single");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Line spacing: Single");
                     break;
                 case 56:  // 1.5 Line Spacing
                     doc.buffer.setLineSpacing1_5();
-                    status::set(status, "Line spacing: 1.5");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Line spacing: 1.5");
                     break;
                 case 57:  // Double Spacing
                     doc.buffer.setLineSpacingDouble();
-                    status::set(status, "Line spacing: Double");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Line spacing: Double");
                     break;
                 // (58 is separator)
                 case 59:  // Bulleted List
                     doc.buffer.toggleBulletedList();
-                    status::set(status, doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
                     break;
                 case 60:  // Numbered List
                     doc.buffer.toggleNumberedList();
-                    status::set(status, doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
                     break;
                 case 61:  // Increase List Level
                     doc.buffer.increaseListLevel();
-                    status::set(status, "List level increased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("List level increased");
                     break;
                 case 62:  // Decrease List Level
                     doc.buffer.decreaseListLevel();
-                    status::set(status, "List level decreased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("List level decreased");
                     break;
                 case 64:  // Increase Space Before
                     doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() + 6);
-                    status::set(status, "Space before increased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Space before increased");
                     break;
                 case 65:  // Decrease Space Before
                     doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() - 6);
-                    status::set(status, "Space before decreased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Space before decreased");
                     break;
                 case 66:  // Increase Space After
                     doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() + 6);
-                    status::set(status, "Space after increased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Space after increased");
                     break;
                 case 67:  // Decrease Space After
                     doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
-                    status::set(status, "Space after decreased");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Space after decreased");
                     break;
                 case 69:  // Drop Cap
                     doc.buffer.toggleCurrentLineDropCap();
-                    status::set(status, doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
                     break;
                 case 70:  // Tab Width...
                     menu.showTabWidthDialog = true;
@@ -1655,14 +1571,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 0:  // Page Break
                     doc.buffer.insertPageBreak();
                     doc.isDirty = true;
-                    status::set(status, "Page break inserted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Page break inserted");
                     break;
                 case 1:  // Section Break
                     doc.buffer.insertSectionBreak();
                     doc.isDirty = true;
-                    status::set(status, "Section break inserted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Section break inserted");
                     break;
                 case 3:  // Hyperlink...
                     // For now, just add hyperlink to selection if any
@@ -1670,35 +1584,32 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         // Would need a dialog for URL input - placeholder for now
                         if (doc.buffer.addHyperlink("https://example.com")) {
                             doc.isDirty = true;
-                            status::set(status, "Hyperlink added (edit URL)");
+                            toast_notify::info("Hyperlink added (edit URL)");
                         }
                     } else {
-                        status::set(status, "Select text first", true);
+                        toast_notify::error("Select text first");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 case 4:  // Remove Hyperlink
                     if (doc.buffer.hyperlinkAtCaret()) {
                         std::size_t caretOffset = doc.buffer.caretOffset();
                         if (doc.buffer.removeHyperlink(caretOffset)) {
                             doc.isDirty = true;
-                            status::set(status, "Hyperlink removed");
+                            toast_notify::success("Hyperlink removed");
                         }
                     } else {
-                        status::set(status, "No hyperlink at cursor", true);
+                        toast_notify::error("No hyperlink at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 case 5:  // Bookmark...
                 {
                     std::string name =
                         std::format("bookmark_{}", doc.buffer.caret().row + 1);
                     if (doc.buffer.addBookmark(name)) {
-                        status::set(status, "Bookmark added");
+                        toast_notify::success("Bookmark added");
                     } else {
-                        status::set(status, "Bookmark not added", true);
+                        toast_notify::error("Bookmark not added");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 6:  // Comment...
@@ -1710,8 +1621,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         menu.pendingCommentEnd = doc.buffer.offsetForPosition(end);
                         menu.showCommentDialog = true;
                     } else {
-                        status::set(status, "Select text to comment", true);
-                        status.expiresAt = raylib::GetTime() + 2.0;
+                        toast_notify::error("Select text to comment");
                     }
                     break;
                 case 8:  // Table...
@@ -1719,8 +1629,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     std::size_t currentLine = doc.buffer.caret().row;
                     doc.insertTable(currentLine, 3, 3);
                     doc.isDirty = true;
-                    status::set(status, "Inserted 3x3 table");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Inserted 3x3 table");
                     break;
                 }
                 case 10:  // Image...
@@ -1738,8 +1647,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     img.filename = "placeholder.png";
                     doc.images.addImage(img);
                     doc.isDirty = true;
-                    status::set(status, "Image placeholder inserted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Image placeholder inserted");
                     break;
                 }
                 case 15:  // Line (drawing)
@@ -1775,8 +1683,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     
                     doc.drawings.addDrawing(drawing);
                     doc.isDirty = true;
-                    status::set(status, std::format("{} inserted", shapeTypeName(drawing.shapeType)));
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info(std::format("{} inserted", shapeTypeName(drawing.shapeType)));
                     break;
                 }
                 case 23:  // Equation...
@@ -1788,8 +1695,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     eq.style = EquationStyle::Inline;
                     doc.equations.addEquation(eq);
                     doc.isDirty = true;
-                    status::set(status, "Equation inserted");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Equation inserted");
                     break;
                 }
                 default:
@@ -1802,8 +1708,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     std::size_t currentLine = doc.buffer.caret().row;
                     doc.insertTable(currentLine, 3, 3);
                     doc.isDirty = true;
-                    status::set(status, "Inserted 3x3 table");
-                    status.expiresAt = raylib::GetTime() + 2.0;
+                    toast_notify::info("Inserted 3x3 table");
                     break;
                 }
                 case 2: {  // Insert Row Above
@@ -1812,11 +1717,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertRowAbove(table->currentCell().row);
                         doc.isDirty = true;
-                        status::set(status, "Row inserted above");
+                        toast_notify::info("Row inserted above");
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 3: {  // Insert Row Below
@@ -1825,11 +1729,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertRowBelow(table->currentCell().row);
                         doc.isDirty = true;
-                        status::set(status, "Row inserted below");
+                        toast_notify::info("Row inserted below");
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 4: {  // Insert Column Left
@@ -1838,11 +1741,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertColumnLeft(table->currentCell().col);
                         doc.isDirty = true;
-                        status::set(status, "Column inserted left");
+                        toast_notify::info("Column inserted left");
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 5: {  // Insert Column Right
@@ -1851,11 +1753,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertColumnRight(table->currentCell().col);
                         doc.isDirty = true;
-                        status::set(status, "Column inserted right");
+                        toast_notify::info("Column inserted right");
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 7: {  // Delete Row
@@ -1864,11 +1765,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->deleteRow(table->currentCell().row);
                         doc.isDirty = true;
-                        status::set(status, "Row deleted");
+                        toast_notify::info("Row deleted");
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 8: {  // Delete Column
@@ -1877,11 +1777,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->deleteColumn(table->currentCell().col);
                         doc.isDirty = true;
-                        status::set(status, "Column deleted");
+                        toast_notify::info("Column deleted");
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 10: {  // Merge Cells
@@ -1895,14 +1794,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         CellPosition bottomRight = {std::max(start.row, end.row), std::max(start.col, end.col)};
                         if (table->mergeCells(topLeft, bottomRight)) {
                             doc.isDirty = true;
-                            status::set(status, "Cells merged");
+                            toast_notify::success("Cells merged");
                         } else {
-                            status::set(status, "Cannot merge cells", true);
+                            toast_notify::error("Cannot merge cells");
                         }
                     } else {
-                        status::set(status, "Select cells to merge", true);
+                        toast_notify::error("Select cells to merge");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 case 11: {  // Split Cell
@@ -1911,14 +1809,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         if (table->splitCell(table->currentCell())) {
                             doc.isDirty = true;
-                            status::set(status, "Cell split");
+                            toast_notify::success("Cell split");
                         } else {
-                            status::set(status, "Cell is not merged", true);
+                            toast_notify::error("Cell is not merged");
                         }
                     } else {
-                        status::set(status, "No table at cursor", true);
+                        toast_notify::error("No table at cursor");
                     }
-                    status.expiresAt = raylib::GetTime() + 2.0;
                     break;
                 }
                 default:
