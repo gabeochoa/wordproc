@@ -51,349 +51,34 @@ inline void debug_log(const char* location, const char* message,
 // #endregion agent log
 
 //=============================================================================
-// LAYER 1: LOW-LEVEL INPUT INJECTOR
+// LAYER 1: LOW-LEVEL INPUT INJECTOR (from afterhours)
 //=============================================================================
+// Using afterhours input_injector directly - no local implementation needed
+}  // namespace testing
+}  // namespace afterhours
 
-namespace input_injector {
+// Include afterhours E2E testing core
+#include "../../vendor/afterhours/src/plugins/e2e_testing/test_input.h"
+#include "../../vendor/afterhours/src/plugins/e2e_testing/visible_text.h"
 
-namespace detail {
-  inline std::array<bool, 512> synthetic_keys{};
-  inline std::array<int, 512> synthetic_press_count{};
-  inline std::array<int, 512> synthetic_press_delay{};
-  
-  struct MouseState {
-    float x = 0, y = 0;
-    bool active = false;
-    bool left_held = false;
-    bool left_pressed = false;
-    bool left_released = false;
-  };
-  inline MouseState mouse;
-  
-  struct PendingClick {
-    bool pending = false;
-    float x = 0, y = 0;
-  };
-  inline PendingClick pending_click;
-  
-  struct KeyHold {
-    bool active = false;
-    int keycode = 0;
-    float remaining = 0.0f;
-  };
-  inline KeyHold key_hold;
-}
-
-/// Set a key as synthetically held down
-inline void set_key_down(int key) {
-  if (key >= 0 && key < 512) {
-    detail::synthetic_keys[key] = true;
-    detail::synthetic_press_count[key]++;
-    detail::synthetic_press_delay[key] = 1; // Delay 1 frame before consumable
-  }
-}
-
-/// Release a synthetically held key
-inline void set_key_up(int key) {
-  if (key >= 0 && key < 512) {
-    detail::synthetic_keys[key] = false;
-  }
-}
-
-/// Check if key is synthetically held
-inline bool is_key_down(int key) {
-  return key >= 0 && key < 512 && detail::synthetic_keys[key];
-}
-
-/// Consume a synthetic key press (returns true once per press)
-inline bool consume_press(int key) {
-  if (key < 0 || key >= 512) return false;
-  if (detail::synthetic_press_count[key] > 0) {
-    if (detail::synthetic_press_delay[key] > 0) {
-      detail::synthetic_press_delay[key]--;
-      return false;
-    }
-    detail::synthetic_press_count[key]--;
-    return true;
-  }
-  return false;
-}
-
-/// Hold a key for specified duration (seconds)
-inline void hold_key_for_duration(int key, float duration) {
-  set_key_down(key);
-  detail::key_hold = {true, key, duration};
-}
-
-/// Update timed key holds (call each frame with delta time)
-inline void update_key_hold(float dt) {
-  if (detail::key_hold.active) {
-    detail::key_hold.remaining -= dt;
-    if (detail::key_hold.remaining <= 0) {
-      set_key_up(detail::key_hold.keycode);
-      detail::key_hold.active = false;
-    }
-  }
-}
-
-/// Set mouse position
-inline void set_mouse_position(float x, float y) {
-  detail::mouse.x = x;
-  detail::mouse.y = y;
-  detail::mouse.active = true;
-}
-
-/// Get mouse position
-inline void get_mouse_position(float& x, float& y) {
-  x = detail::mouse.x;
-  y = detail::mouse.y;
-}
-
-/// Schedule a click at center of rectangle (x, y, w, h)
-inline void schedule_click_at(float x, float y, float w, float h) {
-  detail::pending_click = {true, x + w/2, y + h/2};
-}
-
-/// Execute scheduled click (sets mouse position and pressed state)
-inline void inject_scheduled_click() {
-  if (detail::pending_click.pending) {
-    detail::mouse.x = detail::pending_click.x;
-    detail::mouse.y = detail::pending_click.y;
-    detail::mouse.active = true;
-    detail::mouse.left_held = true;
-    detail::mouse.left_pressed = true;
-  }
-}
-
-/// Release scheduled click
-inline void release_scheduled_click() {
-  if (detail::pending_click.pending && detail::mouse.left_held) {
-    detail::mouse.left_held = false;
-    detail::mouse.left_released = true;
-    detail::pending_click.pending = false;
-  }
-}
-
-/// Check mouse button state
-inline bool is_mouse_button_pressed() { return detail::mouse.active && detail::mouse.left_pressed; }
-inline bool is_mouse_button_down() { return detail::mouse.active && detail::mouse.left_held; }
-inline bool is_mouse_button_released() { return detail::mouse.active && detail::mouse.left_released; }
-
-/// Reset per-frame state (call at start of frame)
-inline void reset_frame() {
-  detail::mouse.left_pressed = false;
-  detail::mouse.left_released = false;
-}
-
-/// Clear all synthetic input state
-inline void reset_all() {
-  detail::synthetic_keys.fill(false);
-  detail::synthetic_press_count.fill(0);
-  detail::synthetic_press_delay.fill(0);
-  detail::mouse = {};
-  detail::pending_click = {};
-  detail::key_hold = {};
-}
-
-} // namespace input_injector
-
-//=============================================================================
-// LAYER 2: HIGH-LEVEL INPUT QUEUE
-//=============================================================================
-
+// Re-open namespace for compatibility shims and remaining layers
+namespace afterhours {
+namespace testing {
 namespace test_input {
 
-struct KeyPress {
-  int key = 0;
-  bool is_char = false;
-  char char_value = 0;
-};
+// Compatibility: set_test_mode/is_test_mode functions
+inline void set_test_mode(bool enabled) { detail::test_mode = enabled; }
+inline bool is_test_mode() { return detail::test_mode; }
 
+// Compatibility: MouseState struct (wraps input_injector mouse)
 struct MouseState {
   std::optional<float> x, y;
   bool left_held = false;
   bool left_pressed = false;
   bool left_released = false;
-  int press_frames = 0;  // Keep press active for N frames
+  int press_frames = 0;
   bool active = false;
 };
-
-namespace detail {
-  inline std::queue<KeyPress> key_queue;
-  inline MouseState mouse;
-  inline bool test_mode = false;
-  inline bool key_consumed = false;
-  inline bool char_consumed = false;
-}
-
-/// Enable/disable test mode
-inline void set_test_mode(bool enabled) { detail::test_mode = enabled; }
-inline bool is_test_mode() { return detail::test_mode; }
-
-/// Queue a key press
-inline void push_key(int key) {
-  KeyPress kp;
-  kp.key = key;
-  detail::key_queue.push(kp);
-}
-
-/// Queue a character
-inline void push_char(char c) {
-  KeyPress kp;
-  kp.is_char = true;
-  kp.char_value = c;
-  detail::key_queue.push(kp);
-}
-
-/// Clear input queue
-inline void clear_queue() {
-  while (!detail::key_queue.empty()) detail::key_queue.pop();
-}
-
-/// Set mouse position
-inline void set_mouse_position(float x, float y) {
-  detail::mouse.x = x;
-  detail::mouse.y = y;
-  detail::mouse.active = true;
-  input_injector::set_mouse_position(x, y);
-}
-
-/// Simulate mouse press
-inline void simulate_mouse_press() {
-  detail::mouse.left_held = true;
-  detail::mouse.left_pressed = true;
-  detail::mouse.press_frames = 1;
-  detail::mouse.active = true;
-}
-
-/// Simulate mouse release
-inline void simulate_mouse_release() {
-  detail::mouse.left_held = false;
-  detail::mouse.left_released = true;
-  detail::mouse.active = true;
-}
-
-/// Click at position (press + release on next frame)
-inline void simulate_click(float x, float y) {
-  set_mouse_position(x, y);
-  simulate_mouse_press();
-}
-
-/// Reset per-frame state
-inline void reset_frame() {
-  detail::key_consumed = false;
-  detail::char_consumed = false;
-  
-  if (detail::mouse.press_frames > 0) {
-    detail::mouse.press_frames--;
-  } else {
-    detail::mouse.left_pressed = false;
-  }
-  detail::mouse.left_released = false;
-  
-  input_injector::reset_frame();
-}
-
-/// Clear all test input state
-inline void reset_all() {
-  clear_queue();
-  detail::mouse = MouseState{};
-  input_injector::reset_all();
-}
-
-// Convenience helpers
-inline void simulate_tab() { push_key(258); }  // KEY_TAB
-inline void simulate_enter() { push_key(257); } // KEY_ENTER
-inline void simulate_escape() { push_key(256); } // KEY_ESCAPE
-inline void simulate_backspace() { push_key(259); } // KEY_BACKSPACE
-inline void simulate_arrow_left() { push_key(263); }
-inline void simulate_arrow_right() { push_key(262); }
-inline void simulate_arrow_up() { push_key(265); }
-inline void simulate_arrow_down() { push_key(264); }
-
-//-----------------------------------------------------------------------------
-// Input query wrappers (use instead of raw raylib/backend calls)
-//-----------------------------------------------------------------------------
-
-/// Check if key pressed (wraps backend call)
-template<typename BackendFn>
-inline bool is_key_pressed(int key, BackendFn backend_fn) {
-  // Check synthetic press first
-  if (input_injector::consume_press(key)) return true;
-  
-  // In test mode, block real input - only use synthetic/queued input
-  if (detail::test_mode) {
-    if (detail::key_queue.empty() || detail::key_consumed) {
-      return false;  // Block real input in test mode
-    }
-    if (!detail::key_queue.front().is_char && detail::key_queue.front().key == key) {
-      detail::key_queue.pop();
-      detail::key_consumed = true;
-      return true;
-    }
-    return false;  // Block real input in test mode
-  }
-  
-  return backend_fn(key);
-}
-
-/// Get next character (wraps backend call)
-template<typename BackendFn>
-inline int get_char_pressed(BackendFn backend_fn) {
-  // In test mode, block real input - only use queued input
-  if (detail::test_mode) {
-    if (detail::key_queue.empty() || detail::char_consumed) {
-      return 0;  // No character - block real input
-    }
-    // Skip non-char entries in the queue (they're handled by is_key_pressed)
-    while (!detail::key_queue.empty() && !detail::key_queue.front().is_char) {
-      detail::key_queue.pop();
-    }
-    if (detail::key_queue.empty()) {
-      return 0;  // No char left after skipping keys
-    }
-    if (detail::key_queue.front().is_char) {
-      char c = detail::key_queue.front().char_value;
-      detail::key_queue.pop();
-      detail::char_consumed = true;
-      return static_cast<int>(c);
-    }
-    return 0;  // Not a char in queue - block real input
-  }
-  
-  return backend_fn();
-}
-
-/// Get mouse position (wraps backend call)
-template<typename Vec2, typename BackendFn>
-inline Vec2 get_mouse_position(BackendFn backend_fn) {
-  if (detail::test_mode && detail::mouse.active && detail::mouse.x && detail::mouse.y) {
-    return Vec2{*detail::mouse.x, *detail::mouse.y};
-  }
-  return backend_fn();
-}
-
-/// Check mouse button pressed (wraps backend call)
-template<typename BackendFn>
-inline bool is_mouse_button_pressed(int button, BackendFn backend_fn) {
-  // In test mode, block real input
-  if (detail::test_mode) {
-    if (button == 0) return detail::mouse.left_pressed;
-    return false;  // Block real input for other buttons
-  }
-  return backend_fn(button);
-}
-
-/// Check mouse button down (wraps backend call)
-template<typename BackendFn>
-inline bool is_mouse_button_down(int button, BackendFn backend_fn) {
-  // In test mode, block real input
-  if (detail::test_mode) {
-    if (button == 0) return detail::mouse.left_held;
-    return false;  // Block real input for other buttons
-  }
-  return backend_fn(button);
-}
 
 } // namespace test_input
 
@@ -457,71 +142,20 @@ struct TestInputSystem : afterhours::System<afterhours::ui::UIContext<InputActio
 */
 
 //=============================================================================
-// LAYER 4: VISIBLE TEXT REGISTRY
+// LAYER 4: VISIBLE TEXT REGISTRY (using afterhours)
 //=============================================================================
 
+// Compatibility wrapper: visible_text namespace using afterhours::testing::VisibleTextRegistry
 namespace visible_text {
 
-class Registry {
-public:
-  static Registry& instance() {
-    static Registry inst;
-    return inst;
-  }
-  
-  void clear() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    texts_.clear();
-  }
-  
-  void register_text(const std::string& text) {
-    if (text.empty()) return;
-    std::lock_guard<std::mutex> lock(mutex_);
-    texts_.push_back(text);
-  }
-  
-  bool contains(const std::string& needle) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (const auto& t : texts_) {
-      if (t.find(needle) != std::string::npos) return true;
-    }
-    return false;
-  }
-  
-  bool has_exact(const std::string& needle) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (const auto& t : texts_) {
-      if (t == needle) return true;
-    }
-    return false;
-  }
-  
-  std::string get_all() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    std::string result;
-    for (const auto& t : texts_) {
-      if (!result.empty()) result += " | ";
-      result += t;
-    }
-    return result;
-  }
-  
-  std::vector<std::string> get_texts() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return texts_;
-  }
+// Registry alias for backward compatibility
+using Registry = VisibleTextRegistry;
 
-private:
-  Registry() = default;
-  mutable std::mutex mutex_;
-  std::vector<std::string> texts_;
-};
-
-inline void clear() { Registry::instance().clear(); }
-inline void register_text(const std::string& t) { Registry::instance().register_text(t); }
-inline bool contains(const std::string& t) { return Registry::instance().contains(t); }
-inline bool has_exact(const std::string& t) { return Registry::instance().has_exact(t); }
-inline std::string get_all() { return Registry::instance().get_all(); }
+inline void clear() { VisibleTextRegistry::instance().clear(); }
+inline void register_text(const std::string& t) { VisibleTextRegistry::instance().register_text(t); }
+inline bool contains(const std::string& t) { return VisibleTextRegistry::instance().contains(t); }
+inline bool has_exact(const std::string& t) { return VisibleTextRegistry::instance().has_exact(t); }
+inline std::string get_all() { return VisibleTextRegistry::instance().get_all(); }
 
 } // namespace visible_text
 
@@ -562,45 +196,9 @@ struct ScriptResult {
   int validation_failures = 0;
 };
 
-struct KeyCombo {
-  bool ctrl = false, shift = false, alt = false;
-  int key = 0;
-};
-
-inline KeyCombo parse_key_combo(const std::string& str) {
-  KeyCombo combo;
-  std::string s = str;
-  
-  auto consume = [&](const std::string& p) {
-    if (s.find(p) == 0) { s = s.substr(p.length()); return true; }
-    return false;
-  };
-  
-  while (true) {
-    if (consume("CTRL+") || consume("CMD+")) combo.ctrl = true;
-    else if (consume("SHIFT+")) combo.shift = true;
-    else if (consume("ALT+")) combo.alt = true;
-    else break;
-  }
-  
-  // Map key names to raylib key codes
-  if (s.length() == 1 && s[0] >= 'A' && s[0] <= 'Z') combo.key = s[0];
-  else if (s == "ENTER") combo.key = 257;
-  else if (s == "ESC" || s == "ESCAPE") combo.key = 256;
-  else if (s == "TAB") combo.key = 258;
-  else if (s == "BACKSPACE") combo.key = 259;
-  else if (s == "DELETE") combo.key = 261;
-  else if (s == "LEFT") combo.key = 263;
-  else if (s == "RIGHT") combo.key = 262;
-  else if (s == "UP") combo.key = 265;
-  else if (s == "DOWN") combo.key = 264;
-  else if (s == "HOME") combo.key = 268;
-  else if (s == "END") combo.key = 269;
-  else if (s == "PAGEUP") combo.key = 266;
-  else if (s == "PAGEDOWN") combo.key = 267;
-  
-  return combo;
-}
+// KeyCombo and parse_key_combo are now from afterhours/core/key_codes.h
+using afterhours::KeyCombo;
+using afterhours::parse_key_combo;
 
 inline std::vector<TestCommand> parse_script(const std::string& path) {
   std::vector<TestCommand> cmds;

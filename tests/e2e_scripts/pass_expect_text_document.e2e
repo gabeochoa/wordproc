@@ -20,3 +20,4 @@ expect_text "This is a test"
 # Take a screenshot to verify
 screenshot expect_text_document
 
+
