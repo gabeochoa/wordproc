@@ -66,7 +66,7 @@ struct TextInputSystem
                 char ch = static_cast<char>(codepoint);
                 if (doc.docSettings.smartQuotesEnabled &&
                     (ch == '"' || ch == '\'')) {
-                    auto insertSmartQuote = [&](char ascii, const char* openQuote,
+                    auto insertSmartQuote = [&](char /*ascii*/, const char* openQuote,
                                                 const char* closeQuote) {
                         std::size_t offset = doc.buffer.caretOffset();
                         bool opening = true;
