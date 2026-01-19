@@ -6,6 +6,11 @@
 #include <afterhours/ah.h>
 #include <afterhours/src/plugins/ui.h>
 #include <afterhours/src/plugins/modal.h>
+#include <afterhours/src/plugins/ui/text_input/text_input.h>
+
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 
 #include "components.h"
 #include "../input_mapping.h"  // For InputAction enum
@@ -286,6 +291,240 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     "Word Count",
                     msg,
                     "OK");
+            }
+        }
+        
+        // Comment input dialog
+        if (menu.showCommentDialog) {
+            constexpr int COMMENT_MODAL_ID = 50002;
+            auto result = afterhours::modal(ctx, mk(entity, COMMENT_MODAL_ID),
+                menu.showCommentDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(360), afterhours::ui::h720(180))
+                    .with_title("Add Comment"));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Prompt label
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Comment:")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Text input
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                    menu.commentInputStr,
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Button row
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (button(ctx, mk(buttonRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("OK")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_background(Theme::Usage::Primary)
+                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    // Handle OK - add comment
+                    auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                          .whereHasComponent<DocumentComponent>()
+                                          .gen();
+                    if (!docEntities.empty() && !menu.commentInputStr.empty()) {
+                        auto& doc = docEntities[0].get().get<DocumentComponent>();
+                        Comment comment;
+                        comment.startOffset = menu.pendingCommentStart;
+                        comment.endOffset = menu.pendingCommentEnd;
+                        comment.author = "User";
+                        comment.text = menu.commentInputStr;
+                        comment.createdAt = std::time(nullptr);
+                        doc.comments.push_back(comment);
+                        toast_notify::success("Comment added");
+                    }
+                    menu.commentInputStr.clear();
+                    menu.showCommentDialog = false;
+                }
+                
+                if (button(ctx, mk(buttonRow.ent(), 1),
+                    ComponentConfig{}
+                        .with_label("Cancel")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    menu.commentInputStr.clear();
+                    menu.showCommentDialog = false;
+                }
+            }
+        }
+        
+        // Template input dialog
+        if (menu.showTemplateDialog) {
+            constexpr int TEMPLATE_MODAL_ID = 50003;
+            auto result = afterhours::modal(ctx, mk(entity, TEMPLATE_MODAL_ID),
+                menu.showTemplateDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(380), afterhours::ui::h720(180))
+                    .with_title("New from Template"));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Prompt label
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Template (letter/memo/report/resume/essay):")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Text input
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                    menu.templateInputStr,
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Button row
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (button(ctx, mk(buttonRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("OK")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_background(Theme::Usage::Primary)
+                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    // Handle OK - load template
+                    auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                          .whereHasComponent<DocumentComponent>()
+                                          .gen();
+                    if (!docEntities.empty() && !menu.templateInputStr.empty()) {
+                        auto& doc = docEntities[0].get().get<DocumentComponent>();
+                        std::string name = menu.templateInputStr;
+                        for (auto& ch : name) ch = static_cast<char>(std::tolower(ch));
+                        std::filesystem::path templatePath =
+                            std::filesystem::current_path() / "resources/templates" /
+                            (name + ".txt");
+                        if (std::filesystem::exists(templatePath)) {
+                            std::ifstream ifs(templatePath);
+                            std::stringstream buffer;
+                            buffer << ifs.rdbuf();
+                            doc.buffer.setText(buffer.str());
+                            doc.isDirty = true;
+                            toast_notify::success("Template loaded: " + name);
+                        } else {
+                            toast_notify::error("Template not found: " + name);
+                        }
+                    }
+                    menu.templateInputStr.clear();
+                    menu.showTemplateDialog = false;
+                }
+                
+                if (button(ctx, mk(buttonRow.ent(), 1),
+                    ComponentConfig{}
+                        .with_label("Cancel")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    menu.templateInputStr.clear();
+                    menu.showTemplateDialog = false;
+                }
+            }
+        }
+        
+        // Tab Width input dialog
+        if (menu.showTabWidthDialog) {
+            constexpr int TABWIDTH_MODAL_ID = 50004;
+            auto result = afterhours::modal(ctx, mk(entity, TABWIDTH_MODAL_ID),
+                menu.showTabWidthDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(320), afterhours::ui::h720(180))
+                    .with_title("Tab Width"));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Prompt label
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Spaces per tab (1-16):")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Text input
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                    menu.tabWidthInputStr,
+                    ComponentConfig{}
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Button row
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (button(ctx, mk(buttonRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("OK")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_background(Theme::Usage::Primary)
+                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    // Handle OK - set tab width
+                    auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                          .whereHasComponent<DocumentComponent>()
+                                          .gen();
+                    if (!docEntities.empty() && !menu.tabWidthInputStr.empty()) {
+                        auto& doc = docEntities[0].get().get<DocumentComponent>();
+                        int width = std::atoi(menu.tabWidthInputStr.c_str());
+                        if (width >= 1 && width <= 16) {
+                            doc.docSettings.tabWidth = width;
+                            toast_notify::success("Tab width set to " + std::to_string(width));
+                        } else {
+                            toast_notify::error("Tab width must be 1-16");
+                        }
+                    }
+                    menu.tabWidthInputStr.clear();
+                    menu.showTabWidthDialog = false;
+                }
+                
+                if (button(ctx, mk(buttonRow.ent(), 1),
+                    ComponentConfig{}
+                        .with_label("Cancel")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    menu.tabWidthInputStr.clear();
+                    menu.showTabWidthDialog = false;
+                }
             }
         }
     }

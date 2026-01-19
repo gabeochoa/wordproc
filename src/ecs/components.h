@@ -182,14 +182,17 @@ struct MenuComponent : public afterhours::BaseComponent {
     std::size_t pendingCommentStart = 0;
     std::size_t pendingCommentEnd = 0;
     char commentInputBuffer[256] = {0};
+    std::string commentInputStr;  // For afterhours text_input
 
     // Template selection dialog
     bool showTemplateDialog = false;
     char templateInputBuffer[128] = {0};
+    std::string templateInputStr;  // For afterhours text_input
 
     // Tab width dialog
     bool showTabWidthDialog = false;
     char tabWidthInputBuffer[16] = {0};
+    std::string tabWidthInputStr;  // For afterhours text_input
     
     // Page Setup dialog state
     bool showPageSetup = false;

@@ -10,14 +10,14 @@ Wordproc is migrating from `win95::DrawMessageDialog` to afterhours modals:
 **Migrated:**
 - ✅ About dialog - uses `modal::info()`
 - ✅ Word Count dialog - uses `modal::info()`
+- ✅ Comment dialog - uses `modal()` + `text_input()`
+- ✅ Template dialog - uses `modal()` + `text_input()`
+- ✅ Tab Width dialog - uses `modal()` + `text_input()`
 
 **Still Using Legacy win95_widgets:**
-- Comment dialog (input dialog)
-- Template dialog (input dialog)
-- Tab Width dialog (input dialog)
-- Find/Replace dialog (complex multi-field)
-- Page Setup dialog (complex multi-field)
-- Help window (custom scrollable list)
+- Find/Replace dialog (complex multi-field, needs selection/navigation)
+- Page Setup dialog (complex multi-field with dropdowns)
+- Help window (custom scrollable list with keybindings)
 
 ### Afterhours modal.h Features
 - **DialogResult enum**: Pending, Confirmed, Cancelled, Dismissed, Custom
