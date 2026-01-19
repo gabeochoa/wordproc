@@ -21,7 +21,6 @@
 #include "rl.h"
 #include "settings.h"
 #include "testing/e2e_runner.h"
-#include "testing/test_input.h"
 #include "ui/menu_setup.h"
 #include "ui/theme.h"
 #include "ui/ui_context.h"

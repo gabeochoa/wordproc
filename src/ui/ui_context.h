@@ -174,21 +174,18 @@ inline afterhours::Entity& getUIRootEntity() {
 
 }  // namespace ui_imm
 
-// Include test input provider after ui_imm is fully defined (to avoid circular
-// deps)
-#include "../testing/test_input_provider.h"
-
 namespace ui_imm {
 
-// Initialize test input provider for UI context integration
-// Call this after initUIContext() when running in test mode
-inline void initTestModeUI() { test_input::initTestInputProvider(); }
-
-// Register test input system that integrates with Afterhours UIContext
-// Call this after registerUIUpdateSystems() when running in test mode
-// The system runs after BeginUIContextManager to override input state
-inline void registerTestInputSystem(afterhours::SystemManager& manager) {
-    test_input::registerTestInputSystem<InputAction>(manager);
+// Initialize test mode UI
+// Note: Test input is now handled directly via afterhours::testing::test_input
+// which is set up in external.h. This function exists for API compatibility.
+inline void initTestModeUI() {
+    // Test input is enabled via test_input::set_test_mode(true)
+    // No additional setup needed for UI context integration
 }
+
+// Note: Test input system registration is no longer needed.
+// Test input is handled via afterhours::testing::test_input which intercepts
+// raylib input calls when test_input::test_mode is true.
 
 }  // namespace ui_imm

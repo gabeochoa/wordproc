@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "../testing/test_input.h"
+// test_input:: available via rl.h -> external.h
 
 namespace win95 {
 

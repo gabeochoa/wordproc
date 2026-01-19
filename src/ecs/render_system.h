@@ -23,7 +23,7 @@
 #include "../input/action_map.h"
 #include "../rl.h"
 #include "../settings.h"
-#include "../testing/test_input.h"
+// test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
 #include "../ui/win95_widgets.h"
 #include "../ui/menu_setup.h"

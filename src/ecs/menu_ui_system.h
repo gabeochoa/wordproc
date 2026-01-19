@@ -8,7 +8,7 @@
 
 #include "components.h"
 #include "../input_mapping.h"  // For InputAction enum
-#include "../testing/test_input.h"  // For E2E testing
+// test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"  // For ui_imm::getUIRootEntity()
 #include "../ui/menu_setup.h"

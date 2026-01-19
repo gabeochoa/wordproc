@@ -62,11 +62,24 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
       return;
     }
     if (!menu_comp) {
-      cmd.fail("menu_comp not set");
+      cmd.fail("menu_comp not set - was E2EConfig.menu_comp passed?");
       return;
     }
 
     const auto &item_name = cmd.arg(0);
+    
+    // Debug: Check if any menu is open
+    bool anyOpen = false;
+    for (const auto &menu : menu_comp->menus) {
+      if (menu.open) {
+        anyOpen = true;
+        break;
+      }
+    }
+    if (!anyOpen) {
+      cmd.fail("No menu is currently open - use menu_open first");
+      return;
+    }
     
     for (std::size_t menuIdx = 0; menuIdx < menu_comp->menus.size(); ++menuIdx) {
       auto &menu = menu_comp->menus[menuIdx];
