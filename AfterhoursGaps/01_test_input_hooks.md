@@ -6,10 +6,17 @@ Afterhours now provides test input hooks in `vendor/afterhours/src/plugins/e2e_t
 - `input_injector.h` - Low-level synthetic key/mouse state
 - `test_input.h` - High-level input queue with backend wrapping
 
-### Wordproc Integration
-Wordproc uses these via thin wrappers:
-- `src/testing/test_input.h` - Adapts afterhours API to wordproc's vec2 and raylib types
-- `src/testing/test_input_provider.h` - UIContext integration (unchanged)
+### Wordproc Integration (Completed)
+Wordproc now uses afterhours directly via `src/external.h`:
+- Namespace aliases: `test_input::` → `afterhours::testing::test_input::`
+- Namespace aliases: `input_injector::` → `afterhours::testing::input_injector::`
+- Macro wrappers intercept raylib input calls and route through test input when enabled
+
+**Deleted files** (no longer needed):
+- `src/testing/test_input.h` - functionality moved to external.h
+- `src/testing/test_input.cpp`
+- `src/testing/test_input_fwd.h`
+- `src/testing/test_input_provider.h`
 
 ## Original Problem (now solved)
 Afterhours previously lacked a first-class way to inject input events for automated tests.

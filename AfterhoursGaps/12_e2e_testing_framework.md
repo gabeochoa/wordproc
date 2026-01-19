@@ -1,28 +1,50 @@
 # E2E Testing Framework
 
-## Status: PARTIALLY ADDRESSED
+## Status: ADDRESSED ✅
 
-Afterhours now provides core E2E testing layers in `vendor/afterhours/src/plugins/e2e_testing/`:
+Afterhours now provides the full E2E testing framework in `vendor/afterhours/src/plugins/e2e_testing/`:
 - ✅ `input_injector.h` - Low-level synthetic key/mouse state
 - ✅ `test_input.h` - High-level input queue with frame awareness  
 - ✅ `visible_text.h` - VisibleTextRegistry for text assertions
 - ✅ `runner.h` - E2ERunner with script parsing and execution
-- ✅ `command_handlers.h` - Built-in command systems
-- ✅ `ui_commands.h` - UI plugin integration commands
+- ✅ `command_handlers.h` - Built-in command systems (type, key, click, wait, etc.)
+- ✅ `ui_commands.h` - UI plugin integration commands (click_ui, focus_ui, etc.)
 
-### Migration Status
-| Component | Source | Notes |
-|-----------|--------|-------|
-| input_injector | afterhours | ✅ Fully migrated |
-| test_input | afterhours | ✅ With compatibility shims |
-| visible_text | afterhours | ✅ Using VisibleTextRegistry |
+### Migration Completed
+| Component | Source | Status |
+|-----------|--------|--------|
+| input_injector | afterhours | ✅ Direct usage via external.h |
+| test_input | afterhours | ✅ Direct usage via external.h |
+| visible_text | afterhours | ✅ Direct usage via external.h |
 | KeyCombo | afterhours | ✅ From key_codes.h |
-| E2ERunner | extracted | Uses wordproc's version (has app-specific callbacks) |
+| E2ERunner | afterhours | ✅ With app-specific property getters |
 
-### Remaining Gap
-The afterhours E2ERunner uses ECS-based command dispatch while wordproc's uses callback-based dispatch. To fully migrate, either:
-1. Add callback setters to afterhours E2ERunner for extensibility, or
-2. Create wordproc command handlers as ECS systems
+### Files Deleted (now using afterhours directly)
+- `src/extracted/e2e_testing.h` (~500 lines)
+- `src/testing/test_input.h` (~194 lines)
+- `src/testing/test_input.cpp`
+- `src/testing/test_input_fwd.h`
+- `src/testing/test_input_provider.h`
+
+### Files Kept (app-specific logic)
+- `src/testing/e2e_runner.h/.cpp` - Property getters, screenshot callbacks
+- `src/testing/e2e_integration.h` - System registration
+- `src/testing/e2e_commands.h` - App-specific command handlers (menu_open, menu_select, etc.)
+
+### Integration Pattern
+Test input is now provided directly in `src/external.h`:
+```cpp
+#include <afterhours/src/plugins/e2e_testing/test_input.h>
+#include <afterhours/src/plugins/e2e_testing/input_injector.h>
+#include <afterhours/src/plugins/e2e_testing/visible_text.h>
+
+namespace test_input {
+    using namespace afterhours::testing::test_input;
+    inline void set_test_mode(bool enabled) { detail::test_mode = enabled; }
+    inline bool is_test_mode() { return detail::test_mode; }
+    // ... convenience wrappers for raylib backend
+}
+```
 
 ## Working Implementation
 

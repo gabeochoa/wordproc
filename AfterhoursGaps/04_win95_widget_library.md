@@ -7,8 +7,14 @@ Afterhours now provides bevel border support in `vendor/afterhours/src/plugins/u
 - `components.h` - `HasBevelBorder` component
 - `rendering.h` - `render_bevel()` function for automatic bevel rendering
 
-### Migration TODO
-Wordproc's `src/ui/win95_widgets.cpp` can be simplified to use:
+### Migration Completed
+**Deleted files** (upstreamed to afterhours):
+- `src/extracted/bevel_border.h`
+
+**Kept files** (app-specific, bypass ECS for direct raylib dialogs):
+- `src/ui/win95_widgets.h/.cpp` - `DrawRaisedBorder()` and `DrawSunkenBorder()` for modal dialogs
+
+For new ECS-based UI, use afterhours:
 ```cpp
 entity.add<HasBevelBorder>(BevelBorder{
   .light_color = {255, 255, 255, 255},
