@@ -9,12 +9,6 @@ contributed to the Afterhours library. Each file is designed to be:
 
 ## Files
 
-### `bevel_border.h`
-3D beveled borders for Win95/retro UI styles. Provides `BevelStyle` enum,
-`BevelBorder` struct, and drawing functions for raised/sunken borders.
-
-**Gap doc**: `AfterhoursGaps/04_win95_widget_library.md`
-
 ### `command_history.h`
 Generic undo/redo system using the Command pattern. Useful for level editors,
 paint tools, forms, and any application with reversible actions.
