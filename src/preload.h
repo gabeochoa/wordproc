@@ -1,5 +1,8 @@
 #pragma once
 
+// Use wordproc's logging instead of afterhours' default
+#include "log.h"
+
 #include <afterhours/src/library.h>
 #include <afterhours/src/singleton.h>
 

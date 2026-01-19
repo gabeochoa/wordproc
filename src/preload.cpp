@@ -12,7 +12,6 @@
 
 #include "fonts/font_loader.h"
 #include "input_mapping.h"
-#include "log.h"
 #include "rl.h"
 #include "settings.h"
 #include "ui/ui_context.h"
