@@ -1,17 +1,13 @@
-// E2E Testing Framework for Afterhours
-// Complete testing framework with input injection, script DSL, and UI assertions.
+// E2E Testing Framework - Wordproc-specific runner
 //
-// Architecture (5 layers):
-// 1. input_injector - Low-level synthetic key/mouse state
-// 2. test_input - High-level input queue with frame awareness
-// 3. TestInputProvider - Afterhours UIContext integration (ECS component)
-// 4. visible_text - Track rendered text for assertions
-// 5. E2ERunner - Script DSL parser and runner
+// Uses afterhours core layers (from vendor/afterhours/src/plugins/e2e_testing/):
+// - input_injector.h - Low-level synthetic key/mouse state
+// - test_input.h - High-level input queue with frame awareness  
+// - visible_text.h - Track rendered text for assertions
 //
-// See src/testing/ for the full multi-file implementation.
-// This is a standalone single-header version for quick integration.
-//
-// To integrate into Afterhours: add as src/plugins/testing.h
+// This file provides:
+// - Compatibility shims for wordproc's API
+// - E2ERunner class with wordproc-specific callbacks (menu, document, outline)
 
 #pragma once
 
@@ -82,64 +78,7 @@ struct MouseState {
 
 } // namespace test_input
 
-//=============================================================================
-// LAYER 3: AFTERHOURS UICONTEXT INTEGRATION (optional)
-//=============================================================================
-
-// This is a template that integrates with Afterhours UIContext.
-// Users should uncomment and adapt when integrating into Afterhours.
-
-/*
-#include <afterhours/src/ecs.h>
-#include <afterhours/src/plugins/ui/context.h>
-
-namespace test_input_provider {
-
-constexpr size_t MAX_ACTIONS = 32;
-
-struct TestInputProvider : afterhours::BaseComponent {
-  std::optional<float> mouse_x, mouse_y;
-  bool mouse_left_down = false;
-  bool mouse_left_pressed = false;
-  bool mouse_left_released = false;
-  std::optional<int> pending_action;
-  std::bitset<MAX_ACTIONS> held_actions;
-  bool active = false;
-  
-  void setMousePosition(float x, float y) { mouse_x = x; mouse_y = y; active = true; }
-  void pressMouseLeft() { mouse_left_down = true; mouse_left_pressed = true; active = true; }
-  void releaseMouseLeft() { mouse_left_down = false; mouse_left_released = true; active = true; }
-  void queueAction(int action) { pending_action = action; active = true; }
-  void holdAction(int action) { if (action >= 0 && action < MAX_ACTIONS) held_actions[action] = true; active = true; }
-  void releaseAction(int action) { if (action >= 0 && action < MAX_ACTIONS) held_actions[action] = false; }
-  void resetFrame() { mouse_left_pressed = false; mouse_left_released = false; pending_action = std::nullopt; }
-  void reset() { *this = TestInputProvider{}; }
-};
-
-template<typename InputAction>
-struct TestInputSystem : afterhours::System<afterhours::ui::UIContext<InputAction>> {
-  void for_each_with(afterhours::Entity&, afterhours::ui::UIContext<InputAction>& ctx, float) override {
-    auto* provider = afterhours::EntityHelper::get_singleton_cmp<TestInputProvider>();
-    if (!provider || !provider->active) return;
-    
-    if (provider->mouse_x && provider->mouse_y) {
-      ctx.mouse.pos = {*provider->mouse_x, *provider->mouse_y};
-    }
-    ctx.mouse.left_down = provider->mouse_left_down;
-    
-    if (provider->pending_action) {
-      ctx.last_action = static_cast<InputAction>(*provider->pending_action);
-      provider->pending_action = std::nullopt;
-    }
-    
-    for (size_t i = 0; i < provider->held_actions.size() && i < ctx.all_actions.size(); ++i) {
-      if (provider->held_actions[i]) ctx.all_actions[i] = true;
-    }
-  }
-};
-
-} // namespace test_input_provider
-*/
+// Note: UIContext integration is provided by src/testing/test_input_provider.h
 
 //=============================================================================
 // LAYER 4: VISIBLE TEXT REGISTRY (using afterhours)
