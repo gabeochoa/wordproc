@@ -1,17 +1,19 @@
 # Test Input Hooks
 
-## Working Implementation
-See these files for a complete working example:
-- `src/testing/test_input.h` - Main API for test input injection
-- `src/testing/test_input.cpp` - Implementation
-- `src/testing/input_injector.h` - Low-level input injection
-- `src/testing/input_injector.cpp` - Implementation
-- `src/testing/test_input_provider.h` - UIContext integration
+## Status: ADDRESSED ✅
 
-## Problem
-Afterhours lacks a first-class way to inject input events for automated tests.
-The library provides no concrete API for simulated key/mouse input, requiring
-applications to build their own testing infrastructure with raylib overrides.
+Afterhours now provides test input hooks in `vendor/afterhours/src/plugins/e2e_testing/`:
+- `input_injector.h` - Low-level synthetic key/mouse state
+- `test_input.h` - High-level input queue with backend wrapping
+
+### Wordproc Integration
+Wordproc uses these via thin wrappers:
+- `src/testing/test_input.h` - Adapts afterhours API to wordproc's vec2 and raylib types
+- `src/testing/test_input_provider.h` - UIContext integration (unchanged)
+
+## Original Problem (now solved)
+Afterhours previously lacked a first-class way to inject input events for automated tests.
+The library now provides a concrete API for simulated key/mouse input.
 
 ## Current Workaround
 

@@ -1,5 +1,29 @@
 # E2E Testing Framework
 
+## Status: PARTIALLY ADDRESSED
+
+Afterhours now provides core E2E testing layers in `vendor/afterhours/src/plugins/e2e_testing/`:
+- ✅ `input_injector.h` - Low-level synthetic key/mouse state
+- ✅ `test_input.h` - High-level input queue with frame awareness  
+- ✅ `visible_text.h` - VisibleTextRegistry for text assertions
+- ✅ `runner.h` - E2ERunner with script parsing and execution
+- ✅ `command_handlers.h` - Built-in command systems
+- ✅ `ui_commands.h` - UI plugin integration commands
+
+### Migration Status
+| Component | Source | Notes |
+|-----------|--------|-------|
+| input_injector | afterhours | ✅ Fully migrated |
+| test_input | afterhours | ✅ With compatibility shims |
+| visible_text | afterhours | ✅ Using VisibleTextRegistry |
+| KeyCombo | afterhours | ✅ From key_codes.h |
+| E2ERunner | extracted | Uses wordproc's version (has app-specific callbacks) |
+
+### Remaining Gap
+The afterhours E2ERunner uses ECS-based command dispatch while wordproc's uses callback-based dispatch. To fully migrate, either:
+1. Add callback setters to afterhours E2ERunner for extensibility, or
+2. Create wordproc command handlers as ECS systems
+
 ## Working Implementation
 
 The full implementation spans multiple files with a layered architecture:
