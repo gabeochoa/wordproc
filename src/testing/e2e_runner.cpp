@@ -1,8 +1,7 @@
 // E2E Runner initialization - app-specific callbacks for wordproc
-// Uses the extracted e2e_testing.h implementation directly
+// Uses afterhours E2ERunner with ECS-based command handlers
 
-#include "../extracted/e2e_testing.h"
-#include "../ecs/components.h"
+#include "e2e_runner.h"
 #include "../editor/document_settings.h"
 #include "../rl.h"
 #include "../settings.h"
@@ -17,9 +16,6 @@
 #include <fstream>
 
 namespace e2e {
-
-// Use the extracted runner type
-using ScriptRunner = afterhours::testing::E2ERunner;
 
 // Helper to take a screenshot
 static void takeScreenshot(const std::string& dir, const std::string& name) {
@@ -88,16 +84,10 @@ static void setupCallbacks(
         takeScreenshot(screenshotDir, name);
     });
     
-    // Set up document dumper
-    runner.set_document_dumper([&docComp](const std::string& path) {
-        std::ofstream file(path);
-        if (file.is_open()) {
-            file << docComp.buffer.getText();
-        }
-    });
+    // Note: document_dump command is now handled by ECS system in e2e_commands.h
     
     // Set up document clearer (for batch mode)
-    runner.set_clear_callback([&docComp]() {
+    runner.set_reset_callback([&docComp]() {
         // Clear text content
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
@@ -505,16 +495,10 @@ static void setupCallbacksEx(
         takeScreenshot(screenshotDir, name);
     });
     
-    // Set up document dumper
-    runner.set_document_dumper([&docComp](const std::string& path) {
-        std::ofstream file(path);
-        if (file.is_open()) {
-            file << docComp.buffer.getText();
-        }
-    });
+    // Note: document_dump command is now handled by ECS system in e2e_commands.h
     
     // Set up document clearer (for batch mode)
-    runner.set_clear_callback([&docComp, &menuComp, &layoutComp]() {
+    runner.set_reset_callback([&docComp, &menuComp, &layoutComp]() {
         // Reset document state
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
@@ -565,51 +549,8 @@ static void setupCallbacksEx(
         Settings::get().reset();
     });
     
-    // Set up menu opener
-    runner.set_menu_opener([&menuComp](const std::string& menuName) -> bool {
-        // Close any currently open menus first
-        for (auto& menu : menuComp.menus) {
-            menu.open = false;
-        }
-        // Open the requested menu
-        for (auto& menu : menuComp.menus) {
-            if (menu.label == menuName) {
-                menu.open = true;
-                return true;
-            }
-        }
-        return false;
-    });
-    
-    // Set up menu item selector
-    runner.set_menu_selector([&menuComp](const std::string& itemName) -> bool {
-        for (std::size_t menuIdx = 0; menuIdx < menuComp.menus.size(); ++menuIdx) {
-            auto& menu = menuComp.menus[menuIdx];
-            if (menu.open) {
-                for (std::size_t i = 0; i < menu.items.size(); ++i) {
-                    if (menu.items[i].label == itemName) {
-                        // Set the clicked result for handleMenuActionImpl to process
-                        // Menu result code is menuIndex * 100 + itemIndex
-                        menuComp.lastClickedResult = static_cast<int>(menuIdx * 100 + i);
-                        menu.open = false;  // Close menu after selection
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    });
-    
-    // Set up outline clicker
-    runner.set_outline_clicker([&docComp](const std::string& headingText) -> bool {
-        auto outline = docComp.buffer.getOutline();
-        for (const auto& entry : outline) {
-            if (entry.text == headingText || entry.text.find(headingText) != std::string::npos) {
-                return docComp.buffer.goToOutlineEntry(entry.lineNumber);
-            }
-        }
-        return false;
-    });
+    // Note: menu_open, menu_select, outline_click commands are now handled
+    // by ECS systems registered in e2e_commands.h
 }
 
 void initializeRunner(

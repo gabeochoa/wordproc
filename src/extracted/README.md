@@ -33,17 +33,6 @@ Useful for games with rebindable controls and productivity apps.
 
 **Gap doc**: `AfterhoursGaps/06_action_binding_system.md`
 
-### `e2e_testing.h`
-Complete E2E testing framework with:
-- Simple script DSL (`.e2e` files) for test cases
-- Input injection (keyboard, mouse)
-- Visible text assertions (`expect_text`)
-- Screenshot capture for visual regression
-- Batch mode for running multiple tests
-- Timeout handling for CI/CD
-
-**Gap doc**: `AfterhoursGaps/12_e2e_testing_framework.md`
-
 ### `icon_registry.h`
 Centralized icon management with:
 - Map action/item IDs to icon resources

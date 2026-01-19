@@ -1,25 +1,27 @@
-// Wrapper that uses the extracted e2e_testing.h implementation
+// Wrapper that uses afterhours E2E testing implementation
 // This file maintains backward compatibility with existing code.
 // Note: test_input_fwd.h is included first from external.h for macro wrappers
 
 #pragma once
 
-#include "../extracted/e2e_testing.h"
+#include <afterhours/src/plugins/e2e_testing/test_input.h>
+#include <afterhours/src/plugins/e2e_testing/input_injector.h>
+#include <afterhours/src/plugins/e2e_testing/visible_text.h>
 #include "../rl.h"
 #include "test_input_fwd.h"  // For test_input_vec2 struct
 
 namespace test_input {
 
-// Re-export types from extracted
+// Re-export types from afterhours
 using KeyPress = afterhours::testing::test_input::KeyPress;
-using MouseState = afterhours::testing::test_input::MouseState;
+using MouseState = afterhours::testing::input_injector::detail::MouseState;
 
-// Forward to extracted implementation
+// Test mode functions (access detail::test_mode directly)
 inline void set_test_mode(bool enabled) { 
-    afterhours::testing::test_input::set_test_mode(enabled); 
+    afterhours::testing::test_input::detail::test_mode = enabled; 
 }
 inline bool is_test_mode() { 
-    return afterhours::testing::test_input::is_test_mode(); 
+    return afterhours::testing::test_input::detail::test_mode; 
 }
 
 inline void push_key(int key) { 
@@ -44,16 +46,21 @@ inline void simulate_mouse_button_press(int button) {
     }
 }
 inline void simulate_mouse_button_release(int button) {
-    if (button == raylib::MOUSE_BUTTON_LEFT) {
-        afterhours::testing::test_input::simulate_mouse_release();
-    }
+    (void)button;
+    afterhours::testing::test_input::simulate_mouse_release();
+}
+inline void simulate_mouse_press() {
+    afterhours::testing::test_input::simulate_mouse_press();
+}
+inline void simulate_mouse_release() {
+    afterhours::testing::test_input::simulate_mouse_release();
 }
 inline void clear_mouse_simulation() {
     afterhours::testing::test_input::reset_all();
 }
 
 inline vec2 get_mouse_position() {
-    if (afterhours::testing::test_input::is_test_mode()) {
+    if (is_test_mode()) {
         float x, y;
         afterhours::testing::input_injector::get_mouse_position(x, y);
         return {x, y};
@@ -68,25 +75,25 @@ inline test_input_vec2 get_mouse_position_fwd() {
 
 inline float get_mouse_wheel_move() {
     // Mouse wheel not simulated in tests
-    if (afterhours::testing::test_input::is_test_mode()) {
+    if (is_test_mode()) {
         return 0.0f;
     }
     return raylib::GetMouseWheelMove_Real();
 }
 inline bool is_mouse_button_pressed(int button) {
-    if (button == raylib::MOUSE_BUTTON_LEFT && afterhours::testing::test_input::is_test_mode()) {
+    if (button == raylib::MOUSE_BUTTON_LEFT && is_test_mode()) {
         return afterhours::testing::input_injector::is_mouse_button_pressed();
     }
     return raylib::IsMouseButtonPressed_Real(button);
 }
 inline bool is_mouse_button_down(int button) {
-    if (button == raylib::MOUSE_BUTTON_LEFT && afterhours::testing::test_input::is_test_mode()) {
+    if (button == raylib::MOUSE_BUTTON_LEFT && is_test_mode()) {
         return afterhours::testing::input_injector::is_mouse_button_down();
     }
     return raylib::IsMouseButtonDown_Real(button);
 }
 inline bool is_mouse_button_released(int button) {
-    if (button == raylib::MOUSE_BUTTON_LEFT && afterhours::testing::test_input::is_test_mode()) {
+    if (button == raylib::MOUSE_BUTTON_LEFT && is_test_mode()) {
         return afterhours::testing::input_injector::is_mouse_button_released();
     }
     return raylib::IsMouseButtonReleased_Real(button);
@@ -130,10 +137,10 @@ inline MouseState mouse_state;
 
 // Visible text registry compatibility
 inline void registerVisibleText(const std::string& text) {
-    afterhours::testing::visible_text::register_text(text);
+    afterhours::testing::VisibleTextRegistry::instance().register_text(text);
 }
 inline void clearVisibleTextRegistry() {
-    afterhours::testing::visible_text::clear();
+    afterhours::testing::VisibleTextRegistry::instance().clear();
 }
 
 // VisibleTextRegistry class for backward compatibility
@@ -143,10 +150,10 @@ public:
         static VisibleTextRegistry inst;
         return inst;
     }
-    void clear() { afterhours::testing::visible_text::clear(); }
-    void registerText(const std::string& t) { afterhours::testing::visible_text::register_text(t); }
-    bool containsText(const std::string& needle) const { return afterhours::testing::visible_text::contains(needle); }
-    std::string getAllText() const { return afterhours::testing::visible_text::get_all(); }
+    void clear() { afterhours::testing::VisibleTextRegistry::instance().clear(); }
+    void registerText(const std::string& t) { afterhours::testing::VisibleTextRegistry::instance().register_text(t); }
+    bool containsText(const std::string& needle) const { return afterhours::testing::VisibleTextRegistry::instance().contains(needle); }
+    std::string getAllText() const { return afterhours::testing::VisibleTextRegistry::instance().get_all(); }
 private:
     VisibleTextRegistry() = default;
 };

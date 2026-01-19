@@ -1,16 +1,16 @@
 // E2E Runner initialization for wordproc
-// Uses the extracted e2e_testing.h implementation directly
+// Uses afterhours E2ERunner with wordproc-specific command handlers
 
 #pragma once
 
 #include <string>
 
 #include "../ecs/components.h"
-#include "../extracted/e2e_testing.h"
+#include "e2e_integration.h"
 
 namespace e2e {
 
-// Use the extracted runner type directly
+// Use afterhours E2ERunner
 using ScriptRunner = afterhours::testing::E2ERunner;
 
 // Initialize the E2E script runner with a single script

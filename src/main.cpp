@@ -315,10 +315,17 @@ int main(int argc, char* argv[]) {
         e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, screenshotDir);
     }
     
-    // Enable debug overlay if requested
-    if (e2eDebugOverlay) {
-        scriptRunner.setDebugOverlay(true);
+    // Register E2E command handler systems if running tests
+    if (scriptRunner.hasCommands()) {
+        e2e::E2EConfig e2eConfig;
+        e2eConfig.doc_comp = &docComp;
+        e2eConfig.menu_comp = &menuComp;
+        e2e::register_e2e_systems(systemManager, e2eConfig);
     }
+    
+    // Enable debug overlay if requested
+    // Note: Debug overlay not yet supported by afterhours E2ERunner
+    (void)e2eDebugOverlay;
 
     if ((!testScriptPath.empty() || !testScriptDir.empty()) && frameLimit == 0) {
         frameLimit = 600;  // Safety net for E2E runs (~10s at 60fps)
@@ -396,12 +403,8 @@ int main(int argc, char* argv[]) {
         
         // Execute E2E script AFTER systems run (visible text is now registered for validation)
         if (scriptRunner.hasCommands() && !scriptRunner.isFinished()) {
-            // Update debug overlay info in TestConfigComponent
-            if (scriptRunner.showDebugOverlay()) {
-                testComp.e2eDebugOverlay = true;
-                testComp.e2eCurrentCommand = scriptRunner.getCurrentCommandDescription();
-                testComp.e2eTimeoutSeconds = scriptRunner.getRemainingTimeoutSeconds();
-            }
+            // Note: Debug overlay not yet supported by afterhours E2ERunner
+            // testComp.e2eDebugOverlay would be set here if supported
             
             scriptRunner.tick();
             
