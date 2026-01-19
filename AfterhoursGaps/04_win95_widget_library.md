@@ -1,13 +1,25 @@
 # Win95-Style Widget Library
 
-## Working Implementation
-See these files for a complete working example:
-- `src/ui/win95_widgets.h` - API for raised/sunken borders, buttons, menus, dialogs
-- `src/ui/win95_widgets.cpp` - Implementation with DrawRaisedBorder, DrawSunkenBorder
-- `src/ui/theme.h` - Win95 color palette
+## Status: ADDRESSED ✅
 
-## Problem
-Afterhours does not support 3D beveled borders needed for classic Win95/retro UI styling.
+Afterhours now provides bevel border support in `vendor/afterhours/src/plugins/ui/`:
+- `components.h` - `BevelStyle` enum (None, Raised, Sunken) and `BevelBorder` struct
+- `components.h` - `HasBevelBorder` component
+- `rendering.h` - `render_bevel()` function for automatic bevel rendering
+
+### Migration TODO
+Wordproc's `src/ui/win95_widgets.cpp` can be simplified to use:
+```cpp
+entity.add<HasBevelBorder>(BevelBorder{
+  .light_color = {255, 255, 255, 255},
+  .dark_color = {128, 128, 128, 255},
+  .thickness = 2.0f,
+  .style = BevelStyle::Raised  // or Sunken
+});
+```
+
+## Original Problem (now solved)
+Afterhours previously did not support 3D beveled borders needed for classic Win95/retro UI styling.
 
 ## Current Workaround
 Custom `src/ui/win95_widgets.cpp` implements `DrawRaisedBorder()` and `DrawSunkenBorder()` 
