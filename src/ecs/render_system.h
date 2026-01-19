@@ -28,6 +28,7 @@
 #include "../ui/ui_context.h"  // for toast_notify
 #include "../ui/win95_widgets.h"
 #include "../ui/menu_setup.h"
+#include "../ui/drawing.h"  // Centralized afterhours drawing wrappers
 #include "../util/drawing.h"
 #include "../util/logging.h"
 #include "component_helpers.h"
@@ -36,40 +37,44 @@
 namespace ecs {
 
 // Helper to draw text and register it for E2E testing
+// Uses afterhours draw_text via draw:: wrapper
 inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize, 
                                   raylib::Color color) {
-    raylib::DrawText(text, x, y, fontSize, color);
+    draw::text(text, static_cast<float>(x), static_cast<float>(y), 
+               static_cast<float>(fontSize), draw::toAh(color));
     test_input::registerVisibleText(text);
 }
 
 // Helper to draw text with font and register it for E2E testing
+// Uses afterhours draw_text_ex via draw:: wrapper
 inline void drawTextExWithRegistry(raylib::Font font, const char* text, 
                                     raylib::Vector2 pos, float fontSize, 
                                     float spacing, raylib::Color color) {
-    raylib::DrawTextEx(font, text, pos, fontSize, spacing, color);
+    draw::textEx(font, text, pos, fontSize, spacing, draw::toAh(color));
     test_input::registerVisibleText(text);
 }
 
 // Draw a page background with shadow (for paged mode)
+// Uses afterhours draw_rectangle via draw:: wrapper
 inline void drawPageBackground(const LayoutComponent& layout) {
     if (layout.pageMode != PageMode::Paged) return;
 
     float pageY = layout.textArea.y + 10.0f;  // 10px margin from top
 
-    // Draw page shadow
+    // Draw page shadow (using afterhours via draw:: wrapper)
     raylib::Rectangle shadowRect = {layout.pageOffsetX + 4.0f, pageY + 4.0f,
                                     layout.pageDisplayWidth,
                                     layout.pageDisplayHeight};
-    raylib::DrawRectangleRec(shadowRect, raylib::Color{100, 100, 100, 128});
+    draw::rectangle(shadowRect, {100, 100, 100, 128});
 
-    // Draw page (white background)
+    // Draw page (white background) (using afterhours via draw:: wrapper)
     raylib::Rectangle pageRect = {layout.pageOffsetX, pageY,
                                   layout.pageDisplayWidth,
                                   layout.pageDisplayHeight};
-    raylib::DrawRectangleRec(pageRect, raylib::WHITE);
+    draw::rectangle(pageRect, {255, 255, 255, 255});
 
-    // Draw page border
-    raylib::DrawRectangleLinesEx(pageRect, 1.0f, raylib::DARKGRAY);
+    // Draw page border (using afterhours via draw:: wrapper)
+    draw::rectangleOutline(pageRect, {80, 80, 80, 255}, 1.0f);
 
     // Draw margin guidelines (dotted or light lines)
     float marginScaled = layout.pageMargin * layout.pageScale;

@@ -5,6 +5,21 @@ See these files for a complete working example:
 - `src/renderer/renderer_interface.h` - IRenderer abstract interface
 - `src/renderer/renderer_interface.cpp` - Global renderer accessor
 - `src/renderer/raylib_renderer.h` - Raylib backend implementation
+- `src/ui/drawing.h` - **NEW** Centralized drawing wrappers using afterhours
+
+## Migration Status (Phase 4)
+Wordproc now has a `draw::` namespace (`src/ui/drawing.h`) that routes through afterhours:
+- ✅ `draw::text()`, `draw::textEx()` → `afterhours::draw_text()`, `draw_text_ex()`
+- ✅ `draw::rectangle()` → `afterhours::draw_rectangle()`
+- ✅ `draw::rectangleOutline()` → `afterhours::draw_rectangle_outline()`
+- ✅ `draw::ring()`, `draw::ringSegment()` → `afterhours::draw_ring()`
+- ⚠️ `draw::line()`, `draw::lineEx()` → Still raylib (afterhours lacks line primitives)
+- ⚠️ `draw::circle()` → Still raylib (afterhours lacks circle primitives)
+
+Key helper functions in `render_system.h` now use `draw::` wrappers:
+- `drawTextWithRegistry()` - routes through afterhours
+- `drawTextExWithRegistry()` - routes through afterhours
+- `drawPageBackground()` - routes through afterhours
 
 ## Problem
 Afterhours is tightly coupled to raylib. There is no abstraction layer to support 
