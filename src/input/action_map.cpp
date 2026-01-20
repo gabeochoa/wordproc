@@ -21,6 +21,17 @@ static bool isKeyPressedHelper(int key) {
     return test_input::is_key_pressed(key);
 }
 
+// Helper for key press with repeat (for held navigation keys)
+// Uses raylib's built-in key repeat, with fallback for test mode
+static bool isKeyPressedRepeatHelper(int key) {
+    // In test mode, just use regular press (no repeat in tests)
+    if (test_input::is_key_pressed(key)) {
+        return true;
+    }
+    // Use raylib's key repeat for real input
+    return raylib::IsKeyPressedRepeat(key);
+}
+
 bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
     bool ctrl = isKeyDownHelper(raylib::KEY_LEFT_CONTROL) ||
                 isKeyDownHelper(raylib::KEY_RIGHT_CONTROL);
@@ -39,6 +50,30 @@ bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
 bool ActionMap::isActionPressed(Action action) const {
     for (const auto& [binding, act] : bindings_) {
         if (act == action && isBindingPressed(binding)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ActionMap::isBindingPressedRepeat(const KeyBinding& binding) const {
+    bool ctrl = isKeyDownHelper(raylib::KEY_LEFT_CONTROL) ||
+                isKeyDownHelper(raylib::KEY_RIGHT_CONTROL);
+    bool shift = isKeyDownHelper(raylib::KEY_LEFT_SHIFT) ||
+                 isKeyDownHelper(raylib::KEY_RIGHT_SHIFT);
+    bool alt = isKeyDownHelper(raylib::KEY_LEFT_ALT) ||
+               isKeyDownHelper(raylib::KEY_RIGHT_ALT);
+
+    if (ctrl != binding.ctrl || shift != binding.shift || alt != binding.alt) {
+        return false;
+    }
+
+    return isKeyPressedRepeatHelper(binding.key);
+}
+
+bool ActionMap::isActionPressedRepeat(Action action) const {
+    for (const auto& [binding, act] : bindings_) {
+        if (act == action && isBindingPressedRepeat(binding)) {
             return true;
         }
     }

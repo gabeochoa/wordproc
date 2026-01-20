@@ -170,6 +170,9 @@ class ActionMap {
     // Check if an action was just triggered this frame
     bool isActionPressed(Action action) const;
 
+    // Check if an action is pressed with key repeat (for held keys like arrows)
+    bool isActionPressedRepeat(Action action) const;
+
     // Get the action for the current key press, if any
     Action getActionForCurrentInput() const;
 
@@ -181,6 +184,9 @@ class ActionMap {
 
     // Check if a specific key binding is pressed this frame
     bool isBindingPressed(const KeyBinding& binding) const;
+    
+    // Check if a specific key binding is pressed with repeat (for held keys)
+    bool isBindingPressedRepeat(const KeyBinding& binding) const;
 };
 
 // Keyboard shortcut presets

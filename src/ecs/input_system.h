@@ -106,7 +106,8 @@ struct TextInputSystem
             doc.buffer.insertChar('\n');
             doc.isDirty = true;
         }
-        if (actionMap_.isActionPressed(Action::Backspace)) {
+        // Use isActionPressedRepeat for backspace/delete so they repeat when held
+        if (actionMap_.isActionPressedRepeat(Action::Backspace)) {
             if (doc.buffer.hasSelection()) {
                 CaretPosition start = doc.buffer.selectionStart();
                 std::string selected = doc.buffer.getSelectedText();
@@ -121,7 +122,7 @@ struct TextInputSystem
             doc.buffer.backspace();
             doc.isDirty = true;
         }
-        if (actionMap_.isActionPressed(Action::Delete)) {
+        if (actionMap_.isActionPressedRepeat(Action::Delete)) {
             if (doc.buffer.hasSelection()) {
                 CaretPosition start = doc.buffer.selectionStart();
                 std::string selected = doc.buffer.getSelectedText();
@@ -508,32 +509,33 @@ struct NavigationSystem
         };
 
         // Left/Right with Ctrl for word movement
-        if (actionMap_.isActionPressed(Action::MoveWordLeft)) {
+        // Use isActionPressedRepeat for held arrow keys to keep moving
+        if (actionMap_.isActionPressedRepeat(Action::MoveWordLeft)) {
             navigateWithSelection([&]() { doc.buffer.moveWordLeft(); });
-        } else if (actionMap_.isActionPressed(Action::MoveLeft)) {
+        } else if (actionMap_.isActionPressedRepeat(Action::MoveLeft)) {
             navigateWithSelection([&]() { doc.buffer.moveLeft(); });
         }
-        if (actionMap_.isActionPressed(Action::MoveWordRight)) {
+        if (actionMap_.isActionPressedRepeat(Action::MoveWordRight)) {
             navigateWithSelection([&]() { doc.buffer.moveWordRight(); });
-        } else if (actionMap_.isActionPressed(Action::MoveRight)) {
+        } else if (actionMap_.isActionPressedRepeat(Action::MoveRight)) {
             navigateWithSelection([&]() { doc.buffer.moveRight(); });
         }
-        if (actionMap_.isActionPressed(Action::MoveUp)) {
+        if (actionMap_.isActionPressedRepeat(Action::MoveUp)) {
             navigateWithSelection([&]() { doc.buffer.moveUp(); });
         }
-        if (actionMap_.isActionPressed(Action::MoveDown)) {
+        if (actionMap_.isActionPressedRepeat(Action::MoveDown)) {
             navigateWithSelection([&]() { doc.buffer.moveDown(); });
         }
 
         // Home/End with Ctrl for document start/end
-        if (actionMap_.isActionPressed(Action::MoveDocumentStart)) {
+        if (actionMap_.isActionPressedRepeat(Action::MoveDocumentStart)) {
             navigateWithSelection([&]() { doc.buffer.moveToDocumentStart(); });
-        } else if (actionMap_.isActionPressed(Action::MoveLineStart)) {
+        } else if (actionMap_.isActionPressedRepeat(Action::MoveLineStart)) {
             navigateWithSelection([&]() { doc.buffer.moveToLineStart(); });
         }
-        if (actionMap_.isActionPressed(Action::MoveDocumentEnd)) {
+        if (actionMap_.isActionPressedRepeat(Action::MoveDocumentEnd)) {
             navigateWithSelection([&]() { doc.buffer.moveToDocumentEnd(); });
-        } else if (actionMap_.isActionPressed(Action::MoveLineEnd)) {
+        } else if (actionMap_.isActionPressedRepeat(Action::MoveLineEnd)) {
             navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
         }
 
