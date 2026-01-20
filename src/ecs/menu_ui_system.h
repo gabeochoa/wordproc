@@ -271,7 +271,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 "OK");
         }
         
-        // Word Count dialog
+        // Word Count dialog - uses larger modal to fit 5 lines of stats
         if (menu.showWordCountDialog) {
             // Need to get document stats - query for DocumentComponent
             auto docEntities = afterhours::EntityQuery({.force_merge = true})
@@ -286,11 +286,42 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     stats.sentences);
                 
                 constexpr int WORDCOUNT_MODAL_ID = 50001;
-                afterhours::modal::info(ctx, mk(entity, WORDCOUNT_MODAL_ID),
+                // Use custom modal with larger height for 5 lines of text
+                auto result = afterhours::modal(ctx, mk(entity, WORDCOUNT_MODAL_ID),
                     menu.showWordCountDialog,
-                    "Word Count",
-                    msg,
-                    "OK");
+                    afterhours::ModalConfig{}
+                        .with_size(afterhours::ui::h720(350), afterhours::ui::h720(220))
+                        .with_title("Word Count")
+                        .with_show_close_button(false));
+                
+                if (result) {
+                    using namespace afterhours::ui;
+                    using namespace afterhours::ui::imm;
+                    
+                    // Message text
+                    div(ctx, mk(result.ent(), 0),
+                        ComponentConfig{}
+                            .with_label(msg)
+                            .with_size(ComponentSize{percent(1.0f), children()})
+                            .with_padding(Spacing::md));
+                    
+                    // OK button row
+                    auto button_row = div(ctx, mk(result.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(44)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_justify_content(JustifyContent::Center)
+                            .with_align_items(AlignItems::Center));
+                    
+                    if (button_row) {
+                        if (button(ctx, mk(button_row.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("OK")
+                                .with_size(ComponentSize{h720(100), h720(32)}))) {
+                            menu.showWordCountDialog = false;
+                        }
+                    }
+                }
             }
         }
         
