@@ -569,6 +569,7 @@ struct NavigationSystem
 
         // Mouse wheel scrolling
         float wheelMove = GetMouseWheelMove();
+        bool scrolledWithWheel = false;
         if (wheelMove != 0.0f) {
             int scrollLines = static_cast<int>(-wheelMove * 3);
             if (layout.splitViewEnabled && shift_down) {
@@ -576,12 +577,16 @@ struct NavigationSystem
                 clampSecondary();
             } else {
                 scroll.offset += scrollLines;
+                scrolledWithWheel = true;
             }
         }
 
-        // Auto-scroll to keep caret visible
-        CaretPosition caretPos = doc.buffer.caret();
-        scroll::scrollToRow(scroll, static_cast<int>(caretPos.row));
+        // Auto-scroll to keep caret visible, but NOT if user just scrolled with mouse wheel
+        // (allow user to freely scroll through document without caret snapping back)
+        if (!scrolledWithWheel) {
+            CaretPosition caretPos = doc.buffer.caret();
+            scroll::scrollToRow(scroll, static_cast<int>(caretPos.row));
+        }
         scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
     }
 };
