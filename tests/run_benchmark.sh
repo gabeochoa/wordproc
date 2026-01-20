@@ -52,14 +52,16 @@ for file in "$TEST_DIR"/*.txt "$TEST_DIR"/*.md "$TEST_DIR"/*.wpdoc; do
     # Run the app in benchmark mode (headless, no window)
     output=$("$WORDPROC" --benchmark "$file" 2>&1 || true)
     
-    # Parse the output
+    # Parse the output - filter to only the benchmark line
     # Format: file=...,size=...,lines=...,chars=...,load_ms=...,total_ms=...,target=100,pass=true/false
-    size_bytes=$(echo "$output" | sed 's/.*size=\([0-9]*\).*/\1/')
-    lines=$(echo "$output" | sed 's/.*lines=\([0-9]*\).*/\1/')
-    chars=$(echo "$output" | sed 's/.*chars=\([0-9]*\).*/\1/')
-    load_ms=$(echo "$output" | sed 's/.*load_ms=\([0-9.]*\).*/\1/')
-    total_ms=$(echo "$output" | sed 's/.*total_ms=\([0-9.]*\).*/\1/')
-    pass_raw=$(echo "$output" | sed 's/.*pass=\([a-z]*\).*/\1/')
+    bench_line=$(echo "$output" | grep "^\\[INFO\\] file=" | head -1)
+    
+    size_bytes=$(echo "$bench_line" | sed 's/.*size=\([0-9]*\).*/\1/')
+    lines=$(echo "$bench_line" | sed 's/.*lines=\([0-9]*\).*/\1/')
+    chars=$(echo "$bench_line" | sed 's/.*chars=\([0-9]*\).*/\1/')
+    load_ms=$(echo "$bench_line" | sed 's/.*load_ms=\([0-9.]*\).*/\1/')
+    total_ms=$(echo "$bench_line" | sed 's/.*total_ms=\([0-9.]*\).*/\1/')
+    pass_raw=$(echo "$bench_line" | sed 's/.*pass=\([a-z]*\).*/\1/')
     
     # Human-readable size
     if [ "$size_bytes" -ge 1048576 ]; then

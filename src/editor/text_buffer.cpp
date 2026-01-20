@@ -143,6 +143,45 @@ void GapBuffer::clear() {
     gap_end_ = buffer_.size();
 }
 
+void GapBuffer::reserve(std::size_t capacity) {
+    if (capacity > buffer_.size()) {
+        std::size_t gap_size = gap_end_ - gap_start_;
+        std::size_t content_size = size();
+        std::size_t new_size = capacity + gap_size;
+        
+        if (new_size > buffer_.size()) {
+            // Move gap to end before resizing
+            moveGapTo(content_size);
+            buffer_.resize(new_size);
+            gap_end_ = new_size;
+        }
+    }
+}
+
+void GapBuffer::pushBack(char ch) {
+    // Ensure gap is at end and has space
+    std::size_t content_size = size();
+    moveGapTo(content_size);
+    
+    if (gap_start_ >= gap_end_) {
+        ensureCapacity(content_size + 1);
+    }
+    
+    buffer_[gap_start_] = ch;
+    ++gap_start_;
+}
+
+void GapBuffer::setContent(const char* data, std::size_t len) {
+    // Resize buffer to exactly fit content + gap
+    constexpr std::size_t GAP_SIZE = 4096;
+    buffer_.resize(len + GAP_SIZE);
+    
+    // Copy content at start, gap at end
+    std::memcpy(buffer_.data(), data, len);
+    gap_start_ = len;
+    gap_end_ = buffer_.size();
+}
+
 // ============================================================================
 // TextBuffer implementation (SoA with gap buffer)
 // ============================================================================
@@ -517,19 +556,42 @@ void TextBuffer::setText(const std::string& text) {
     version_++;  // Content changed - invalidate render cache
 
     if (!text.empty()) {
-        // Remove \r from CRLF line endings
+        // Optimized two-pass approach:
+        // Pass 1: Clean CRLF (copies to temp buffer)
+        // Pass 2: Build line index (scans cleaned buffer)
+        // Then bulk load to gap buffer (single memcpy)
+        
         std::string cleaned;
         cleaned.reserve(text.size());
+        
         for (char ch : text) {
             if (ch != '\r') {
                 cleaned.push_back(ch);
             }
         }
-
-        chars_.insertString(0, cleaned.c_str(), cleaned.size());
+        
+        // Bulk load into gap buffer (single memcpy, no per-char overhead)
+        chars_.setContent(cleaned.data(), cleaned.size());
+        
+        // Build line index in single pass over cleaned data
+        line_spans_.reserve(cleaned.size() / 40 + 1);  // Estimate ~40 chars per line
+        std::size_t line_start = 0;
+        const char* data = cleaned.data();
+        std::size_t len = cleaned.size();
+        
+        for (std::size_t i = 0; i < len; ++i) {
+            if (data[i] == '\n') {
+                line_spans_.push_back({line_start, i - line_start});
+                line_start = i + 1;
+            }
+        }
+        
+        // Add final line (may be empty)
+        line_spans_.push_back({line_start, len - line_start});
+    } else {
+        // Empty document - single empty line
+        line_spans_.push_back({0, 0});
     }
-
-    rebuildLineIndex();
 
     // Move caret to end
     if (!line_spans_.empty()) {

@@ -172,6 +172,15 @@ class GapBuffer {
 
     void clear();
 
+    // Reserve capacity for bulk loading (avoids reallocations)
+    void reserve(std::size_t capacity);
+    
+    // Push back for efficient sequential loading
+    void pushBack(char ch);
+    
+    // Bulk load - replaces all content efficiently (for initial file loading)
+    void setContent(const char* data, std::size_t len);
+
     // Performance tracking
     std::size_t gapMoves() const { return gap_moves_; }
     std::size_t reallocations() const { return reallocations_; }
