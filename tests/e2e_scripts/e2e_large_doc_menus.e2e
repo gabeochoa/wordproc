@@ -1,0 +1,81 @@
+# Test: Keyboard interactions on large document
+# Tests keyboard shortcuts and UI interactions with War and Peace loaded
+# Run with: ./output/wordproc.exe test_files/public_domain/war_and_peace.txt --test-mode --test-script="tests/e2e_scripts/e2e_large_doc_menus.e2e" --e2e-timeout=60
+
+# Wait for document to load
+wait_frames 60
+
+screenshot 01_doc_loaded
+
+# Test Zoom In keyboard shortcut
+key CTRL+ALT+=
+wait_frames 20
+validate zoom_level=110
+
+screenshot 02_zoomed_in
+
+# Zoom back to normal
+key CTRL+ALT+0
+wait_frames 20
+validate zoom_level=100
+
+screenshot 03_zoom_reset
+
+# Select all text using known-working command
+select_all
+wait_frames 30
+validate has_selection=true
+
+screenshot 04_text_selected
+
+# Apply bold via keyboard shortcut
+key CTRL+B
+wait_frames 30
+
+screenshot 05_bold_applied
+
+# Undo bold
+key CTRL+Z
+wait_frames 30
+
+screenshot 06_after_undo_bold
+
+# Clear selection
+key RIGHT
+wait_frames 20
+
+# Test Find dialog
+key CTRL+F
+wait_frames 30
+screenshot 07_find_dialog
+
+# Close find with Escape
+key ESCAPE
+wait_frames 20
+
+screenshot 08_find_closed
+
+# Navigate around the large document
+key CTRL+HOME
+wait_frames 20
+key PAGEDOWN
+wait_frames 10
+key PAGEDOWN
+wait_frames 10
+key PAGEDOWN
+wait_frames 10
+
+screenshot 09_middle_doc
+
+# Go to end
+key CTRL+END
+wait_frames 20
+
+screenshot 10_doc_end
+
+# Go back to start
+key CTRL+HOME
+wait_frames 20
+
+screenshot 11_final_state
+

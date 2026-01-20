@@ -73,6 +73,7 @@ int main(int argc, char* argv[]) {
     int frameLimit = 0;
     std::string testScriptPath;
     std::string testScriptDir;  // For batch mode
+    float e2eTimeout = 30.0f;  // Default 30 second timeout for E2E tests
     // Parse --screenshot-dir, --frame-limit, --test-script, and --test-script-dir arguments
     // argh uses the params() map for named parameters
     for (auto& [name, value] : cmdl.params()) {
@@ -85,6 +86,8 @@ int main(int argc, char* argv[]) {
             testScriptPath = value;
         } else if (name == "test-script-dir") {
             testScriptDir = value;
+        } else if (name == "e2e-timeout") {
+            e2eTimeout = std::stof(value);
         } else if (name == "e2e-debug") {
             // Value can be "true", "1", or just present
             // This is handled below after scriptRunner is set up
@@ -324,6 +327,9 @@ int main(int argc, char* argv[]) {
         e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, screenshotDir);
     }
     
+    // Set E2E timeout (default 30s, can be increased for large document tests)
+    scriptRunner.set_timeout(e2eTimeout);
+    
     // Register E2E command handler systems if running tests
     if (scriptRunner.hasCommands()) {
         e2e::E2EConfig e2eConfig;
@@ -337,7 +343,8 @@ int main(int argc, char* argv[]) {
     (void)e2eDebugOverlay;
 
     if ((!testScriptPath.empty() || !testScriptDir.empty()) && frameLimit == 0) {
-        frameLimit = 600;  // Safety net for E2E runs (~10s at 60fps)
+        // Calculate frame limit from timeout (60 fps * timeout seconds, with some buffer)
+        frameLimit = static_cast<int>(e2eTimeout * 60 * 1.5f);  // 1.5x buffer
     }
     if (!testScriptPath.empty() && !scriptRunner.hasCommands()) {
         LOG_WARNING("E2E script has no commands: %s", testScriptPath.c_str());
@@ -480,7 +487,8 @@ int main(int argc, char* argv[]) {
                 std::chrono::duration_cast<std::chrono::seconds>(
                     std::chrono::steady_clock::now() - e2eStartTime)
                     .count();
-            if (elapsed > 8) {
+            // Use e2eTimeout - 2 seconds to allow runner to timeout gracefully first
+            if (elapsed > static_cast<long long>(e2eTimeout - 2.0f)) {
                 LOG_WARNING("E2E timeout after %lld seconds",
                             static_cast<long long>(elapsed));
                 // #region agent log

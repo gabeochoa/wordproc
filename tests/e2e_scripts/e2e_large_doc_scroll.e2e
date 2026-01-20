@@ -1,0 +1,91 @@
+# Test: Large document scrolling and navigation
+# Tests scrolling, navigation, and basic editing on War and Peace
+# Run with: ./output/wordproc.exe test_files/public_domain/war_and_peace.txt --test-mode --test-script="tests/e2e_scripts/e2e_large_doc_scroll.e2e"
+
+# Wait for document to load (use frames not seconds for faster testing)
+wait_frames 60
+
+screenshot 01_large_doc_loaded
+
+# Navigate to end of document using Ctrl+End
+key CTRL+END
+wait_frames 30
+
+screenshot 02_at_document_end
+
+# Navigate back to start using Ctrl+Home
+key CTRL+HOME
+wait_frames 30
+
+screenshot 03_at_document_start
+
+# Page down several times
+key PAGEDOWN
+wait_frames 10
+key PAGEDOWN
+wait_frames 10
+key PAGEDOWN
+wait_frames 10
+
+screenshot 04_after_page_downs
+
+# Use arrow keys to navigate
+key DOWN
+wait_frames 10
+key DOWN
+wait_frames 10
+key RIGHT
+wait_frames 10
+
+screenshot 05_arrow_navigation
+
+# Go to end then back
+key CTRL+END
+wait_frames 20
+key UP
+wait_frames 10
+key UP
+wait_frames 10
+
+screenshot 06_near_end
+
+# Type some text to test editing in large document (won't save)
+type "TEST"
+wait_frames 30
+
+screenshot 07_after_typing
+
+# Undo the typing
+key CTRL+Z
+wait_frames 20
+
+screenshot 08_after_undo
+
+# Select all and validate selection works on large doc
+select_all
+wait_frames 30
+validate has_selection=true
+
+screenshot 09_select_all
+
+# Clear selection
+key RIGHT
+wait_frames 10
+validate has_selection=false
+
+# Navigate using Home/End keys
+key END
+wait_frames 10
+key HOME
+wait_frames 10
+
+screenshot 10_home_end_navigation
+
+# Page up
+key PAGEUP
+wait_frames 10
+key PAGEUP
+wait_frames 10
+
+screenshot 11_final_state
+
