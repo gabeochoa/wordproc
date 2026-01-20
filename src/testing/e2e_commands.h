@@ -84,7 +84,13 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
     for (std::size_t menuIdx = 0; menuIdx < menu_comp->menus.size(); ++menuIdx) {
       auto &menu = menu_comp->menus[menuIdx];
       if (menu.open) {
+        // Debug: list all menu items
+        std::string available_items;
         for (std::size_t i = 0; i < menu.items.size(); ++i) {
+          if (!menu.items[i].separator) {
+            if (!available_items.empty()) available_items += ", ";
+            available_items += "'" + menu.items[i].label + "'";
+          }
           if (menu.items[i].label == item_name) {
             // Set the clicked result for handleMenuActionImpl to process
             menu_comp->lastClickedResult = static_cast<int>(menuIdx * 100 + i);
@@ -93,10 +99,12 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
             return;
           }
         }
+        cmd.fail("Menu item '" + item_name + "' not found in '" + menu.label + "'. Available: " + available_items);
+        return;
       }
     }
     
-    cmd.fail("Menu item not found: " + item_name);
+    cmd.fail("Menu item not found: " + item_name + " (no menu open)");
   }
 };
 
