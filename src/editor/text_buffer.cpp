@@ -5,6 +5,9 @@
 #include <cstring>
 #include <regex>
 
+// Afterhours text utilities for word navigation
+#include "../vendor/afterhours/src/plugins/ui/text_input/utils.h"
+
 // ============================================================================
 // TextBuffer implementation (SoA with gap buffer)
 // ============================================================================
@@ -1014,84 +1017,21 @@ void TextBuffer::moveDown() {
 void TextBuffer::moveWordLeft() {
     if (chars_.empty()) return;
 
-    // Skip any whitespace/punctuation to the left
-    while (caret_.column > 0 || caret_.row > 0) {
-        if (caret_.column == 0) {
-            if (caret_.row == 0) break;
-            caret_.row--;
-            caret_.column = line_spans_[caret_.row].length;
-            continue;
-        }
-
-        std::size_t offset = positionToOffset(caret_);
-        if (offset == 0) break;
-        char ch = chars_.at(offset - 1);
-        if (std::isalnum(static_cast<unsigned char>(ch))) {
-            break;
-        }
-        caret_.column--;
-    }
-
-    // Move to start of current word
-    while (caret_.column > 0) {
-        std::size_t offset = positionToOffset(caret_);
-        if (offset == 0) break;
-        char ch = chars_.at(offset - 1);
-        if (!std::isalnum(static_cast<unsigned char>(ch))) {
-            break;
-        }
-        caret_.column--;
-    }
+    // Use afterhours utility for better UTF-8 support
+    std::string text = getText();
+    std::size_t offset = positionToOffset(caret_);
+    std::size_t new_offset = afterhours::text_input::find_word_start(text, offset);
+    caret_ = offsetToPosition(new_offset);
 }
 
 void TextBuffer::moveWordRight() {
     if (chars_.empty()) return;
 
-    std::size_t totalLines = line_spans_.size();
-    std::size_t totalChars = chars_.size();
-
-    // Skip current word
-    while (caret_.row < totalLines) {
-        const LineSpan& span = line_spans_[caret_.row];
-        if (caret_.column >= span.length) {
-            // Move to next line
-            if (caret_.row + 1 < totalLines) {
-                caret_.row++;
-                caret_.column = 0;
-                continue;
-            }
-            break;
-        }
-
-        std::size_t offset = positionToOffset(caret_);
-        if (offset >= totalChars) break;
-        char ch = chars_.at(offset);
-        if (!std::isalnum(static_cast<unsigned char>(ch))) {
-            break;
-        }
-        caret_.column++;
-    }
-
-    // Skip whitespace/punctuation
-    while (caret_.row < totalLines) {
-        const LineSpan& span = line_spans_[caret_.row];
-        if (caret_.column >= span.length) {
-            if (caret_.row + 1 < totalLines) {
-                caret_.row++;
-                caret_.column = 0;
-                continue;
-            }
-            break;
-        }
-
-        std::size_t offset = positionToOffset(caret_);
-        if (offset >= totalChars) break;
-        char ch = chars_.at(offset);
-        if (std::isalnum(static_cast<unsigned char>(ch))) {
-            break;
-        }
-        caret_.column++;
-    }
+    // Use afterhours utility for better UTF-8 support
+    std::string text = getText();
+    std::size_t offset = positionToOffset(caret_);
+    std::size_t new_offset = afterhours::text_input::find_word_end(text, offset);
+    caret_ = offsetToPosition(new_offset);
 }
 
 void TextBuffer::moveToLineStart() { caret_.column = 0; }

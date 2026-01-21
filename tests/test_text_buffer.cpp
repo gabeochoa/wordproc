@@ -1656,3 +1656,287 @@ TEST_CASE("Page breaks", "[text_buffer][pagebreak]") {
         REQUIRE(buffer.hasPageBreakBefore(buffer.caret().row));
     }
 }
+
+TEST_CASE("Word navigation", "[text_buffer][word_navigation]") {
+    TextBuffer buffer;
+    
+    SECTION("moveWordLeft on empty buffer") {
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().row == 0);
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordRight on empty buffer") {
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().row == 0);
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordLeft basic") {
+        buffer.setText("hello world");
+        buffer.setCaret({0, 11});  // End: "hello world|"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 6);  // "hello |world"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);  // "|hello world"
+    }
+    
+    SECTION("moveWordRight basic") {
+        buffer.setText("hello world");
+        buffer.setCaret({0, 0});  // Start: "|hello world"
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);  // "hello| world"
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 11);  // "hello world|"
+    }
+    
+    SECTION("moveWordLeft with punctuation") {
+        buffer.setText("hello, world!");
+        buffer.setCaret({0, 13});  // End
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 7);  // After comma-space: "hello, |world!"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);  // Start
+    }
+    
+    SECTION("moveWordRight with punctuation") {
+        buffer.setText("hello, world!");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);  // "hello|, world!"
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 12);  // "hello, world|!"
+    }
+    
+    SECTION("moveWordLeft across lines") {
+        buffer.setText("first line\nsecond line");
+        buffer.setCaret({1, 0});  // Start of second line
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().row == 0);
+        REQUIRE(buffer.caret().column == 6);  // "first |line"
+    }
+    
+    SECTION("moveWordRight across lines") {
+        buffer.setText("first line\nsecond line");
+        buffer.setCaret({0, 10});  // End of first line
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().row == 1);
+        REQUIRE(buffer.caret().column == 6);  // "second| line"
+    }
+    
+    SECTION("moveWordLeft multiple words") {
+        buffer.setText("one two three four");
+        buffer.setCaret({0, 18});  // End
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 14);  // "one two three |four"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 8);  // "one two |three four"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 4);  // "one |two three four"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);  // "|one two three four"
+    }
+    
+    SECTION("moveWordLeft with multiple spaces") {
+        buffer.setText("hello    world");
+        buffer.setCaret({0, 14});  // End
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 9);  // Skip spaces: "hello    |world"
+    }
+    
+    SECTION("moveWordRight with multiple spaces") {
+        buffer.setText("hello    world");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);  // "hello|    world"
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 14);  // Skip spaces: "hello    world|"
+    }
+    
+    SECTION("moveWordLeft at word start") {
+        buffer.setText("hello world");
+        buffer.setCaret({0, 6});  // Start of "world": "hello |world"
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);  // Move to start of "hello"
+    }
+    
+    SECTION("moveWordRight at word end") {
+        buffer.setText("hello world");
+        buffer.setCaret({0, 5});  // End of "hello": "hello| world"
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 11);  // Move to end of "world"
+    }
+}
+
+TEST_CASE("Word navigation - UTF-8 support", "[text_buffer][word_navigation][utf8]") {
+    TextBuffer buffer;
+    
+    SECTION("moveWordLeft with emoji") {
+        buffer.setText("hello 👍 world");
+        buffer.setCaret({0, 15});  // After "world"
+        
+        buffer.moveWordLeft();
+        // Should handle emoji correctly (emoji is multiple bytes)
+        REQUIRE(buffer.caret().column < 15);
+    }
+    
+    SECTION("moveWordRight with emoji") {
+        buffer.setText("hello 👍 world");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);  // "hello|"
+        
+        // Move past emoji
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column > 5);
+    }
+    
+    SECTION("moveWordLeft with CJK characters") {
+        buffer.setText("hello 你好 world");
+        buffer.setCaret({0, 18});  // End
+        
+        buffer.moveWordLeft();
+        // Should move to start of "world"
+        REQUIRE(buffer.caret().column < 18);
+    }
+    
+    SECTION("moveWordRight with CJK characters") {
+        buffer.setText("hello 你好 world");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);  // "hello|"
+        
+        // Continue navigating
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column > 5);
+    }
+    
+    SECTION("moveWordLeft with mixed UTF-8 content") {
+        buffer.setText("test 😀 emoji 🎉 here");
+        buffer.setCaret({0, 23});  // End
+        
+        // Navigate backward through mixed content
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column < 23);  // Moved back
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column < 18);  // Moved back more
+    }
+}
+
+TEST_CASE("Word navigation - Edge cases", "[text_buffer][word_navigation][edge]") {
+    TextBuffer buffer;
+    
+    SECTION("moveWordLeft on single word") {
+        buffer.setText("hello");
+        buffer.setCaret({0, 5});
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);
+        
+        // Should stay at start
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordRight on single word") {
+        buffer.setText("hello");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);
+        
+        // Should stay at end
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);
+    }
+    
+    SECTION("moveWordLeft with only whitespace") {
+        buffer.setText("     ");
+        buffer.setCaret({0, 5});
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordRight with only whitespace") {
+        buffer.setText("     ");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 5);
+    }
+    
+    SECTION("moveWordLeft with only punctuation") {
+        buffer.setText("...,,,");
+        buffer.setCaret({0, 6});
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordRight with only punctuation") {
+        buffer.setText("...,,,");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().column == 6);
+    }
+    
+    SECTION("moveWordLeft at document start") {
+        buffer.setText("hello world");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().row == 0);
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordRight at document end") {
+        buffer.setText("hello world");
+        buffer.setCaret({0, 11});
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().row == 0);
+        REQUIRE(buffer.caret().column == 11);
+    }
+    
+    SECTION("moveWordLeft multiline at document start") {
+        buffer.setText("line1\nline2\nline3");
+        buffer.setCaret({0, 0});
+        
+        buffer.moveWordLeft();
+        REQUIRE(buffer.caret().row == 0);
+        REQUIRE(buffer.caret().column == 0);
+    }
+    
+    SECTION("moveWordRight multiline at document end") {
+        buffer.setText("line1\nline2\nline3");
+        buffer.setCaret({2, 5});  // End of "line3"
+        
+        buffer.moveWordRight();
+        REQUIRE(buffer.caret().row == 2);
+        REQUIRE(buffer.caret().column == 5);
+    }
+}
