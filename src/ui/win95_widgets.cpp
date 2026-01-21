@@ -5,6 +5,7 @@
 
 // test_input:: available via rl.h -> external.h
 #include "input.h"  // For input:: wrappers
+#include "theme.h"  // For centralized color scheme
 
 namespace win95 {
 
@@ -17,16 +18,16 @@ void DrawRaisedBorder(raylib::Rectangle rect, int thickness) {
     for (int i = 0; i < thickness; ++i) {
         // Top edge (light)
         raylib::DrawLine(x + i, y + i, x + w - i - 1, y + i,
-                         colors::BORDER_LIGHT);
+                         theme::BORDER_LIGHT);
         // Left edge (light)
         raylib::DrawLine(x + i, y + i, x + i, y + h - i - 1,
-                         colors::BORDER_LIGHT);
+                         theme::BORDER_LIGHT);
         // Bottom edge (dark)
         raylib::DrawLine(x + i, y + h - i - 1, x + w - i, y + h - i - 1,
-                         colors::BORDER_DARK);
+                         theme::BORDER_DARK);
         // Right edge (dark)
         raylib::DrawLine(x + w - i - 1, y + i, x + w - i - 1, y + h - i,
-                         colors::BORDER_DARK);
+                         theme::BORDER_DARK);
     }
 }
 
@@ -39,16 +40,16 @@ void DrawSunkenBorder(raylib::Rectangle rect, int thickness) {
     for (int i = 0; i < thickness; ++i) {
         // Top edge (dark)
         raylib::DrawLine(x + i, y + i, x + w - i - 1, y + i,
-                         colors::BORDER_DARK);
+                         theme::BORDER_DARK);
         // Left edge (dark)
         raylib::DrawLine(x + i, y + i, x + i, y + h - i - 1,
-                         colors::BORDER_DARK);
+                         theme::BORDER_DARK);
         // Bottom edge (light)
         raylib::DrawLine(x + i, y + h - i - 1, x + w - i, y + h - i - 1,
-                         colors::BORDER_LIGHT);
+                         theme::BORDER_LIGHT);
         // Right edge (light)
         raylib::DrawLine(x + w - i - 1, y + i, x + w - i - 1, y + h - i,
-                         colors::BORDER_LIGHT);
+                         theme::BORDER_LIGHT);
     }
 }
 
@@ -73,7 +74,7 @@ bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled) {
     }
 
     // Draw button background
-    raylib::DrawRectangleRec(rect, colors::BUTTON_FACE);
+    raylib::DrawRectangleRec(rect, theme::BUTTON_BG);
 
     // Draw 3D border based on state
     if (state == ButtonState::Pressed) {
@@ -95,7 +96,7 @@ bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled) {
 
     // Draw text
     raylib::Color textColor =
-        enabled ? colors::TEXT_COLOR : colors::TEXT_DISABLED;
+        enabled ? theme::TEXT_COLOR : theme::MENU_DISABLED;
     raylib::DrawText(text, textX, textY, 14, textColor);
 
     return clicked;
@@ -120,7 +121,7 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
     }
 
     // Draw checkbox background
-    raylib::DrawRectangleRec(boxRect, colors::TEXT_AREA_BG);
+    raylib::DrawRectangleRec(boxRect, theme::TEXT_AREA_BG);
     DrawSunkenBorder(boxRect, 2);
 
     // Draw checkmark if checked
@@ -128,17 +129,17 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
         int cx = static_cast<int>(boxRect.x) + 2;
         int cy = static_cast<int>(boxRect.y) + BOX_SIZE / 2;
         // Simple checkmark
-        raylib::DrawLine(cx + 2, cy, cx + 4, cy + 3, colors::TEXT_COLOR);
-        raylib::DrawLine(cx + 4, cy + 3, cx + 9, cy - 3, colors::TEXT_COLOR);
-        raylib::DrawLine(cx + 2, cy + 1, cx + 4, cy + 4, colors::TEXT_COLOR);
-        raylib::DrawLine(cx + 4, cy + 4, cx + 9, cy - 2, colors::TEXT_COLOR);
+        raylib::DrawLine(cx + 2, cy, cx + 4, cy + 3, theme::TEXT_COLOR);
+        raylib::DrawLine(cx + 4, cy + 3, cx + 9, cy - 3, theme::TEXT_COLOR);
+        raylib::DrawLine(cx + 2, cy + 1, cx + 4, cy + 4, theme::TEXT_COLOR);
+        raylib::DrawLine(cx + 4, cy + 4, cx + 9, cy - 2, theme::TEXT_COLOR);
     }
 
     // Draw label
     int textX = static_cast<int>(boxRect.x + BOX_SIZE + 6);
     int textY = static_cast<int>(rect.y + (rect.height - 14) / 2);
     raylib::Color textColor =
-        enabled ? colors::TEXT_COLOR : colors::TEXT_DISABLED;
+        enabled ? theme::TEXT_COLOR : theme::MENU_DISABLED;
     raylib::DrawText(text, textX, textY, 14, textColor);
 
     return changed;
@@ -190,12 +191,12 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
         
         // Draw menu header
         if (menu.open || hover) {
-            raylib::DrawRectangleRec(menu.bounds, colors::MENU_HIGHLIGHT);
+            raylib::DrawRectangleRec(menu.bounds, theme::MENU_HOVER);
             raylib::DrawText(menu.label.c_str(), x + 8, menuBarY + 3, 14,
-                             colors::TITLE_TEXT);
+                             theme::TITLE_TEXT);
         } else {
             raylib::DrawText(menu.label.c_str(), x + 8, menuBarY + 3, 14,
-                             colors::TEXT_COLOR);
+                             theme::TEXT_COLOR);
         }
 
         // Draw dropdown if open
@@ -260,7 +261,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
         static_cast<float>(maxWidth), static_cast<float>(totalHeight)};
 
     // Draw dropdown background
-    raylib::DrawRectangleRec(dropdownRect, colors::WINDOW_BG);
+    raylib::DrawRectangleRec(dropdownRect, theme::WINDOW_BG);
     DrawRaisedBorder(dropdownRect, 2);
 
     // Draw items
@@ -277,9 +278,9 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
             // Draw separator line
             int sepY = itemY + itemHeight / 2;
             raylib::DrawLine(x + 4, sepY, x + maxWidth - 4, sepY,
-                             colors::BORDER_DARK);
+                             theme::BORDER_DARK);
             raylib::DrawLine(x + 4, sepY + 1, x + maxWidth - 4, sepY + 1,
-                             colors::BORDER_LIGHT);
+                             theme::BORDER_LIGHT);
         } else {
             bool hover = raylib::CheckCollisionPointRec(mousePos, itemRect) &&
                          item.enabled;
@@ -292,7 +293,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
             const int textX = x + markColumnWidth;
 
             if (hover) {
-                raylib::DrawRectangleRec(itemRect, colors::MENU_HIGHLIGHT);
+                raylib::DrawRectangleRec(itemRect, theme::MENU_HOVER);
                 
                 // Draw mark if present
                 if (item.mark != MenuMark::None) {
@@ -306,18 +307,18 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                     }
                     if (markStr) {
                         raylib::DrawText(markStr, x + 6, itemY + 3, 14,
-                                         colors::TITLE_TEXT);
+                                         theme::TITLE_TEXT);
                     }
                 }
                 
                 raylib::DrawText(item.label.c_str(), textX, itemY + 3, 14,
-                                 colors::TITLE_TEXT);
+                                 theme::TITLE_TEXT);
                 if (!item.shortcut.empty()) {
                     int shortcutX =
                         x + maxWidth -
                         raylib::MeasureText(item.shortcut.c_str(), 14) - 12;
                     raylib::DrawText(item.shortcut.c_str(), shortcutX,
-                                     itemY + 3, 14, colors::TITLE_TEXT);
+                                     itemY + 3, 14, theme::TITLE_TEXT);
                 }
 
                 if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
@@ -325,7 +326,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                 }
             } else {
                 raylib::Color textColor =
-                    item.enabled ? colors::TEXT_COLOR : colors::TEXT_DISABLED;
+                    item.enabled ? theme::TEXT_COLOR : theme::MENU_DISABLED;
                 
                 // Draw mark if present
                 if (item.mark != MenuMark::None) {
@@ -369,20 +370,20 @@ int DrawMessageDialog(raylib::Rectangle dialogRect, const char* title,
                           raylib::GetScreenHeight(), {0, 0, 0, 128});
 
     // Draw dialog background
-    raylib::DrawRectangleRec(dialogRect, colors::WINDOW_BG);
+    raylib::DrawRectangleRec(dialogRect, theme::WINDOW_BG);
     DrawRaisedBorder(dialogRect, 2);
 
     // Draw title bar
     raylib::Rectangle titleRect = {dialogRect.x + 2, dialogRect.y + 2,
                                    dialogRect.width - 4, 20};
-    raylib::DrawRectangleRec(titleRect, colors::TITLE_BAR_ACTIVE);
+    raylib::DrawRectangleRec(titleRect, theme::TITLE_BAR);
     raylib::DrawText(title, static_cast<int>(titleRect.x) + 4,
-                     static_cast<int>(titleRect.y) + 3, 14, colors::TITLE_TEXT);
+                     static_cast<int>(titleRect.y) + 3, 14, theme::TITLE_TEXT);
 
     // Draw message
     int messageX = static_cast<int>(dialogRect.x) + 16;
     int messageY = static_cast<int>(dialogRect.y) + 40;
-    raylib::DrawText(message, messageX, messageY, 14, colors::TEXT_COLOR);
+    raylib::DrawText(message, messageX, messageY, 14, theme::TEXT_COLOR);
 
     // Draw buttons
     int buttonWidth = 75;
@@ -432,25 +433,25 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
                           raylib::GetScreenHeight(), {0, 0, 0, 128});
 
     // Draw dialog background
-    raylib::DrawRectangleRec(dialogRect, colors::WINDOW_BG);
+    raylib::DrawRectangleRec(dialogRect, theme::WINDOW_BG);
     DrawRaisedBorder(dialogRect, 2);
 
     // Draw title bar
     raylib::Rectangle titleRect = {dialogRect.x + 2, dialogRect.y + 2,
                                    dialogRect.width - 4, 20};
-    raylib::DrawRectangleRec(titleRect, colors::TITLE_BAR_ACTIVE);
+    raylib::DrawRectangleRec(titleRect, theme::TITLE_BAR);
     raylib::DrawText(title, static_cast<int>(titleRect.x) + 4,
-                     static_cast<int>(titleRect.y) + 3, 14, colors::TITLE_TEXT);
+                     static_cast<int>(titleRect.y) + 3, 14, theme::TITLE_TEXT);
 
     // Draw prompt
     int promptX = static_cast<int>(dialogRect.x) + 16;
     int promptY = static_cast<int>(dialogRect.y) + 36;
-    raylib::DrawText(prompt, promptX, promptY, 14, colors::TEXT_COLOR);
+    raylib::DrawText(prompt, promptX, promptY, 14, theme::TEXT_COLOR);
 
     // Draw input field
     raylib::Rectangle inputRect = {dialogRect.x + 16, dialogRect.y + 56,
                                    dialogRect.width - 32, 22};
-    raylib::DrawRectangleRec(inputRect, colors::TEXT_AREA_BG);
+    raylib::DrawRectangleRec(inputRect, theme::TEXT_AREA_BG);
     DrawSunkenBorder(inputRect, 2);
 
     // Handle text input
@@ -482,7 +483,7 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
 
     // Draw input text
     raylib::DrawText(buffer, static_cast<int>(inputRect.x) + 4,
-                     static_cast<int>(inputRect.y) + 4, 14, colors::TEXT_COLOR);
+                     static_cast<int>(inputRect.y) + 4, 14, theme::TEXT_COLOR);
 
     // Draw buttons
     int buttonWidth = 75;
@@ -508,36 +509,6 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
     }
 
     return result;
-}
-
-void applyDarkMode(bool enabled) {
-    if (enabled) {
-        colors::WINDOW_BG = {48, 48, 48, 255};
-        colors::TITLE_BAR_ACTIVE = {32, 32, 64, 255};
-        colors::TITLE_BAR_INACTIVE = {64, 64, 64, 255};
-        colors::TITLE_TEXT = {255, 255, 255, 255};
-        colors::TEXT_AREA_BG = {24, 24, 24, 255};
-        colors::TEXT_COLOR = {230, 230, 230, 255};
-        colors::TEXT_DISABLED = {120, 120, 120, 255};
-        colors::BORDER_LIGHT = {90, 90, 90, 255};
-        colors::BORDER_DARK = {20, 20, 20, 255};
-        colors::BORDER_DARKER = {10, 10, 10, 255};
-        colors::MENU_HIGHLIGHT = {64, 64, 128, 255};
-        colors::BUTTON_FACE = {64, 64, 64, 255};
-    } else {
-        colors::WINDOW_BG = {192, 192, 192, 255};
-        colors::TITLE_BAR_ACTIVE = {0, 0, 128, 255};
-        colors::TITLE_BAR_INACTIVE = {128, 128, 128, 255};
-        colors::TITLE_TEXT = {255, 255, 255, 255};
-        colors::TEXT_AREA_BG = {255, 255, 255, 255};
-        colors::TEXT_COLOR = {0, 0, 0, 255};
-        colors::TEXT_DISABLED = {128, 128, 128, 255};
-        colors::BORDER_LIGHT = {255, 255, 255, 255};
-        colors::BORDER_DARK = {128, 128, 128, 255};
-        colors::BORDER_DARKER = {64, 64, 64, 255};
-        colors::MENU_HIGHLIGHT = {0, 0, 128, 255};
-        colors::BUTTON_FACE = {192, 192, 192, 255};
-    }
 }
 
 }  // namespace win95

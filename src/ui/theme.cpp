@@ -1,5 +1,4 @@
 #include "theme.h"
-#include "win95_widgets.h"
 
 namespace theme {
 
@@ -70,8 +69,6 @@ void applyDarkMode(bool enabled) {
         BUTTON_TEXT = {0, 0, 0, 255};
         BUTTON_PRESSED_BG = {128, 128, 128, 255};
     }
-
-    win95::applyDarkMode(enabled);
 }
 
 }  // namespace theme
