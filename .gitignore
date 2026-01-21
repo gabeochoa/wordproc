@@ -83,5 +83,6 @@ compile_commands.json
 .cursor/
 
 # Test screenshots (generated during E2E tests)
+tests/screenshots/
 *.png
 !resources/**/*.png

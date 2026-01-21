@@ -40,6 +40,8 @@ for test in \
     e2e_menu_file_new.e2e \
     e2e_menu_file_open.e2e \
     e2e_menu_file_save.e2e \
+    e2e_menu_file_saveas.e2e \
+    e2e_menu_edit_goto_bookmark.e2e \
     e2e_menu_view_page_modes.e2e \
     e2e_menu_view_line_width.e2e \
     e2e_menu_view_line_numbers.e2e \

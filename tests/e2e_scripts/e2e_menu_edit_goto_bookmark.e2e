@@ -1,0 +1,31 @@
+# Test: Edit > Go To Bookmark...
+# Validates Go To Bookmark dialog functionality
+
+# Type some content with multiple lines
+type "Line 1 - First section"
+key ENTER
+type "Line 2 - Second section"
+key ENTER
+type "Line 3 - Third section"
+wait 1
+
+# Verify all lines exist
+validate line_count=3
+
+# Open Go To Bookmark dialog (should show "No bookmarks")
+menu_open Edit
+wait 1
+menu_select Go To Bookmark...
+wait 1
+
+# Dialog should show "No bookmarks" message since we haven't created any
+# Press ESC to close
+key ESCAPE
+wait 1
+
+# Verify document still has 3 lines
+validate line_count=3
+
+screenshot e2e_menu_edit_goto_bookmark
+
+

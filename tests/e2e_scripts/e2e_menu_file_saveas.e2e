@@ -1,0 +1,28 @@
+# Test: File > Save As...
+# Validates Save As dialog and saving to new path
+
+# Type some content
+type "Testing Save As functionality"
+wait 1
+validate text=Testing Save As functionality
+
+# Open Save As dialog
+menu_open File
+wait 1
+menu_select Save As...
+wait 1
+
+# Note: We can't interact with the dialog input in basic e2e tests
+# but we can verify the dialog opened and validate file operations
+# For now, just verify the menu item triggers without error
+
+# Cancel out (ESC key)
+key ESCAPE
+wait 1
+
+# Verify content is still intact
+validate text=Testing Save As functionality
+
+screenshot e2e_menu_file_saveas
+
+
