@@ -1,6 +1,21 @@
 # Text Editing Composable Components
 
-## Status: Partially Addressed
+## Status: ✅ RESOLVED - Features Exist in Afterhours
+
+**Date Resolved**: 2025-01-21  
+**Location**: `vendor/afterhours/src/plugins/ui/text_input/`
+
+**All proposed components are now in afterhours:**
+- ✅ `TextSelection` (selection.h)
+- ✅ `LineIndex` (line_index.h)
+- ✅ `TextLayoutCache` (text_layout.h)
+- ✅ Text utilities for word/paragraph navigation (utils.h)
+
+**⚠️ Note**: Wordproc is NOT yet using these components - it has custom implementations with richer paragraph metadata. See `00_RESEARCH_FINDINGS.md` for migration analysis.
+
+---
+
+## Original Context
 
 Afterhours provides building blocks for text editing. Applications like wordproc 
 compose these into full text editors. Afterhours does NOT provide a complete 

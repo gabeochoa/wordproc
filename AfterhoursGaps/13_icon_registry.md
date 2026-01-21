@@ -1,5 +1,15 @@
 # Icon Registry
 
+## Status: 🎯 READY TO CONTRIBUTE (Requires API Redesign)
+
+**Current State**: NOT in afterhours  
+**Wordproc Implementation**: `src/extracted/icon_registry.h` (traditional singleton)  
+**Blocker**: API incompatible with afterhours ECS patterns
+
+**See `00_RESEARCH_FINDINGS.md` section 3 for detailed API redesign requirements.**
+
+---
+
 ## Working Implementation
 See `src/ui/icon_registry.h` for a complete working example.
 
@@ -12,6 +22,19 @@ often need to:
 - Provide fallback symbols when icons aren't loaded
 - Handle mirrored icon pairs (undo/redo, left/right arrows)
 - Control which icons are approved for use
+
+## API Incompatibility
+
+**Wordproc uses**:
+```cpp
+IconRegistry& IconRegistry::instance()  // Traditional singleton
+```
+
+**Afterhours requires**:
+```cpp
+icon_registry::init()                   // ECS-based singleton
+icon_registry::register_icon(...)       // Free function API
+```
 
 ## Use Cases
 

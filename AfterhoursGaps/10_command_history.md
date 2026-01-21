@@ -1,12 +1,25 @@
 # Command History (Undo/Redo)
 
-## Working Implementation
-See these files for a complete working example:
-- `src/extracted/command_history.h` - Clean, standalone implementation ready for PR
-- `src/editor/text_buffer.h` - Domain-specific usage in TextBuffer
+## Status: ✅ RESOLVED - Template Version Exists in Afterhours
 
-## Problem
-Afterhours does not provide a generic undo/redo system based on the Command pattern.
+**Date Resolved**: 2025-01-21  
+**Location**: `vendor/afterhours/src/plugins/command_history.h`
+
+**Afterhours has a template-based implementation:**
+- ✅ `Command<State>` template interface
+- ✅ `CommandHistory<State>` with undo/redo/merge
+- ✅ Works with any state type (more general than wordproc's version)
+
+**⚠️ Note**: Wordproc is NOT yet using this - it has a non-template implementation specific to `TextBuffer`. See `00_RESEARCH_FINDINGS.md` for API comparison and migration path.
+
+---
+
+## Original Context (Before Resolution)
+
+### Working Implementation
+See these files for a complete working example:
+- `src/extracted/command_history.h` - Non-template version
+- `src/editor/text_buffer.h` - Domain-specific usage in TextBuffer
 
 ## Use Cases
 - **Level editors**: Undo place/delete/move entity
