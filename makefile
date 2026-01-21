@@ -233,6 +233,7 @@ cppcheck:
 
 # Test source files
 TEST_SRC := $(wildcard tests/*.cpp)
+TEST_SRC += src/editor/gap_buffer.cpp
 TEST_SRC += src/editor/text_buffer.cpp
 TEST_SRC += src/editor/text_layout.cpp
 TEST_SRC += src/editor/document_io.cpp
@@ -269,6 +270,10 @@ $(OBJ_DIR)/test/%.o: tests/%.cpp | $(OBJ_DIR)/test
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
 # Compile editor sources for tests
+$(OBJ_DIR)/test/gap_buffer.o: src/editor/gap_buffer.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
 $(OBJ_DIR)/test/text_buffer.o: src/editor/text_buffer.cpp | $(OBJ_DIR)/test
 	@echo "Compiling $< for tests..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
