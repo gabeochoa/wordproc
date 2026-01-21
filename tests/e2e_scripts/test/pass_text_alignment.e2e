@@ -5,22 +5,22 @@ type "Alignment Test"
 wait 2
 
 # Default should be left
-validate alignment=Left
+validate alignment=left
 
 # Center alignment
 key CTRL+E
 wait 2
-validate alignment=Center
+validate alignment=center
 
 # Right alignment
 key CTRL+R
 wait 2
-validate alignment=Right
+validate alignment=right
 
 # Back to left
 key CTRL+L
 wait 2
-validate alignment=Left
+validate alignment=left
 
 screenshot 05_text_alignment
 

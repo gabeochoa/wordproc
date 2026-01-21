@@ -4,7 +4,7 @@
 validate smart_quotes_enabled=true
 type "\"Hello\""
 wait 2
-validate text_contains=“Hello”
+validate text="Hello"
 
 screenshot e2e_smart_quotes
 

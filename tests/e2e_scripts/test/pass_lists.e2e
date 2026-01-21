@@ -5,22 +5,22 @@ type "List Item Test"
 wait 2
 
 # Default should be no list
-validate list_type=None
+validate list_type=none
 
 # Toggle bulleted list
 key CTRL+SHIFT+8
 wait 2
-validate list_type=Bulleted
+validate list_type=bulleted
 
 # Toggle off
 key CTRL+SHIFT+8
 wait 2
-validate list_type=None
+validate list_type=none
 
 # Toggle numbered list
 key CTRL+SHIFT+7
 wait 2
-validate list_type=Numbered
+validate list_type=numbered
 
 screenshot 08_lists
 

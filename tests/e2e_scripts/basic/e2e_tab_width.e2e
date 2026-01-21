@@ -2,7 +2,8 @@
 # Validates tab width dialog updates document settings
 
 menu_open Format
-menu_select "Tab Width..."
+wait 1
+menu_select Tab Width...
 wait 1
 type "6"
 key ENTER
