@@ -173,6 +173,8 @@ struct MenuComponent : public afterhours::BaseComponent {
     FindOptions findOptions;       // Case sensitive, whole word, wrap around
     char findInputBuffer[256] = {0};
     char replaceInputBuffer[256] = {0};
+    std::string findInputStr;      // For afterhours text_input
+    std::string replaceInputStr;   // For afterhours text_input
 
     // Word count dialog
     bool showWordCountDialog = false;

@@ -741,6 +741,286 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
             }
         }
+        
+        // Help Window (Keyboard Shortcuts)
+        if (menu.showHelpWindow) {
+            constexpr int HELP_MODAL_ID = 50008;
+            auto result = afterhours::modal(ctx, mk(entity, HELP_MODAL_ID),
+                menu.showHelpWindow,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(500), afterhours::ui::h720(500))
+                    .with_title("Keyboard Shortcuts")
+                    .with_show_close_button(true));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Get keybindings
+                input::ActionMap defaultMap = input::createDefaultActionMap();
+                auto bindings = input::getBindingsList(defaultMap);
+                
+                // Create scrollable container for keybindings list
+                auto scrollContainer = scroll_view(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(380)})
+                        .with_padding(Spacing::sm)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (scrollContainer) {
+                    // Header row
+                    auto headerRow = div(ctx, mk(scrollContainer.ent(), 0),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_padding(Spacing::xs)
+                            .with_render_layer(CONTENT_LAYER));
+                    
+                    if (headerRow) {
+                        div(ctx, mk(headerRow.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("Action")
+                                .with_size(ComponentSize{h720(200), h720(20)})
+                                .with_custom_text_color(toAhColor(raylib::DARKGRAY))
+                                .with_render_layer(CONTENT_LAYER));
+                        
+                        div(ctx, mk(headerRow.ent(), 1),
+                            ComponentConfig{}
+                                .with_label("Shortcut")
+                                .with_size(ComponentSize{h720(200), h720(20)})
+                                .with_custom_text_color(toAhColor(raylib::DARKGRAY))
+                                .with_render_layer(CONTENT_LAYER));
+                    }
+                    
+                    // Bindings list
+                    for (size_t i = 0; i < bindings.size(); ++i) {
+                        const auto& binding = bindings[i];
+                        auto bindingRow = div(ctx, mk(scrollContainer.ent(), static_cast<int>(i + 1)),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_padding(Spacing::xs)
+                                .with_render_layer(CONTENT_LAYER));
+                        
+                        if (bindingRow) {
+                            div(ctx, mk(bindingRow.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label(binding.actionName)
+                                    .with_size(ComponentSize{h720(200), h720(18)})
+                                    .with_render_layer(CONTENT_LAYER));
+                            
+                            div(ctx, mk(bindingRow.ent(), 1),
+                                ComponentConfig{}
+                                    .with_label(binding.bindingStr)
+                                    .with_size(ComponentSize{h720(200), h720(18)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        }
+                    }
+                }
+                
+                // OK button at bottom
+                auto buttonRow = div(ctx, mk(result.ent(), 1),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("OK")
+                            .with_size(ComponentSize{h720(100), h720(32)})
+                            .with_render_layer(CONTENT_LAYER))) {
+                        menu.showHelpWindow = false;
+                    }
+                }
+            }
+        }
+        
+        // Find/Replace Dialog
+        if (menu.showFindDialog) {
+            constexpr int FIND_MODAL_ID = 50009;
+            std::string title = menu.findReplaceMode ? "Find and Replace" : "Find";
+            auto result = afterhours::modal(ctx, mk(entity, FIND_MODAL_ID),
+                menu.showFindDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(450), menu.findReplaceMode ? afterhours::ui::h720(280) : afterhours::ui::h720(220))
+                    .with_title(title)
+                    .with_show_close_button(true));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Find label and input
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Find:")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                    menu.findInputStr,
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Replace label and input (only in replace mode)
+                if (menu.findReplaceMode) {
+                    div(ctx, mk(result.ent(), 2),
+                        ComponentConfig{}
+                            .with_label("Replace with:")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_margin(Margin{.top = DefaultSpacing::small()})
+                            .with_render_layer(CONTENT_LAYER));
+                    
+                    afterhours::text_input::text_input(ctx, mk(result.ent(), 3),
+                        menu.replaceInputStr,
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(32)})
+                            .with_background(Theme::Usage::Surface)
+                            .with_render_layer(CONTENT_LAYER));
+                }
+                
+                // Options checkboxes
+                auto optionsRow = div(ctx, mk(result.ent(), 4),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(30)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (optionsRow) {
+                    // Case sensitive checkbox
+                    checkbox(ctx, mk(optionsRow.ent(), 0),
+                        menu.findOptions.caseSensitive,
+                        ComponentConfig{}
+                            .with_label("Case sensitive")
+                            .with_size(ComponentSize{h720(150), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+                    
+                    // Whole word checkbox
+                    checkbox(ctx, mk(optionsRow.ent(), 1),
+                        menu.findOptions.wholeWord,
+                        ComponentConfig{}
+                            .with_label("Whole word")
+                            .with_size(ComponentSize{h720(120), h720(24)})
+                            .with_margin(Margin{.left = DefaultSpacing::small()})
+                            .with_render_layer(CONTENT_LAYER));
+                }
+                
+                // Button row
+                auto buttonRow = div(ctx, mk(result.ent(), 5),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (buttonRow) {
+                    // Find Next button
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("Find Next")
+                            .with_size(ComponentSize{h720(100), h720(32)})
+                            .with_background(Theme::Usage::Primary)
+                            .with_margin(Margin{.right = DefaultSpacing::small()})
+                            .with_render_layer(CONTENT_LAYER))) {
+                        // Get document and perform find
+                        auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                              .whereHasComponent<DocumentComponent>()
+                                              .gen();
+                        if (!docEntities.empty() && !menu.findInputStr.empty()) {
+                            auto& doc = docEntities[0].get().get<DocumentComponent>();
+                            menu.lastSearchTerm = menu.findInputStr;
+                            FindResult findResult = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
+                            if (findResult.found) {
+                                doc.buffer.setCaret(findResult.start);
+                                doc.buffer.setSelectionAnchor(findResult.start);
+                                doc.buffer.setCaret(findResult.end);
+                                doc.buffer.updateSelectionToCaret();
+                                toast_notify::info("Found", 2.0f);
+                            } else {
+                                toast_notify::warning("Not found");
+                            }
+                        }
+                    }
+                    
+                    // Replace button (only in replace mode)
+                    if (menu.findReplaceMode) {
+                        if (button(ctx, mk(buttonRow.ent(), 1),
+                            ComponentConfig{}
+                                .with_label("Replace")
+                                .with_size(ComponentSize{h720(100), h720(32)})
+                                .with_margin(Margin{.right = DefaultSpacing::small()})
+                                .with_render_layer(CONTENT_LAYER))) {
+                            // Get document and perform replace
+                            auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                                  .whereHasComponent<DocumentComponent>()
+                                                  .gen();
+                            if (!docEntities.empty() && !menu.findInputStr.empty()) {
+                                auto& doc = docEntities[0].get().get<DocumentComponent>();
+                                menu.lastSearchTerm = menu.findInputStr;
+                                menu.replaceTerm = menu.replaceInputStr;
+                                
+                                // Check if current selection matches the search term
+                                if (doc.buffer.hasSelection()) {
+                                    std::string selected = doc.buffer.getSelectedText();
+                                    bool matches = menu.findOptions.caseSensitive ? 
+                                        (selected == menu.lastSearchTerm) :
+                                        ([&]() {
+                                            std::string selLower = selected;
+                                            std::string termLower = menu.lastSearchTerm;
+                                            for (auto& c : selLower) c = static_cast<char>(std::tolower(c));
+                                            for (auto& c : termLower) c = static_cast<char>(std::tolower(c));
+                                            return selLower == termLower;
+                                        })();
+                                    
+                                    if (matches) {
+                                        doc.buffer.deleteSelection();
+                                        doc.buffer.insertText(menu.replaceTerm);
+                                        doc.isDirty = true;
+                                        toast_notify::success("Replaced");
+                                        
+                                        // Find next occurrence
+                                        FindResult findResult = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
+                                        if (findResult.found) {
+                                            doc.buffer.setCaret(findResult.start);
+                                            doc.buffer.setSelectionAnchor(findResult.start);
+                                            doc.buffer.setCaret(findResult.end);
+                                            doc.buffer.updateSelectionToCaret();
+                                        }
+                                    } else {
+                                        toast_notify::warning("Selection doesn't match search term");
+                                    }
+                                } else {
+                                    toast_notify::warning("No selection");
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Close button
+                    if (button(ctx, mk(buttonRow.ent(), 2),
+                        ComponentConfig{}
+                            .with_label("Close")
+                            .with_size(ComponentSize{h720(80), h720(32)})
+                            .with_render_layer(CONTENT_LAYER))) {
+                        menu.findInputStr.clear();
+                        menu.replaceInputStr.clear();
+                        menu.showFindDialog = false;
+                    }
+                }
+            }
+        }
     }
 };
 
