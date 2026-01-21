@@ -1201,6 +1201,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     layout.showLineNumbers = !layout.showLineNumbers;
                     toast_notify::info(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     break;
+                case 16:  // Show Outline
+                    layout.showOutline = !layout.showOutline;
+                    toast_notify::info(layout.showOutline ? "Outline: On" : "Outline: Off");
+                    break;
                 default:
                     break;
             }
@@ -1582,6 +1586,45 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     doc.equations.addEquation(eq);
                     doc.isDirty = true;
                     toast_notify::info("Equation inserted");
+                    break;
+                }
+                case 24:  // Footnote
+                {
+                    // Insert footnote marker as placeholder
+                    doc.buffer.insertText("[1]");
+                    doc.isDirty = true;
+                    toast_notify::info("Footnote marker inserted");
+                    break;
+                }
+                case 27:  // Header
+                {
+                    // Insert header placeholder text at current position
+                    doc.buffer.insertText("[HEADER]");
+                    doc.isDirty = true;
+                    toast_notify::info("Header placeholder inserted");
+                    break;
+                }
+                case 28:  // Footer
+                {
+                    // Insert footer placeholder text at current position
+                    doc.buffer.insertText("[FOOTER]");
+                    doc.isDirty = true;
+                    toast_notify::info("Footer placeholder inserted");
+                    break;
+                }
+                case 29:  // Page Number
+                {
+                    // Insert page number placeholder at current position
+                    doc.buffer.insertText("[PAGE #]");
+                    doc.isDirty = true;
+                    toast_notify::info("Page number placeholder inserted");
+                    break;
+                }
+                case 32:  // Table of Contents
+                {
+                    doc.buffer.insertTableOfContents();
+                    doc.isDirty = true;
+                    toast_notify::info("Table of Contents inserted");
                     break;
                 }
                 default:

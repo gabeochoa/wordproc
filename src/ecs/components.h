@@ -263,6 +263,10 @@ struct LayoutComponent : public afterhours::BaseComponent {
     // Line numbering
     bool showLineNumbers = false;    // Toggle line number display in gutter
     float lineNumberGutterWidth = 50.0f;  // Width of line number gutter in pixels
+    
+    // Outline panel
+    bool showOutline = false;        // Toggle outline panel display
+    float outlinePanelWidth = 200.0f;  // Width of outline panel in pixels
 };
 
 // Component for test mode configuration
