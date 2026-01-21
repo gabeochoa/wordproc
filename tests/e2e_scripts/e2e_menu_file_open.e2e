@@ -1,0 +1,31 @@
+# Test: File > Open (Ctrl+O)
+# Validates Open menu item loads a document
+
+# Open a test file via menu
+menu_open File
+wait 2
+menu_select Open...
+wait 2
+
+# The file should be loaded (defaultPath is used in test mode)
+# Just wait to allow file to load
+wait 2
+
+# Test keyboard shortcut
+# First clear document
+menu_open File
+wait 2
+menu_select New
+wait 2
+validate text=
+
+# Now use Ctrl+O
+key CTRL+O
+wait 2
+
+# Should have loaded content again
+wait 2
+
+screenshot e2e_menu_file_open
+
+

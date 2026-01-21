@@ -1,0 +1,32 @@
+# Test: Table > Delete Row/Column
+# Validates table delete operations
+
+# Insert a 3x3 table via menu
+menu_open Table
+wait 2
+menu_select Insert Table...
+wait 2
+validate has_table=true
+validate table_rows=3
+validate table_cols=3
+
+# Delete a row
+menu_open Table
+wait 2
+menu_select Delete Row
+wait 2
+validate table_rows=2
+
+# Delete a column
+menu_open Table
+wait 2
+menu_select Delete Column
+wait 2
+validate table_cols=2
+
+# Table should still exist
+validate has_table=true
+
+screenshot e2e_menu_table_delete
+
+

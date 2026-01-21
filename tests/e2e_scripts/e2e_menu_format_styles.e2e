@@ -1,0 +1,78 @@
+# Test: Format > Paragraph Styles
+# Validates all paragraph style options
+
+# Type test text
+type "Paragraph Style Test"
+wait 2
+
+# Test Normal style (Ctrl+Alt+0)
+menu_open Format
+wait 2
+menu_select Normal
+wait 2
+validate paragraph_style=normal
+
+# Test Title style
+menu_open Format
+wait 2
+menu_select Title
+wait 2
+validate paragraph_style=title
+
+# Test Subtitle style
+menu_open Format
+wait 2
+menu_select Subtitle
+wait 2
+validate paragraph_style=subtitle
+
+# Test Heading 1 (Ctrl+Alt+1)
+menu_open Format
+wait 2
+menu_select Heading 1
+wait 2
+validate paragraph_style=heading1
+
+# Test Heading 2 (Ctrl+Alt+2)
+menu_open Format
+wait 2
+menu_select Heading 2
+wait 2
+validate paragraph_style=heading2
+
+# Test Heading 3 (Ctrl+Alt+3)
+menu_open Format
+wait 2
+menu_select Heading 3
+wait 2
+validate paragraph_style=heading3
+
+# Test Heading 4 (Ctrl+Alt+4)
+menu_open Format
+wait 2
+menu_select Heading 4
+wait 2
+validate paragraph_style=heading4
+
+# Test Heading 5 (Ctrl+Alt+5)
+menu_open Format
+wait 2
+menu_select Heading 5
+wait 2
+validate paragraph_style=heading5
+
+# Test Heading 6 (Ctrl+Alt+6)
+menu_open Format
+wait 2
+menu_select Heading 6
+wait 2
+validate paragraph_style=heading6
+
+# Back to Normal
+key CTRL+ALT+0
+wait 2
+validate paragraph_style=normal
+
+screenshot e2e_menu_format_styles
+
+

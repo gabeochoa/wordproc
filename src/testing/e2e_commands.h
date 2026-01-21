@@ -57,7 +57,7 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
                              float) override {
     if (cmd.is_consumed() || !cmd.is("menu_select"))
       return;
-    if (!cmd.has_args(1)) {
+    if (cmd.args.empty()) {
       cmd.fail("menu_select requires item name");
       return;
     }
@@ -66,7 +66,11 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    const auto &item_name = cmd.arg(0);
+    // Join all arguments to support multi-word menu items
+    std::string item_name = cmd.args[0];
+    for (size_t i = 1; i < cmd.args.size(); ++i) {
+      item_name += " " + cmd.args[i];
+    }
     
     // Debug: Check if any menu is open
     bool anyOpen = false;

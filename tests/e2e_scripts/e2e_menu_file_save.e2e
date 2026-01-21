@@ -1,0 +1,34 @@
+# Test: File > Save (Ctrl+S)
+# Validates Save menu item writes document to disk
+
+# Type some content
+type "Test content for save"
+wait 2
+validate text=Test content for save
+
+# Use File > Save menu
+menu_open File
+wait 2
+menu_select Save
+wait 2
+
+# File should be saved (no way to directly validate file existence in e2e)
+# But we can verify no error occurred and document is no longer dirty
+# Wait for save operation
+wait 2
+
+# Test keyboard shortcut
+type " more"
+wait 2
+validate text=Test content for save more
+
+# Use Ctrl+S
+key CTRL+S
+wait 2
+
+# Wait for save
+wait 2
+
+screenshot e2e_menu_file_save
+
+

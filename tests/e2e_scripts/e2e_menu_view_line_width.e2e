@@ -1,0 +1,37 @@
+# Test: View > Line Width options
+# Validates line width settings (Normal, Narrow, Wide)
+
+# Type some text
+type "This text tests line width settings for the editor"
+wait 2
+
+# Set to Normal width
+menu_open View
+wait 2
+menu_select Line Width: Normal
+wait 2
+
+# Set to Narrow width (60 chars)
+menu_open View
+wait 2
+menu_select Line Width: Narrow
+wait 2
+
+# Set to Wide width (100 chars)
+menu_open View
+wait 2
+menu_select Line Width: Wide
+wait 2
+
+# Back to Normal
+menu_open View
+wait 2
+menu_select Line Width: Normal
+wait 2
+
+# Text should still be intact
+validate text=This text tests line width settings for the editor
+
+screenshot e2e_menu_view_line_width
+
+

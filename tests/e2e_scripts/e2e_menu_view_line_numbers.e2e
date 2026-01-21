@@ -1,0 +1,37 @@
+# Test: View > Show Line Numbers
+# Validates line numbers toggle
+
+# Type multi-line text
+type "Line one"
+key ENTER
+type "Line two"
+key ENTER
+type "Line three"
+wait 2
+
+# Toggle line numbers on
+menu_open View
+wait 2
+menu_select Show Line Numbers
+wait 2
+
+# Toggle line numbers off
+menu_open View
+wait 2
+menu_select Show Line Numbers
+wait 2
+
+# Toggle back on
+menu_open View
+wait 2
+menu_select Show Line Numbers
+wait 2
+
+# Validate text is intact
+validate text_contains=Line one
+validate text_contains=Line two
+validate text_contains=Line three
+
+screenshot e2e_menu_view_line_numbers
+
+

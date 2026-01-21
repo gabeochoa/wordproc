@@ -1,0 +1,32 @@
+# Test: File > New (Ctrl+N)
+# Validates New menu item clears the document
+
+# Type some text first
+type "This text should be cleared"
+wait 2
+validate text=This text should be cleared
+
+# Use File > New menu
+menu_open File
+wait 2
+menu_select New
+wait 2
+
+# Validate document is cleared
+validate text=
+validate line_count=1
+
+# Also test keyboard shortcut
+type "More text"
+wait 2
+validate text=More text
+
+# Use Ctrl+N
+key CTRL+N
+wait 2
+validate text=
+validate line_count=1
+
+screenshot e2e_menu_file_new
+
+

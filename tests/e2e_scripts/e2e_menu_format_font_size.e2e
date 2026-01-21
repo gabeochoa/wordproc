@@ -1,0 +1,57 @@
+# Test: Format > Font Size (Increase/Decrease/Reset)
+# Validates font size controls
+
+# Type test text
+type "Size"
+wait 2
+
+# Default font size should be 16
+validate font_size=16
+
+# Increase size (Ctrl++)
+menu_open Format
+wait 2
+menu_select Increase Size
+wait 2
+validate font_size=18
+
+# Increase again using keyboard shortcut
+key CTRL+PLUS
+wait 2
+validate font_size=20
+
+# Decrease size (Ctrl+-)
+menu_open Format
+wait 2
+menu_select Decrease Size
+wait 2
+validate font_size=18
+
+# Decrease again using keyboard
+key CTRL+MINUS
+wait 2
+validate font_size=16
+
+# Reset to default (Ctrl+0)
+# First make it different
+key CTRL+PLUS
+key CTRL+PLUS
+key CTRL+PLUS
+wait 2
+validate font_size=22
+
+# Now reset
+menu_open Format
+wait 2
+menu_select Reset Size
+wait 2
+validate font_size=16
+
+# Test with keyboard
+key CTRL+0
+wait 2
+validate font_size=16
+
+screenshot e2e_menu_format_font_size
+
+

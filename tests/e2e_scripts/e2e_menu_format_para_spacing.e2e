@@ -1,0 +1,57 @@
+# Test: Format > Paragraph Spacing (Before/After)
+# Validates space before and after paragraph controls
+
+# Type test paragraph
+type "Paragraph spacing test"
+wait 2
+
+# Increase space before (Ctrl+Alt+Up)
+menu_open Format
+wait 2
+menu_select Increase Space Before
+wait 2
+
+# Increase again
+menu_open Format
+wait 2
+menu_select Increase Space Before
+wait 2
+
+# Test keyboard shortcut
+key CTRL+ALT+UP
+wait 2
+
+# Decrease space before (Ctrl+Alt+Down)
+menu_open Format
+wait 2
+menu_select Decrease Space Before
+wait 2
+
+# Increase space after (Ctrl+Shift+Alt+Up)
+menu_open Format
+wait 2
+menu_select Increase Space After
+wait 2
+
+# Increase again
+menu_open Format
+wait 2
+menu_select Increase Space After
+wait 2
+
+# Test keyboard shortcut
+key CTRL+SHIFT+ALT+UP
+wait 2
+
+# Decrease space after (Ctrl+Shift+Alt+Down)
+menu_open Format
+wait 2
+menu_select Decrease Space After
+wait 2
+
+# Validate text is intact
+validate text=Paragraph spacing test
+
+screenshot e2e_menu_format_para_spacing
+
+

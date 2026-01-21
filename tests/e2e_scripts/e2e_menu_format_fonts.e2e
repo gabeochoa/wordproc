@@ -1,0 +1,38 @@
+# Test: Format > Font selection
+# Validates font switching (Gaegu, Garamond)
+
+# Type test text
+type "Font test"
+wait 2
+
+# Switch to Gaegu font (Ctrl+1)
+menu_open Format
+wait 2
+menu_select Font: Gaegu
+wait 2
+validate font=Gaegu-Bold
+
+# Switch to Garamond font (Ctrl+2)
+menu_open Format
+wait 2
+menu_select Font: Garamond
+wait 2
+validate font=EBGaramond-Regular
+
+# Test keyboard shortcuts
+# Back to Gaegu
+key CTRL+1
+wait 2
+validate font=Gaegu-Bold
+
+# Back to Garamond
+key CTRL+2
+wait 2
+validate font=EBGaramond-Regular
+
+# Text should be intact
+validate text=Font test
+
+screenshot e2e_menu_format_fonts
+
+

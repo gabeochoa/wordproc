@@ -1,0 +1,34 @@
+# Test: Table > Merge/Split Cells
+# Validates table cell merge and split operations
+
+# Insert a 3x3 table
+menu_open Table
+wait 2
+menu_select Insert Table...
+wait 2
+validate has_table=true
+validate table_rows=3
+validate table_cols=3
+
+# Select cells for merging would require more complex selection logic
+# For now, just test that the menu items don't crash
+# (Actual merge requires cell selection which e2e doesn't fully support yet)
+
+# Try to merge cells (will show error if no selection)
+menu_open Table
+wait 2
+menu_select Merge Cells
+wait 2
+
+# Try to split cell (will show error if cell not merged)
+menu_open Table
+wait 2
+menu_select Split Cell
+wait 2
+
+# Table should still exist
+validate has_table=true
+
+screenshot e2e_menu_table_merge_split
+
+
