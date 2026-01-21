@@ -178,7 +178,7 @@ bool TextBuffer::deleteSelection() {
 
     // Record for undo
     if (recordingHistory_ && !deletedText.empty()) {
-        history_.record(
+        history_.push(
             std::make_unique<DeleteSelectionCommand>(start, end, deletedText));
     }
 
@@ -365,7 +365,7 @@ void TextBuffer::insertChar(char ch) {
 
     // Record for undo
     if (recordingHistory_) {
-        history_.record(std::make_unique<InsertCharCommand>(insertPos, ch));
+        history_.push(std::make_unique<InsertCharCommand>(insertPos, ch));
     }
 }
 
@@ -877,7 +877,7 @@ void TextBuffer::backspace() {
 
         // Record for undo
         if (recordingHistory_) {
-            history_.record(std::make_unique<DeleteCharCommand>(
+            history_.push(std::make_unique<DeleteCharCommand>(
                 deletePos, deletedChar, true));
         }
         return;
@@ -908,7 +908,7 @@ void TextBuffer::backspace() {
 
     // Record for undo (deleted a newline)
     if (recordingHistory_) {
-        history_.record(
+        history_.push(
             std::make_unique<DeleteCharCommand>(deletePos, '\n', true));
     }
 }
@@ -942,7 +942,7 @@ void TextBuffer::del() {
 
         // Record for undo
         if (recordingHistory_) {
-            history_.record(std::make_unique<DeleteCharCommand>(
+            history_.push(std::make_unique<DeleteCharCommand>(
                 deletePos, deletedChar, false));
         }
         return;
@@ -968,7 +968,7 @@ void TextBuffer::del() {
 
     // Record for undo (deleted a newline)
     if (recordingHistory_) {
-        history_.record(
+        history_.push(
             std::make_unique<DeleteCharCommand>(deletePos, '\n', false));
     }
 }
@@ -1151,36 +1151,7 @@ void DeleteSelectionCommand::undo(TextBuffer& buffer) {
 }
 
 // ============================================================================
-// CommandHistory implementation
 // ============================================================================
-
-void CommandHistory::execute(std::unique_ptr<EditCommand> cmd,
-                             TextBuffer& buffer) {
-    cmd->execute(buffer);
-    undoStack_.push_back(std::move(cmd));
-    redoStack_.clear();
-}
-
-void CommandHistory::record(std::unique_ptr<EditCommand> cmd) {
-    undoStack_.push_back(std::move(cmd));
-    redoStack_.clear();
-}
-
-void CommandHistory::undo(TextBuffer& buffer) {
-    if (undoStack_.empty()) return;
-    auto cmd = std::move(undoStack_.back());
-    undoStack_.pop_back();
-    cmd->undo(buffer);
-    redoStack_.push_back(std::move(cmd));
-}
-
-void CommandHistory::redo(TextBuffer& buffer) {
-    if (redoStack_.empty()) return;
-    auto cmd = std::move(redoStack_.back());
-    redoStack_.pop_back();
-    cmd->execute(buffer);
-    undoStack_.push_back(std::move(cmd));
-}
 
 // ============================================================================
 // TextBuffer undo/redo methods

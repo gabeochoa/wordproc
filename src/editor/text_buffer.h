@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "../vendor/afterhours/src/plugins/command_history.h"
 #include "document_settings.h"
 #include "gap_buffer.h"
 
@@ -32,17 +33,8 @@ struct FindResult {
 // Forward declaration
 class TextBuffer;
 
-// Base class for undoable commands
-class EditCommand {
-   public:
-    virtual ~EditCommand() = default;
-    virtual void execute(TextBuffer& buffer) = 0;
-    virtual void undo(TextBuffer& buffer) = 0;
-    virtual std::string description() const = 0;
-};
-
 // Insert a single character
-class InsertCharCommand : public EditCommand {
+class InsertCharCommand : public afterhours::Command<TextBuffer> {
    public:
     InsertCharCommand(CaretPosition pos, char ch) : position_(pos), char_(ch) {}
     void execute(TextBuffer& buffer) override;
@@ -55,7 +47,7 @@ class InsertCharCommand : public EditCommand {
 };
 
 // Delete a single character (backspace or delete)
-class DeleteCharCommand : public EditCommand {
+class DeleteCharCommand : public afterhours::Command<TextBuffer> {
    public:
     DeleteCharCommand(CaretPosition pos, char ch, bool isBackspace)
         : position_(pos), char_(ch), isBackspace_(isBackspace) {}
@@ -70,7 +62,7 @@ class DeleteCharCommand : public EditCommand {
 };
 
 // Delete a selection
-class DeleteSelectionCommand : public EditCommand {
+class DeleteSelectionCommand : public afterhours::Command<TextBuffer> {
    public:
     DeleteSelectionCommand(CaretPosition start, CaretPosition end,
                            std::string text)
@@ -83,27 +75,6 @@ class DeleteSelectionCommand : public EditCommand {
     CaretPosition start_;
     CaretPosition end_;
     std::string deletedText_;
-};
-
-// Command history for undo/redo
-class CommandHistory {
-   public:
-    void execute(std::unique_ptr<EditCommand> cmd, TextBuffer& buffer);
-    void record(std::unique_ptr<EditCommand> cmd);  // Record without executing
-    bool canUndo() const { return !undoStack_.empty(); }
-    bool canRedo() const { return !redoStack_.empty(); }
-    void undo(TextBuffer& buffer);
-    void redo(TextBuffer& buffer);
-    void clear() {
-        undoStack_.clear();
-        redoStack_.clear();
-    }
-    std::size_t undoStackSize() const { return undoStack_.size(); }
-    std::size_t redoStackSize() const { return redoStack_.size(); }
-
-   private:
-    std::vector<std::unique_ptr<EditCommand>> undoStack_;
-    std::vector<std::unique_ptr<EditCommand>> redoStack_;
 };
 
 // TextStyle is now defined in document_settings.h
@@ -391,8 +362,8 @@ class TextBuffer {
     std::uint64_t version() const { return version_; }
 
     // Undo/Redo support
-    bool canUndo() const { return history_.canUndo(); }
-    bool canRedo() const { return history_.canRedo(); }
+    bool canUndo() const { return history_.can_undo(); }
+    bool canRedo() const { return history_.can_redo(); }
     void undo();
     void redo();
     void clearHistory() { history_.clear(); }
@@ -442,7 +413,7 @@ class TextBuffer {
     CaretPosition selection_end_;
     TextStyle style_;
     PerfStats stats_;
-    std::uint64_t version_ = 0;       // Increments on every modification
-    mutable CommandHistory history_;  // Undo/redo command history
-    bool recordingHistory_ = true;    // Whether to record commands for undo
+    std::uint64_t version_ = 0;  // Increments on every modification
+    mutable afterhours::CommandHistory<TextBuffer> history_;  // Undo/redo
+    bool recordingHistory_ = true;  // Whether to record commands for undo
 };
