@@ -1,20 +1,20 @@
 # Test: Debug overlay visibility test
 # This test runs long enough to capture the debug overlay
 
-# Wait a long time - plenty of frames to see the overlay
-wait 30
+# Wait enough time to see the overlay (debug overlay should appear quickly)
+wait 5
 
 # Expect some text to be on screen
 expect_text "File"
 
-# Wait more
-wait 30
+# Wait a bit more
+wait 5
 
 # Another check
 expect_text "Edit"
 
-# Final wait
-wait 30
+# Final wait to ensure overlay is visible
+wait 5
 
 # Take a screenshot (overlay should be visible in this)
 screenshot debug_overlay_visible
