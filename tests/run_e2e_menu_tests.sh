@@ -63,12 +63,13 @@ echo -e "${BLUE}Running menu tests...${NC}"
 echo "Screenshots will be saved to: $SCREENSHOT_DIR"
 echo ""
 
-# Run all menu test scripts in batch mode from project root
+# Run all menu test scripts in batch mode from project root (with 60s timeout)
 set +e
 cd "$PROJECT_DIR" && "$EXECUTABLE" \
     --test-mode \
     --test-script-dir="$TEMP_MENU_TESTS" \
     --screenshot-dir="$SCREENSHOT_DIR" \
+    --e2e-timeout=60 \
     2>&1 | tee "$OUTPUT_DIR/e2e_menu_tests.log"
 exit_code=${PIPESTATUS[0]}
 set -e

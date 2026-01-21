@@ -422,13 +422,10 @@ static void setupCallbacksEx(
         // Selection properties
         if (prop == "selection_length") return std::to_string(buffer.getSelectedText().size());
         
-        // Text search properties
-        if (prop.substr(0, 13) == "text_contains") {
-            std::string needle = prop.substr(14);
-            return buffer.getText().find(needle) != std::string::npos ? "true" : "false";
-        }
-        if (prop.substr(0, 16) == "text_shorter_than") {
-            int maxLen = std::stoi(prop.substr(17));
+        // Text search properties (removed - doesn't fit validate command design)
+        // text_shorter_than_NUMBER - check if text length < NUMBER
+        if (prop.length() > 18 && prop.substr(0, 18) == "text_shorter_than_") {
+            int maxLen = std::stoi(prop.substr(18));
             return buffer.getText().size() < static_cast<std::size_t>(maxLen) ? "true" : "false";
         }
         if (prop.substr(0, 10) == "regex_find") {

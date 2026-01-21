@@ -3,31 +3,31 @@
 
 # Type some text
 type "This text tests line width settings for the editor"
-wait 2
+wait 1
 
 # Set to Normal width
 menu_open View
-wait 2
+wait 1
 menu_select Line Width: Normal
-wait 2
+wait 1
 
 # Set to Narrow width (60 chars)
 menu_open View
-wait 2
+wait 1
 menu_select Line Width: Narrow
-wait 2
+wait 1
 
 # Set to Wide width (100 chars)
 menu_open View
-wait 2
+wait 1
 menu_select Line Width: Wide
-wait 2
+wait 1
 
 # Back to Normal
 menu_open View
-wait 2
+wait 1
 menu_select Line Width: Normal
-wait 2
+wait 1
 
 # Text should still be intact
 validate text=This text tests line width settings for the editor

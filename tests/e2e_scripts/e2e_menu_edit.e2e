@@ -3,7 +3,7 @@
 
 # Open Edit menu
 menu_open Edit
-wait 2
+wait 1
 
 # Validate menu is open
 validate menu_open=Edit
@@ -20,7 +20,7 @@ validate menu_contains=Replace
 
 # Close menu
 key ESCAPE
-wait 2
+wait 1
 validate menu_open=false
 
 screenshot e2e_menu_edit

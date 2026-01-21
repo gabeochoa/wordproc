@@ -3,25 +3,25 @@
 
 # Type some text
 type "Testing page modes"
-wait 2
+wait 1
 
 # Switch to Pageless Mode
 menu_open View
-wait 2
+wait 1
 menu_select Pageless Mode
-wait 2
+wait 1
 
 # Switch to Paged Mode
 menu_open View
-wait 2
+wait 1
 menu_select Paged Mode
-wait 2
+wait 1
 
 # Switch back to Pageless
 menu_open View
-wait 2
+wait 1
 menu_select Pageless Mode
-wait 2
+wait 1
 
 # Final check: text should still be there
 validate text=Testing page modes

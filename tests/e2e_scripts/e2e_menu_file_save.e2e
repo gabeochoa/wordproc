@@ -3,31 +3,31 @@
 
 # Type some content
 type "Test content for save"
-wait 2
+wait 1
 validate text=Test content for save
 
 # Use File > Save menu
 menu_open File
-wait 2
+wait 1
 menu_select Save
-wait 2
+wait 1
 
 # File should be saved (no way to directly validate file existence in e2e)
 # But we can verify no error occurred and document is no longer dirty
 # Wait for save operation
-wait 2
+wait 1
 
 # Test keyboard shortcut
 type " more"
-wait 2
+wait 1
 validate text=Test content for save more
 
 # Use Ctrl+S
 key CTRL+S
-wait 2
+wait 1
 
 # Wait for save
-wait 2
+wait 1
 
 screenshot e2e_menu_file_save
 

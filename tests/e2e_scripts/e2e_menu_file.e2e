@@ -3,7 +3,7 @@
 
 # Open File menu
 menu_open File
-wait 2
+wait 1
 
 # Validate menu is open
 validate menu_open=File
@@ -19,7 +19,7 @@ validate menu_contains=Exit
 
 # Close menu
 key ESCAPE
-wait 2
+wait 1
 validate menu_open=false
 
 screenshot e2e_menu_file

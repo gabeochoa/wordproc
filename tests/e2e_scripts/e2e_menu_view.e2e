@@ -3,7 +3,7 @@
 
 # Open View menu
 menu_open View
-wait 2
+wait 1
 
 # Validate menu is open
 validate menu_open=View
@@ -19,7 +19,7 @@ validate menu_contains=Zoom
 
 # Close menu
 key ESCAPE
-wait 2
+wait 1
 validate menu_open=false
 
 screenshot e2e_menu_view

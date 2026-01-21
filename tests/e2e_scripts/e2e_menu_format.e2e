@@ -3,7 +3,7 @@
 
 # Open Format menu
 menu_open Format
-wait 2
+wait 1
 
 # Validate menu is open
 validate menu_open=Format
@@ -21,7 +21,7 @@ validate menu_contains=Highlight Color
 
 # Close menu
 key ESCAPE
-wait 2
+wait 1
 validate menu_open=false
 
 screenshot e2e_menu_format
