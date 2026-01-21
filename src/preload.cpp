@@ -14,6 +14,7 @@
 #include "input_mapping.h"
 #include "rl.h"
 #include "settings.h"
+#include "ui/theme.h"
 #include "ui/ui_context.h"
 #include "util/logging.h"
 
@@ -125,6 +126,11 @@ Preload &Preload::make_singleton() {
             // Alias the same font for other uses to avoid extra loads
             fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str());
             fontMgr.load_font("Garamond", english_font.c_str());
+            
+            // Load UI font for Win95 widgets and other UI rendering
+            theme::UI_FONT = raylib::LoadFont(english_font.c_str());
+            raylib::SetTextureFilter(theme::UI_FONT.texture, raylib::TEXTURE_FILTER_BILINEAR);
+            theme::UI_FONT_LOADED = true;
         }
 
         // Register loaded fonts with FontLoader for P2 font listing

@@ -38,11 +38,10 @@
 namespace ecs {
 
 // Helper to draw text and register it for E2E testing
+// Uses the UI font for consistent rendering across all UI elements
 inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize, 
                                   raylib::Color color) {
-    afterhours::draw_text(text, static_cast<float>(x), static_cast<float>(y), 
-                          static_cast<float>(fontSize), 
-                          afterhours::Color{color.r, color.g, color.b, color.a});
+    theme::DrawUIText(text, x, y, fontSize, color);
     test_input::registerVisibleText(text);
 }
 
@@ -344,7 +343,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             // Draw background for text
             raylib::DrawRectangle(textX - 4, breakY - 6, textWidth + 8, 12, 
                                  raylib::Color{255, 255, 255, 255});
-            raylib::DrawText(breakText, textX, breakY - 5, 10, breakColor);
+            theme::DrawUIText(breakText, textX, breakY - 5, 10, breakColor);
             
             y += 20;  // Add space for the page break indicator
         }
@@ -361,7 +360,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             
             // Draw line number in gray
             raylib::Color lineNumColor = {128, 128, 128, 255};
-            raylib::DrawText(lineNumStr, gutterX, y, 14, lineNumColor);
+            theme::DrawUIText(lineNumStr, gutterX, y, 14, lineNumColor);
         }
         
         // Apply indentation
@@ -595,7 +594,7 @@ struct EditorRenderSystem
                 if (cmdText.length() > 40) {
                     cmdText = cmdText.substr(0, 37) + "...";
                 }
-                raylib::DrawText(cmdText.c_str(), overlayX + 5, overlayY + 5, 14, 
+                theme::DrawUIText(cmdText.c_str(), overlayX + 5, overlayY + 5, 14, 
                                  raylib::Color{255, 255, 255, 255});
                 
                 // Draw timeout countdown
@@ -607,7 +606,7 @@ struct EditorRenderSystem
                 } else {
                     timeoutText = "<no timeout>";
                 }
-                raylib::DrawText(timeoutText.c_str(), overlayX + 5, overlayY + 25, 14, 
+                theme::DrawUIText(timeoutText.c_str(), overlayX + 5, overlayY + 25, 14, 
                                  raylib::Color{255, 200, 100, 255});
             }
         }
