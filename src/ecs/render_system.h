@@ -977,6 +977,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         toast_notify::error("Save failed: " + result.error);
                     }
                 } break;
+                case 4:  // Save As...
+                {
+                    // Pre-fill with current filename or default
+                    std::string suggested = doc.filePath.empty() ? "untitled.wdoc" : doc.filePath;
+                    menu.saveAsInputStr = suggested;
+                    menu.showSaveAsDialog = true;
+                } break;
                 case 6:  // Export PDF
                 {
                     std::filesystem::path basePath =
@@ -1131,6 +1138,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     menu.showFindDialog = true;
                     menu.findReplaceMode = true;
                     toast_notify::info("Replace mode");
+                    break;
+                case 18:  // Go To Bookmark...
+                    menu.showBookmarkListDialog = true;
                     break;
                 default:
                     break;

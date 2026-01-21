@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
 
     // Test mode configuration
     bool testModeEnabled = cmdl["--test-mode"];
-    std::string screenshotDir = "output/screenshots";
+    std::string screenshotDir = "tests/screenshots";
     int frameLimit = 0;
     std::string testScriptPath;
     std::string testScriptDir;  // For batch mode

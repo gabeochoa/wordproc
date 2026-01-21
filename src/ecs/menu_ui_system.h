@@ -558,6 +558,189 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
             }
         }
+        
+        // Save As dialog
+        if (menu.showSaveAsDialog) {
+            constexpr int SAVEAS_MODAL_ID = 50006;
+            auto result = afterhours::modal(ctx, mk(entity, SAVEAS_MODAL_ID),
+                menu.showSaveAsDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(450), afterhours::ui::h720(180))
+                    .with_title("Save As"));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Prompt label
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Filename (path relative to current dir or absolute):")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Text input
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                    menu.saveAsInputStr,
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Button row
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (button(ctx, mk(buttonRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Save")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_background(Theme::Usage::Primary)
+                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    // Save to new path
+                    std::string newPath = menu.saveAsInputStr;
+                    if (!newPath.empty()) {
+                        // Query for DocumentComponent and LayoutComponent
+                        auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                               .whereHasComponent<DocumentComponent>()
+                                               .gen();
+                        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
+                                                   .whereHasComponent<LayoutComponent>()
+                                                   .gen();
+                        
+                        if (!docEntities.empty() && !layoutEntities.empty()) {
+                            auto& docComp = docEntities[0].get().get<DocumentComponent>();
+                            auto& layoutComp = layoutEntities[0].get().get<LayoutComponent>();
+                            
+                            // Sync layout settings to document settings before save
+                            docComp.docSettings.textStyle = docComp.buffer.textStyle();
+                            docComp.docSettings.pageSettings.mode = layoutComp.pageMode;
+                            docComp.docSettings.pageSettings.pageWidth = layoutComp.pageWidth;
+                            docComp.docSettings.pageSettings.pageHeight = layoutComp.pageHeight;
+                            docComp.docSettings.pageSettings.pageMargin = layoutComp.pageMargin;
+                            docComp.docSettings.pageSettings.lineWidthLimit = layoutComp.lineWidthLimit;
+                            
+                            // Save document
+                            auto saveResult = saveDocumentEx(docComp.buffer, docComp.docSettings, newPath);
+                            if (saveResult.success) {
+                                docComp.isDirty = false;
+                                docComp.filePath = newPath;
+                                if (!docComp.autoSavePath.empty()) {
+                                    std::filesystem::remove(docComp.autoSavePath);
+                                }
+                                Settings::get().add_recent_file(newPath);
+                                menu.menus = menu_setup::createMenuBar(Settings::get().get_recent_files());
+                                menu.recentFilesCount = static_cast<int>(Settings::get().get_recent_files().size());
+                                toast_notify::success("Saved as: " + std::filesystem::path(newPath).filename().string());
+                            } else {
+                                toast_notify::error("Save failed: " + saveResult.error);
+                            }
+                        }
+                    }
+                    menu.saveAsInputStr.clear();
+                    menu.showSaveAsDialog = false;
+                }
+                
+                if (button(ctx, mk(buttonRow.ent(), 1),
+                    ComponentConfig{}
+                        .with_label("Cancel")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    menu.saveAsInputStr.clear();
+                    menu.showSaveAsDialog = false;
+                }
+            }
+        }
+        
+        // Go To Bookmark dialog
+        if (menu.showBookmarkListDialog) {
+            constexpr int BOOKMARK_LIST_MODAL_ID = 50007;
+            auto result = afterhours::modal(ctx, mk(entity, BOOKMARK_LIST_MODAL_ID),
+                menu.showBookmarkListDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(400), afterhours::ui::h720(300))
+                    .with_title("Go To Bookmark"));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Query for DocumentComponent
+                auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                                       .whereHasComponent<DocumentComponent>()
+                                       .gen();
+                if (docEntities.empty()) {
+                    menu.showBookmarkListDialog = false;
+                    return;
+                }
+                auto& docComp = docEntities[0].get().get<DocumentComponent>();
+                
+                const auto& bookmarks = docComp.buffer.bookmarks();
+                
+                if (bookmarks.empty()) {
+                    // No bookmarks message
+                    div(ctx, mk(result.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("No bookmarks in document")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+                } else {
+                    // List of bookmarks
+                    auto listContainer = div(ctx, mk(result.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(200)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_render_layer(CONTENT_LAYER));
+                    
+                    int idx = 0;
+                    for (const auto& bookmark : bookmarks) {
+                        if (button(ctx, mk(listContainer.ent(), 1000 + idx),
+                            ComponentConfig{}
+                                .with_label(bookmark.name)
+                                .with_size(ComponentSize{percent(1.0f), h720(32)})
+                                .with_background(Theme::Usage::Surface)
+                                .with_margin(Margin{.bottom = DefaultSpacing::tiny()})
+                                .with_render_layer(CONTENT_LAYER))) {
+                            // Jump to bookmark
+                            if (docComp.buffer.goToBookmark(bookmark.name)) {
+                                toast_notify::success("Jumped to: " + bookmark.name);
+                            } else {
+                                toast_notify::error("Bookmark not found");
+                            }
+                            menu.showBookmarkListDialog = false;
+                        }
+                        idx++;
+                    }
+                }
+                
+                // Close button at bottom
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (button(ctx, mk(buttonRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Close")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    menu.showBookmarkListDialog = false;
+                }
+            }
+        }
     }
 };
 

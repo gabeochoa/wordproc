@@ -202,6 +202,14 @@ struct MenuComponent : public afterhours::BaseComponent {
     int marginBottomMm = 25;
     int marginLeftMm = 25;
     int marginRightMm = 25;
+    
+    // Save As dialog state
+    bool showSaveAsDialog = false;
+    char saveAsInputBuffer[256] = {0};
+    std::string saveAsInputStr;  // For afterhours text_input
+    
+    // Go To Bookmark dialog state
+    bool showBookmarkListDialog = false;
 };
 
 // PageMode is defined in document_settings.h
@@ -260,7 +268,7 @@ struct LayoutComponent : public afterhours::BaseComponent {
 // Component for test mode configuration
 struct TestConfigComponent : public afterhours::BaseComponent {
     bool enabled = false;
-    std::string screenshotDir = "output/screenshots";
+    std::string screenshotDir = "tests/screenshots";
     int frameLimit = 0;
     int frameCount = 0;
 
