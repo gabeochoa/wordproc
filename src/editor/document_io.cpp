@@ -335,6 +335,12 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
         return result;
     }
 
+    // Reject .e2e test files - these should be run using the test framework
+    if (extension == ".e2e") {
+        result.error = "Cannot open E2E test files as documents. Use --test-script to run tests.";
+        return result;
+    }
+
     try {
         nlohmann::json doc = nlohmann::json::parse(raw);
 
