@@ -1,0 +1,63 @@
+# Test: Toolbar Combined Formatting
+# Validates that multiple toolbar button states work together
+
+# Type some text
+type "Testing Combined Formatting"
+wait 1
+
+# Select all text
+select_all
+wait 1
+
+# Apply bold
+key CTRL+B
+wait 1
+validate bold=true
+
+# Apply italic (should have both now)
+key CTRL+I
+wait 1
+validate bold=true
+validate italic=true
+
+# Apply underline (should have all three)
+key CTRL+U
+wait 1
+validate bold=true
+validate italic=true
+validate underline=true
+
+# Take screenshot with all formatting
+screenshot toolbar_all_formatting_active
+
+# Change alignment to center
+key CTRL+E
+wait 1
+validate alignment=center
+
+# Take screenshot with formatting and alignment
+screenshot toolbar_formatted_centered
+
+# Remove italic
+key CTRL+I
+wait 1
+validate bold=true
+validate italic=false
+validate underline=true
+
+# Take screenshot with bold and underline only
+screenshot toolbar_bold_underline_only
+
+# Clear all formatting
+key CTRL+B
+wait 1
+key CTRL+U
+wait 1
+validate bold=false
+validate italic=false
+validate underline=false
+
+# Take screenshot with no formatting
+screenshot toolbar_no_formatting
+
+

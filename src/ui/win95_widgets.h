@@ -79,4 +79,21 @@ struct DialogState {
     std::string inputBuffer;
 };
 
+// Toolbar-specific widgets
+
+// Draw a toolbar button (square icon button)
+// Returns true if clicked
+bool DrawToolbarButton(raylib::Rectangle rect, const char* label, bool enabled = true, bool pressed = false);
+
+// Draw a toolbar separator line
+void DrawToolbarSeparator(int x, int y, int height);
+
+// Draw a dropdown button (for combo boxes like style/font selection)
+// Returns true if clicked
+bool DrawDropdownButton(raylib::Rectangle rect, const char* label, bool open, bool enabled = true);
+
+// Draw a dropdown list (for combo box dropdowns)
+// Returns index of selected item, or -1 if none
+int DrawDropdownList(raylib::Rectangle rect, const std::vector<std::string>& items, int hoveredIndex = -1);
+
 }  // namespace win95

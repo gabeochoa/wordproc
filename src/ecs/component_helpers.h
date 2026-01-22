@@ -65,6 +65,9 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
     layout.screenHeight = h;
 
     float menuHeight = layout.focusMode ? 0.0f : layout.menuBarHeight;
+    float toolbarHeight = layout.focusMode ? 0.0f : layout.toolbarHeight;
+    float formattingBarHeight = layout.focusMode ? 0.0f : layout.formattingBarHeight;
+    float rulerHeight = layout.focusMode ? 0.0f : layout.rulerHeight;
     float statusHeight = layout.focusMode ? 0.0f : layout.statusBarHeight;
 
     layout.titleBar = {0, 0, static_cast<float>(w), layout.titleBarHeight};
@@ -74,9 +77,11 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
                         static_cast<float>(w), statusHeight};
 
     float textTop =
-        layout.titleBarHeight + menuHeight + layout.borderWidth;
+        layout.titleBarHeight + menuHeight + toolbarHeight + formattingBarHeight + 
+        rulerHeight + layout.borderWidth;
     float textHeight = static_cast<float>(h) - layout.titleBarHeight -
-                       menuHeight - statusHeight -
+                       menuHeight - toolbarHeight - formattingBarHeight - 
+                       rulerHeight - statusHeight -
                        2 * layout.borderWidth;
     layout.textArea = {layout.borderWidth, textTop,
                        static_cast<float>(w) - 2 * layout.borderWidth,

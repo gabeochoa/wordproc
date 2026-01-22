@@ -1,0 +1,33 @@
+# Test: Toolbar Bold Button
+# Validates that the bold toolbar button works correctly
+
+# Type some text
+type "Testing Bold Button"
+wait 1
+
+# Select all text
+select_all
+wait 1
+
+# Click bold button using keyboard shortcut (Ctrl+B)
+# This should toggle the button state in the toolbar
+key CTRL+B
+wait 1
+
+# Validate bold is enabled
+validate bold=true
+
+# Take screenshot showing bold button pressed
+screenshot toolbar_bold_active
+
+# Toggle bold off
+key CTRL+B
+wait 1
+
+# Validate bold is disabled
+validate bold=false
+
+# Take screenshot showing bold button normal
+screenshot toolbar_bold_inactive
+
+

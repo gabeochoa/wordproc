@@ -1,0 +1,32 @@
+# Test: Toolbar Underline Button
+# Validates that the underline toolbar button works correctly
+
+# Type some text
+type "Testing Underline Button"
+wait 1
+
+# Select all text
+select_all
+wait 1
+
+# Apply underline using keyboard shortcut (Ctrl+U)
+key CTRL+U
+wait 1
+
+# Validate underline is enabled
+validate underline=true
+
+# Take screenshot showing underline button pressed
+screenshot toolbar_underline_active
+
+# Toggle underline off
+key CTRL+U
+wait 1
+
+# Validate underline is disabled
+validate underline=false
+
+# Take screenshot showing underline button normal
+screenshot toolbar_underline_inactive
+
+

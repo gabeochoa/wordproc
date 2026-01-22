@@ -1,0 +1,72 @@
+# Test: Toolbar Visual Check
+# Captures screenshots of the toolbar in various states for visual verification
+
+# Wait for app to fully initialize
+wait 1
+
+# Take initial screenshot showing all toolbar buttons
+screenshot toolbar_initial_state
+
+# Type some text to enable selection-dependent buttons
+type "Sample text for testing toolbar buttons"
+wait 1
+
+# Take screenshot with text (cut/copy buttons should be disabled)
+screenshot toolbar_with_text
+
+# Select all to enable cut/copy buttons
+select_all
+wait 1
+
+# Take screenshot with selection (cut/copy buttons should be enabled)
+screenshot toolbar_with_selection
+
+# Apply bold
+key CTRL+B
+wait 1
+
+# Take screenshot with bold active
+screenshot toolbar_bold_button_active
+
+# Apply italic and underline
+key CTRL+I
+wait 1
+key CTRL+U
+wait 1
+
+# Take screenshot with multiple format buttons active
+screenshot toolbar_multiple_formats_active
+
+# Change to center alignment
+key CTRL+E
+wait 1
+
+# Take screenshot with center alignment button active
+screenshot toolbar_center_align_active
+
+# Change to right alignment
+key CTRL+R
+wait 1
+
+# Take screenshot with right alignment button active
+screenshot toolbar_right_align_active
+
+# Clear text to test empty state
+select_all
+wait 1
+key DELETE
+wait 1
+
+# Take screenshot of empty document (undo/redo states should change)
+screenshot toolbar_empty_document
+
+# Type something and undo to enable redo button
+type "Test"
+wait 1
+key CTRL+Z
+wait 1
+
+# Take screenshot with redo button enabled
+screenshot toolbar_redo_enabled
+
+

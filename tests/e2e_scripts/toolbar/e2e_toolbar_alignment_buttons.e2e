@@ -1,0 +1,41 @@
+# Test: Toolbar Alignment Buttons
+# Validates that the alignment toolbar buttons work correctly
+
+# Type some text
+type "Testing Alignment Buttons"
+wait 1
+
+# Select all text
+select_all
+wait 1
+
+# Test Left Alignment (Ctrl+L)
+key CTRL+L
+wait 1
+validate alignment=left
+screenshot toolbar_align_left
+
+# Test Center Alignment (Ctrl+E)
+key CTRL+E
+wait 1
+validate alignment=center
+screenshot toolbar_align_center
+
+# Test Right Alignment (Ctrl+R)
+key CTRL+R
+wait 1
+validate alignment=right
+screenshot toolbar_align_right
+
+# Test Justify Alignment (Ctrl+J)
+key CTRL+J
+wait 1
+validate alignment=justify
+screenshot toolbar_align_justify
+
+# Return to left alignment
+key CTRL+L
+wait 1
+validate alignment=left
+
+

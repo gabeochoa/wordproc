@@ -45,8 +45,22 @@ inline raylib::Color DIALOG_TITLE_TEXT = {255, 255, 255, 255};
 
 // Button colors
 inline raylib::Color BUTTON_BG = {192, 192, 192, 255};
+inline raylib::Color BUTTON_FACE = {192, 192, 192, 255};
 inline raylib::Color BUTTON_TEXT = {0, 0, 0, 255};
 inline raylib::Color BUTTON_PRESSED_BG = {128, 128, 128, 255};
+
+// Toolbar colors
+inline raylib::Color TOOLBAR_BG = {192, 192, 192, 255};
+inline raylib::Color TOOLBAR_HOVER_BG = {220, 220, 220, 255};
+inline raylib::Color TOOLBAR_PRESSED_BG = {160, 160, 160, 255};
+inline raylib::Color TOOLBAR_BUTTON_HOVER = {220, 220, 220, 255};
+inline raylib::Color TOOLBAR_BUTTON_PRESSED = {160, 160, 160, 255};
+inline raylib::Color TOOLBAR_SEPARATOR = {128, 128, 128, 255};
+
+// Ruler colors
+inline raylib::Color RULER_BG = {255, 255, 255, 255};
+inline raylib::Color RULER_MARKS = {0, 0, 0, 255};
+inline raylib::Color RULER_TEXT = {0, 0, 0, 255};
 
 // UI Font - initialized in preload, used for all UI text rendering
 inline raylib::Font UI_FONT;
@@ -67,11 +81,19 @@ inline int scaleInt(int baseSize) {
 constexpr int FONT_SIZE = 18;  // UI font size (title, menus, status bar) - increased for better readability
 constexpr int TITLE_BAR_HEIGHT = 24;
 constexpr int MENU_BAR_HEIGHT = 20;
+constexpr int TOOLBAR_HEIGHT = 28;
+constexpr int FORMATTING_BAR_HEIGHT = 28;
+constexpr int RULER_HEIGHT = 20;
 constexpr int STATUS_BAR_HEIGHT = 20;
 constexpr int BORDER_WIDTH = 3;
 constexpr double STATUS_MESSAGE_DURATION =
     3.0;                                      // Seconds to show status messages
 constexpr double CARET_BLINK_INTERVAL = 0.5;  // Seconds between caret blinks
+
+// Toolbar button sizes
+constexpr int TOOLBAR_BUTTON_SIZE = 24;  // Square icon buttons
+constexpr int TOOLBAR_BUTTON_PADDING = 2;
+constexpr int TOOLBAR_SEPARATOR_WIDTH = 2;
 
 // Spacing scale (4/8/16-based rhythm for consistent margins/gutters/padding)
 constexpr int SPACING_XS = 4;   // Extra small: tight spacing, icons

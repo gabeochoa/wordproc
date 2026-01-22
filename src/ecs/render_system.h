@@ -658,6 +658,61 @@ struct EditorRenderSystem
             mutableMenu.helpScrollOffset = 0;
         }
 
+        // Draw horizontal ruler (after toolbars, before text area)
+        if (!layout.focusMode) {
+            float rulerY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + 
+                                               theme::layout::MENU_BAR_HEIGHT + 
+                                               theme::layout::TOOLBAR_HEIGHT + 
+                                               theme::layout::FORMATTING_BAR_HEIGHT);
+            raylib::Rectangle rulerRect = {
+                0, rulerY,
+                static_cast<float>(layout.screenWidth),
+                theme::layout::scale(theme::layout::RULER_HEIGHT)
+            };
+            raylib::DrawRectangleRec(rulerRect, theme::RULER_BG);
+            util::drawSunkenBorder(rulerRect);
+            
+            // Draw ruler marks (inches/centimeters)
+            // For simplicity, use 1 inch = 72 pixels (standard DPI)
+            int rulerStartX = theme::layout::scaleInt(50);  // Offset for left margin
+            int pixelsPerInch = theme::layout::scaleInt(72);
+            int maxInches = (layout.screenWidth - rulerStartX) / pixelsPerInch;
+            
+            for (int inch = 0; inch <= maxInches; ++inch) {
+                int x = rulerStartX + inch * pixelsPerInch;
+                
+                // Draw inch mark (tall line)
+                raylib::DrawLine(x, static_cast<int>(rulerY) + theme::layout::scaleInt(12), 
+                               x, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
+                               theme::RULER_MARKS);
+                
+                // Draw inch number
+                std::string inchStr = std::to_string(inch);
+                int textWidth = theme::MeasureUIText(inchStr.c_str(), 8);
+                theme::DrawUIText(inchStr.c_str(), x - textWidth / 2, 
+                                static_cast<int>(rulerY) + theme::layout::scaleInt(2), 
+                                8, theme::RULER_TEXT);
+                
+                // Draw half-inch marks
+                if (inch < maxInches) {
+                    int halfX = x + pixelsPerInch / 2;
+                    raylib::DrawLine(halfX, static_cast<int>(rulerY) + theme::layout::scaleInt(14), 
+                                   halfX, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
+                                   theme::RULER_MARKS);
+                    
+                    // Draw quarter-inch marks
+                    int quarterX1 = x + pixelsPerInch / 4;
+                    int quarterX2 = x + 3 * pixelsPerInch / 4;
+                    raylib::DrawLine(quarterX1, static_cast<int>(rulerY) + theme::layout::scaleInt(16), 
+                                   quarterX1, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
+                                   theme::RULER_MARKS);
+                    raylib::DrawLine(quarterX2, static_cast<int>(rulerY) + theme::layout::scaleInt(16), 
+                                   quarterX2, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
+                                   theme::RULER_MARKS);
+                }
+            }
+        }
+
         // Draw text area background
         raylib::Rectangle textAreaRect = {layout.textArea.x, layout.textArea.y,
                                           layout.textArea.width,
@@ -731,24 +786,54 @@ struct EditorRenderSystem
             raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
             util::drawRaisedBorder(statusBarRect);
 
-            // Always show document info in status bar
+            // Status bar layout (matching Word 6.0 style)
             CaretPosition caretPos = doc.buffer.caret();
-            ParagraphStyle paraStyle = doc.buffer.currentParagraphStyle();
             TextStats stats = doc.buffer.stats();
-            std::string statusText = std::format(
-                "Ln {}, Col {} | {} | {}{}{}{}| {}pt | {} | Words: {} | Zoom: {}%",
-                caretPos.row + 1, caretPos.column + 1,
-                paragraphStyleName(paraStyle),
-                style.bold ? "B " : "",
-                style.italic ? "I " : "",
-                style.underline ? "U " : "",
-                style.strikethrough ? "S " : "",
-                style.fontSize, style.font, stats.words,
-                static_cast<int>(layout.zoomLevel * 100.0f));
-            drawTextWithRegistry(
-                statusText.c_str(), 4,
-                layout.screenHeight - theme::layout::scaleInt(theme::layout::STATUS_BAR_HEIGHT) + 2,
-                theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
+            int statusY = layout.screenHeight - theme::layout::scaleInt(theme::layout::STATUS_BAR_HEIGHT) + theme::layout::scaleInt(3);
+            int statusFontSize = theme::layout::FONT_SIZE - 4;
+            
+            // Left section: Page/Section info
+            int x = theme::layout::scaleInt(4);
+            std::string pageInfo = std::format("Page 1    Sec 1");
+            drawTextWithRegistry(pageInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
+            x += theme::MeasureUIText(pageInfo.c_str(), statusFontSize) + theme::layout::scaleInt(20);
+            
+            // Line/Column info
+            std::string lineColInfo = std::format("{}/{}", caretPos.row + 1, stats.lines);
+            drawTextWithRegistry(lineColInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
+            x += theme::MeasureUIText(lineColInfo.c_str(), statusFontSize) + theme::layout::scaleInt(20);
+            
+            // Position info (At X")
+            float inchPos = static_cast<float>(caretPos.column) / 72.0f;  // Approximate
+            std::string posInfo = std::format("At {:.1f}\"", inchPos);
+            drawTextWithRegistry(posInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
+            x += theme::MeasureUIText(posInfo.c_str(), statusFontSize) + theme::layout::scaleInt(20);
+            
+            // Line/Column position
+            std::string lnColInfo = std::format("Ln {}    Col {}", caretPos.row + 1, caretPos.column + 1);
+            drawTextWithRegistry(lnColInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
+            
+            // Right section: Status indicators and time
+            int rightX = layout.screenWidth - theme::layout::scaleInt(4);
+            
+            // Time
+            std::time_t now = std::time(nullptr);
+            std::tm* localTime = std::localtime(&now);
+            char timeStr[16];
+            std::strftime(timeStr, sizeof(timeStr), "%I:%M %p", localTime);
+            int timeWidth = theme::MeasureUIText(timeStr, statusFontSize);
+            drawTextWithRegistry(timeStr, rightX - timeWidth, statusY, statusFontSize, theme::TEXT_COLOR);
+            rightX -= timeWidth + theme::layout::scaleInt(20);
+            
+            // Status indicators (REC, MRK, EXT, OVR)
+            const char* indicators[] = {"REC", "MRK", "EXT", "OVR"};
+            for (int i = 3; i >= 0; --i) {
+                int indWidth = theme::MeasureUIText(indicators[i], statusFontSize);
+                // Draw dimmed (inactive) indicators
+                drawTextWithRegistry(indicators[i], rightX - indWidth, statusY, 
+                                   statusFontSize, theme::MENU_DISABLED);
+                rightX -= indWidth + theme::layout::scaleInt(12);
+            }
         }
 
         if (!layout.focusMode) {

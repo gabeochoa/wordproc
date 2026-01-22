@@ -1,0 +1,32 @@
+# Test: Toolbar Italic Button
+# Validates that the italic toolbar button works correctly
+
+# Type some text
+type "Testing Italic Button"
+wait 1
+
+# Select all text
+select_all
+wait 1
+
+# Apply italic using keyboard shortcut (Ctrl+I)
+key CTRL+I
+wait 1
+
+# Validate italic is enabled
+validate italic=true
+
+# Take screenshot showing italic button pressed
+screenshot toolbar_italic_active
+
+# Toggle italic off
+key CTRL+I
+wait 1
+
+# Validate italic is disabled
+validate italic=false
+
+# Take screenshot showing italic button normal
+screenshot toolbar_italic_inactive
+
+

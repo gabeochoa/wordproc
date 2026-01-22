@@ -1,0 +1,53 @@
+# Test: Toolbar Cut/Copy/Paste Buttons
+# Validates that cut, copy, and paste operations work
+
+# Type some text
+type "Text to copy"
+wait 1
+
+# Select all text
+select_all
+wait 1
+
+# Take screenshot with selection
+screenshot toolbar_text_selected
+
+# Copy text (Ctrl+C)
+key CTRL+C
+wait 1
+
+# Move to end
+key END
+wait 1
+
+# Add a space
+type " "
+wait 1
+
+# Paste text (Ctrl+V)
+key CTRL+V
+wait 1
+
+# Validate text was pasted
+validate text=Text to copy Text to copy
+
+# Take screenshot after paste
+screenshot toolbar_after_paste
+
+# Select the first occurrence
+key HOME
+wait 1
+key SHIFT+END
+wait 1
+
+# Cut text (Ctrl+X)
+key CTRL+X
+wait 1
+
+# Validate first part was cut
+validate text= Text to copy
+
+# Take screenshot after cut
+screenshot toolbar_after_cut
+
+

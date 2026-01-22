@@ -225,11 +225,14 @@ struct MenuComponent : public afterhours::BaseComponent {
 // DocumentComponent.docSettings.pageSettings for display They are synced from
 // DocumentSettings on load and saved back on save
 struct LayoutComponent : public afterhours::BaseComponent {
-    float titleBarHeight = 20.0f;
+    float titleBarHeight = 24.0f;   // Base size, will be scaled in updateLayout
     float menuBarHeight = 20.0f;
-    float statusBarHeight = 18.0f;
-    float borderWidth = 2.0f;
-    float textPadding = 4.0f;
+    float toolbarHeight = 28.0f;        // Standard toolbar with icon buttons
+    float formattingBarHeight = 28.0f;  // Formatting toolbar with style/font dropdowns
+    float rulerHeight = 20.0f;          // Horizontal ruler
+    float statusBarHeight = 20.0f;
+    float borderWidth = 3.0f;
+    float textPadding = 8.0f;
 
     // View options
     float zoomLevel = 1.0f;
@@ -300,6 +303,32 @@ struct InputComponent : public afterhours::BaseComponent {
     input::ActionMap actionMap;
 
     InputComponent() : actionMap(input::createDefaultActionMap()) {}
+};
+
+// Component for toolbar state
+struct ToolbarComponent : public afterhours::BaseComponent {
+    // Current selections in dropdowns
+    std::string currentStyle = "Normal";
+    std::string currentFont = "Times New Roman";
+    int currentFontSize = 10;
+    
+    // Formatting button states (track what's active based on current selection)
+    bool boldActive = false;
+    bool italicActive = false;
+    bool underlineActive = false;
+    
+    // Alignment button states
+    int currentAlignment = 0;  // 0=left, 1=center, 2=right, 3=justify
+    
+    // Available options for dropdowns
+    std::vector<std::string> styles = {"Normal", "Heading 1", "Heading 2", "Heading 3", "Title"};
+    std::vector<std::string> fonts = {"Times New Roman", "Arial", "Courier New", "Gaegu", "Gaegu-Bold"};
+    std::vector<int> fontSizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72};
+    
+    // Dropdown open states
+    bool styleDropdownOpen = false;
+    bool fontDropdownOpen = false;
+    bool fontSizeDropdownOpen = false;
 };
 
 }  // namespace ecs

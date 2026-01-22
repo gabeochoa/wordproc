@@ -530,4 +530,333 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
     return result;
 }
 
+// Toolbar-specific widget implementations
+
+// Helper function to draw toolbar icons
+static void DrawToolbarIcon(const char* iconType, int centerX, int centerY, raylib::Color color, bool enabled) {
+    if (!enabled) {
+        color = raylib::Color{128, 128, 128, 255};
+    }
+    
+    int size = theme::layout::scaleInt(14);
+    int lineThickness = std::max(1, theme::layout::scaleInt(1));
+    
+    if (strcmp(iconType, "new") == 0) {
+        // Document icon - rectangle with folded corner
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2, size - 3, size, color);
+        raylib::DrawTriangle(
+            {static_cast<float>(centerX + size/2 - 3), static_cast<float>(centerY - size/2)},
+            {static_cast<float>(centerX + size/2), static_cast<float>(centerY - size/2 + 3)},
+            {static_cast<float>(centerX + size/2 - 3), static_cast<float>(centerY - size/2 + 3)},
+            theme::WINDOW_BG
+        );
+        // Lines on document
+        for (int i = 0; i < 3; i++) {
+            raylib::DrawLineEx(
+                {static_cast<float>(centerX - size/2 + 2), static_cast<float>(centerY - size/2 + 3 + i * 3)},
+                {static_cast<float>(centerX + size/2 - 5), static_cast<float>(centerY - size/2 + 3 + i * 3)},
+                static_cast<float>(lineThickness), theme::WINDOW_BG
+            );
+        }
+    } else if (strcmp(iconType, "open") == 0) {
+        // Folder icon
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2 + 2, size, size - 4, color);
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2, size/2 + 2, 3, color);
+        raylib::DrawRectangle(centerX - size/2 + 2, centerY - size/2 + 4, size - 4, size - 10, theme::WINDOW_BG);
+    } else if (strcmp(iconType, "save") == 0) {
+        // Floppy disk icon
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2, size, size, color);
+        // Label area
+        raylib::DrawRectangle(centerX - size/2 + 2, centerY - size/2 + 1, size - 4, 4, theme::WINDOW_BG);
+        // Disk hole
+        raylib::DrawRectangle(centerX - size/2 + 2, centerY + size/2 - 5, size - 4, 3, theme::WINDOW_BG);
+        // Metal shutter
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2 + size - 6, size, 2, raylib::DARKGRAY);
+    } else if (strcmp(iconType, "print") == 0) {
+        // Printer icon
+        raylib::DrawRectangle(centerX - size/2 + 2, centerY - size/2, size - 4, 3, color);
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2 + 3, size, size/2, color);
+        raylib::DrawRectangle(centerX - size/2 + 2, centerY, size - 4, size/2 - 1, theme::WINDOW_BG);
+        raylib::DrawRectangle(centerX + size/2 - 3, centerY - size/2 + 5, 2, 2, raylib::RED);
+    } else if (strcmp(iconType, "cut") == 0) {
+        // Scissors icon
+        raylib::DrawCircle(centerX - 3, centerY - 3, 2, color);
+        raylib::DrawCircle(centerX - 3, centerY + 3, 2, color);
+        raylib::DrawLineEx({static_cast<float>(centerX - 3), static_cast<float>(centerY - 3)},
+                          {static_cast<float>(centerX + size/2 - 2), static_cast<float>(centerY)}, 
+                          static_cast<float>(lineThickness + 1), color);
+        raylib::DrawLineEx({static_cast<float>(centerX - 3), static_cast<float>(centerY + 3)},
+                          {static_cast<float>(centerX + size/2 - 2), static_cast<float>(centerY)}, 
+                          static_cast<float>(lineThickness + 1), color);
+    } else if (strcmp(iconType, "copy") == 0) {
+        // Two overlapping documents
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2, size - 3, size - 3, theme::WINDOW_BG);
+        raylib::DrawRectangleLines(centerX - size/2, centerY - size/2, size - 3, size - 3, color);
+        raylib::DrawRectangle(centerX - size/2 + 3, centerY - size/2 + 3, size - 3, size - 3, theme::WINDOW_BG);
+        raylib::DrawRectangleLines(centerX - size/2 + 3, centerY - size/2 + 3, size - 3, size - 3, color);
+    } else if (strcmp(iconType, "paste") == 0) {
+        // Clipboard icon
+        raylib::DrawRectangle(centerX - size/2, centerY - size/2 + 3, size, size - 3, color);
+        raylib::DrawRectangle(centerX - 2, centerY - size/2, 4, 4, color);
+        raylib::DrawRectangle(centerX - size/2 + 2, centerY - size/2 + 5, size - 4, size - 8, theme::WINDOW_BG);
+    } else if (strcmp(iconType, "undo") == 0) {
+        // Curved arrow pointing left
+        int arcRadius = size/3;
+        raylib::DrawRing({static_cast<float>(centerX + 2), static_cast<float>(centerY)}, 
+                        arcRadius - lineThickness, arcRadius, 90, 270, 16, color);
+        raylib::DrawTriangle(
+            {static_cast<float>(centerX - size/2 + 3), static_cast<float>(centerY - 2)},
+            {static_cast<float>(centerX - size/2 + 3), static_cast<float>(centerY + 2)},
+            {static_cast<float>(centerX - size/2 - 1), static_cast<float>(centerY)},
+            color
+        );
+    } else if (strcmp(iconType, "redo") == 0) {
+        // Curved arrow pointing right
+        int arcRadius = size/3;
+        raylib::DrawRing({static_cast<float>(centerX - 2), static_cast<float>(centerY)}, 
+                        arcRadius - lineThickness, arcRadius, 270, 450, 16, color);
+        raylib::DrawTriangle(
+            {static_cast<float>(centerX + size/2 - 3), static_cast<float>(centerY - 2)},
+            {static_cast<float>(centerX + size/2 - 3), static_cast<float>(centerY + 2)},
+            {static_cast<float>(centerX + size/2 + 1), static_cast<float>(centerY)},
+            color
+        );
+    } else if (strcmp(iconType, "B") == 0 || strcmp(iconType, "I") == 0 || strcmp(iconType, "U") == 0) {
+        // Text formatting: just draw the letter
+        int fontSize = 13;
+        int textWidth = theme::MeasureUIText(iconType, fontSize);
+        int textX = centerX - textWidth / 2;
+        int textY = centerY - fontSize / 2;
+        if (strcmp(iconType, "B") == 0) {
+            // Draw bold by drawing twice with offset
+            theme::DrawUIText(iconType, textX, textY, fontSize, color);
+            theme::DrawUIText(iconType, textX + 1, textY, fontSize, color);
+        } else {
+            theme::DrawUIText(iconType, textX, textY, fontSize, color);
+            if (strcmp(iconType, "U") == 0) {
+                // Add underline
+                raylib::DrawLineEx(
+                    {static_cast<float>(centerX - size/2 + 2), static_cast<float>(centerY + size/2 - 2)},
+                    {static_cast<float>(centerX + size/2 - 2), static_cast<float>(centerY + size/2 - 2)},
+                    static_cast<float>(lineThickness), color
+                );
+            }
+        }
+    } else if (strcmp(iconType, "L") == 0 || strcmp(iconType, "C") == 0 || 
+               strcmp(iconType, "R") == 0 || strcmp(iconType, "J") == 0) {
+        // Alignment icons: lines representing text
+        int lineLen = size;
+        int spacing = 3;
+        if (strcmp(iconType, "L") == 0) {
+            // Left align
+            for (int i = 0; i < 3; i++) {
+                int len = (i == 1) ? lineLen - 3 : lineLen;
+                raylib::DrawLineEx(
+                    {static_cast<float>(centerX - size/2), static_cast<float>(centerY - 4 + i * spacing)},
+                    {static_cast<float>(centerX - size/2 + len), static_cast<float>(centerY - 4 + i * spacing)},
+                    static_cast<float>(lineThickness), color
+                );
+            }
+        } else if (strcmp(iconType, "C") == 0) {
+            // Center align
+            for (int i = 0; i < 3; i++) {
+                int len = (i == 1) ? lineLen - 4 : lineLen - 2;
+                raylib::DrawLineEx(
+                    {static_cast<float>(centerX - len/2), static_cast<float>(centerY - 4 + i * spacing)},
+                    {static_cast<float>(centerX + len/2), static_cast<float>(centerY - 4 + i * spacing)},
+                    static_cast<float>(lineThickness), color
+                );
+            }
+        } else if (strcmp(iconType, "R") == 0) {
+            // Right align
+            for (int i = 0; i < 3; i++) {
+                int len = (i == 1) ? lineLen - 3 : lineLen;
+                raylib::DrawLineEx(
+                    {static_cast<float>(centerX + size/2 - len), static_cast<float>(centerY - 4 + i * spacing)},
+                    {static_cast<float>(centerX + size/2), static_cast<float>(centerY - 4 + i * spacing)},
+                    static_cast<float>(lineThickness), color
+                );
+            }
+        } else if (strcmp(iconType, "J") == 0) {
+            // Justify
+            for (int i = 0; i < 3; i++) {
+                raylib::DrawLineEx(
+                    {static_cast<float>(centerX - size/2), static_cast<float>(centerY - 4 + i * spacing)},
+                    {static_cast<float>(centerX + size/2), static_cast<float>(centerY - 4 + i * spacing)},
+                    static_cast<float>(lineThickness), color
+                );
+            }
+        }
+    } else {
+        // Fallback: draw text label
+        int fontSize = 10;
+        int textWidth = theme::MeasureUIText(iconType, fontSize);
+        int textX = centerX - textWidth / 2;
+        int textY = centerY - fontSize / 2;
+        theme::DrawUIText(iconType, textX, textY, fontSize, color);
+    }
+}
+
+bool DrawToolbarButton(raylib::Rectangle rect, const char* icon, bool enabled, bool pressed) {
+    bool clicked = false;
+    ButtonState state = enabled ? ButtonState::Normal : ButtonState::Disabled;
+
+    raylib::Vector2 mousePos = input::getMousePosition();
+    bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
+    bool pressing = hover && IsMouseButtonDown(raylib::MOUSE_LEFT_BUTTON);
+
+    if (enabled) {
+        if (pressing || pressed) {
+            state = ButtonState::Pressed;
+        } else if (hover) {
+            state = ButtonState::Hover;
+            if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
+                clicked = true;
+            }
+        }
+    }
+
+    // Draw button background with better visual distinction
+    raylib::Color bgColor = theme::BUTTON_FACE;
+    if (state == ButtonState::Hover && !pressed) bgColor = theme::TOOLBAR_HOVER_BG;
+    if (state == ButtonState::Pressed || pressed) bgColor = theme::TOOLBAR_PRESSED_BG;
+    
+    raylib::DrawRectangleRec(rect, bgColor);
+
+    // Draw 3D border based on state (more pronounced)
+    if (state == ButtonState::Pressed || pressed) {
+        DrawSunkenBorder(rect, theme::layout::scaleInt(2));
+    } else if (state == ButtonState::Hover || state == ButtonState::Normal) {
+        DrawRaisedBorder(rect, theme::layout::scaleInt(2));
+    }
+
+    // Draw icon
+    int centerX = static_cast<int>(rect.x + rect.width / 2);
+    int centerY = static_cast<int>(rect.y + rect.height / 2);
+
+    // Offset icon when pressed
+    if (state == ButtonState::Pressed || pressed) {
+        centerX += theme::layout::scaleInt(1);
+        centerY += theme::layout::scaleInt(1);
+    }
+
+    raylib::Color iconColor = enabled ? theme::BUTTON_TEXT : theme::MENU_DISABLED;
+    DrawToolbarIcon(icon, centerX, centerY, iconColor, enabled);
+
+    return clicked;
+}
+
+void DrawToolbarSeparator(int x, int y, int height) {
+    int scaledHeight = theme::layout::scaleInt(height);
+    int scaledY = theme::layout::scaleInt(y);
+    int scaledX = theme::layout::scaleInt(x);
+    
+    // Draw a vertical separator line with 3D effect
+    raylib::DrawLine(scaledX, scaledY + 2, scaledX, scaledY + scaledHeight - 2, theme::BORDER_DARK);
+    raylib::DrawLine(scaledX + 1, scaledY + 2, scaledX + 1, scaledY + scaledHeight - 2, theme::BORDER_LIGHT);
+}
+
+bool DrawDropdownButton(raylib::Rectangle rect, const char* label, bool open, bool enabled) {
+    bool clicked = false;
+    ButtonState state = enabled ? ButtonState::Normal : ButtonState::Disabled;
+
+    raylib::Vector2 mousePos = input::getMousePosition();
+    bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
+
+    if (enabled) {
+        if (open) {
+            state = ButtonState::Pressed;
+        } else if (hover) {
+            state = ButtonState::Hover;
+            if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
+                clicked = true;
+            }
+        }
+    }
+
+    // Draw button background
+    raylib::DrawRectangleRec(rect, theme::BUTTON_BG);
+
+    // Draw 3D border
+    if (state == ButtonState::Pressed || open) {
+        DrawSunkenBorder(rect, theme::layout::scaleInt(2));
+    } else {
+        DrawRaisedBorder(rect, theme::layout::scaleInt(2));
+    }
+
+    // Draw label text (left-aligned)
+    int fontSize = 12;
+    int textX = static_cast<int>(rect.x) + theme::layout::scaleInt(4);
+    int textY = static_cast<int>(rect.y + (rect.height - theme::layout::scaleInt(fontSize)) / 2);
+    
+    if (state == ButtonState::Pressed || open) {
+        textX += theme::layout::scaleInt(1);
+        textY += theme::layout::scaleInt(1);
+    }
+    
+    raylib::Color textColor = enabled ? theme::TEXT_COLOR : theme::MENU_DISABLED;
+    theme::DrawUIText(label, textX, textY, fontSize, textColor);
+
+    // Draw dropdown arrow (small triangle on the right)
+    int arrowX = static_cast<int>(rect.x + rect.width) - theme::layout::scaleInt(14);
+    int arrowY = static_cast<int>(rect.y + rect.height / 2);
+    
+    if (state == ButtonState::Pressed || open) {
+        arrowX += theme::layout::scaleInt(1);
+        arrowY += theme::layout::scaleInt(1);
+    }
+    
+    // Draw downward pointing triangle
+    raylib::DrawTriangle(
+        {static_cast<float>(arrowX), static_cast<float>(arrowY - 2)},
+        {static_cast<float>(arrowX + 6), static_cast<float>(arrowY - 2)},
+        {static_cast<float>(arrowX + 3), static_cast<float>(arrowY + 2)},
+        textColor
+    );
+
+    return clicked;
+}
+
+int DrawDropdownList(raylib::Rectangle rect, const std::vector<std::string>& items, int /*hoveredIndex*/) {
+    int selectedItem = -1;
+    
+    // Draw dropdown background
+    raylib::DrawRectangleRec(rect, theme::WINDOW_BG);
+    DrawSunkenBorder(rect, theme::layout::scaleInt(2));
+
+    // Draw items
+    raylib::Vector2 mousePos = input::getMousePosition();
+    int itemHeight = theme::layout::scaleInt(20);
+    int fontSize = 12;
+    
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        int itemY = static_cast<int>(rect.y) + theme::layout::scaleInt(2) + static_cast<int>(i) * itemHeight;
+        int itemX = static_cast<int>(rect.x) + theme::layout::scaleInt(4);
+        
+        raylib::Rectangle itemRect = {
+            rect.x + theme::layout::scale(2),
+            static_cast<float>(itemY),
+            rect.width - theme::layout::scale(4),
+            static_cast<float>(itemHeight)
+        };
+        
+        bool hover = raylib::CheckCollisionPointRec(mousePos, itemRect);
+        
+        if (hover) {
+            raylib::DrawRectangleRec(itemRect, theme::MENU_HOVER);
+            theme::DrawUIText(items[i].c_str(), itemX, itemY + theme::layout::scaleInt(3), 
+                            fontSize, theme::MENU_TEXT_HOVER);
+            
+            if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
+                selectedItem = static_cast<int>(i);
+            }
+        } else {
+            theme::DrawUIText(items[i].c_str(), itemX, itemY + theme::layout::scaleInt(3), 
+                            fontSize, theme::TEXT_COLOR);
+        }
+    }
+
+    return selectedItem;
+}
+
 }  // namespace win95

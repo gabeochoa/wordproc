@@ -13,6 +13,7 @@
 #include "ecs/menu_ui_system.h"
 #include "ecs/render_system.h"
 #include "ecs/test_systems.h"
+#include "ecs/toolbar_system.h"
 #include "editor/document_io.h"
 #include "editor/text_buffer.h"
 #include "editor/text_layout.h"
@@ -76,8 +77,12 @@ int main(int argc, char* argv[]) {
     float e2eTimeout = 30.0f;  // Default 30 second timeout for E2E tests
     // Parse --screenshot-dir, --frame-limit, --test-script, and --test-script-dir arguments
     // argh uses the params() map for named parameters
+    fprintf(stderr, "[DEBUG ARGS] params().size() = %zu\n", cmdl.params().size());
+    fflush(stderr);
     for (auto& [name, value] : cmdl.params()) {
         LOG_INFO("Parsed param: %s = %s", name.c_str(), value.c_str());
+        fprintf(stderr, "[DEBUG ARGS] param: '%s' = '%s'\n", name.c_str(), value.c_str());
+        fflush(stderr);
         if (name == "screenshot-dir") {
             screenshotDir = value;
         } else if (name == "frame-limit") {
@@ -257,6 +262,10 @@ int main(int argc, char* argv[]) {
     testComp.frameLimit = frameLimit;
     testComp.fpsTestMode = fpsTestMode;
 
+    // Add toolbar component
+    auto& toolbarComp = editorEntity.addComponent<ecs::ToolbarComponent>();
+    (void)toolbarComp;  // Initialize with defaults
+
     // Setup SystemManager with all systems
     SystemManager systemManager;
 
@@ -295,6 +304,9 @@ int main(int argc, char* argv[]) {
     // EditorRenderSystem must be first - it calls BeginDrawing() in once()
     systemManager.register_render_system(
         std::make_unique<ecs::EditorRenderSystem>());
+    // Toolbar render system (draws toolbars after main render)
+    systemManager.register_render_system(
+        std::make_unique<ecs::ToolbarRenderSystem>());
     // Afterhours UI render systems (renders buttons, divs, etc.)
     ui_imm::registerUIRenderSystems(systemManager);
     // Modal backdrop rendering (draws dimmed overlay behind modals)
@@ -319,12 +331,23 @@ int main(int argc, char* argv[]) {
     
     // Initialize E2E script runner if script specified
     e2e::ScriptRunner scriptRunner;
+    fprintf(stderr, "[E2E DEBUG MAIN] testScriptPath='%s', testScriptDir='%s'\n", 
+            testScriptPath.c_str(), testScriptDir.c_str());
+    fflush(stderr);
+    
     if (!testScriptDir.empty()) {
         // Batch mode: load all scripts from directory (with menu/layout support)
+        fprintf(stderr, "[E2E DEBUG MAIN] Initializing batch runner\n");
+        fflush(stderr);
         e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, menuComp, layoutComp, screenshotDir);
     } else if (!testScriptPath.empty()) {
         // Single script mode (with menu/layout support)
+        fprintf(stderr, "[E2E DEBUG MAIN] Initializing single script runner for: %s\n", testScriptPath.c_str());
+        fflush(stderr);
         e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, screenshotDir);
+    } else {
+        fprintf(stderr, "[E2E DEBUG MAIN] No test script specified\n");
+        fflush(stderr);
     }
     
     // Set E2E timeout (default 30s, can be increased for large document tests)
@@ -428,6 +451,12 @@ int main(int argc, char* argv[]) {
             // Note: Debug overlay not yet supported by afterhours E2ERunner
             // testComp.e2eDebugOverlay would be set here if supported
             
+            static int tickCount = 0;
+            tickCount++;
+            if (tickCount <= 5) {
+                fprintf(stderr, "[E2E DEBUG] Calling scriptRunner.tick() #%d\n", tickCount);
+                fflush(stderr);
+            }
             scriptRunner.tick();
             
             // If script finished, print results and exit

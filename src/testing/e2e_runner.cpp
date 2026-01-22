@@ -565,12 +565,22 @@ void initializeRunner(
     LOG_INFO("Loading E2E test script: %s", scriptPath.c_str());
     runner.load_script(scriptPath);
     
+    fprintf(stderr, "[E2E DEBUG] Script loaded. is_finished=%d, hasCommands=%d\n", 
+            runner.is_finished(), runner.hasCommands());
+    fflush(stderr);
+    
     if (!!runner.is_finished()) {
         LOG_WARNING("No commands found in test script: %s", scriptPath.c_str());
+        fprintf(stderr, "[E2E DEBUG] Runner is finished immediately after loading\n");
+        fflush(stderr);
         return;
     }
     
+    fprintf(stderr, "[E2E DEBUG] Setting up callbacks for script\n");
+    fflush(stderr);
     setupCallbacksEx(runner, docComp, menuComp, layoutComp, screenshotDir);
+    fprintf(stderr, "[E2E DEBUG] Callbacks setup complete\n");
+    fflush(stderr);
 }
 
 void initializeRunnerBatch(

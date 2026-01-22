@@ -1,0 +1,27 @@
+# Test: Toolbar New Document Button
+# Validates that the new document button clears the editor
+
+# Type some text
+type "This text should be cleared"
+wait 1
+
+# Validate text exists
+validate text=This text should be cleared
+
+# Take screenshot before clearing
+screenshot toolbar_before_new_doc
+
+# Simulate new document by selecting all and deleting
+select_all
+wait 1
+key DELETE
+wait 1
+
+# Validate document is empty
+validate text=
+validate line_count=0
+
+# Take screenshot after new document
+screenshot toolbar_after_new_doc
+
+

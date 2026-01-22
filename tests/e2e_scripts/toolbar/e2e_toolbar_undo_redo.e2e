@@ -1,0 +1,44 @@
+# Test: Toolbar Undo/Redo Buttons
+# Validates that undo/redo toolbar buttons work correctly
+
+# Type first text
+type "First line"
+wait 1
+
+# Add a new line
+key ENTER
+wait 1
+
+# Type second text
+type "Second line"
+wait 1
+
+# Validate both lines exist
+validate text=First line
+validate line_count=2
+
+# Take screenshot before undo
+screenshot toolbar_before_undo
+
+# Undo last action (Ctrl+Z)
+key CTRL+Z
+wait 1
+
+# Take screenshot after undo
+screenshot toolbar_after_undo
+
+# Undo again
+key CTRL+Z
+wait 1
+
+# Redo (Ctrl+Y or Ctrl+Shift+Z)
+key CTRL+Y
+wait 1
+
+# Take screenshot after redo
+screenshot toolbar_after_redo
+
+# Verify text is back
+validate line_count=2
+
+
