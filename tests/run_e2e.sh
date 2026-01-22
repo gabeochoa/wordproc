@@ -73,6 +73,55 @@ echo "   Wordproc E2E Test Runner"
 echo "=============================================="
 echo ""
 
+# Check for display/GUI access
+check_display_access() {
+    local os_type="$(uname -s)"
+    
+    if [ "$os_type" = "Darwin" ]; then
+        # macOS: Check if we can access the window server
+        # Try to get window list - this will fail if no GUI access
+        if ! /usr/bin/osascript -e 'tell application "System Events" to return name of first process' &>/dev/null; then
+            # Fallback: check if we're in a SSH session without display forwarding
+            if [ -n "$SSH_CONNECTION" ] && [ -z "$DISPLAY" ]; then
+                echo -e "${RED}ERROR: No GUI access available.${NC}"
+                echo ""
+                echo "E2E tests require a graphical display to run."
+                echo "You appear to be in an SSH session without display forwarding."
+                echo ""
+                echo "Options:"
+                echo "  1. Run tests locally on a machine with a display"
+                echo "  2. Use SSH with X11 forwarding: ssh -X user@host"
+                echo "  3. Use a virtual display (e.g., Xvfb on Linux)"
+                echo ""
+                return 1
+            fi
+        fi
+    elif [ "$os_type" = "Linux" ]; then
+        # Linux: Check if DISPLAY is set
+        if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+            echo -e "${RED}ERROR: No display available (DISPLAY and WAYLAND_DISPLAY not set).${NC}"
+            echo ""
+            echo "E2E tests require a graphical display to run."
+            echo ""
+            echo "Options:"
+            echo "  1. Run tests on a machine with a display"
+            echo "  2. Use Xvfb for headless testing:"
+            echo "     Xvfb :99 -screen 0 1024x768x24 &"
+            echo "     export DISPLAY=:99"
+            echo "     $0 $@"
+            echo ""
+            return 1
+        fi
+    fi
+    
+    return 0
+}
+
+# Verify GUI access before proceeding
+if ! check_display_access; then
+    exit 1
+fi
+
 # Check if executable exists
 if [ ! -f "$EXECUTABLE" ]; then
     echo -e "${YELLOW}Building application...${NC}"
@@ -139,7 +188,18 @@ echo ""
 
 # Run all scripts in batch mode from project root
 set +e
-cd "$PROJECT_DIR" && "$EXECUTABLE" \
+cd "$PROJECT_DIR"
+
+# Run with timeout wrapper to catch hung processes
+if command -v timeout &>/dev/null; then
+    # Use GNU timeout if available
+    TIMEOUT_CMD="timeout $((TIMEOUT + 30))"
+else
+    # No timeout command, run directly
+    TIMEOUT_CMD=""
+fi
+
+$TIMEOUT_CMD "$EXECUTABLE" \
     --test-mode \
     --test-script-dir="$TEMP_TEST_DIR" \
     --screenshot-dir="$SCREENSHOT_DIR" \
@@ -147,6 +207,32 @@ cd "$PROJECT_DIR" && "$EXECUTABLE" \
     2>&1 | tee "$LOG_FILE"
 exit_code=${PIPESTATUS[0]}
 set -e
+
+# Check for permission-related failures
+if [ $exit_code -eq 124 ]; then
+    echo ""
+    echo -e "${RED}ERROR: Test execution timed out.${NC}"
+    echo "This may indicate the application couldn't open a window."
+    echo ""
+    echo "Possible causes:"
+    echo "  - Running in a sandboxed environment without display access"
+    echo "  - Screen recording/accessibility permissions not granted (macOS)"
+    echo "  - No window manager running"
+    echo ""
+fi
+
+# Check if log file is empty or shows no test output
+if [ -f "$LOG_FILE" ]; then
+    if ! grep -q "\[PASS\]\|\[FAIL\]\|E2E" "$LOG_FILE" 2>/dev/null; then
+        if [ $exit_code -ne 0 ]; then
+            echo ""
+            echo -e "${YELLOW}WARNING: No test output detected in log.${NC}"
+            echo "The application may have failed to start properly."
+            echo "Check if GUI/display permissions are configured correctly."
+            echo ""
+        fi
+    fi
+fi
 
 # Clean up temp directory
 rm -rf "$TEMP_TEST_DIR"

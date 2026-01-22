@@ -1,0 +1,13 @@
+# Test: Wrong alignment validation
+# This test validates that alignment validation catches incorrect value
+# Expected: FAIL (left alignment is default, but validation expects center)
+
+type "Left aligned text"
+wait 2
+
+# Don't change alignment (defaults to left)
+
+# This validation should fail - alignment is "left", not "center"
+validate alignment=center
+
+

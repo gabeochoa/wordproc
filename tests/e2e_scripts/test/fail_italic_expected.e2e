@@ -1,0 +1,15 @@
+# Test: Italic expected but not applied
+# This test validates that formatting validation catches missing italic
+# Expected: FAIL (italic never applied, but validation expects it)
+
+type "Test text"
+wait 2
+
+# Select all but DON'T apply italic
+select_all
+wait 1
+
+# This validation should fail - we didn't apply italic
+validate italic=true
+
+

@@ -1,0 +1,15 @@
+# Test: Typo in property name detection
+# This test validates that misspelled property names cause test failures
+# Expected: FAIL (test should fail because "boldd" is not a valid property)
+
+type "Hello"
+wait 2
+
+# Apply bold
+key CTRL+B
+wait 1
+
+# This validation should fail - typo in property name (boldd instead of bold)
+validate boldd=true
+
+

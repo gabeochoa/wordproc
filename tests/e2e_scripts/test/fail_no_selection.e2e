@@ -1,0 +1,13 @@
+# Test: Selection expected but not made
+# This test validates that selection validation catches missing selection
+# Expected: FAIL (no selection made, but validation expects it)
+
+type "Some text to test"
+wait 2
+
+# Don't select anything
+
+# This validation should fail - no selection exists
+validate has_selection=true
+
+

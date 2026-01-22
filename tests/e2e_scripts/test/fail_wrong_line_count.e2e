@@ -1,0 +1,11 @@
+# Test: Wrong line count validation
+# This test validates that line count validation catches incorrect value
+# Expected: FAIL (1 line exists, but validation expects 5)
+
+type "Single line of text"
+wait 2
+
+# This validation should fail - only 1 line, not 5
+validate line_count=5
+
+

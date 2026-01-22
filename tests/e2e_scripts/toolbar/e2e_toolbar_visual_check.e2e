@@ -1,5 +1,5 @@
 # Test: Toolbar Visual Check
-# Captures screenshots of the toolbar in various states for visual verification
+# Captures screenshots of the toolbar in various states with validation
 
 # Wait for app to fully initialize
 wait 1
@@ -7,9 +7,18 @@ wait 1
 # Take initial screenshot showing all toolbar buttons
 screenshot toolbar_initial_state
 
+# Validate initial state - no text, no formatting
+validate text=
+validate bold=false
+validate italic=false
+validate underline=false
+
 # Type some text to enable selection-dependent buttons
 type "Sample text for testing toolbar buttons"
 wait 1
+
+# Validate text was typed
+validate line_count=1
 
 # Take screenshot with text (cut/copy buttons should be disabled)
 screenshot toolbar_with_text
@@ -18,12 +27,18 @@ screenshot toolbar_with_text
 select_all
 wait 1
 
+# Validate selection exists
+validate has_selection=true
+
 # Take screenshot with selection (cut/copy buttons should be enabled)
 screenshot toolbar_with_selection
 
 # Apply bold
 key CTRL+B
 wait 1
+
+# Validate bold is active
+validate bold=true
 
 # Take screenshot with bold active
 screenshot toolbar_bold_button_active
@@ -34,6 +49,11 @@ wait 1
 key CTRL+U
 wait 1
 
+# Validate all three formats are active
+validate bold=true
+validate italic=true
+validate underline=true
+
 # Take screenshot with multiple format buttons active
 screenshot toolbar_multiple_formats_active
 
@@ -41,12 +61,18 @@ screenshot toolbar_multiple_formats_active
 key CTRL+E
 wait 1
 
+# Validate center alignment
+validate alignment=center
+
 # Take screenshot with center alignment button active
 screenshot toolbar_center_align_active
 
 # Change to right alignment
 key CTRL+R
 wait 1
+
+# Validate right alignment
+validate alignment=right
 
 # Take screenshot with right alignment button active
 screenshot toolbar_right_align_active
@@ -57,6 +83,9 @@ wait 1
 key DELETE
 wait 1
 
+# Validate text was deleted
+validate text=
+
 # Take screenshot of empty document (undo/redo states should change)
 screenshot toolbar_empty_document
 
@@ -66,7 +95,9 @@ wait 1
 key CTRL+Z
 wait 1
 
+# Validate undo worked - text should be empty again
+validate text=
+
 # Take screenshot with redo button enabled
 screenshot toolbar_redo_enabled
-
 

@@ -1,0 +1,11 @@
+# Test: Wrong text content validation
+# This test validates that text content validation catches incorrect text
+# Expected: FAIL (typed "Hello" but validation expects "Goodbye")
+
+type "Hello"
+wait 2
+
+# This validation should fail - wrong expected text
+validate text=Goodbye
+
+
