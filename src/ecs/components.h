@@ -212,6 +212,10 @@ struct MenuComponent : public afterhours::BaseComponent {
     
     // Go To Bookmark dialog state
     bool showBookmarkListDialog = false;
+    
+    // Settings dialog
+    bool showSettingsDialog = false;
+    std::string uiScaleInputStr;  // For text input (percentage value)
 };
 
 // PageMode is defined in document_settings.h

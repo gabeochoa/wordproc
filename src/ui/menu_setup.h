@@ -247,6 +247,14 @@ inline std::vector<win95::Menu> createMenuBar(
     toolsMenu.items = {{"Word Count...", "", true, false, nullptr}};
     menus.push_back(toolsMenu);
 
+    // Settings menu
+    win95::Menu settingsMenu;
+    settingsMenu.label = "Settings";
+    settingsMenu.items = {{"UI Scale...", "", true, false, nullptr},           // 0
+                          {"", "", false, true, nullptr},                      // 1 Separator
+                          {"Preferences...", "", false, false, nullptr}};      // 2 (disabled for now)
+    menus.push_back(settingsMenu);
+
     return menus;
 }
 

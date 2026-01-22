@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../rl.h"
+#include "../settings.h"
 
 // Win95-style color theme with Mac OS 3.1 accents
 // All colors are centralized here for easy theming
@@ -53,6 +54,16 @@ inline bool UI_FONT_LOADED = false;
 
 // UI layout constants
 namespace layout {
+// Base UI scaling functions - multiply all UI sizes by Settings ui_scale
+inline float scale(float baseSize) {
+    return baseSize * Settings::get().get_ui_scale();
+}
+
+inline int scaleInt(int baseSize) {
+    return static_cast<int>(scale(static_cast<float>(baseSize)));
+}
+
+// Base sizes (before scaling)
 constexpr int FONT_SIZE = 18;  // UI font size (title, menus, status bar) - increased for better readability
 constexpr int TITLE_BAR_HEIGHT = 24;
 constexpr int MENU_BAR_HEIGHT = 20;
@@ -82,12 +93,14 @@ void applyDarkMode(bool enabled);
 
 // Helper function to draw text with the UI font
 // Falls back to raylib default font if UI_FONT not loaded
-inline void DrawUIText(const char* text, int x, int y, int fontSize, raylib::Color color) {
+// Automatically applies UI scaling to font size
+inline void DrawUIText(const char* text, int x, int y, int baseFontSize, raylib::Color color) {
+    int scaledSize = layout::scaleInt(baseFontSize);
     if (UI_FONT_LOADED) {
         raylib::DrawTextEx(UI_FONT, text, {static_cast<float>(x), static_cast<float>(y)}, 
-                          static_cast<float>(fontSize), 1.0f, color);
+                          static_cast<float>(scaledSize), 1.0f, color);
     } else {
-        raylib::DrawText(text, x, y, fontSize, color);
+        raylib::DrawText(text, x, y, scaledSize, color);
     }
 }
 
@@ -97,12 +110,14 @@ inline void DrawUIText(const std::string& text, int x, int y, int fontSize, rayl
 }
 
 // Helper to measure text with UI font
-inline int MeasureUIText(const char* text, int fontSize) {
+// Automatically applies UI scaling to font size
+inline int MeasureUIText(const char* text, int baseFontSize) {
+    int scaledSize = layout::scaleInt(baseFontSize);
     if (UI_FONT_LOADED) {
-        raylib::Vector2 size = raylib::MeasureTextEx(UI_FONT, text, static_cast<float>(fontSize), 1.0f);
+        raylib::Vector2 size = raylib::MeasureTextEx(UI_FONT, text, static_cast<float>(scaledSize), 1.0f);
         return static_cast<int>(size.x);
     } else {
-        return raylib::MeasureText(text, fontSize);
+        return raylib::MeasureText(text, scaledSize);
     }
 }
 

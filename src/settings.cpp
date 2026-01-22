@@ -18,6 +18,7 @@ struct S_Data {
 
     bool fullscreen_enabled = false;
     std::vector<std::string> recent_files;
+    float ui_scale = 1.0f;  // UI scaling factor (0.5 - 2.0)
 
     std::filesystem::path loaded_from;
 };
@@ -42,6 +43,7 @@ void to_json(nlohmann::json &j, const S_Data &data) {
     j["resolution"] = rez_j;
     j["fullscreen_enabled"] = data.fullscreen_enabled;
     j["recent_files"] = data.recent_files;
+    j["ui_scale"] = data.ui_scale;
 }
 
 void from_json(const nlohmann::json &j, S_Data &data) {
@@ -51,6 +53,9 @@ void from_json(const nlohmann::json &j, S_Data &data) {
     }
     if (j.contains("recent_files")) {
         data.recent_files = j.at("recent_files").get<std::vector<std::string>>();
+    }
+    if (j.contains("ui_scale")) {
+        data.ui_scale = j.at("ui_scale");
     }
 }
 
@@ -116,6 +121,16 @@ void Settings::add_recent_file(const std::string& path) {
 
 void Settings::clear_recent_files() {
     data->recent_files.clear();
+    save_if_auto();
+}
+
+float Settings::get_ui_scale() const {
+    return data->ui_scale;
+}
+
+void Settings::set_ui_scale(float scale) {
+    // Clamp to valid range
+    data->ui_scale = std::max(0.5f, std::min(2.0f, scale));
     save_if_auto();
 }
 

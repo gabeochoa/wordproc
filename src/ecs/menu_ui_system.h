@@ -106,9 +106,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             ComponentConfig{}
                 .with_debug_name("menu_bar_container")
                 .with_size(ComponentSize{pixels(static_cast<float>(screenWidth)), 
-                                        pixels(static_cast<float>(theme::layout::MENU_BAR_HEIGHT))})
+                                        pixels(theme::layout::scale(theme::layout::MENU_BAR_HEIGHT))})
                 .with_absolute_position()
-                .with_translate(0.0f, static_cast<float>(theme::layout::TITLE_BAR_HEIGHT))
+                .with_translate(0.0f, theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT))
                 .with_flex_direction(FlexDirection::Row)
                 .with_custom_background(toAhColor(theme::MENU_BG)));
 
@@ -116,8 +116,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         (void)menuBar;  // Menu bar container used for background only
         
         // Track X position for header buttons
-        float headerX = 4.0f;
-        float headerY = static_cast<float>(theme::layout::TITLE_BAR_HEIGHT);
+        float headerX = theme::layout::scale(4.0f);
+        float headerY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT);
         
         // Render each menu header button (absolute positioned to avoid layout issues)
         for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
@@ -137,7 +137,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_debug_name("menu_header_" + menuItem.label)
                     .with_label(menuItem.label)
                     .with_size(ComponentSize{pixels(buttonWidth), 
-                                            pixels(static_cast<float>(theme::layout::MENU_BAR_HEIGHT))})
+                                            pixels(theme::layout::scale(theme::layout::MENU_BAR_HEIGHT))})
                     .with_absolute_position()
                     .with_translate(headerX, headerY)
                     .with_custom_background(isOpen ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
@@ -154,17 +154,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             if (!menuItem.open) continue;
             
             // Calculate dropdown position
-            float dropdownX = 4.0f;
+            float dropdownX = theme::layout::scale(4.0f);
             for (size_t i = 0; i < menuIdx; ++i) {
                 dropdownX += static_cast<float>(menu.menus[i].label.length() * 8 + 16);
             }
-            float dropdownY = static_cast<float>(theme::layout::TITLE_BAR_HEIGHT + 
+            float dropdownY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + 
                                                   theme::layout::MENU_BAR_HEIGHT);
             
             // Count non-separator items for height calculation
             float dropdownHeight = 0;
             for (const auto& item : menuItem.items) {
-                dropdownHeight += item.separator ? 8.0f : 20.0f;
+                dropdownHeight += item.separator ? theme::layout::scale(8.0f) : theme::layout::scale(20.0f);
             }
             
             // Calculate max width based on content
@@ -226,20 +226,20 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     
                     // Menu item button - absolute positioned with explicit coordinates
                     // Create button for Afterhours UI (not for click handling - that's done by win95::DrawDropdownMenu)
-                    button(ctx, mk(entity, 2000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
-                        ComponentConfig{}
-                            .with_debug_name("item_" + item.label)
-                            .with_label(fullLabel)
-                            .with_size(ComponentSize{pixels(maxWidth), pixels(20.0f)})
-                            .with_absolute_position()
-                            .with_translate(dropdownX, itemY)
-                            .with_custom_background(toAhColor(theme::MENU_BG))
-                            .with_custom_text_color(item.enabled ? toAhColor(theme::MENU_TEXT)
-                                                                  : toAhColor(theme::MENU_DISABLED))
-                            .with_alignment(afterhours::ui::TextAlignment::Left)
-                            .with_render_layer(11));
-                    
-                    itemY += 20.0f;
+                button(ctx, mk(entity, 2000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
+                    ComponentConfig{}
+                        .with_debug_name("item_" + item.label)
+                        .with_label(fullLabel)
+                        .with_size(ComponentSize{pixels(maxWidth), pixels(theme::layout::scale(20.0f))})
+                        .with_absolute_position()
+                        .with_translate(dropdownX, itemY)
+                        .with_custom_background(toAhColor(theme::MENU_BG))
+                        .with_custom_text_color(item.enabled ? toAhColor(theme::MENU_TEXT)
+                                                              : toAhColor(theme::MENU_DISABLED))
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(11));
+                
+                itemY += theme::layout::scale(20.0f);
                     // Note: Click handling for menu items is done by win95::DrawDropdownMenu
                 }
             }
@@ -555,6 +555,89 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_render_layer(CONTENT_LAYER))) {
                     menu.tabWidthInputStr.clear();
                     menu.showTabWidthDialog = false;
+                }
+            }
+        }
+        
+        // UI Settings dialog
+        if (menu.showSettingsDialog) {
+            constexpr int SETTINGS_MODAL_ID = 50005;
+            auto result = afterhours::modal(ctx, mk(entity, SETTINGS_MODAL_ID),
+                menu.showSettingsDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(380), afterhours::ui::h720(220))
+                    .with_title("UI Settings"));
+            
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                
+                // Prompt label
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("UI Scale (50% - 200%):")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Text input
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                    menu.uiScaleInputStr,
+                    ComponentConfig{}
+                        .with_size(ComponentSize{h720(100), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+                
+                // Button row
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                
+                if (button(ctx, mk(buttonRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("OK")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_background(Theme::Usage::Primary)
+                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    // Handle OK - set UI scale
+                    if (!menu.uiScaleInputStr.empty()) {
+                        int percentage = std::atoi(menu.uiScaleInputStr.c_str());
+                        if (percentage >= 50 && percentage <= 200) {
+                            float scale = static_cast<float>(percentage) / 100.0f;
+                            Settings::get().set_ui_scale(scale);
+                            toast_notify::success("UI scale set to " + std::to_string(percentage) + "%");
+                        } else {
+                            toast_notify::error("UI scale must be 50-200%");
+                        }
+                    }
+                    menu.uiScaleInputStr.clear();
+                    menu.showSettingsDialog = false;
+                }
+                
+                if (button(ctx, mk(buttonRow.ent(), 1),
+                    ComponentConfig{}
+                        .with_label("Cancel")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    menu.uiScaleInputStr.clear();
+                    menu.showSettingsDialog = false;
+                }
+                
+                if (button(ctx, mk(buttonRow.ent(), 2),
+                    ComponentConfig{}
+                        .with_label("Reset")
+                        .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_render_layer(CONTENT_LAYER))) {
+                    Settings::get().set_ui_scale(1.0f);
+                    menu.uiScaleInputStr = "100";
+                    toast_notify::success("UI scale reset to 100%");
                 }
             }
         }

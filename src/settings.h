@@ -43,4 +43,8 @@ struct Settings {
     const std::vector<std::string>& get_recent_files() const;
     void add_recent_file(const std::string& path);
     void clear_recent_files();
+
+    // UI scaling
+    float get_ui_scale() const;
+    void set_ui_scale(float scale);
 };

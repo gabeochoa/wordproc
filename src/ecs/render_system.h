@@ -747,7 +747,7 @@ struct EditorRenderSystem
                 static_cast<int>(layout.zoomLevel * 100.0f));
             drawTextWithRegistry(
                 statusText.c_str(), 4,
-                layout.screenHeight - theme::layout::STATUS_BAR_HEIGHT + 2,
+                layout.screenHeight - theme::layout::scaleInt(theme::layout::STATUS_BAR_HEIGHT) + 2,
                 theme::layout::FONT_SIZE - 2, theme::TEXT_COLOR);
         }
 
@@ -755,8 +755,8 @@ struct EditorRenderSystem
             // Draw interactive menus ON TOP of everything except dialogs
             // (drawn last so dropdowns appear above the text area)
             int menuResult =
-                win95::DrawMenuBar(mutableMenu.menus, theme::layout::TITLE_BAR_HEIGHT,
-                                   theme::layout::MENU_BAR_HEIGHT);
+                win95::DrawMenuBar(mutableMenu.menus, theme::layout::scaleInt(theme::layout::TITLE_BAR_HEIGHT),
+                                   theme::layout::scaleInt(theme::layout::MENU_BAR_HEIGHT));
             if (menuResult >= 0) {
                 handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableLayout);
             }
@@ -1741,6 +1741,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
         } else if (menuIndex == 7) {  // Tools menu
             if (itemIndex == 0) {
                 menu.showWordCountDialog = true;
+            }
+        } else if (menuIndex == 8) {  // Settings menu
+            if (itemIndex == 0) {  // UI Scale...
+                menu.showSettingsDialog = true;
+                // Pre-fill with current scale as percentage
+                int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
+                menu.uiScaleInputStr = std::to_string(currentPercentage);
             }
         }
     }

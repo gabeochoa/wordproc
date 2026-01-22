@@ -78,26 +78,27 @@ bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled) {
 
     // Draw 3D border based on state
     if (state == ButtonState::Pressed) {
-        DrawSunkenBorder(rect, 2);
+        DrawSunkenBorder(rect, theme::layout::scaleInt(2));
     } else {
-        DrawRaisedBorder(rect, 2);
+        DrawRaisedBorder(rect, theme::layout::scaleInt(2));
     }
 
     // Calculate text position
-    int textWidth = raylib::MeasureText(text, 14);
+    int fontSize = 14;
+    int textWidth = theme::MeasureUIText(text, fontSize);
     int textX = static_cast<int>(rect.x + (rect.width - textWidth) / 2);
-    int textY = static_cast<int>(rect.y + (rect.height - 14) / 2);
+    int textY = static_cast<int>(rect.y + (rect.height - theme::layout::scaleInt(fontSize)) / 2);
 
     // Offset text when pressed
     if (state == ButtonState::Pressed) {
-        textX += 1;
-        textY += 1;
+        textX += theme::layout::scaleInt(1);
+        textY += theme::layout::scaleInt(1);
     }
 
     // Draw text
     raylib::Color textColor =
         enabled ? theme::TEXT_COLOR : theme::MENU_DISABLED;
-    theme::DrawUIText(text, textX, textY, 14, textColor);
+    theme::DrawUIText(text, textX, textY, fontSize, textColor);
 
     return clicked;
 }
@@ -107,9 +108,9 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
     bool changed = false;
 
     // Checkbox box is 13x13 pixels (Win95 authentic)
-    constexpr int BOX_SIZE = 13;
+    const int BOX_SIZE = theme::layout::scaleInt(13);
     raylib::Rectangle boxRect = {rect.x, rect.y + (rect.height - BOX_SIZE) / 2,
-                                 BOX_SIZE, BOX_SIZE};
+                                 static_cast<float>(BOX_SIZE), static_cast<float>(BOX_SIZE)};
 
     raylib::Vector2 mousePos = input::getMousePosition();
     bool hover = raylib::CheckCollisionPointRec(mousePos, rect);
@@ -122,7 +123,7 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
 
     // Draw checkbox background
     raylib::DrawRectangleRec(boxRect, theme::TEXT_AREA_BG);
-    DrawSunkenBorder(boxRect, 2);
+    DrawSunkenBorder(boxRect, theme::layout::scaleInt(2));
 
     // Draw checkmark if checked
     if (*checked) {
@@ -136,18 +137,19 @@ bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
     }
 
     // Draw label
-    int textX = static_cast<int>(boxRect.x + BOX_SIZE + 6);
-    int textY = static_cast<int>(rect.y + (rect.height - 14) / 2);
+    int fontSize = 14;
+    int textX = static_cast<int>(boxRect.x + BOX_SIZE + theme::layout::scaleInt(6));
+    int textY = static_cast<int>(rect.y + (rect.height - theme::layout::scaleInt(fontSize)) / 2);
     raylib::Color textColor =
         enabled ? theme::TEXT_COLOR : theme::MENU_DISABLED;
-    theme::DrawUIText(text, textX, textY, 14, textColor);
+    theme::DrawUIText(text, textX, textY, fontSize, textColor);
 
     return changed;
 }
 
 int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
     int clickedMenu = -1;
-    int x = 4;
+    int x = theme::layout::scaleInt(4);
 
     raylib::Vector2 mousePos = input::getMousePosition();
     bool mouseInMenuBar =
@@ -155,8 +157,9 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
 
     for (std::size_t i = 0; i < menus.size(); ++i) {
         Menu& menu = menus[i];
-        int textWidth = raylib::MeasureText(menu.label.c_str(), 14);
-        int itemWidth = textWidth + 16;  // Padding on each side
+        int fontSize = 14;
+        int textWidth = theme::MeasureUIText(menu.label.c_str(), fontSize);
+        int itemWidth = textWidth + theme::layout::scaleInt(16);  // Padding on each side
 
         menu.bounds = {static_cast<float>(x), static_cast<float>(menuBarY),
                        static_cast<float>(itemWidth),
@@ -192,17 +195,19 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
         // Draw menu header
         if (menu.open || hover) {
             raylib::DrawRectangleRec(menu.bounds, theme::MENU_HOVER);
-            theme::DrawUIText(menu.label.c_str(), x + 8, menuBarY + 3, 14,
+            theme::DrawUIText(menu.label.c_str(), x + theme::layout::scaleInt(8), 
+                             menuBarY + theme::layout::scaleInt(3), fontSize,
                              theme::TITLE_TEXT);
         } else {
-            theme::DrawUIText(menu.label.c_str(), x + 8, menuBarY + 3, 14,
+            theme::DrawUIText(menu.label.c_str(), x + theme::layout::scaleInt(8), 
+                             menuBarY + theme::layout::scaleInt(3), fontSize,
                              theme::TEXT_COLOR);
         }
 
         // Draw dropdown if open
         if (menu.open) {
             int selectedItem =
-                DrawDropdownMenu(menu, x, menuBarY + menuBarHeight, 20);
+                DrawDropdownMenu(menu, x, menuBarY + menuBarHeight, theme::layout::scaleInt(20));
             if (selectedItem >= 0) {
                 clickedMenu = static_cast<int>(
                     i * 100 + selectedItem);  // Encode menu and item
@@ -223,9 +228,10 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight) {
         for (const auto& menu : menus) {
             if (menu.open) {
                 // Check if click is in dropdown area
-                int dropdownHeight = static_cast<int>(menu.items.size()) * 20;
+                int dropdownHeight = static_cast<int>(menu.items.size()) * theme::layout::scaleInt(20);
                 raylib::Rectangle dropdownRect = {
-                    menu.bounds.x, menu.bounds.y + menu.bounds.height, 150,
+                    menu.bounds.x, menu.bounds.y + menu.bounds.height, 
+                    static_cast<float>(theme::layout::scaleInt(150)),
                     static_cast<float>(dropdownHeight)};
                 if (raylib::CheckCollisionPointRec(mousePos, dropdownRect)) {
                     clickedInDropdown = true;
@@ -246,13 +252,14 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
     int selectedItem = -1;
 
     // Calculate dropdown dimensions
-    int maxWidth = 150;
+    int fontSize = 14;
+    int maxWidth = theme::layout::scaleInt(150);
     for (const auto& item : menu.items) {
-        int w = raylib::MeasureText(item.label.c_str(), 14);
+        int w = theme::MeasureUIText(item.label.c_str(), fontSize);
         if (!item.shortcut.empty()) {
-            w += raylib::MeasureText(item.shortcut.c_str(), 14) + 20;
+            w += theme::MeasureUIText(item.shortcut.c_str(), fontSize) + theme::layout::scaleInt(20);
         }
-        maxWidth = std::max(maxWidth, w + 32);
+        maxWidth = std::max(maxWidth, w + theme::layout::scaleInt(32));
     }
 
     int totalHeight = static_cast<int>(menu.items.size()) * itemHeight;
@@ -262,7 +269,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
 
     // Draw dropdown background
     raylib::DrawRectangleRec(dropdownRect, theme::WINDOW_BG);
-    DrawRaisedBorder(dropdownRect, 2);
+    DrawRaisedBorder(dropdownRect, theme::layout::scaleInt(2));
 
     // Draw items
     raylib::Vector2 mousePos = input::getMousePosition();
@@ -271,16 +278,18 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
     for (std::size_t i = 0; i < menu.items.size(); ++i) {
         const MenuItem& item = menu.items[i];
         raylib::Rectangle itemRect = {
-            static_cast<float>(x + 2), static_cast<float>(itemY),
-            static_cast<float>(maxWidth - 4), static_cast<float>(itemHeight)};
+            static_cast<float>(x + theme::layout::scaleInt(2)), static_cast<float>(itemY),
+            static_cast<float>(maxWidth - theme::layout::scaleInt(4)), static_cast<float>(itemHeight)};
 
         if (item.separator) {
             // Draw separator line
             int sepY = itemY + itemHeight / 2;
-            raylib::DrawLine(x + 4, sepY, x + maxWidth - 4, sepY,
-                             theme::BORDER_DARK);
-            raylib::DrawLine(x + 4, sepY + 1, x + maxWidth - 4, sepY + 1,
-                             theme::BORDER_LIGHT);
+            raylib::DrawLine(x + theme::layout::scaleInt(4), sepY, 
+                           x + maxWidth - theme::layout::scaleInt(4), sepY,
+                           theme::BORDER_DARK);
+            raylib::DrawLine(x + theme::layout::scaleInt(4), sepY + 1, 
+                           x + maxWidth - theme::layout::scaleInt(4), sepY + 1,
+                           theme::BORDER_LIGHT);
         } else {
             bool hover = raylib::CheckCollisionPointRec(mousePos, itemRect) &&
                          item.enabled;
@@ -289,7 +298,7 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
             test_input::registerVisibleText(item.label);
             
             // Reserve 20 pixels for mark column
-            const int markColumnWidth = 20;
+            const int markColumnWidth = theme::layout::scaleInt(20);
             const int textX = x + markColumnWidth;
 
             if (hover) {
@@ -306,19 +315,20 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                         default: break;
                     }
                     if (markStr) {
-                        theme::DrawUIText(markStr, x + 6, itemY + 3, 14,
+                        theme::DrawUIText(markStr, x + theme::layout::scaleInt(6), 
+                                         itemY + theme::layout::scaleInt(3), fontSize,
                                          theme::TITLE_TEXT);
                     }
                 }
                 
-                theme::DrawUIText(item.label.c_str(), textX, itemY + 3, 14,
+                theme::DrawUIText(item.label.c_str(), textX, itemY + theme::layout::scaleInt(3), fontSize,
                                  theme::TITLE_TEXT);
                 if (!item.shortcut.empty()) {
                     int shortcutX =
                         x + maxWidth -
-                        theme::MeasureUIText(item.shortcut.c_str(), 14) - 12;
+                        theme::MeasureUIText(item.shortcut.c_str(), fontSize) - theme::layout::scaleInt(12);
                     theme::DrawUIText(item.shortcut.c_str(), shortcutX,
-                                     itemY + 3, 14, theme::TITLE_TEXT);
+                                     itemY + theme::layout::scaleInt(3), fontSize, theme::TITLE_TEXT);
                 }
 
                 if (IsMouseButtonReleased(raylib::MOUSE_LEFT_BUTTON)) {
@@ -339,18 +349,19 @@ int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight) {
                         default: break;
                     }
                     if (markStr) {
-                        theme::DrawUIText(markStr, x + 6, itemY + 3, 14, textColor);
+                        theme::DrawUIText(markStr, x + theme::layout::scaleInt(6), 
+                                         itemY + theme::layout::scaleInt(3), fontSize, textColor);
                     }
                 }
                 
-                theme::DrawUIText(item.label.c_str(), textX, itemY + 3, 14,
+                theme::DrawUIText(item.label.c_str(), textX, itemY + theme::layout::scaleInt(3), fontSize,
                                  textColor);
                 if (!item.shortcut.empty()) {
                     int shortcutX =
                         x + maxWidth -
-                        theme::MeasureUIText(item.shortcut.c_str(), 14) - 12;
+                        theme::MeasureUIText(item.shortcut.c_str(), fontSize) - theme::layout::scaleInt(12);
                     theme::DrawUIText(item.shortcut.c_str(), shortcutX,
-                                     itemY + 3, 14, textColor);
+                                     itemY + theme::layout::scaleInt(3), fontSize, textColor);
                 }
             }
         }
@@ -371,31 +382,34 @@ int DrawMessageDialog(raylib::Rectangle dialogRect, const char* title,
 
     // Draw dialog background
     raylib::DrawRectangleRec(dialogRect, theme::WINDOW_BG);
-    DrawRaisedBorder(dialogRect, 2);
+    DrawRaisedBorder(dialogRect, theme::layout::scaleInt(2));
 
     // Draw title bar
-    raylib::Rectangle titleRect = {dialogRect.x + 2, dialogRect.y + 2,
-                                   dialogRect.width - 4, 20};
+    int fontSize = 14;
+    raylib::Rectangle titleRect = {dialogRect.x + theme::layout::scale(2), 
+                                   dialogRect.y + theme::layout::scale(2),
+                                   dialogRect.width - theme::layout::scale(4), 
+                                   theme::layout::scale(20)};
     raylib::DrawRectangleRec(titleRect, theme::TITLE_BAR);
-    theme::DrawUIText(title, static_cast<int>(titleRect.x) + 4,
-                     static_cast<int>(titleRect.y) + 3, 14, theme::TITLE_TEXT);
+    theme::DrawUIText(title, static_cast<int>(titleRect.x) + theme::layout::scaleInt(4),
+                     static_cast<int>(titleRect.y) + theme::layout::scaleInt(3), fontSize, theme::TITLE_TEXT);
 
     // Draw message
-    int messageX = static_cast<int>(dialogRect.x) + 16;
-    int messageY = static_cast<int>(dialogRect.y) + 40;
-    theme::DrawUIText(message, messageX, messageY, 14, theme::TEXT_COLOR);
+    int messageX = static_cast<int>(dialogRect.x) + theme::layout::scaleInt(16);
+    int messageY = static_cast<int>(dialogRect.y) + theme::layout::scaleInt(40);
+    theme::DrawUIText(message, messageX, messageY, fontSize, theme::TEXT_COLOR);
 
     // Draw buttons
-    int buttonWidth = 75;
-    int buttonHeight = 23;
+    int buttonWidth = theme::layout::scaleInt(75);
+    int buttonHeight = theme::layout::scaleInt(23);
     int buttonY =
-        static_cast<int>(dialogRect.y + dialogRect.height) - buttonHeight - 12;
+        static_cast<int>(dialogRect.y + dialogRect.height) - buttonHeight - theme::layout::scaleInt(12);
 
     if (hasCancel) {
         int okX = static_cast<int>(dialogRect.x + dialogRect.width) -
-                  2 * buttonWidth - 24;
+                  2 * buttonWidth - theme::layout::scaleInt(24);
         int cancelX = static_cast<int>(dialogRect.x + dialogRect.width) -
-                      buttonWidth - 12;
+                      buttonWidth - theme::layout::scaleInt(12);
 
         if (DrawButton({static_cast<float>(okX), static_cast<float>(buttonY),
                         static_cast<float>(buttonWidth),
@@ -434,25 +448,30 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
 
     // Draw dialog background
     raylib::DrawRectangleRec(dialogRect, theme::WINDOW_BG);
-    DrawRaisedBorder(dialogRect, 2);
+    DrawRaisedBorder(dialogRect, theme::layout::scaleInt(2));
 
     // Draw title bar
-    raylib::Rectangle titleRect = {dialogRect.x + 2, dialogRect.y + 2,
-                                   dialogRect.width - 4, 20};
+    int fontSize = 14;
+    raylib::Rectangle titleRect = {dialogRect.x + theme::layout::scale(2), 
+                                   dialogRect.y + theme::layout::scale(2),
+                                   dialogRect.width - theme::layout::scale(4), 
+                                   theme::layout::scale(20)};
     raylib::DrawRectangleRec(titleRect, theme::TITLE_BAR);
-    theme::DrawUIText(title, static_cast<int>(titleRect.x) + 4,
-                     static_cast<int>(titleRect.y) + 3, 14, theme::TITLE_TEXT);
+    theme::DrawUIText(title, static_cast<int>(titleRect.x) + theme::layout::scaleInt(4),
+                     static_cast<int>(titleRect.y) + theme::layout::scaleInt(3), fontSize, theme::TITLE_TEXT);
 
     // Draw prompt
-    int promptX = static_cast<int>(dialogRect.x) + 16;
-    int promptY = static_cast<int>(dialogRect.y) + 36;
-    theme::DrawUIText(prompt, promptX, promptY, 14, theme::TEXT_COLOR);
+    int promptX = static_cast<int>(dialogRect.x) + theme::layout::scaleInt(16);
+    int promptY = static_cast<int>(dialogRect.y) + theme::layout::scaleInt(36);
+    theme::DrawUIText(prompt, promptX, promptY, fontSize, theme::TEXT_COLOR);
 
     // Draw input field
-    raylib::Rectangle inputRect = {dialogRect.x + 16, dialogRect.y + 56,
-                                   dialogRect.width - 32, 22};
+    raylib::Rectangle inputRect = {dialogRect.x + theme::layout::scale(16), 
+                                   dialogRect.y + theme::layout::scale(56),
+                                   dialogRect.width - theme::layout::scale(32), 
+                                   theme::layout::scale(22)};
     raylib::DrawRectangleRec(inputRect, theme::TEXT_AREA_BG);
-    DrawSunkenBorder(inputRect, 2);
+    DrawSunkenBorder(inputRect, theme::layout::scaleInt(2));
 
     // Handle text input
     int key = GetCharPressed();
@@ -482,18 +501,18 @@ int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
     }
 
     // Draw input text
-    theme::DrawUIText(buffer, static_cast<int>(inputRect.x) + 4,
-                     static_cast<int>(inputRect.y) + 4, 14, theme::TEXT_COLOR);
+    theme::DrawUIText(buffer, static_cast<int>(inputRect.x) + theme::layout::scaleInt(4),
+                     static_cast<int>(inputRect.y) + theme::layout::scaleInt(4), fontSize, theme::TEXT_COLOR);
 
     // Draw buttons
-    int buttonWidth = 75;
-    int buttonHeight = 23;
+    int buttonWidth = theme::layout::scaleInt(75);
+    int buttonHeight = theme::layout::scaleInt(23);
     int buttonY =
-        static_cast<int>(dialogRect.y + dialogRect.height) - buttonHeight - 12;
+        static_cast<int>(dialogRect.y + dialogRect.height) - buttonHeight - theme::layout::scaleInt(12);
     int okX = static_cast<int>(dialogRect.x + dialogRect.width) -
-              2 * buttonWidth - 24;
+              2 * buttonWidth - theme::layout::scaleInt(24);
     int cancelX =
-        static_cast<int>(dialogRect.x + dialogRect.width) - buttonWidth - 12;
+        static_cast<int>(dialogRect.x + dialogRect.width) - buttonWidth - theme::layout::scaleInt(12);
 
     if (DrawButton(
             {static_cast<float>(okX), static_cast<float>(buttonY),
