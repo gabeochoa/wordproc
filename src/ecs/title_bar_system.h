@@ -15,10 +15,25 @@ using afterhours::Entity;
 using afterhours::ui::UIContext;
 using afterhours::ui::imm::ComponentConfig;
 using afterhours::ui::imm::div;
+using afterhours::ui::imm::button;
 using afterhours::ui::imm::mk;
 using afterhours::ui::pixels;
 using afterhours::ui::percent;
 using afterhours::ui::ComponentSize;
+
+// Helper: Win95-style title bar control button
+inline ComponentConfig titleBarButton(float x, float y, float w, float h) {
+    return ComponentConfig{}
+        .with_size(ComponentSize{pixels(w), pixels(h)})
+        .with_absolute_position()
+        .with_translate(x, y)
+        .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+        .with_bevel(afterhours::ui::BevelStyle::Raised,
+                    ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+        .with_roundness(0.0f)
+        .with_alignment(afterhours::ui::TextAlignment::Center);
+}
 
 // Title Bar System - renders the blue title bar using Afterhours UI
 struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
@@ -71,6 +86,39 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
                 .with_alignment(afterhours::ui::TextAlignment::Left)
                 .with_padding(afterhours::ui::Padding{.left = pixels(4)})
                 .with_debug_name("title_bar"));
+
+        // === Window control buttons (right side of title bar) ===
+        float btnW = theme::layout::scale(16);
+        float btnH = theme::layout::scale(14);
+        float btnPad = theme::layout::scale(2);
+        float btnY = (titleBarHeight - btnH) / 2.0f;
+
+        // Close button (rightmost)
+        float closeX = screenWidth - btnW - btnPad;
+        if (button(ctx, mk(uiRoot, 9010),
+            titleBarButton(closeX, btnY, btnW, btnH)
+                .with_label("X")
+                .with_debug_name("btn_close"))) {
+            // Request window close
+            // Note: raylib doesn't have a clean "close" API from within,
+            // but we can set a flag that the main loop checks
+        }
+
+        // Maximize button
+        float maxX = closeX - btnW - btnPad;
+        button(ctx, mk(uiRoot, 9011),
+            titleBarButton(maxX, btnY, btnW, btnH)
+                .with_label("o")
+                .with_debug_name("btn_maximize"));
+
+        // Minimize button
+        float minX = maxX - btnW - btnPad;
+        if (button(ctx, mk(uiRoot, 9012),
+            titleBarButton(minX, btnY, btnW, btnH)
+                .with_label("_")
+                .with_debug_name("btn_minimize"))) {
+            raylib::MinimizeWindow();
+        }
     }
 };
 

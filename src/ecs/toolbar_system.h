@@ -57,14 +57,27 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
     return config;
 }
 
-// Helper: create an absolute-positioned separator at (x, y)
-inline ComponentConfig absSeparator(float x, float y, float height) {
-    return ComponentConfig{}
-        .with_size(ComponentSize{pixels(2), pixels(height)})
-        .with_absolute_position()
-        .with_translate(x, y)
-        .with_custom_background(ui_imm::win95_colors::BORDER_DARK)
-        .with_roundness(0.0f);
+// Helper: draw an etched separator (dark|light line pair) at (x, y)
+// Uses two entity IDs: baseId and baseId+1
+inline void drawEtchedSeparator(afterhours::ui::UIContext<InputAction>& ctx,
+                                 afterhours::Entity& uiRoot, int baseId,
+                                 float x, float y, float height) {
+    // Dark line (left)
+    div(ctx, mk(uiRoot, baseId),
+        ComponentConfig{}
+            .with_size(ComponentSize{pixels(1), pixels(height)})
+            .with_absolute_position()
+            .with_translate(x, y)
+            .with_custom_background(ui_imm::win95_colors::BORDER_DARK)
+            .with_roundness(0.0f));
+    // Light line (right)
+    div(ctx, mk(uiRoot, baseId + 1),
+        ComponentConfig{}
+            .with_size(ComponentSize{pixels(1), pixels(height)})
+            .with_absolute_position()
+            .with_translate(x + 1, y)
+            .with_custom_background(ui_imm::win95_colors::BORDER_LIGHT)
+            .with_roundness(0.0f));
 }
 
 // Helper: create an absolute-positioned dropdown button at (x, y)
@@ -178,8 +191,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         curX += buttonSize + buttonPadding;
         
-        // Separator
-        div(ctx, mk(uiRoot, btnId++), absSeparator(curX + sepPadding / 2, btnY, buttonSize - 4).with_debug_name("sep1"));
+        // Separator (etched)
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        btnId += 2;
         curX += sepWidth + sepPadding;
         
         // Print
@@ -189,8 +203,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         curX += buttonSize + buttonPadding;
         
-        // Separator
-        div(ctx, mk(uiRoot, btnId++), absSeparator(curX + sepPadding / 2, btnY, buttonSize - 4).with_debug_name("sep2"));
+        // Separator (etched)
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        btnId += 2;
         curX += sepWidth + sepPadding;
         
         // Cut/Copy/Paste
@@ -216,8 +231,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         curX += buttonSize + buttonPadding;
         
-        // Separator
-        div(ctx, mk(uiRoot, btnId++), absSeparator(curX + sepPadding / 2, btnY, buttonSize - 4).with_debug_name("sep3"));
+        // Separator (etched)
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        btnId += 2;
         curX += sepWidth + sepPadding;
         
         // Undo/Redo
@@ -403,8 +419,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         fmtX += fontSizeDropdownWidth + buttonPadding * 2;
         
-        // Separator after dropdowns
-        div(ctx, mk(uiRoot, fmtBtnId++), absSeparator(fmtX + sepPadding / 2, fmtBtnY, dropdownHeight - 4).with_debug_name("sep4"));
+        // Separator after dropdowns (etched)
+        drawEtchedSeparator(ctx, uiRoot, fmtBtnId, fmtX + sepPadding / 2, fmtBtnY, dropdownHeight - 4);
+        fmtBtnId += 2;
         fmtX += sepWidth + sepPadding;
         
         // === Formatting Buttons (Bold, Italic, Underline) ===
@@ -446,8 +463,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         fmtX += buttonSize + buttonPadding;
         
-        // Separator
-        div(ctx, mk(uiRoot, fmtBtnId++), absSeparator(fmtX + sepPadding / 2, fmtBtnY, buttonSize - 4).with_debug_name("sep5"));
+        // Separator (etched)
+        drawEtchedSeparator(ctx, uiRoot, fmtBtnId, fmtX + sepPadding / 2, fmtBtnY, buttonSize - 4);
+        fmtBtnId += 2;
         fmtX += sepWidth + sepPadding;
         
         // === Alignment Buttons ===
