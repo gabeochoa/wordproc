@@ -1,18 +1,31 @@
 # Test: Multiline text with Enter key
-# Validates newline insertion
+# Validates newline insertion and line count
 
+# Type first line
 type "Line One"
 wait 2
+validate line_count=1
+validate text=Line One
+
+# Screenshot after first line
+screenshot pass_multiline_one_line
+
+# Add second line
 key ENTER
 wait 2
 type "Line Two"
 wait 2
+validate line_count=2
+
+# Screenshot after two lines
+screenshot pass_multiline_two_lines
+
+# Add third line
 key ENTER
 wait 2
 type "Line Three"
 wait 2
-
 validate line_count=3
 
-screenshot 12_multiline
-
+# Screenshot showing all three lines
+screenshot pass_multiline_three_lines

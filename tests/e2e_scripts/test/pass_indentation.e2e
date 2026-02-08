@@ -3,24 +3,34 @@
 
 type "Indentation Test"
 wait 2
+validate text=Indentation Test
 
 # Default indent should be 0
 validate left_indent=0
 
-# Increase indent
+# Screenshot at no indent
+screenshot pass_indentation_no_indent
+
+# Increase indent once
 key CTRL+]
 wait 2
 validate left_indent=20
 
-# Increase again
+# Screenshot at first indent level
+screenshot pass_indentation_indent_one
+
+# Increase indent again
 key CTRL+]
 wait 2
 validate left_indent=40
+
+# Screenshot at second indent level
+screenshot pass_indentation_indent_two
 
 # Decrease indent
 key CTRL+[
 wait 2
 validate left_indent=20
 
-screenshot 07_indentation
-
+# Screenshot after decreasing indent
+screenshot pass_indentation_indent_decreased

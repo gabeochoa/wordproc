@@ -4,23 +4,26 @@
 # Wait for window to render
 wait 5
 
+# Screenshot showing initial state with menu bar
+screenshot pass_file_menu_dropdown_menu_bar_visible
+
 # Verify File button is visible first
 expect_text "File"
 
 # Click on File button (x=28 is center of File button, y=34 is center of menu bar)
-# File button: starts at x=4, width=48px, so center is x=28
-# Menu bar: starts at y=24 (title bar height), height=20px, so center is y=34
 click 28 34
 
 # Wait for click to be processed and menu to open
 wait 2
 
-# Take screenshot to verify dropdown is open
-screenshot file_menu_dropdown
+# Screenshot showing dropdown open with menu items
+screenshot pass_file_menu_dropdown_menu_open
 
-# Verify File menu items are visible (they should be registered by MenuUISystem)
+# Verify File menu items are visible
 expect_text "New"
 expect_text "Open..."
 expect_text "Save"
 expect_text "Exit"
 
+# Screenshot confirming all items are visible
+screenshot pass_file_menu_dropdown_items_visible

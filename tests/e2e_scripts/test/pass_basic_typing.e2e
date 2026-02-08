@@ -1,6 +1,12 @@
 # Test: Basic typing functionality
 # Validates that text can be typed and is stored correctly
 
+# Wait for window to render
+wait 3
+
+# Screenshot the empty document before typing
+screenshot pass_basic_typing_empty_document
+
 # Type some text
 type "Hello World"
 wait 2
@@ -9,6 +15,13 @@ wait 2
 validate text=Hello World
 validate line_count=1
 
-# Take a screenshot
-screenshot 01_basic_typing
+# Screenshot showing typed text in document
+screenshot pass_basic_typing_text_typed
 
+# Type more text
+type " - More Text"
+wait 2
+validate text=Hello World - More Text
+
+# Screenshot showing appended text
+screenshot pass_basic_typing_text_appended

@@ -3,24 +3,36 @@
 
 type "Line Spacing Test"
 wait 2
+key ENTER
+type "Second line for spacing"
+wait 2
 
 # Default should be single (1.0)
 validate line_spacing=1.000000
+
+# Screenshot at single spacing
+screenshot pass_line_spacing_single
 
 # Set to 1.5 spacing
 key CTRL+SHIFT+5
 wait 2
 validate line_spacing=1.500000
 
+# Screenshot at 1.5 spacing (lines should be further apart)
+screenshot pass_line_spacing_one_point_five
+
 # Set to double spacing
 key CTRL+SHIFT+2
 wait 2
 validate line_spacing=2.000000
+
+# Screenshot at double spacing (lines should be widest apart)
+screenshot pass_line_spacing_double
 
 # Back to single
 key CTRL+SHIFT+1
 wait 2
 validate line_spacing=1.000000
 
-screenshot 09_line_spacing
-
+# Screenshot back at single spacing
+screenshot pass_line_spacing_single_restored
