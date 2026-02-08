@@ -10,9 +10,6 @@
 // Note: Colors are now centralized in theme.h
 namespace win95 {
 
-// Button state for tracking interaction
-enum class ButtonState { Normal, Hover, Pressed, Disabled };
-
 // Menu mark type for standard menu conventions
 enum class MenuMark {
     None,       // No mark - regular menu item
@@ -45,14 +42,6 @@ void DrawRaisedBorder(raylib::Rectangle rect, int thickness = 1);
 // Draw a Win95-style sunken border (text fields, list boxes)
 void DrawSunkenBorder(raylib::Rectangle rect, int thickness = 1);
 
-// Draw a Win95-style button
-// Returns true if clicked
-bool DrawButton(raylib::Rectangle rect, const char* text, bool enabled = true);
-
-// Draw a Win95-style checkbox
-// Returns true if state changed
-bool DrawCheckbox(raylib::Rectangle rect, const char* text, bool* checked,
-                  bool enabled = true);
 
 // Draw menu bar and handle interaction
 // Returns index of clicked menu item, or -1 if none
@@ -62,38 +51,5 @@ int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight);
 // Returns index of selected item, or -1 if none
 int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight);
 
-// Draw a message dialog
-// Returns: 0 = OK, 1 = Cancel, -1 = still open
-int DrawMessageDialog(raylib::Rectangle dialogRect, const char* title,
-                      const char* message, bool hasCancel = false);
-
-// Draw a simple input dialog
-// Returns: 0 = OK, 1 = Cancel, -1 = still open
-int DrawInputDialog(raylib::Rectangle dialogRect, const char* title,
-                    const char* prompt, char* buffer, int bufferSize);
-
-// Dialog state management
-struct DialogState {
-    bool active = false;
-    int result = -1;
-    std::string inputBuffer;
-};
-
-// Toolbar-specific widgets
-
-// Draw a toolbar button (square icon button)
-// Returns true if clicked
-bool DrawToolbarButton(raylib::Rectangle rect, const char* label, bool enabled = true, bool pressed = false);
-
-// Draw a toolbar separator line
-void DrawToolbarSeparator(int x, int y, int height);
-
-// Draw a dropdown button (for combo boxes like style/font selection)
-// Returns true if clicked
-bool DrawDropdownButton(raylib::Rectangle rect, const char* label, bool open, bool enabled = true);
-
-// Draw a dropdown list (for combo box dropdowns)
-// Returns index of selected item, or -1 if none
-int DrawDropdownList(raylib::Rectangle rect, const std::vector<std::string>& items, int hoveredIndex = -1);
 
 }  // namespace win95

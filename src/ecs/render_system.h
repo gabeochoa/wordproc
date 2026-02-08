@@ -618,24 +618,7 @@ struct EditorRenderSystem
                        const ScrollComponent& scroll,
                        const LayoutComponent& layout, const MenuComponent& menu,
                        const float) const override {
-        // Draw title bar
-        raylib::Rectangle titleBarRect = {layout.titleBar.x, layout.titleBar.y,
-                                          layout.titleBar.width,
-                                          layout.titleBar.height};
-        raylib::DrawRectangleRec(titleBarRect, theme::TITLE_BAR);
-
-        std::string title = "Wordproc";
-        if (!doc.filePath.empty()) {
-            title +=
-                " - " + std::filesystem::path(doc.filePath).filename().string();
-        } else {
-            title += " - Untitled";
-        }
-        if (doc.isDirty) {
-            title += " *";
-        }
-        drawTextWithRegistry(title.c_str(), 4, 4, theme::layout::FONT_SIZE,
-                             theme::TITLE_TEXT);
+        // Title bar is now rendered by TitleBarSystem using Afterhours UI
 
         // Draw menu bar background (menus are drawn later after text area)
         if (!layout.focusMode) {
