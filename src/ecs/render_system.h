@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
-#include <ctime>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -778,63 +777,7 @@ struct EditorRenderSystem
             }
         }
 
-        // Draw status bar (notifications now use toast system)
-        if (!layout.focusMode) {
-            raylib::Rectangle statusBarRect = {
-                layout.statusBar.x, layout.statusBar.y, layout.statusBar.width,
-                layout.statusBar.height};
-            raylib::DrawRectangleRec(statusBarRect, theme::STATUS_BAR);
-            util::drawRaisedBorder(statusBarRect);
-
-            // Status bar layout (matching Word 6.0 style)
-            CaretPosition caretPos = doc.buffer.caret();
-            TextStats stats = doc.buffer.stats();
-            int statusY = layout.screenHeight - theme::layout::scaleInt(theme::layout::STATUS_BAR_HEIGHT) + theme::layout::scaleInt(3);
-            int statusFontSize = theme::layout::FONT_SIZE - 4;
-            
-            // Left section: Page/Section info
-            int x = theme::layout::scaleInt(4);
-            std::string pageInfo = std::format("Page 1    Sec 1");
-            drawTextWithRegistry(pageInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
-            x += theme::MeasureUIText(pageInfo.c_str(), statusFontSize) + theme::layout::scaleInt(20);
-            
-            // Line/Column info
-            std::string lineColInfo = std::format("{}/{}", caretPos.row + 1, stats.lines);
-            drawTextWithRegistry(lineColInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
-            x += theme::MeasureUIText(lineColInfo.c_str(), statusFontSize) + theme::layout::scaleInt(20);
-            
-            // Position info (At X")
-            float inchPos = static_cast<float>(caretPos.column) / 72.0f;  // Approximate
-            std::string posInfo = std::format("At {:.1f}\"", inchPos);
-            drawTextWithRegistry(posInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
-            x += theme::MeasureUIText(posInfo.c_str(), statusFontSize) + theme::layout::scaleInt(20);
-            
-            // Line/Column position
-            std::string lnColInfo = std::format("Ln {}    Col {}", caretPos.row + 1, caretPos.column + 1);
-            drawTextWithRegistry(lnColInfo.c_str(), x, statusY, statusFontSize, theme::TEXT_COLOR);
-            
-            // Right section: Status indicators and time
-            int rightX = layout.screenWidth - theme::layout::scaleInt(4);
-            
-            // Time
-            std::time_t now = std::time(nullptr);
-            std::tm* localTime = std::localtime(&now);
-            char timeStr[16];
-            std::strftime(timeStr, sizeof(timeStr), "%I:%M %p", localTime);
-            int timeWidth = theme::MeasureUIText(timeStr, statusFontSize);
-            drawTextWithRegistry(timeStr, rightX - timeWidth, statusY, statusFontSize, theme::TEXT_COLOR);
-            rightX -= timeWidth + theme::layout::scaleInt(20);
-            
-            // Status indicators (REC, MRK, EXT, OVR)
-            const char* indicators[] = {"REC", "MRK", "EXT", "OVR"};
-            for (int i = 3; i >= 0; --i) {
-                int indWidth = theme::MeasureUIText(indicators[i], statusFontSize);
-                // Draw dimmed (inactive) indicators
-                drawTextWithRegistry(indicators[i], rightX - indWidth, statusY, 
-                                   statusFontSize, theme::MENU_DISABLED);
-                rightX -= indWidth + theme::layout::scaleInt(12);
-            }
-        }
+        // Status bar is now rendered by StatusBarSystem using Afterhours UI
 
         if (!layout.focusMode) {
             // Draw interactive menus ON TOP of everything except dialogs

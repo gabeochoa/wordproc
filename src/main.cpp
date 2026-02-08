@@ -14,6 +14,7 @@
 #include "ecs/render_system.h"
 #include "ecs/test_systems.h"
 #include "ecs/toolbar_system.h"
+#include "ecs/status_bar_system.h"
 #include "editor/document_io.h"
 #include "editor/text_buffer.h"
 #include "editor/text_layout.h"
@@ -277,6 +278,8 @@ int main(int argc, char* argv[]) {
         std::make_unique<ecs::MenuUISystem>());
     systemManager.register_update_system(
         std::make_unique<ecs::ToolbarRenderSystem>());
+    systemManager.register_update_system(
+        std::make_unique<ecs::StatusBarSystem>());
     
     // Register post-layout UI systems (entity mapping, autolayout, interactions)
     // This builds the mapping and computes sizes for all UI elements created above
