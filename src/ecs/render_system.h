@@ -734,6 +734,57 @@ struct EditorRenderSystem
                              layout.zoomLevel);
         }
 
+        // === Draw Vertical Scroll Bar ===
+        {
+            float sbWidth = 16.0f;
+            float sbX = textAreaRect.x + textAreaRect.width - sbWidth;
+            float sbY = textAreaRect.y;
+            float sbHeight = textAreaRect.height;
+            int totalLines = static_cast<int>(doc.buffer.lineCount());
+            int visibleLines = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
+
+            // Scroll bar track (sunken background)
+            raylib::DrawRectangle(static_cast<int>(sbX), static_cast<int>(sbY),
+                                  static_cast<int>(sbWidth), static_cast<int>(sbHeight),
+                                  theme::BUTTON_FACE);
+            // Sunken border on track
+            raylib::DrawLine(static_cast<int>(sbX), static_cast<int>(sbY),
+                             static_cast<int>(sbX), static_cast<int>(sbY + sbHeight),
+                             theme::BORDER_DARK);
+            raylib::DrawLine(static_cast<int>(sbX), static_cast<int>(sbY),
+                             static_cast<int>(sbX + sbWidth), static_cast<int>(sbY),
+                             theme::BORDER_DARK);
+
+            // Thumb
+            if (totalLines > visibleLines) {
+                float thumbRatio = static_cast<float>(visibleLines) / static_cast<float>(totalLines);
+                float thumbHeight = std::max(20.0f, sbHeight * thumbRatio);
+                float scrollRange = sbHeight - thumbHeight;
+                float scrollRatio = (scroll.maxScroll > 0)
+                    ? static_cast<float>(scroll.offset) / static_cast<float>(scroll.maxScroll)
+                    : 0.0f;
+                float thumbY = sbY + scrollRange * scrollRatio;
+
+                // Raised thumb
+                raylib::DrawRectangle(static_cast<int>(sbX + 1), static_cast<int>(thumbY),
+                                      static_cast<int>(sbWidth - 2), static_cast<int>(thumbHeight),
+                                      theme::BUTTON_FACE);
+                // 3D border on thumb (raised)
+                raylib::DrawLine(static_cast<int>(sbX + 1), static_cast<int>(thumbY),
+                                 static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY),
+                                 theme::BORDER_LIGHT);
+                raylib::DrawLine(static_cast<int>(sbX + 1), static_cast<int>(thumbY),
+                                 static_cast<int>(sbX + 1), static_cast<int>(thumbY + thumbHeight),
+                                 theme::BORDER_LIGHT);
+                raylib::DrawLine(static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY),
+                                 static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY + thumbHeight),
+                                 theme::BORDER_DARK);
+                raylib::DrawLine(static_cast<int>(sbX + 1), static_cast<int>(thumbY + thumbHeight - 1),
+                                 static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY + thumbHeight - 1),
+                                 theme::BORDER_DARK);
+            }
+        }
+
         // Draw comment markers in the right margin
         if (!doc.comments.empty()) {
             for (const auto& comment : doc.comments) {
