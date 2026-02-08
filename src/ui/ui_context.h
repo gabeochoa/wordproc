@@ -30,6 +30,8 @@ constexpr afterhours::Color BUTTON_FACE = {192, 192, 192, 255};
 constexpr afterhours::Color BORDER_LIGHT = {255, 255, 255, 255};
 constexpr afterhours::Color BORDER_DARK = {128, 128, 128, 255};
 constexpr afterhours::Color ERROR_COLOR = {255, 0, 0, 255};
+constexpr afterhours::Color SELECTION_BG = {0, 0, 128, 255};      // Blue selection
+constexpr afterhours::Color SELECTION_TEXT = {255, 255, 255, 255};  // White text on selection
 }  // namespace win95_colors
 
 // Create Win95 theme for Afterhours UI
@@ -100,7 +102,17 @@ inline void registerUIPreLayoutSystems(afterhours::SystemManager& manager) {
 inline void registerUIPostLayoutSystems(afterhours::SystemManager& manager) {
     using namespace afterhours;
 
-    // Run autolayout (must run AFTER all UI elements are created)
+    // Update dropdown options before layout
+    manager.register_update_system(
+        std::make_unique<ui::UpdateDropdownOptions<InputAction>>());
+
+    // Clear visibility flags from previous frame
+    manager.register_update_system(std::make_unique<ui::ClearVisibity>());
+
+    // Build entity mapping (MUST run before RunAutoLayout)
+    manager.register_update_system(std::make_unique<ui::BuildUIEntityMapping>());
+
+    // Run autolayout (must run AFTER all UI elements are created and mapping is built)
     manager.register_update_system(std::make_unique<ui::RunAutoLayout>());
 
     // Track visibility
@@ -113,17 +125,21 @@ inline void registerUIPostLayoutSystems(afterhours::SystemManager& manager) {
     manager.register_update_system(
         std::make_unique<ui::HandleClicks<InputAction>>());
     manager.register_update_system(
+        std::make_unique<ui::CloseDropdownOnClickOutside<InputAction>>());
+    manager.register_update_system(
         std::make_unique<ui::HandleDrags<InputAction>>());
     manager.register_update_system(
         std::make_unique<ui::HandleLeftRight<InputAction>>());
+    manager.register_update_system(
+        std::make_unique<ui::HandleSelectOnFocus<InputAction>>());
+
+    // Compute visual focus after input handlers adjusted logical focus
+    manager.register_update_system(
+        std::make_unique<ui::ComputeVisualFocusId<InputAction>>());
 
     // End context (cleanup)
     manager.register_update_system(
         std::make_unique<ui::EndUIContextManager<InputAction>>());
-
-    // Compute visual focus
-    manager.register_update_system(
-        std::make_unique<ui::ComputeVisualFocusId<InputAction>>());
 }
 
 // Register all Afterhours UI update systems with the SystemManager

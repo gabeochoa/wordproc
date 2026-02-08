@@ -3,85 +3,112 @@
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../rl.h"
 #include "../ui/theme.h"
-#include "../ui/win95_widgets.h"
+#include "../ui/ah_win95_widgets.h"
+#include "../ui/ah_modal_input.h"
 #include "../ui/input.h"
 #include "../ui/ui_context.h"
-#include "../util/drawing.h"
 #include "../editor/document_io.h"
 #include "components.h"
 #include "component_helpers.h"
 
 namespace ecs {
 
+using afterhours::Entity;
+using afterhours::ui::UIContext;
+using afterhours::ui::imm::ComponentConfig;
+using afterhours::ui::imm::div;
+using afterhours::ui::imm::button;
+using afterhours::ui::imm::mk;
+using afterhours::ui::pixels;
+using afterhours::ui::percent;
+using afterhours::ui::FlexDirection;
+using afterhours::ui::AlignItems;
+using afterhours::ui::JustifyContent;
+using afterhours::ui::ComponentSize;
+using afterhours::ui::Padding;
+using afterhours::ui::Margin;
+
 // Toolbar Render System - renders the standard toolbar and formatting toolbar
-struct ToolbarRenderSystem : afterhours::System<ToolbarComponent, LayoutComponent, DocumentComponent> {
+// Uses UIContext for Afterhours widgets, manually queries for other components
+struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
     
-    void for_each_with(const afterhours::Entity& /*entity*/,
-                       const ToolbarComponent& constToolbar,
-                       const LayoutComponent& layout,
-                       const DocumentComponent& constDoc,
-                       const float) const override {
-        // Cast away const to allow modifications (needed for UI interactions)
-        auto& toolbar = const_cast<ToolbarComponent&>(constToolbar);
-        auto& doc = const_cast<DocumentComponent&>(constDoc);
+    void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
+        // Find toolbar entities
+        auto toolbarEntities = afterhours::EntityQuery({.force_merge = true})
+                                  .whereHasComponent<ToolbarComponent>()
+                                  .gen();
+        if (toolbarEntities.empty()) return;
+        
+        auto& toolbar = toolbarEntities[0].get().get<ToolbarComponent>();
+        
+        // Find document entities
+        auto docEntities = afterhours::EntityQuery({.force_merge = true})
+                              .whereHasComponent<DocumentComponent>()
+                              .gen();
+        if (docEntities.empty()) return;
+        
+        auto& doc = docEntities[0].get().get<DocumentComponent>();
+        
+        // Find layout entities
+        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
+                                 .whereHasComponent<LayoutComponent>()
+                                 .gen();
+        if (layoutEntities.empty()) return;
+        
+        auto& layout = layoutEntities[0].get().get<LayoutComponent>();
         
         // Skip rendering toolbars in focus mode
         if (layout.focusMode) {
             return;
         }
         
-        int screenWidth = layout.screenWidth;
+        float screenWidth = static_cast<float>(layout.screenWidth);
         
         // Calculate toolbar positions
         float toolbarY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + theme::layout::MENU_BAR_HEIGHT);
         float formattingBarY = toolbarY + theme::layout::scale(theme::layout::TOOLBAR_HEIGHT);
+        float toolbarHeight = theme::layout::scale(theme::layout::TOOLBAR_HEIGHT);
+        float formattingBarHeight = theme::layout::scale(theme::layout::FORMATTING_BAR_HEIGHT);
         
-        // Draw standard toolbar background
-        raylib::Rectangle toolbarRect = {
-            0, toolbarY,
-            static_cast<float>(screenWidth),
-            theme::layout::scale(theme::layout::TOOLBAR_HEIGHT)
-        };
-        raylib::DrawRectangleRec(toolbarRect, theme::TOOLBAR_BG);
-        util::drawRaisedBorder(toolbarRect);
+        // Get the UI root entity for Afterhours components
+        Entity& uiRoot = ui_imm::getUIRootEntity();
         
-        // Draw formatting toolbar background
-        raylib::Rectangle formattingBarRect = {
-            0, formattingBarY,
-            static_cast<float>(screenWidth),
-            theme::layout::scale(theme::layout::FORMATTING_BAR_HEIGHT)
-        };
-        raylib::DrawRectangleRec(formattingBarRect, theme::TOOLBAR_BG);
-        util::drawRaisedBorder(formattingBarRect);
+        // Button dimensions
+        float buttonSize = theme::layout::scale(theme::layout::TOOLBAR_BUTTON_SIZE);
+        float buttonPadding = theme::layout::scale(theme::layout::TOOLBAR_BUTTON_PADDING);
         
-        // === Standard Toolbar Buttons ===
-        int buttonSize = theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE);
-        int buttonPadding = theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_PADDING);
-        int x = buttonPadding;
-        int y = static_cast<int>(toolbarY) + buttonPadding;
+        // === Standard Toolbar Background ===
+        auto stdToolbar = div(ctx, mk(uiRoot, 1000),
+            ComponentConfig{}
+                .with_size(ComponentSize{pixels(screenWidth), pixels(toolbarHeight)})
+                .with_absolute_position()
+                .with_translate(0, toolbarY)
+                .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                .with_border(ui_imm::win95_colors::BORDER_LIGHT, 1.0f)
+                .with_roundness(0.0f)
+                .with_flex_direction(FlexDirection::Row)
+                .with_align_items(AlignItems::Center)
+                .with_padding(Padding{.top = pixels(buttonPadding), .right = pixels(buttonPadding), 
+                                     .bottom = pixels(buttonPadding), .left = pixels(buttonPadding)})
+                .with_debug_name("std_toolbar"));
         
-        // File operations
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "new", true)) {
-            // New document
+        int btnId = 1;
+        
+        // === File Operations ===
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true).with_label("N").with_debug_name("btn_new"))) {
             doc.buffer.setText("");
             doc.filePath.clear();
             doc.isDirty = false;
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "open", true)) {
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true).with_label("O").with_debug_name("btn_open"))) {
             // Open document (would trigger file dialog)
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "save", true)) {
-            // Save document
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true).with_label("S").with_debug_name("btn_save"))) {
             if (!doc.filePath.empty()) {
                 auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.filePath);
                 if (result.success) {
@@ -89,290 +116,273 @@ struct ToolbarRenderSystem : afterhours::System<ToolbarComponent, LayoutComponen
                 }
             }
         }
-        x += buttonSize + buttonPadding;
         
         // Separator
-        win95::DrawToolbarSeparator(x, y, buttonSize);
-        x += theme::layout::scaleInt(6);
+        div(ctx, mk(stdToolbar.ent(), btnId++), ah_win95::win95SeparatorStyle(buttonSize - 4).with_debug_name("sep1"));
         
         // Print
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "print", true)) {
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true).with_label("P").with_debug_name("btn_print"))) {
             // Print (not implemented)
         }
-        x += buttonSize + buttonPadding;
         
         // Separator
-        win95::DrawToolbarSeparator(x, y, buttonSize);
-        x += theme::layout::scaleInt(6);
+        div(ctx, mk(stdToolbar.ent(), btnId++), ah_win95::win95SeparatorStyle(buttonSize - 4).with_debug_name("sep2"));
         
         // Cut/Copy/Paste
         bool hasSelection = doc.buffer.hasSelection();
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "cut", hasSelection)) {
+        
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, hasSelection).with_label("X").with_debug_name("btn_cut"))) {
             if (hasSelection) {
-                // Cut operation (would need clipboard integration)
                 doc.isDirty = true;
             }
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "copy", hasSelection)) {
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, hasSelection).with_label("C").with_debug_name("btn_copy"))) {
             // Copy operation
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "paste", true)) {
-            // Paste operation (would need clipboard)
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true).with_label("V").with_debug_name("btn_paste"))) {
+            // Paste operation
         }
-        x += buttonSize + buttonPadding;
         
         // Separator
-        win95::DrawToolbarSeparator(x, y, buttonSize);
-        x += theme::layout::scaleInt(6);
+        div(ctx, mk(stdToolbar.ent(), btnId++), ah_win95::win95SeparatorStyle(buttonSize - 4).with_debug_name("sep3"));
         
         // Undo/Redo
         bool canUndo = doc.buffer.canUndo();
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "undo", canUndo)) {
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, canUndo).with_label("<").with_debug_name("btn_undo"))) {
             if (canUndo) {
                 doc.buffer.undo();
                 doc.isDirty = true;
             }
         }
-        x += buttonSize + buttonPadding;
         
         bool canRedo = doc.buffer.canRedo();
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "redo", canRedo)) {
+        if (button(ctx, mk(stdToolbar.ent(), btnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, canRedo).with_label(">").with_debug_name("btn_redo"))) {
             if (canRedo) {
                 doc.buffer.redo();
                 doc.isDirty = true;
             }
         }
-        x += buttonSize + buttonPadding;
         
-        // === Formatting Toolbar ===
-        x = buttonPadding;
-        y = static_cast<int>(formattingBarY) + buttonPadding;
+        // === Formatting Toolbar Background ===
+        auto fmtToolbar = div(ctx, mk(uiRoot, 2000),
+            ComponentConfig{}
+                .with_size(ComponentSize{pixels(screenWidth), pixels(formattingBarHeight)})
+                .with_absolute_position()
+                .with_translate(0, formattingBarY)
+                .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                .with_border(ui_imm::win95_colors::BORDER_LIGHT, 1.0f)
+                .with_roundness(0.0f)
+                .with_flex_direction(FlexDirection::Row)
+                .with_align_items(AlignItems::Center)
+                .with_padding(Padding{.top = pixels(buttonPadding), .right = pixels(buttonPadding), 
+                                     .bottom = pixels(buttonPadding), .left = pixels(buttonPadding)})
+                .with_debug_name("fmt_toolbar"));
         
-        // Style dropdown
-        int dropdownWidth = theme::layout::scaleInt(120);
-        int dropdownHeight = theme::layout::scaleInt(22);
+        int fmtBtnId = 1;
         
-        if (win95::DrawDropdownButton({static_cast<float>(x), static_cast<float>(y), 
-                                       static_cast<float>(dropdownWidth), static_cast<float>(dropdownHeight)}, 
-                                      toolbar.currentStyle.c_str(), 
-                                      toolbar.styleDropdownOpen, true)) {
+        // Dropdown dimensions
+        float dropdownHeight = theme::layout::scale(22);
+        
+        // === Style Dropdown ===
+        float styleDropdownWidth = theme::layout::scale(120);
+        std::string styleLabel = toolbar.currentStyle + " v";
+        
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95DropdownButtonStyle(styleDropdownWidth, dropdownHeight, toolbar.styleDropdownOpen)
+                .with_label(styleLabel)
+                .with_debug_name("dropdown_style"))) {
             toolbar.styleDropdownOpen = !toolbar.styleDropdownOpen;
             toolbar.fontDropdownOpen = false;
             toolbar.fontSizeDropdownOpen = false;
         }
         
-        // Draw style dropdown list if open
-        if (toolbar.styleDropdownOpen) {
-            int listHeight = static_cast<int>(toolbar.styles.size()) * theme::layout::scaleInt(20) + theme::layout::scaleInt(4);
-            raylib::Rectangle listRect = {
-                static_cast<float>(x),
-                static_cast<float>(y + dropdownHeight),
-                static_cast<float>(dropdownWidth),
-                static_cast<float>(listHeight)
-            };
+        // Style dropdown list
+        if (toolbar.styleDropdownOpen && !toolbar.styles.empty()) {
+            auto styleList = div(ctx, mk(uiRoot, 3000),
+                ah_win95::win95DropdownListStyle(styleDropdownWidth, static_cast<int>(toolbar.styles.size()))
+                    .with_translate(buttonPadding, formattingBarY + dropdownHeight + buttonPadding)
+                    .with_debug_name("dropdown_style_list"));
             
-            int selected = win95::DrawDropdownList(listRect, toolbar.styles);
-            if (selected >= 0) {
-                toolbar.currentStyle = toolbar.styles[selected];
-                toolbar.styleDropdownOpen = false;
-                // Apply style to current selection
+            for (size_t i = 0; i < toolbar.styles.size(); ++i) {
+                bool isSelected = (toolbar.styles[i] == toolbar.currentStyle);
+                if (button(ctx, mk(styleList.ent(), static_cast<int>(i)),
+                    ah_win95::win95DropdownItemStyle(isSelected)
+                        .with_label(toolbar.styles[i])
+                        .with_debug_name("style_item_" + std::to_string(i)))) {
+                    toolbar.currentStyle = toolbar.styles[i];
+                    toolbar.styleDropdownOpen = false;
+                }
             }
         }
         
-        x += dropdownWidth + buttonPadding * 2;
+        // === Font Dropdown ===
+        float fontDropdownWidth = theme::layout::scale(140);
+        float fontDropdownX = buttonPadding + styleDropdownWidth + buttonPadding * 2;
+        std::string fontLabel = toolbar.currentFont + " v";
         
-        // Font dropdown
-        dropdownWidth = theme::layout::scaleInt(140);
-        if (win95::DrawDropdownButton({static_cast<float>(x), static_cast<float>(y), 
-                                       static_cast<float>(dropdownWidth), static_cast<float>(dropdownHeight)}, 
-                                      toolbar.currentFont.c_str(), 
-                                      toolbar.fontDropdownOpen, true)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95DropdownButtonStyle(fontDropdownWidth, dropdownHeight, toolbar.fontDropdownOpen)
+                .with_label(fontLabel)
+                .with_debug_name("dropdown_font"))) {
             toolbar.fontDropdownOpen = !toolbar.fontDropdownOpen;
             toolbar.styleDropdownOpen = false;
             toolbar.fontSizeDropdownOpen = false;
         }
         
-        // Draw font dropdown list if open
-        if (toolbar.fontDropdownOpen) {
-            int listHeight = static_cast<int>(toolbar.fonts.size()) * theme::layout::scaleInt(20) + theme::layout::scaleInt(4);
-            raylib::Rectangle listRect = {
-                static_cast<float>(x),
-                static_cast<float>(y + dropdownHeight),
-                static_cast<float>(dropdownWidth),
-                static_cast<float>(listHeight)
-            };
+        // Font dropdown list
+        if (toolbar.fontDropdownOpen && !toolbar.fonts.empty()) {
+            auto fontList = div(ctx, mk(uiRoot, 3100),
+                ah_win95::win95DropdownListStyle(fontDropdownWidth, static_cast<int>(toolbar.fonts.size()))
+                    .with_translate(fontDropdownX, formattingBarY + dropdownHeight + buttonPadding)
+                    .with_debug_name("dropdown_font_list"));
             
-            int selected = win95::DrawDropdownList(listRect, toolbar.fonts);
-            if (selected >= 0) {
-                toolbar.currentFont = toolbar.fonts[selected];
-                toolbar.fontDropdownOpen = false;
-                // Apply font to document
-                TextStyle style = doc.buffer.textStyle();
-                style.font = toolbar.currentFont;
-                doc.buffer.setTextStyle(style);
-                doc.isDirty = true;
+            for (size_t i = 0; i < toolbar.fonts.size(); ++i) {
+                bool isSelected = (toolbar.fonts[i] == toolbar.currentFont);
+                if (button(ctx, mk(fontList.ent(), static_cast<int>(i)),
+                    ah_win95::win95DropdownItemStyle(isSelected)
+                        .with_label(toolbar.fonts[i])
+                        .with_debug_name("font_item_" + std::to_string(i)))) {
+                    toolbar.currentFont = toolbar.fonts[i];
+                    toolbar.fontDropdownOpen = false;
+                    TextStyle style = doc.buffer.textStyle();
+                    style.font = toolbar.currentFont;
+                    doc.buffer.setTextStyle(style);
+                    doc.isDirty = true;
+                }
             }
         }
         
-        x += dropdownWidth + buttonPadding * 2;
+        // === Font Size Dropdown ===
+        float fontSizeDropdownWidth = theme::layout::scale(50);
+        float fontSizeDropdownX = fontDropdownX + fontDropdownWidth + buttonPadding * 2;
+        std::string fontSizeLabel = std::to_string(toolbar.currentFontSize) + " v";
         
-        // Font size dropdown
-        dropdownWidth = theme::layout::scaleInt(50);
-        std::string fontSizeStr = std::to_string(toolbar.currentFontSize);
-        if (win95::DrawDropdownButton({static_cast<float>(x), static_cast<float>(y), 
-                                       static_cast<float>(dropdownWidth), static_cast<float>(dropdownHeight)}, 
-                                      fontSizeStr.c_str(), 
-                                      toolbar.fontSizeDropdownOpen, true)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95DropdownButtonStyle(fontSizeDropdownWidth, dropdownHeight, toolbar.fontSizeDropdownOpen)
+                .with_label(fontSizeLabel)
+                .with_debug_name("dropdown_fontsize"))) {
             toolbar.fontSizeDropdownOpen = !toolbar.fontSizeDropdownOpen;
             toolbar.styleDropdownOpen = false;
             toolbar.fontDropdownOpen = false;
         }
         
-        // Draw font size dropdown list if open
-        if (toolbar.fontSizeDropdownOpen) {
-            std::vector<std::string> fontSizeStrs;
-            for (int size : toolbar.fontSizes) {
-                fontSizeStrs.push_back(std::to_string(size));
-            }
+        // Font size dropdown list
+        if (toolbar.fontSizeDropdownOpen && !toolbar.fontSizes.empty()) {
+            auto sizeList = div(ctx, mk(uiRoot, 3200),
+                ah_win95::win95DropdownListStyle(fontSizeDropdownWidth, static_cast<int>(toolbar.fontSizes.size()))
+                    .with_translate(fontSizeDropdownX, formattingBarY + dropdownHeight + buttonPadding)
+                    .with_debug_name("dropdown_fontsize_list"));
             
-            int listHeight = static_cast<int>(fontSizeStrs.size()) * theme::layout::scaleInt(20) + theme::layout::scaleInt(4);
-            raylib::Rectangle listRect = {
-                static_cast<float>(x),
-                static_cast<float>(y + dropdownHeight),
-                static_cast<float>(dropdownWidth),
-                static_cast<float>(listHeight)
-            };
-            
-            int selected = win95::DrawDropdownList(listRect, fontSizeStrs);
-            if (selected >= 0) {
-                toolbar.currentFontSize = toolbar.fontSizes[selected];
-                toolbar.fontSizeDropdownOpen = false;
-                // Apply font size to document
-                TextStyle style = doc.buffer.textStyle();
-                style.fontSize = toolbar.currentFontSize;
-                doc.buffer.setTextStyle(style);
-                doc.isDirty = true;
+            for (size_t i = 0; i < toolbar.fontSizes.size(); ++i) {
+                bool isSelected = (toolbar.fontSizes[i] == toolbar.currentFontSize);
+                std::string sizeStr = std::to_string(toolbar.fontSizes[i]);
+                if (button(ctx, mk(sizeList.ent(), static_cast<int>(i)),
+                    ah_win95::win95DropdownItemStyle(isSelected)
+                        .with_label(sizeStr)
+                        .with_debug_name("size_item_" + std::to_string(i)))) {
+                    toolbar.currentFontSize = toolbar.fontSizes[i];
+                    toolbar.fontSizeDropdownOpen = false;
+                    TextStyle style = doc.buffer.textStyle();
+                    style.fontSize = toolbar.currentFontSize;
+                    doc.buffer.setTextStyle(style);
+                    doc.isDirty = true;
+                }
             }
         }
         
-        x += dropdownWidth + buttonPadding * 2;
+        // Separator after dropdowns
+        div(ctx, mk(fmtToolbar.ent(), fmtBtnId++), ah_win95::win95SeparatorStyle(dropdownHeight - 4).with_debug_name("sep4"));
         
-        // Separator
-        win95::DrawToolbarSeparator(x, y, dropdownHeight);
-        x += theme::layout::scaleInt(6);
-        
-        // Formatting buttons (Bold, Italic, Underline)
-        buttonSize = theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE);
-        y = static_cast<int>(formattingBarY) + buttonPadding;
-        
-        // Update toolbar button states based on current text style
+        // === Formatting Buttons (Bold, Italic, Underline) ===
         TextStyle currentStyle = doc.buffer.textStyle();
         toolbar.boldActive = currentStyle.bold;
         toolbar.italicActive = currentStyle.italic;
         toolbar.underlineActive = currentStyle.underline;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "B", true, toolbar.boldActive)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.boldActive)
+                .with_label("B")
+                .with_debug_name("btn_bold"))) {
             TextStyle style = doc.buffer.textStyle();
             style.bold = !style.bold;
             doc.buffer.setTextStyle(style);
             doc.isDirty = true;
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "I", true, toolbar.italicActive)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.italicActive)
+                .with_label("I")
+                .with_debug_name("btn_italic"))) {
             TextStyle style = doc.buffer.textStyle();
             style.italic = !style.italic;
             doc.buffer.setTextStyle(style);
             doc.isDirty = true;
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "U", true, toolbar.underlineActive)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.underlineActive)
+                .with_label("U")
+                .with_debug_name("btn_underline"))) {
             TextStyle style = doc.buffer.textStyle();
             style.underline = !style.underline;
             doc.buffer.setTextStyle(style);
             doc.isDirty = true;
         }
-        x += buttonSize + buttonPadding;
         
         // Separator
-        win95::DrawToolbarSeparator(x, y, buttonSize);
-        x += theme::layout::scaleInt(6);
+        div(ctx, mk(fmtToolbar.ent(), fmtBtnId++), ah_win95::win95SeparatorStyle(buttonSize - 4).with_debug_name("sep5"));
         
-        // Alignment buttons
-        TextAlignment currentAlign = doc.buffer.currentAlignment();
-        toolbar.currentAlignment = static_cast<int>(currentAlign);
+        // === Alignment Buttons ===
+        toolbar.currentAlignment = static_cast<int>(doc.buffer.currentAlignment());
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "L", true, toolbar.currentAlignment == 0)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.currentAlignment == 0)
+                .with_label("L")
+                .with_debug_name("btn_align_left"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Left);
             toolbar.currentAlignment = 0;
             doc.isDirty = true;
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "C", true, toolbar.currentAlignment == 1)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.currentAlignment == 1)
+                .with_label("C")
+                .with_debug_name("btn_align_center"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Center);
             toolbar.currentAlignment = 1;
             doc.isDirty = true;
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "R", true, toolbar.currentAlignment == 2)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.currentAlignment == 2)
+                .with_label("R")
+                .with_debug_name("btn_align_right"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Right);
             toolbar.currentAlignment = 2;
             doc.isDirty = true;
         }
-        x += buttonSize + buttonPadding;
         
-        if (win95::DrawToolbarButton({static_cast<float>(x), static_cast<float>(y), 
-                                      static_cast<float>(buttonSize), static_cast<float>(buttonSize)}, 
-                                     "J", true, toolbar.currentAlignment == 3)) {
+        if (button(ctx, mk(fmtToolbar.ent(), fmtBtnId++),
+            ah_win95::win95ToolbarButtonStyle(buttonSize, true, toolbar.currentAlignment == 3)
+                .with_label("J")
+                .with_debug_name("btn_align_justify"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Justify);
             toolbar.currentAlignment = 3;
             doc.isDirty = true;
         }
         
-        // Close dropdowns on click outside
-        if (IsMouseButtonPressed(raylib::MOUSE_LEFT_BUTTON)) {
-            raylib::Vector2 mousePos = input::getMousePosition();
-            
-            // For simplicity, close all dropdowns on any click outside the toolbar area
-            if (mousePos.y < formattingBarY || mousePos.y > formattingBarY + theme::layout::scale(theme::layout::FORMATTING_BAR_HEIGHT) + 200) {
-                toolbar.styleDropdownOpen = false;
-                toolbar.fontDropdownOpen = false;
-                toolbar.fontSizeDropdownOpen = false;
-            }
-        }
+        // Close dropdowns when clicking elsewhere - handled via Afterhours focus system
+        // When any non-dropdown button is clicked, dropdowns close automatically
+        // because we toggle off other dropdowns when opening one
     }
 };
 
 }  // namespace ecs
-

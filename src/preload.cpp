@@ -139,21 +139,8 @@ Preload &Preload::make_singleton() {
 
         {
             SCOPED_TIMER("Theme setup");
-            ui::imm::ThemeDefaults::get()
-                .set_theme_color(ui::Theme::Usage::Primary, colors::UI_GREEN)
-                .set_theme_color(ui::Theme::Usage::Error, colors::UI_RED)
-                .set_theme_color(ui::Theme::Usage::Font, colors::UI_WHITE)
-                .set_theme_color(
-                    ui::Theme::Usage::DarkFont,
-                    afterhours::Color{30, 30, 30, 255})
-                .set_theme_color(ui::Theme::Usage::Background, colors::UI_BLACK)
-                .set_theme_color(
-                    ui::Theme::Usage::Surface,
-                    afterhours::Color{40, 40, 50, 255})
-                .set_theme_color(ui::Theme::Usage::Secondary,
-                                 afterhours::Color{253, 249, 0, 255})
-                .set_theme_color(ui::Theme::Usage::Accent,
-                                 afterhours::Color{0, 228, 48, 255});
+            // Use Win95 theme for consistent styling between legacy and Afterhours widgets
+            ui_imm::initWin95Theme();
 
             ui::imm::UIStylingDefaults::get().set_grid_snapping(true);
         }

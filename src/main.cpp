@@ -272,12 +272,15 @@ int main(int argc, char* argv[]) {
     // Register pre-layout UI systems (context begin, clear children)
     ui_imm::registerUIPreLayoutSystems(systemManager);
     
-    // MenuUISystem creates UI elements - must run BEFORE autolayout
+    // UI-creating systems must run BETWEEN pre-layout and post-layout
+    // so their entities are included in BuildUIEntityMapping and RunAutoLayout
     systemManager.register_update_system(
         std::make_unique<ecs::MenuUISystem>());
+    systemManager.register_update_system(
+        std::make_unique<ecs::ToolbarRenderSystem>());
     
-    // Register post-layout UI systems (autolayout, interactions)
-    // This computes sizes for all UI elements created above
+    // Register post-layout UI systems (entity mapping, autolayout, interactions)
+    // This builds the mapping and computes sizes for all UI elements created above
     ui_imm::registerUIPostLayoutSystems(systemManager);
 
     // Update systems (run every frame for input/logic)
@@ -304,9 +307,6 @@ int main(int argc, char* argv[]) {
     // EditorRenderSystem must be first - it calls BeginDrawing() in once()
     systemManager.register_render_system(
         std::make_unique<ecs::EditorRenderSystem>());
-    // Toolbar render system (draws toolbars after main render)
-    systemManager.register_render_system(
-        std::make_unique<ecs::ToolbarRenderSystem>());
     // Afterhours UI render systems (renders buttons, divs, etc.)
     ui_imm::registerUIRenderSystems(systemManager);
     // Modal backdrop rendering (draws dimmed overlay behind modals)
