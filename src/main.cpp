@@ -209,8 +209,7 @@ int main(int argc, char* argv[]) {
     auto& docComp = editorEntity.addComponent<ecs::DocumentComponent>();
     docComp.filePath = loadFile;
     if (testModeEnabled) {
-        docComp.autoSaveIntervalSeconds = 0.0;
-        docComp.lastAutoSaveTime = -1.0;
+        docComp.autoSaveEnabled = false;
     }
 
     // Load file if specified

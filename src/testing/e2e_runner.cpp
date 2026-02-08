@@ -533,6 +533,13 @@ static void setupCallbacksEx(
         menuComp.tabWidthInputBuffer[0] = '\0';
         menuComp.showPageSetup = false;
         
+        // Close any open dropdown menus
+        menuComp.activeMenuIndex = -1;
+        menuComp.lastClickedResult = -1;
+        for (auto& menu : menuComp.menus) {
+            menu.open = false;
+        }
+        
         // Reset layout state
         layoutComp.zoomLevel = 1.0f;
         layoutComp.focusMode = false;
