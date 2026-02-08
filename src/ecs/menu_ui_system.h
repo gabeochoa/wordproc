@@ -327,9 +327,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
         
         // Close menus on click outside (if no header or item was interacted with)
-        // Check if mouse was clicked but didn't hit any menu element
+        // Use just_pressed (not just_released) to avoid closing menus on mouse-up
+        // after opening them on mouse-down in the same click gesture.
         if (anyMenuOpen && !headerInteracted && !itemInteracted) {
-            if (ctx.mouse.just_released) {
+            if (ctx.mouse.just_pressed) {
                 // Check if click was outside all menu areas
                 bool clickInMenu = false;
                 // Check header buttons

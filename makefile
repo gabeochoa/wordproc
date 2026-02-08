@@ -205,7 +205,7 @@ sign: $(MAIN_EXE)
 	$(sign_cmd) $(MAIN_EXE)
 
 run: output
-	./$(MAIN_EXE)
+	timeout 60 ./$(MAIN_EXE) || true
 
 # Utility targets
 .PHONY: all clean clean-all deps output sign run

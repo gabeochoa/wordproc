@@ -306,6 +306,24 @@ struct InputComponent : public afterhours::BaseComponent {
 };
 
 // Component for toolbar state
+// Toolbar icon types for overlay rendering
+enum class ToolbarIcon {
+    None, New, Open, Save, Print,
+    Cut, Copy, Paste, Undo, Redo,
+    AlignLeft, AlignCenter, AlignRight, AlignJustify
+};
+
+// Data for post-render overlays (icons, triangles drawn after afterhours UI)
+struct ToolbarOverlayItem {
+    float x, y, w, h;
+    ToolbarIcon icon = ToolbarIcon::None;
+    bool enabled = true;
+};
+
+struct DropdownTriangle {
+    float x, y;  // position of the triangle center
+};
+
 struct ToolbarComponent : public afterhours::BaseComponent {
     // Current selections in dropdowns
     std::string currentStyle = "Normal";
@@ -329,6 +347,10 @@ struct ToolbarComponent : public afterhours::BaseComponent {
     bool styleDropdownOpen = false;
     bool fontDropdownOpen = false;
     bool fontSizeDropdownOpen = false;
+    
+    // Overlay data: written during update, read during render
+    std::vector<ToolbarOverlayItem> iconOverlays;
+    std::vector<DropdownTriangle> dropdownTriangles;
 };
 
 }  // namespace ecs

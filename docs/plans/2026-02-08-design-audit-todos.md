@@ -525,13 +525,19 @@ Screenshots reviewed: `audit_01_default_view.png` (empty document), `audit_02_wi
 **Done:** #3 (toast stacking), #5 (menu order), #7 (formatting active state), #9 (status bar color), #11 (color-only feedback), #13 (window controls), #14 (sunken border - already existed), #15 (etched separators), #19 (insert menu consolidated), #27 (title bar [Modified])
 **Done (new):** #2 (scroll bar), #4 (tooltips)
 
-**Deferred to afterhours:**
-- #1 (toolbar icons) — needs pixel art icon support or bitmap rendering
-- #6 (access keys/mnemonics) — needs per-character text decoration in afterhours
-- #8 (dropdown ▼) — font doesn't support Unicode triangle glyph
-- #17 (title bar font) — only one font loaded; adding sans-serif increases startup
-- #20 (hover state) — needs afterhours hover callback or custom rendering
+**Deferred to afterhours** (see `docs/plans/afterhours-feature-requests.md`):
+- ~~#1 (toolbar icons)~~ — WORKAROUND: pixel-art icons drawn with raylib primitives in ToolbarOverlayRenderSystem
+- ~~#6 (access keys/mnemonics)~~ — WORKAROUND: underlines drawn via raylib DrawLine in overlay render
+- ~~#8 (dropdown ▼)~~ — WORKAROUND: filled triangles drawn via raylib DrawTriangle in overlay render
+- #12 (focus indicators) — needs visible focus ring rendering from ComputeVisualFocusId
+- ~~#17 (title bar font)~~ — RESOLVED: loaded Roboto-Regular.ttf as UI font
+- ~~#20 (hover state)~~ — WORKAROUND: was_hot() used for flat/raised/sunken toolbar button states
+- #34 (drop shadows on menus) — needs shadow/elevation support in afterhours
+- #36 (motion/animation) — needs transition system for opacity/position interpolation
 
 **Remaining local work:**
-- #10 (keyboard shortcuts on all menus) — already present in menu_setup.h, just not all visible in dropdown
-- #12 (focus indicators), #16 (status bar consistency), #18 (selection contrast), #21-#38 (various)
+- #10 (keyboard shortcuts on all menus) — show shortcuts beyond just File menu
+- #16 (status bar consistency), #18 (selection contrast), #21 (status bar abbreviation tooltips)
+- #22 (consistent spacing), #24 (context menus), #25 (disabled menu items)
+- #28 (ruler alignment), #29 (ruler margin handles), #33 (type hierarchy)
+- #35 (responsive layout), #38 (progress indicators)

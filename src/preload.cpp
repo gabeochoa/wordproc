@@ -114,21 +114,23 @@ Preload &Preload::make_singleton() {
             ui::add_singleton_components<ui_imm::InputAction>(sophie);
         }
 
-        // Load only ONE essential font at startup for fastest launch
-        std::string english_font =
+        // Load fonts for UI and document rendering
+        std::string document_font =
             files::get_resource_path("fonts", "EBGaramond-Regular.ttf").string();
+        std::string ui_font_path =
+            files::get_resource_path("fonts", "Roboto-Regular.ttf").string();
 
         {
-            SCOPED_TIMER("Load default font");
+            SCOPED_TIMER("Load fonts");
             auto& fontMgr = sophie.get<ui::FontManager>();
-            // Single font load - used as default for everything initially
-            fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, english_font.c_str());
-            // Alias the same font for other uses to avoid extra loads
-            fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, english_font.c_str());
-            fontMgr.load_font("Garamond", english_font.c_str());
+            // Sans-serif font for all UI chrome (menus, toolbar, title bar, status bar)
+            fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, ui_font_path.c_str());
+            fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, ui_font_path.c_str());
+            // Serif font available for document-related rendering
+            fontMgr.load_font("Garamond", document_font.c_str());
             
-            // Load UI font for Win95 widgets and other UI rendering
-            theme::UI_FONT = raylib::LoadFont(english_font.c_str());
+            // Load sans-serif UI font for manual Win95 widget rendering (DrawUIText)
+            theme::UI_FONT = raylib::LoadFont(ui_font_path.c_str());
             raylib::SetTextureFilter(theme::UI_FONT.texture, raylib::TEXTURE_FILTER_BILINEAR);
             theme::UI_FONT_LOADED = true;
         }
