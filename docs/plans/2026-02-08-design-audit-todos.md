@@ -7,9 +7,9 @@ Consolidated from 4 audit passes. Triaged 2026-02-08.
 
 ### Flagged by all 4 audits
 - [ ] **1. Toolbar icons**: Replace single-letter labels (N, O, S, P, X, C, V, <, >) with pixel-art icons
-- [ ] **2. Vertical scroll bar**: Add scrollbar to right edge of document area
+- [x] **2. Vertical scroll bar**: ~~Add scrollbar to right edge of document area~~ ✅ Done (Win95-style proportional thumb)
 - [x] **3. Toast notification stacking**: ~~Fix unlimited stacking, cap at 1-2 or use status bar~~ ✅ dismiss_all() prevents stacking
-- [ ] **4. Tooltips on toolbar buttons**: Add hover tooltips ("New (Ctrl+N)", etc.)
+- [x] **4. Tooltips on toolbar buttons**: ~~Add hover tooltips ("New (Ctrl+N)", etc.)~~ ✅ Done (yellow tooltip on hover)
 
 ### Flagged by 3 audits
 - [x] **5. Menu order + Help last**: ~~Reorder to File, Edit, View, Insert, Format, Tools, Table, Help. Merge Settings into Tools > Options~~ ✅ Done
@@ -22,12 +22,12 @@ Consolidated from 4 audit passes. Triaged 2026-02-08.
 
 ### Flagged by 2 audits
 - [x] **13. Window control buttons**: ~~Add min/max/close to title bar~~ ✅ Done (_, o, X)
-- [ ] **14. Text area sunken border**: Add 2px sunken bevel around document area
+- [x] **14. Text area sunken border**: ~~Add 2px sunken bevel around document area~~ ✅ Already existed (util::drawSunkenBorder)
 - [x] **15. Toolbar separators**: ~~Add etched vertical lines between button groups~~ ✅ Done (dark+light line pairs)
 - [ ] **16. Status bar inconsistency**: Ensure full status bar layout in all views
 - [ ] **17. Title bar font**: Use sans-serif system font instead of monospace
 - [ ] **18. Selection highlight contrast**: Make selected text readable (white on navy)
-- [ ] **19. Insert menu too long**: Move shapes into cascading submenu
+- [x] **19. Insert menu too long**: ~~Move shapes into cascading submenu~~ ✅ Consolidated with "Shape:" prefix, removed redundant "Shape..." entry
 - [ ] **20. Hover state on buttons**: Add visual feedback on mouse-over
 - [ ] **21. Status bar abbreviation tooltips**: Add hover explanations for REC/MRK/EXT/OVR
 - [ ] **22. Consistent spacing**: Normalize gaps between title/menu/toolbar/formatting/ruler
@@ -509,21 +509,29 @@ Screenshots reviewed: `audit_01_default_view.png` (empty document), `audit_02_wi
 | 24 | Context menus | ❌ STILL TODO | Cannot verify from screenshots |
 | 25 | Insert menu disabled states | ❌ STILL TODO | No grayed-out items visible |
 
-## Updated Scores
+## Updated Scores (after phase 3)
 
-| Audit | Previous Score | Current Score | Change |
-|-------|---------------|---------------|--------|
-| Win95 | 4/10 | 5.5/10 | +1.5 — Menu order fixed, window controls added, separators etched, toast stacking resolved, title bar improved |
-| Apple HIG | 4/10 | 5/10 | +1.0 — Toast stacking fixed, title bar indicator clearer, toolbar separators improve visual grouping |
-| Sun JLF | 2/10 | 2.5/10 | +0.5 — Menu order closer to standard, toast stacking fixed (style fundamentally different from JLF target) |
-| Material Design 3 | 1/10 | 1.5/10 | +0.5 — Color-only feedback addressed, toast stacking fixed (style fundamentally different from M3 target) |
+| Audit | Original | After Phase 2 | After Phase 3 | Change |
+|-------|----------|---------------|---------------|--------|
+| Win95 | 4/10 | 5.5/10 | 6.5/10 | +2.5 — Scroll bar, tooltips, insert menu cleanup, all phase 2 items |
+| Apple HIG | 4/10 | 5/10 | 6/10 | +2.0 — Scroll bar (See-and-Point), tooltips (Forgiveness), insert menu |
+| Sun JLF | 2/10 | 2.5/10 | 3/10 | +1.0 — Tool tips added, scroll bar |
+| Material Design 3 | 1/10 | 1.5/10 | 2/10 | +1.0 — Scroll bar, tooltips |
 
-## Summary
+## Summary (Phase 3)
 
-8 of 38 "Yes" items addressed in this pass. The structural improvements (menu reordering, window controls, etched separators, toast stacking, title bar indicator) are immediately visible and bring the Win95 compliance up. The next biggest wins would be:
+12 of 38 "Yes" items addressed across all phases:
 
-1. **Toolbar icons** (#1) — single biggest visual compliance gap across all 4 audits
-2. **Scroll bar** (#2) — fundamental usability requirement
-3. **Access keys / mnemonics** (#6) — accessibility and Win95 compliance
-4. **Tooltips** (#4) — complements icon work
-5. **Text area sunken border** (#14) — low-effort, high-impact visual fix
+**Done:** #3 (toast stacking), #5 (menu order), #7 (formatting active state), #9 (status bar color), #11 (color-only feedback), #13 (window controls), #14 (sunken border - already existed), #15 (etched separators), #19 (insert menu consolidated), #27 (title bar [Modified])
+**Done (new):** #2 (scroll bar), #4 (tooltips)
+
+**Deferred to afterhours:**
+- #1 (toolbar icons) — needs pixel art icon support or bitmap rendering
+- #6 (access keys/mnemonics) — needs per-character text decoration in afterhours
+- #8 (dropdown ▼) — font doesn't support Unicode triangle glyph
+- #17 (title bar font) — only one font loaded; adding sans-serif increases startup
+- #20 (hover state) — needs afterhours hover callback or custom rendering
+
+**Remaining local work:**
+- #10 (keyboard shortcuts on all menus) — already present in menu_setup.h, just not all visible in dropdown
+- #12 (focus indicators), #16 (status bar consistency), #18 (selection contrast), #21-#38 (various)
