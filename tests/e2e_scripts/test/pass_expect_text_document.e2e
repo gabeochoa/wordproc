@@ -1,9 +1,5 @@
 # Test: Verify typed text is visible on screen
-# Validates that document content can be checked with expect_text
-
-# Screenshot empty document
-wait 3
-screenshot pass_expect_text_document_empty
+# This test validates that document content can be checked with expect_text
 
 # Type some text
 type "Hello World"
@@ -11,9 +7,6 @@ wait 3
 
 # Verify the text appears on screen
 expect_text "Hello World"
-
-# Screenshot showing first line of text rendered
-screenshot pass_expect_text_document_first_line
 
 # Type more text on a new line
 key ENTER
@@ -24,5 +17,8 @@ wait 3
 expect_text "Hello World"
 expect_text "This is a test"
 
-# Screenshot showing both lines rendered
-screenshot pass_expect_text_document_two_lines
+# Take a screenshot to verify
+screenshot expect_text_document
+
+
+

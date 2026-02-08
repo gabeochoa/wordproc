@@ -624,9 +624,9 @@ struct AutoSaveSystem
         auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.autoSavePath);
         if (result.success) {
             doc.lastAutoSaveTime = now;
-            toast_notify::info("Auto-saved", 2.0f);
+            toast_notify::info("[saved] Auto-saved", 2.0f);
         } else {
-            toast_notify::error("Auto-save failed: " + result.error);
+            toast_notify::error("[error] Auto-save failed: " + result.error);
         }
     }
 };

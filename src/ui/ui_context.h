@@ -30,8 +30,6 @@ constexpr afterhours::Color BUTTON_FACE = {192, 192, 192, 255};
 constexpr afterhours::Color BORDER_LIGHT = {255, 255, 255, 255};
 constexpr afterhours::Color BORDER_DARK = {128, 128, 128, 255};
 constexpr afterhours::Color ERROR_COLOR = {255, 0, 0, 255};
-constexpr afterhours::Color SELECTION_BG = {0, 0, 128, 255};      // Blue selection
-constexpr afterhours::Color SELECTION_TEXT = {255, 255, 255, 255};  // White text on selection
 }  // namespace win95_colors
 
 // Create Win95 theme for Afterhours UI
@@ -229,26 +227,41 @@ inline void initTestModeUI() {
 // Toast notification helpers - provides static API without needing context parameter
 namespace toast_notify {
 
+// Dismiss all existing toasts to prevent stacking
+inline void dismiss_all() {
+    auto toasts = afterhours::EntityQuery({.force_merge = true})
+                      .whereHasComponent<afterhours::toast::Toast>()
+                      .gen();
+    for (auto& ref : toasts) {
+        ref.get().get<afterhours::toast::Toast>().dismissed = true;
+    }
+}
+
 // Send an info notification (blue, 3 seconds)
+// Dismisses existing toasts first to prevent stacking
 inline void info(const std::string& message, float duration = 3.0f) {
+    dismiss_all();
     auto& ctx = ui_imm::getUIContext();
     afterhours::toast::send_info(ctx, message, duration);
 }
 
 // Send a success notification (green, 3 seconds)
 inline void success(const std::string& message, float duration = 3.0f) {
+    dismiss_all();
     auto& ctx = ui_imm::getUIContext();
     afterhours::toast::send_success(ctx, message, duration);
 }
 
 // Send a warning notification (yellow/orange, 5 seconds)
 inline void warning(const std::string& message, float duration = 5.0f) {
+    dismiss_all();
     auto& ctx = ui_imm::getUIContext();
     afterhours::toast::send_warning(ctx, message, duration);
 }
 
 // Send an error notification (red, 7 seconds)
 inline void error(const std::string& message, float duration = 7.0f) {
+    dismiss_all();
     auto& ctx = ui_imm::getUIContext();
     afterhours::toast::send_error(ctx, message, duration);
 }

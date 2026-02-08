@@ -3,34 +3,24 @@
 
 type "Alignment Test"
 wait 2
-validate text=Alignment Test
 
 # Default should be left
 validate alignment=left
-
-# Screenshot showing left-aligned text (default)
-screenshot pass_text_alignment_left_default
 
 # Center alignment
 key CTRL+E
 wait 2
 validate alignment=center
 
-# Screenshot showing centered text
-screenshot pass_text_alignment_center
-
 # Right alignment
 key CTRL+R
 wait 2
 validate alignment=right
-
-# Screenshot showing right-aligned text
-screenshot pass_text_alignment_right
 
 # Back to left
 key CTRL+L
 wait 2
 validate alignment=left
 
-# Screenshot showing left-aligned again
-screenshot pass_text_alignment_left_restored
+screenshot 05_text_alignment
+

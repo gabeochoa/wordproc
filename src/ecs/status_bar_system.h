@@ -75,7 +75,8 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
                 .with_absolute_position()
                 .with_translate(0, statusBarY)
                 .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
-                .with_border(ui_imm::win95_colors::BORDER_LIGHT, 1.0f)
+                .with_bevel(afterhours::ui::BevelStyle::Raised,
+                            ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
                 .with_roundness(0.0f)
                 .with_debug_name("status_bar_bg"));
 

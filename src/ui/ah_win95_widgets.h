@@ -61,6 +61,8 @@ inline ComponentConfig win95ToolbarButtonStyle(float size, bool enabled = true, 
         .with_roundness(0.0f)
         .with_custom_background(bg)
         .with_custom_text_color(textColor)
+        .with_bevel(pressed ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
+                    ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 2.0f)
         .with_margin(Margin{.right = pixels(2)})
         .with_alignment(afterhours::ui::TextAlignment::Center);
 
@@ -119,6 +121,8 @@ inline ComponentConfig win95DropdownButtonStyle(float width, float height, bool 
         .with_size(ComponentSize{pixels(width), pixels(height)})
         .with_custom_background(bg)
         .with_custom_text_color(ui_imm::win95_colors::TEXT)
+        .with_bevel(open ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
+                    ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
         .with_roundness(0.0f)
         .with_padding(Padding{.top = pixels(2), .right = pixels(4), .bottom = pixels(2), .left = pixels(4)})
         .with_margin(Margin{.right = pixels(4)})

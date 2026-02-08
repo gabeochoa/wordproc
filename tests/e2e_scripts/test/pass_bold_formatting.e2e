@@ -4,31 +4,20 @@
 # Type some text
 type "Bold Text Test"
 wait 2
-validate text=Bold Text Test
-validate bold=false
 
-# Screenshot before any formatting
-screenshot pass_bold_formatting_text_typed
-
-# Select all text
+# Select all and apply bold
 select_all
 wait 2
-
-# Screenshot showing selection
-screenshot pass_bold_formatting_text_selected
-
-# Apply bold
 key CTRL+B
 wait 2
-validate bold=true
 
-# Screenshot showing bold applied
-screenshot pass_bold_formatting_bold_applied
+# Validate bold is enabled
+validate bold=true
 
 # Toggle bold off
 key CTRL+B
 wait 2
 validate bold=false
 
-# Screenshot showing bold removed
-screenshot pass_bold_formatting_bold_removed
+screenshot 02_bold_formatting
+

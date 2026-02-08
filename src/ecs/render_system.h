@@ -618,21 +618,8 @@ struct EditorRenderSystem
                        const ScrollComponent& scroll,
                        const LayoutComponent& layout, const MenuComponent& menu,
                        const float) const override {
-        // Title bar is now rendered by TitleBarSystem using Afterhours UI
-
-        // Draw menu bar background (menus are drawn later after text area)
-        if (!layout.focusMode) {
-            raylib::Rectangle menuBarRect = {layout.menuBar.x, layout.menuBar.y,
-                                             layout.menuBar.width,
-                                             layout.menuBar.height};
-            raylib::DrawRectangleRec(menuBarRect, theme::WINDOW_BG);
-            util::drawRaisedBorder(menuBarRect);
-        }
-
-        // Get mutable refs for later use
-        auto& mutableDoc = const_cast<DocumentComponent&>(doc);
+        // Mutable ref for input handling
         auto& mutableMenu = const_cast<MenuComponent&>(menu);
-        auto& mutableLayout = const_cast<LayoutComponent&>(layout);
 
         // F1 to show help window
         if (IsKeyPressed(raylib::KEY_F1)) {
@@ -760,18 +747,6 @@ struct EditorRenderSystem
             }
         }
 
-        // Status bar is now rendered by StatusBarSystem using Afterhours UI
-
-        if (!layout.focusMode) {
-            // Draw interactive menus ON TOP of everything except dialogs
-            // (drawn last so dropdowns appear above the text area)
-            int menuResult =
-                win95::DrawMenuBar(mutableMenu.menus, theme::layout::scaleInt(theme::layout::TITLE_BAR_HEIGHT),
-                                   theme::layout::scaleInt(theme::layout::MENU_BAR_HEIGHT));
-            if (menuResult >= 0) {
-                handleMenuActionImpl(menuResult, mutableDoc, mutableMenu, mutableLayout);
-            }
-        }
 
         // Note: About, Word Count, and Help dialogs now rendered by MenuUISystem using afterhours modal.h
     }
@@ -806,8 +781,7 @@ struct MenuSystem
 
     void renderMenus(DocumentComponent& doc, MenuComponent& menu,
                      LayoutComponent& layout) const {
-        // Menu bar is now rendered by MenuUISystem using Afterhours UI
-        // Just consume any click results and handle actions here
+        // Consume any click results from MenuUISystem and handle actions
         int menuResult = menu.consumeClickedResult();
 
         if (menuResult >= 0) {
@@ -1201,7 +1175,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 default:
                     break;
             }
-        } else if (menuIndex == 3) {  // Format menu
+        } else if (menuIndex == 4) {  // Format menu
             TextStyle style = doc.buffer.textStyle();
             switch (itemIndex) {
                 // Paragraph styles (0-8)
@@ -1449,7 +1423,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 default:
                     break;
             }
-        } else if (menuIndex == 4) {  // Insert menu
+        } else if (menuIndex == 3) {  // Insert menu
             switch (itemIndex) {
                 case 0:  // Page Break
                     doc.buffer.insertPageBreak();
@@ -1623,7 +1597,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 default:
                     break;
             }
-        } else if (menuIndex == 5) {  // Table menu
+        } else if (menuIndex == 6) {  // Table menu
             switch (itemIndex) {
                 case 0: {  // Insert Table...
                     // Insert a default 3x3 table at current line
@@ -1743,22 +1717,26 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 default:
                     break;
             }
-        } else if (menuIndex == 6) {  // Help menu
+        } else if (menuIndex == 7) {  // Help menu
             if (itemIndex == 0) {     // Keyboard Shortcuts
                 menu.showHelpWindow = true;
             } else if (itemIndex == 2) {  // About (after separator)
                 menu.showAboutDialog = true;
             }
-        } else if (menuIndex == 7) {  // Tools menu
-            if (itemIndex == 0) {
-                menu.showWordCountDialog = true;
-            }
-        } else if (menuIndex == 8) {  // Settings menu
-            if (itemIndex == 0) {  // UI Scale...
-                menu.showSettingsDialog = true;
-                // Pre-fill with current scale as percentage
-                int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
-                menu.uiScaleInputStr = std::to_string(currentPercentage);
+        } else if (menuIndex == 5) {  // Tools menu (includes former Settings items)
+            switch (itemIndex) {
+                case 0:  // Word Count...
+                    menu.showWordCountDialog = true;
+                    break;
+                case 2:  // UI Scale... (was Settings item 0)
+                    menu.showSettingsDialog = true;
+                    {
+                        int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
+                        menu.uiScaleInputStr = std::to_string(currentPercentage);
+                    }
+                    break;
+                default:
+                    break;
             }
         }
     }

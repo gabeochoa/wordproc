@@ -407,7 +407,7 @@ int main(int argc, char* argv[]) {
     // Send deferred toast notification for auto-save recovery
     // (must happen after toast systems are registered)
     if (recoveredAutoSave) {
-        toast_notify::success("Recovered auto-save");
+        toast_notify::info("[recovered] Restored from auto-save", 5.0f);
     }
 
     int loopFrames = 0;

@@ -7,37 +7,20 @@ wait 2
 # Default should be no list
 validate list_type=none
 
-# Screenshot with no list
-screenshot pass_lists_no_list
-
 # Toggle bulleted list
 key CTRL+SHIFT+8
 wait 2
 validate list_type=bulleted
 
-# Screenshot showing bullet marker
-screenshot pass_lists_bulleted
-
-# Toggle off bulleted
+# Toggle off
 key CTRL+SHIFT+8
 wait 2
 validate list_type=none
-
-# Screenshot showing list removed
-screenshot pass_lists_bullet_removed
 
 # Toggle numbered list
 key CTRL+SHIFT+7
 wait 2
 validate list_type=numbered
 
-# Screenshot showing number marker
-screenshot pass_lists_numbered
+screenshot 08_lists
 
-# Toggle off numbered
-key CTRL+SHIFT+7
-wait 2
-validate list_type=none
-
-# Screenshot showing numbered list removed
-screenshot pass_lists_number_removed

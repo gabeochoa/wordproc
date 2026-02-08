@@ -1,17 +1,19 @@
 # Test: Mouse click functionality
-# Validates that mouse clicks position the caret
+# Validates that mouse clicks work in test mode
 
 # Type some text first
 type "Click test"
 wait 2
+
+# Validate text was typed
 validate text=Click test
 
-# Screenshot before click
-screenshot pass_mouse_click_before_click
-
-# Click in the document area (middle of window)
+# Move mouse and click in the document area (approximately center of window)
+# This should position the caret
 click 400 300
 wait 3
 
-# Screenshot after clicking to reposition caret
-screenshot pass_mouse_click_after_click
+# Take a screenshot to verify mouse position
+screenshot 13_mouse_click
+
+

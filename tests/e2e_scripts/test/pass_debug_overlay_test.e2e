@@ -1,18 +1,23 @@
 # Test: Debug overlay visibility test
-# Validates that the debug overlay renders
+# This test runs long enough to capture the debug overlay
 
-# Wait for window to fully render
+# Wait enough time to see the overlay (debug overlay should appear quickly)
 wait 5
 
-# Screenshot showing initial window state
-screenshot pass_debug_overlay_test_initial
-
-# Verify menu bar is present
+# Expect some text to be on screen
 expect_text "File"
+
+# Wait a bit more
+wait 5
+
+# Another check
 expect_text "Edit"
 
-# Wait for overlay to settle
+# Final wait to ensure overlay is visible
 wait 5
 
-# Screenshot for visual check of overlay state
-screenshot pass_debug_overlay_test_overlay_state
+# Take a screenshot (overlay should be visible in this)
+screenshot debug_overlay_visible
+
+
+

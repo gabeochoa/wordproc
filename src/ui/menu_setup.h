@@ -172,7 +172,7 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Drop Cap", "", true, false, nullptr},
         {"Tab Width...", "", true, false, nullptr}
     };
-    menus.push_back(formatMenu);
+    // formatMenu pushed later in correct order (Index 4)
 
     // Insert menu
     win95::Menu insertMenu;
@@ -212,7 +212,20 @@ inline std::vector<win95::Menu> createMenuBar(
         {"", "", false, true, nullptr},                          // 30 Separator
         {"Table of Contents", "", true, false, nullptr}          // 31
     };
-    menus.push_back(insertMenu);
+    menus.push_back(insertMenu);   // Index 3: Insert
+
+    menus.push_back(formatMenu);   // Index 4: Format
+
+    // Tools menu (includes former Settings items)
+    win95::Menu toolsMenu;
+    toolsMenu.label = "Tools";
+    toolsMenu.items = {
+        {"Word Count...", "", true, false, nullptr},             // 0
+        {"", "", false, true, nullptr},                          // 1 Separator
+        {"UI Scale...", "", true, false, nullptr},               // 2 (was Settings)
+        {"Preferences...", "", false, false, nullptr}            // 3 (disabled, was Settings)
+    };
+    menus.push_back(toolsMenu);    // Index 5: Tools
 
     // Table menu
     win95::Menu tableMenu;
@@ -231,29 +244,15 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Merge Cells", "", true, false, nullptr},               // 10
         {"Split Cell", "", true, false, nullptr}                 // 11
     };
-    menus.push_back(tableMenu);
+    menus.push_back(tableMenu);    // Index 6: Table
 
-    // Help menu
+    // Help menu (always last per Win95 guidelines)
     win95::Menu helpMenu;
     helpMenu.label = "Help";
     helpMenu.items = {{"Keyboard Shortcuts...", "F1", true, false, nullptr},
                       {"", "", false, true, nullptr},  // Separator
                       {"About Wordproc", "", true, false, nullptr}};
-    menus.push_back(helpMenu);
-
-    // Tools menu
-    win95::Menu toolsMenu;
-    toolsMenu.label = "Tools";
-    toolsMenu.items = {{"Word Count...", "", true, false, nullptr}};
-    menus.push_back(toolsMenu);
-
-    // Settings menu
-    win95::Menu settingsMenu;
-    settingsMenu.label = "Settings";
-    settingsMenu.items = {{"UI Scale...", "", true, false, nullptr},           // 0
-                          {"", "", false, true, nullptr},                      // 1 Separator
-                          {"Preferences...", "", false, false, nullptr}};      // 2 (disabled for now)
-    menus.push_back(settingsMenu);
+    menus.push_back(helpMenu);     // Index 7: Help
 
     return menus;
 }

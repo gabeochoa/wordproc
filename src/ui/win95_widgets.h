@@ -6,8 +6,9 @@
 
 #include "../rl.h"
 
-// Win95-style widgets
-// Note: Colors are now centralized in theme.h
+// Win95-style menu types
+// These are data structures used by MenuComponent and menu_setup.
+// All drawing/interaction is now handled by Afterhours UI in MenuUISystem.
 namespace win95 {
 
 // Menu mark type for standard menu conventions
@@ -35,21 +36,5 @@ struct Menu {
     bool open = false;
     raylib::Rectangle bounds;
 };
-
-// Draw a Win95-style raised border (buttons, panels)
-void DrawRaisedBorder(raylib::Rectangle rect, int thickness = 1);
-
-// Draw a Win95-style sunken border (text fields, list boxes)
-void DrawSunkenBorder(raylib::Rectangle rect, int thickness = 1);
-
-
-// Draw menu bar and handle interaction
-// Returns index of clicked menu item, or -1 if none
-int DrawMenuBar(std::vector<Menu>& menus, int menuBarY, int menuBarHeight);
-
-// Draw a dropdown menu
-// Returns index of selected item, or -1 if none
-int DrawDropdownMenu(Menu& menu, int x, int y, int itemHeight);
-
 
 }  // namespace win95

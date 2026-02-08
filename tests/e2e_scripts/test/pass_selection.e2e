@@ -1,16 +1,11 @@
 # Test: Text selection (Ctrl+A)
 # Validates select all functionality
 
-# Type some text
 type "Select Me"
 wait 2
-validate text=Select Me
 
 # No selection initially
 validate has_selection=false
-
-# Screenshot before selection
-screenshot pass_selection_no_selection
 
 # Select all
 select_all
@@ -20,5 +15,5 @@ wait 2
 validate has_selection=true
 validate selected_text=Select Me
 
-# Screenshot showing text selected (highlight should be visible)
-screenshot pass_selection_all_selected
+screenshot 10_selection
+

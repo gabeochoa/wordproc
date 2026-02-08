@@ -85,7 +85,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // Get the UI root entity for parenting UI elements
         Entity& entity = ui_imm::getUIRootEntity();
         
-        // Set up Win95 theme
+        // Save the global theme so we can restore it after menu rendering
+        Theme savedTheme = ctx.theme;
+        
+        // Set up Win95 menu theme (only for this system's components)
         Theme menuTheme;
         menuTheme.font = toAhColor(theme::MENU_TEXT_HOVER);
         menuTheme.darkfont = toAhColor(theme::MENU_TEXT);
@@ -99,162 +102,261 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         menuTheme.segments = 0;
         ctx.theme = menuTheme;
 
-        int screenWidth = 800;  // TODO: get from layout component
+        // Get screen width from layout
+        float screenWidth = 800.0f;
+        {
+            auto layEntities = afterhours::EntityQuery({.force_merge = true})
+                                  .whereHasComponent<LayoutComponent>()
+                                  .gen();
+            if (!layEntities.empty()) {
+                screenWidth = static_cast<float>(layEntities[0].get().get<LayoutComponent>().screenWidth);
+            }
+        }
         
-        // Create menu bar container
-        auto menuBarContainer = div(ctx, mk(entity, 0),
+        // Create menu bar container (background + raised border via afterhours)
+        // Menu bar container (background)
+        div(ctx, mk(entity, 0),
             ComponentConfig{}
                 .with_debug_name("menu_bar_container")
-                .with_size(ComponentSize{pixels(static_cast<float>(screenWidth)), 
+                .with_size(ComponentSize{pixels(screenWidth), 
                                         pixels(theme::layout::scale(theme::layout::MENU_BAR_HEIGHT))})
                 .with_absolute_position()
                 .with_translate(0.0f, theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT))
                 .with_flex_direction(FlexDirection::Row)
-                .with_custom_background(toAhColor(theme::MENU_BG)));
+                .with_custom_background(toAhColor(theme::WINDOW_BG))
+                .with_bevel(afterhours::ui::BevelStyle::Raised,
+                            toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
+                .with_roundness(0.0f));
 
-        Entity& menuBar = menuBarContainer.ent();
-        (void)menuBar;  // Menu bar container used for background only
+        // Check if any menu is currently open (for hover-to-switch logic)
+        bool anyMenuOpen = false;
+        for (const auto& m : menu.menus) {
+            if (m.open) { anyMenuOpen = true; break; }
+        }
         
         // Track X position for header buttons
         float headerX = theme::layout::scale(4.0f);
         float headerY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT);
         
-        // Render each menu header button (absolute positioned to avoid layout issues)
+        // Track whether any header was clicked or hovered this frame
+        bool headerInteracted = false;
+        
+        // Render each menu header button and handle clicks + hover-to-switch
         for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
-            auto& menuItem = menu.menus[menuIdx];
-            bool isOpen = menuItem.open;
+            auto& menuDef = menu.menus[menuIdx];
+            bool isOpen = menuDef.open;
             
-            // Calculate button width based on label
-            float buttonWidth = static_cast<float>(menuItem.label.length() * 8 + 16);
+            // Calculate button width using actual text measurement (matching original Win95 DrawMenuBar)
+            int menuFontSize = 14;
+            float buttonWidth = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
             
             // Register menu label for E2E tests
-            test_input::registerVisibleText(menuItem.label);
+            test_input::registerVisibleText(menuDef.label);
             
-            // Each header button is absolute-positioned to avoid parent layout dependency
-            // Note: button result unused - immediate mode UI doesn't need it here
-            (void)button(ctx, mk(entity, 500 + static_cast<int>(menuIdx)),
+            int headerId = 500 + static_cast<int>(menuIdx);
+            
+            // Determine highlight: open OR hovered while another menu is open
+            bool highlighted = isOpen;
+            if (!isOpen && anyMenuOpen && ctx.was_hot(headerId)) {
+                highlighted = true;
+            }
+            
+            auto headerResult = button(ctx, mk(entity, headerId),
                 ComponentConfig{}
-                    .with_debug_name("menu_header_" + menuItem.label)
-                    .with_label(menuItem.label)
+                    .with_debug_name("menu_header_" + menuDef.label)
+                    .with_label(menuDef.label)
                     .with_size(ComponentSize{pixels(buttonWidth), 
                                             pixels(theme::layout::scale(theme::layout::MENU_BAR_HEIGHT))})
                     .with_absolute_position()
                     .with_translate(headerX, headerY)
-                    .with_custom_background(isOpen ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
-                    .with_custom_text_color(isOpen ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
+                    .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
+                    .with_custom_text_color(highlighted ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
+                    .with_roundness(0.0f)
                     .with_render_layer(1));
             
-            // Update X position for next header
+            // Handle header click: toggle this menu, close others
+            if (headerResult) {
+                for (size_t j = 0; j < menu.menus.size(); ++j) {
+                    menu.menus[j].open = (j == menuIdx) ? !isOpen : false;
+                }
+                menu.activeMenuIndex = isOpen ? -1 : static_cast<int>(menuIdx);
+                headerInteracted = true;
+            }
+            
+            // Handle hover-to-switch: when any menu is open and we hover a different header
+            if (anyMenuOpen && !isOpen && ctx.was_hot(headerId)) {
+                for (size_t j = 0; j < menu.menus.size(); ++j) {
+                    menu.menus[j].open = (j == menuIdx);
+                }
+                menu.activeMenuIndex = static_cast<int>(menuIdx);
+                headerInteracted = true;
+            }
+            
             headerX += buttonWidth;
         }
         
-        // Render dropdown for open menu
+        // Render dropdown for whichever menu is open
+        bool itemInteracted = false;
         for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
-            auto& menuItem = menu.menus[menuIdx];
-            if (!menuItem.open) continue;
+            auto& menuDef = menu.menus[menuIdx];
+            if (!menuDef.open) continue;
             
-            // Calculate dropdown position
+            // Calculate dropdown position (matching menu header widths)
+            int menuFontSize = 14;
             float dropdownX = theme::layout::scale(4.0f);
             for (size_t i = 0; i < menuIdx; ++i) {
-                dropdownX += static_cast<float>(menu.menus[i].label.length() * 8 + 16);
+                dropdownX += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
             }
             float dropdownY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + 
                                                   theme::layout::MENU_BAR_HEIGHT);
             
-            // Count non-separator items for height calculation
+            // Compute dropdown height
             float dropdownHeight = 0;
-            for (const auto& item : menuItem.items) {
+            for (const auto& item : menuDef.items) {
                 dropdownHeight += item.separator ? theme::layout::scale(8.0f) : theme::layout::scale(20.0f);
             }
             
-            // Calculate max width based on content
+            // Compute max width from content
             float maxWidth = 150.0f;
-            for (const auto& item : menuItem.items) {
+            for (const auto& item : menuDef.items) {
                 float labelWidth = static_cast<float>(item.label.length() * 7);
                 float shortcutWidth = static_cast<float>(item.shortcut.length() * 7);
-                float totalWidth = labelWidth + shortcutWidth + 40.0f;
+                float totalWidth = labelWidth + shortcutWidth + 50.0f;
                 if (totalWidth > maxWidth) maxWidth = totalWidth;
             }
             
-            // Create dropdown container
-            auto dropdownContainer = div(ctx, mk(entity, 100 + static_cast<int>(menuIdx)),
+            // Dropdown container background
+            div(ctx, mk(entity, 100 + static_cast<int>(menuIdx)),
                 ComponentConfig{}
-                    .with_debug_name("dropdown_" + menuItem.label)
-                    .with_size(ComponentSize{pixels(maxWidth), pixels(dropdownHeight)})
+                    .with_debug_name("dropdown_" + menuDef.label)
+                    .with_size(ComponentSize{pixels(maxWidth), pixels(dropdownHeight + 4.0f)})
                     .with_absolute_position()
                     .with_translate(dropdownX, dropdownY)
-                    .with_flex_direction(FlexDirection::Column)
                     .with_custom_background(toAhColor(theme::MENU_BG))
-                    .with_render_layer(10));  // Render on top
+                    .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
+                    .with_roundness(0.0f)
+                    .with_render_layer(10));
             
-            Entity& dropdown = dropdownContainer.ent();
-            (void)dropdown;  // Dropdown container used for background only
+            // Render each menu item
+            float itemY = dropdownY + 2.0f;
             
-            // Track Y position for menu items (each item individually absolute-positioned)
-            float itemY = dropdownY;
-            
-            // Render menu items - each individually absolute-positioned to avoid layout issues
-            for (size_t itemIdx = 0; itemIdx < menuItem.items.size(); ++itemIdx) {
-                const auto& item = menuItem.items[itemIdx];
+            for (size_t itemIdx = 0; itemIdx < menuDef.items.size(); ++itemIdx) {
+                const auto& item = menuDef.items[itemIdx];
                 
                 if (item.separator) {
-                    // Draw separator as a thin div - absolute positioned
-                    div(ctx, mk(entity, 1000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
+                    // Separator line
+                    div(ctx, mk(entity, 10000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
                         ComponentConfig{}
                             .with_debug_name("separator")
-                            .with_size(ComponentSize{pixels(maxWidth), pixels(8.0f)})
+                            .with_size(ComponentSize{pixels(maxWidth - 4.0f), pixels(2.0f)})
                             .with_absolute_position()
-                            .with_translate(dropdownX, itemY)
-                    .with_custom_background(toAhColor(theme::MENU_SEPARATOR))
+                            .with_translate(dropdownX + 2.0f, itemY + 3.0f)
+                            .with_custom_background(toAhColor(theme::BORDER_DARK))
+                            .with_roundness(0.0f)
                             .with_render_layer(11));
-                    itemY += 8.0f;
+                    itemY += theme::layout::scale(8.0f);
                 } else {
-                    // Build label with shortcut combined (padded for alignment)
-                    std::string fullLabel = item.label;
+                    // Build full label: mark + label + padded shortcut
+                    std::string fullLabel;
+                    
+                    // Prepend mark character if present
+                    if (item.mark != win95::MenuMark::None) {
+                        switch (item.mark) {
+                            case win95::MenuMark::Checkmark: fullLabel = "\xE2\x9C\x93 "; break;
+                            case win95::MenuMark::Radio:     fullLabel = "\xE2\x80\xA2 "; break;
+                            case win95::MenuMark::Dash:      fullLabel = "- "; break;
+                            case win95::MenuMark::None: break;
+                            default: break;
+                        }
+                    } else {
+                        fullLabel = "  ";  // Reserve space for mark column
+                    }
+                    
+                    fullLabel += item.label;
+                    
                     if (!item.shortcut.empty()) {
-                        // Pad label to align shortcuts on the right
-                        size_t labelLen = item.label.length();
-                        size_t targetLen = 20;  // Approximate width for menu item text
-                        if (labelLen < targetLen) {
-                            fullLabel += std::string(targetLen - labelLen, ' ');
+                        size_t currentLen = fullLabel.length();
+                        size_t targetLen = 24;
+                        if (currentLen < targetLen) {
+                            fullLabel += std::string(targetLen - currentLen, ' ');
                         }
                         fullLabel += item.shortcut;
                     }
                     
-                    // Register menu item label for E2E tests (when dropdown is open)
+                    // Register menu item label for E2E tests
                     test_input::registerVisibleText(item.label);
                     
-                    // Menu item button - absolute positioned with explicit coordinates
-                    // Create button for Afterhours UI (not for click handling - that's done by win95::DrawDropdownMenu)
-                button(ctx, mk(entity, 2000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
-                    ComponentConfig{}
-                        .with_debug_name("item_" + item.label)
-                        .with_label(fullLabel)
-                        .with_size(ComponentSize{pixels(maxWidth), pixels(theme::layout::scale(20.0f))})
-                        .with_absolute_position()
-                        .with_translate(dropdownX, itemY)
-                        .with_custom_background(toAhColor(theme::MENU_BG))
-                        .with_custom_text_color(item.enabled ? toAhColor(theme::MENU_TEXT)
-                                                              : toAhColor(theme::MENU_DISABLED))
-                        .with_alignment(afterhours::ui::TextAlignment::Left)
-                        .with_render_layer(11));
-                
-                itemY += theme::layout::scale(20.0f);
-                    // Note: Click handling for menu items is done by win95::DrawDropdownMenu
+                    int itemId = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
+                    float itemHeight = theme::layout::scale(20.0f);
+                    
+                    // Determine hover highlight
+                    bool hovered = ctx.was_hot(itemId) && item.enabled;
+                    
+                    auto itemResult = button(ctx, mk(entity, itemId),
+                        ComponentConfig{}
+                            .with_debug_name("item_" + item.label)
+                            .with_label(fullLabel)
+                            .with_size(ComponentSize{pixels(maxWidth - 4.0f), pixels(itemHeight)})
+                            .with_absolute_position()
+                            .with_translate(dropdownX + 2.0f, itemY)
+                            .with_custom_background(hovered ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
+                            .with_custom_text_color(
+                                !item.enabled ? toAhColor(theme::MENU_DISABLED) :
+                                hovered ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_roundness(0.0f)
+                            .with_render_layer(11));
+                    
+                    // Handle item click: dispatch action via lastClickedResult
+                    if (itemResult && item.enabled) {
+                        menu.lastClickedResult = static_cast<int>(menuIdx * 100 + itemIdx);
+                        // Call item action callback if set
+                        if (item.action) {
+                            item.action();
+                        }
+                        // Close all menus
+                        for (auto& m : menu.menus) { m.open = false; }
+                        menu.activeMenuIndex = -1;
+                        itemInteracted = true;
+                    }
+                    
+                    itemY += itemHeight;
                 }
             }
         }
         
-        // Handle click outside menus to close them
-        bool anyOpen = false;
-        for (const auto& m : menu.menus) {
-            if (m.open) anyOpen = true;
-        }
-        
-        if (anyOpen && ctx.pressed(InputAction::WidgetPress)) {
-            // Check if click was on menu bar or dropdown
-            // For now, just close menus on any click that wasn't handled by a button
-            // This is simplified - a full implementation would track bounds
+        // Close menus on click outside (if no header or item was interacted with)
+        // Check if mouse was clicked but didn't hit any menu element
+        if (anyMenuOpen && !headerInteracted && !itemInteracted) {
+            if (ctx.mouse.just_released) {
+                // Check if click was outside all menu areas
+                bool clickInMenu = false;
+                // Check header buttons
+                for (size_t i = 0; i < menu.menus.size(); ++i) {
+                    if (ctx.was_hot(500 + static_cast<int>(i))) { clickInMenu = true; break; }
+                }
+                // Check dropdown items  
+                if (!clickInMenu) {
+                    for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
+                        if (!menu.menus[menuIdx].open) continue;
+                        for (size_t itemIdx = 0; itemIdx < menu.menus[menuIdx].items.size(); ++itemIdx) {
+                            int id = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
+                            if (ctx.was_hot(id)) { clickInMenu = true; break; }
+                            int sepId = 10000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
+                            if (ctx.was_hot(sepId)) { clickInMenu = true; break; }
+                        }
+                        // Also check dropdown container
+                        int containerId = 100 + static_cast<int>(menuIdx);
+                        if (ctx.was_hot(containerId)) { clickInMenu = true; }
+                        if (clickInMenu) break;
+                    }
+                }
+                if (!clickInMenu) {
+                    for (auto& m : menu.menus) { m.open = false; }
+                    menu.activeMenuIndex = -1;
+                }
+            }
         }
         
         // ============================================================
@@ -1104,6 +1206,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
             }
         }
+        
+        // Restore the global theme so subsequent systems (toolbar, etc.) use the correct theme
+        ctx.theme = savedTheme;
     }
 };
 

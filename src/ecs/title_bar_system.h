@@ -49,7 +49,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
             title += " - Untitled";
         }
         if (doc.isDirty) {
-            title += " *";
+            title += " [Modified]";
         }
 
         Entity& uiRoot = ui_imm::getUIRootEntity();

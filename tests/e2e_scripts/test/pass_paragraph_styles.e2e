@@ -7,28 +7,20 @@ wait 2
 # Default should be Normal
 validate paragraph_style=normal
 
-# Screenshot at normal style
-screenshot pass_paragraph_styles_normal
-
 # Apply Heading 1 (Ctrl+Alt+1)
 key CTRL+ALT+1
 wait 2
 validate paragraph_style=heading 1
-
-# Screenshot showing heading 1 (text should be larger)
-screenshot pass_paragraph_styles_heading1
 
 # Apply Heading 2 (Ctrl+Alt+2)
 key CTRL+ALT+2
 wait 2
 validate paragraph_style=heading 2
 
-# Screenshot showing heading 2 (smaller than h1 but larger than normal)
-screenshot pass_paragraph_styles_heading2
-
 # Apply Normal (Ctrl+Alt+0)
 key CTRL+ALT+0
 wait 2
+validate paragraph_style=heading 2
 
-# Screenshot after resetting to normal
-screenshot pass_paragraph_styles_reset_to_normal
+screenshot 06_paragraph_styles
+

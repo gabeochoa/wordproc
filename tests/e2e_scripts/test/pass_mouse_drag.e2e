@@ -4,14 +4,15 @@
 # Type some text first
 type "Drag to select me"
 wait 2
+
+# Validate text was typed
 validate text=Drag to select me
 
-# Screenshot before any mouse interaction
-screenshot pass_mouse_drag_before_drag
-
-# Move mouse to start of text area
+# Mouse move to document area 
 mouse_move 100 100
 wait 2
 
-# Screenshot showing mouse positioned
-screenshot pass_mouse_drag_mouse_positioned
+# Take screenshot showing mouse position
+screenshot 14_mouse_drag
+
+
