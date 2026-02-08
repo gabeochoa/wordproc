@@ -1489,7 +1489,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Inserted 3x3 table");
                     break;
                 }
-                case 10:  // Image...
+                case 9:  // Image...
                 {
                     // Insert a placeholder image at the current line
                     DocumentImage img;
@@ -1507,13 +1507,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Image placeholder inserted");
                     break;
                 }
-                case 15:  // Line (drawing)
-                case 16:  // Rectangle (drawing)
-                case 17:  // Circle (drawing)
-                case 18:  // Ellipse (drawing)
-                case 19:  // Arrow (drawing)
-                case 20:  // Rounded Rectangle (drawing)
-                case 21:  // Triangle (drawing)
+                case 13:  // Shape: Line
+                case 14:  // Shape: Rectangle
+                case 15:  // Shape: Circle
+                case 16:  // Shape: Ellipse
+                case 17:  // Shape: Arrow
+                case 18:  // Shape: Rounded Rect
+                case 19:  // Shape: Triangle
                 {
                     DocumentDrawing drawing;
                     drawing.anchorLine = doc.buffer.caret().row;
@@ -1528,13 +1528,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     drawing.layoutMode = DrawingLayoutMode::Inline;
                     
                     switch (itemIndex) {
-                        case 15: drawing.shapeType = ShapeType::Line; break;
-                        case 16: drawing.shapeType = ShapeType::Rectangle; break;
-                        case 17: drawing.shapeType = ShapeType::Ellipse; break;  // Circle is an ellipse
-                        case 18: drawing.shapeType = ShapeType::Ellipse; break;
-                        case 19: drawing.shapeType = ShapeType::Arrow; break;
-                        case 20: drawing.shapeType = ShapeType::RoundedRect; break;
-                        case 21: drawing.shapeType = ShapeType::Triangle; break;
+                        case 13: drawing.shapeType = ShapeType::Line; break;
+                        case 14: drawing.shapeType = ShapeType::Rectangle; break;
+                        case 15: drawing.shapeType = ShapeType::Ellipse; break;  // Circle is an ellipse
+                        case 16: drawing.shapeType = ShapeType::Ellipse; break;
+                        case 17: drawing.shapeType = ShapeType::Arrow; break;
+                        case 18: drawing.shapeType = ShapeType::RoundedRect; break;
+                        case 19: drawing.shapeType = ShapeType::Triangle; break;
                         default: break;
                     }
                     
@@ -1543,7 +1543,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info(std::format("{} inserted", shapeTypeName(drawing.shapeType)));
                     break;
                 }
-                case 23:  // Equation...
+                case 21:  // Equation...
                 {
                     DocumentEquation eq;
                     eq.anchorLine = doc.buffer.caret().row;
@@ -1555,7 +1555,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Equation inserted");
                     break;
                 }
-                case 24:  // Footnote
+                case 22:  // Footnote
                 {
                     // Insert footnote marker as placeholder
                     doc.buffer.insertText("[1]");
@@ -1563,7 +1563,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Footnote marker inserted");
                     break;
                 }
-                case 27:  // Header
+                case 25:  // Header
                 {
                     // Insert header placeholder text at current position
                     doc.buffer.insertText("[HEADER]");
@@ -1571,7 +1571,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Header placeholder inserted");
                     break;
                 }
-                case 28:  // Footer
+                case 26:  // Footer
                 {
                     // Insert footer placeholder text at current position
                     doc.buffer.insertText("[FOOTER]");
@@ -1579,7 +1579,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Footer placeholder inserted");
                     break;
                 }
-                case 29:  // Page Number
+                case 27:  // Page Number
                 {
                     // Insert page number placeholder at current position
                     doc.buffer.insertText("[PAGE #]");
@@ -1587,7 +1587,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Page number placeholder inserted");
                     break;
                 }
-                case 32:  // Table of Contents
+                case 30:  // Table of Contents
                 {
                     doc.buffer.insertTableOfContents();
                     doc.isDirty = true;

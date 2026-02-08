@@ -174,7 +174,7 @@ inline std::vector<win95::Menu> createMenuBar(
     };
     // formatMenu pushed later in correct order (Index 4)
 
-    // Insert menu
+    // Insert menu (shapes consolidated)
     win95::Menu insertMenu;
     insertMenu.label = "Insert";
     insertMenu.items = {
@@ -186,31 +186,29 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Bookmark...", "", true, false, nullptr},               // 5
         {"Comment...", "", true, false, nullptr},                // 6
         {"", "", false, true, nullptr},                          // 7 Separator
-        {"Table...", "", true, false, nullptr},                  // 7
-        {"", "", false, true, nullptr},                          // 8 Separator
+        {"Table...", "", true, false, nullptr},                  // 8
         {"Image...", "", true, false, nullptr},                  // 9
         {"Image Layout...", "", true, false, nullptr},           // 10
         {"Wrap Text", "", true, false, nullptr},                 // 11
         {"", "", false, true, nullptr},                          // 12 Separator
-        {"Shape...", "", true, false, nullptr},                  // 13
-        {"Line", "", true, false, nullptr},                      // 14 - Drawing: Line
-        {"Rectangle", "", true, false, nullptr},                 // 15 - Drawing: Rectangle
-        {"Circle", "", true, false, nullptr},                    // 16 - Drawing: Circle
-        {"Ellipse", "", true, false, nullptr},                   // 17 - Drawing: Ellipse
-        {"Arrow", "", true, false, nullptr},                     // 18 - Drawing: Arrow
-        {"Rounded Rectangle", "", true, false, nullptr},         // 19 - Drawing: Rounded Rectangle
-        {"Triangle", "", true, false, nullptr},                  // 20 - Drawing: Triangle
-        {"", "", false, true, nullptr},                          // 21 Separator
-        {"Equation...", "", true, false, nullptr},               // 22
-        {"Footnote", "", true, false, nullptr},                  // 23
-        {"Special Character...", "", true, false, nullptr},      // 24
-        {"", "", false, true, nullptr},                          // 25 Separator
-        {"Header", "", true, false, nullptr},                    // 26
-        {"Footer", "", true, false, nullptr},                    // 27
-        {"Page Number", "", true, false, nullptr},               // 28
-        {"Document Body", "", true, false, nullptr},             // 29
-        {"", "", false, true, nullptr},                          // 30 Separator
-        {"Table of Contents", "", true, false, nullptr}          // 31
+        {"Shape: Line", "", true, false, nullptr},               // 13
+        {"Shape: Rectangle", "", true, false, nullptr},          // 14
+        {"Shape: Circle", "", true, false, nullptr},             // 15
+        {"Shape: Ellipse", "", true, false, nullptr},            // 16
+        {"Shape: Arrow", "", true, false, nullptr},              // 17
+        {"Shape: Rounded Rect", "", true, false, nullptr},       // 18
+        {"Shape: Triangle", "", true, false, nullptr},           // 19
+        {"", "", false, true, nullptr},                          // 20 Separator
+        {"Equation...", "", true, false, nullptr},               // 21
+        {"Footnote", "", true, false, nullptr},                  // 22
+        {"Special Character...", "", true, false, nullptr},      // 23
+        {"", "", false, true, nullptr},                          // 24 Separator
+        {"Header", "", true, false, nullptr},                    // 25
+        {"Footer", "", true, false, nullptr},                    // 26
+        {"Page Number", "", true, false, nullptr},               // 27
+        {"Document Body", "", true, false, nullptr},             // 28
+        {"", "", false, true, nullptr},                          // 29 Separator
+        {"Table of Contents", "", true, false, nullptr}          // 30
     };
     menus.push_back(insertMenu);   // Index 3: Insert
 
