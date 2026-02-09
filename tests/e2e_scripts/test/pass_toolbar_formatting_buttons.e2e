@@ -1,0 +1,18 @@
+# Test: Verify toolbar formatting buttons (B, I, U) are visible and clickable
+# These buttons appear on the formatting bar below the main toolbar
+
+# Wait for window to render
+wait 5
+
+# Verify Bold, Italic, Underline buttons are visible
+expect_text "B"
+expect_text "I"
+expect_text "U"
+
+# Verify formatting bar dropdowns
+expect_text "Normal"
+expect_text "Times New Roman"
+expect_text "10"
+
+# Take screenshot of initial state
+screenshot toolbar_formatting_initial

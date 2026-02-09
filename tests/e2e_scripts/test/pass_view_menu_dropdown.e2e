@@ -1,0 +1,28 @@
+# Test: Verify View menu dropdown opens and shows items
+# Clicks the View button and validates dropdown content
+
+# Wait for window to render
+wait 5
+
+# Verify View button is visible
+expect_text "View"
+
+# Click on View button
+# File(~48px) + Edit(~40px) = ~88px from left, center of View ~= 90
+click 90 34
+
+# Wait for menu to open
+wait 2
+
+# Take screenshot
+screenshot view_menu_dropdown
+
+# Verify View menu items are visible
+expect_text "Zoom In"
+expect_text "Zoom Out"
+expect_text "Focus Mode"
+expect_text "Dark Mode"
+
+# Close menu
+click 500 300
+wait 2

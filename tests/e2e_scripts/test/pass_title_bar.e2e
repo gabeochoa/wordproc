@@ -1,0 +1,14 @@
+# Test: Verify title bar shows application name
+# The title bar should show "Wordproc - Untitled" for a new document
+
+# Wait for window to render
+wait 5
+
+# Verify title bar text
+expect_text "Wordproc"
+
+# Verify window control buttons are present
+expect_text "X"
+
+# Take screenshot
+screenshot title_bar_visible

@@ -1,0 +1,17 @@
+# Test: Verify status bar shows expected text
+# The status bar should show page/section/line/column info and mode indicators
+
+# Wait for window to render
+wait 5
+
+# Verify status bar left section has page/line info
+expect_text "Page 1"
+expect_text "Ln 1"
+expect_text "Col 1"
+
+# Verify status bar right section has mode indicators
+expect_text "REC"
+expect_text "OVR"
+
+# Take screenshot
+screenshot status_bar_visible

@@ -1,0 +1,30 @@
+# Test: Verify Edit menu dropdown opens and shows all items
+# Clicks the Edit button and validates dropdown content
+
+# Wait for window to render
+wait 5
+
+# Verify Edit button is visible
+expect_text "Edit"
+
+# Click on Edit button (x=57, y=34 based on existing menu tests)
+click 57 34
+
+# Wait for menu to open
+wait 2
+
+# Take screenshot
+screenshot edit_menu_dropdown
+
+# Verify Edit menu items are visible
+expect_text "Undo"
+expect_text "Redo"
+expect_text "Cut"
+expect_text "Copy"
+expect_text "Paste"
+expect_text "Select All"
+expect_text "Find..."
+
+# Close menu
+click 500 300
+wait 2
