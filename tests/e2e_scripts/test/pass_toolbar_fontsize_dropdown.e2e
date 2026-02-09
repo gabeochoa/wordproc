@@ -1,0 +1,31 @@
+# Test: Verify Font Size dropdown on formatting toolbar opens and shows items
+# Validates that clicking the Font Size dropdown shows size options
+
+# Wait for window to render
+wait 5
+
+# Verify the current font size is visible
+expect_text "10"
+
+# Click the Font Size dropdown button
+# Style dropdown: x=2, width=120 -> ends at 122, gap 4 -> 126
+# Font dropdown: x=126, width=140 -> ends at 266, gap 4 -> 270
+# Font Size dropdown: x=270, width=50, center = 270 + 25 = 295
+# Y center: 85
+click 295 85
+
+# Wait for dropdown to open
+wait 3
+
+# Take screenshot to verify dropdown is open and visible
+screenshot toolbar_fontsize_dropdown
+
+# Verify font size items are visible
+expect_text "12"
+expect_text "14"
+expect_text "18"
+expect_text "24"
+
+# Click elsewhere to close the dropdown
+click 500 300
+wait 2

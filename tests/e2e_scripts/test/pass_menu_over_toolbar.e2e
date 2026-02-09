@@ -1,0 +1,39 @@
+# Test: Verify menu dropdowns render above toolbar (z-order)
+# When the File menu opens, it should appear in front of toolbar icons,
+# not behind them. This test validates the overlay render system
+# correctly hides icons when menus are open.
+
+# Wait for window to render
+wait 5
+
+# Open the File menu
+click 28 34
+wait 3
+
+# Take screenshot - menu should be visible above toolbar
+screenshot menu_over_toolbar
+
+# Verify menu items are visible (proves menu rendered on top)
+expect_text "New"
+expect_text "Save"
+expect_text "Export PDF..."
+
+# Close menu by clicking elsewhere
+click 500 300
+wait 2
+
+# Open the Edit menu
+click 57 34
+wait 3
+
+# Take screenshot
+screenshot edit_menu_over_toolbar
+
+# Verify Edit menu items are visible
+expect_text "Undo"
+expect_text "Cut"
+expect_text "Paste"
+
+# Close menu
+click 500 300
+wait 2

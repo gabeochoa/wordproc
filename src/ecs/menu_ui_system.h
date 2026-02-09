@@ -171,6 +171,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_translate(headerX, headerY)
                     .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
                     .with_custom_text_color(highlighted ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
+                    .with_alignment(afterhours::ui::TextAlignment::Center)
                     .with_roundness(0.0f)
                     .with_render_layer(1));
             

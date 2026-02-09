@@ -194,7 +194,10 @@ int main(int argc, char* argv[]) {
     {
         SCOPED_TIMER("UI context init");
         // Initialize Afterhours immediate-mode UI context with Win95 theme
-        ui_imm::initUIContext(800, 600);
+        // Use actual window dimensions so mouse coordinates match UI layout
+        ui_imm::initUIContext(
+            Settings::get().get_screen_width(),
+            Settings::get().get_screen_height());
         
         // Initialize test input provider when in test mode
         // This registers the TestInputProvider singleton for ECS systems to query
@@ -348,12 +351,12 @@ int main(int argc, char* argv[]) {
         // Batch mode: load all scripts from directory (with menu/layout support)
         fprintf(stderr, "[E2E DEBUG MAIN] Initializing batch runner\n");
         fflush(stderr);
-        e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, menuComp, layoutComp, screenshotDir);
+        e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
     } else if (!testScriptPath.empty()) {
         // Single script mode (with menu/layout support)
         fprintf(stderr, "[E2E DEBUG MAIN] Initializing single script runner for: %s\n", testScriptPath.c_str());
         fflush(stderr);
-        e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, screenshotDir);
+        e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
     } else {
         fprintf(stderr, "[E2E DEBUG MAIN] No test script specified\n");
         fflush(stderr);
@@ -423,6 +426,35 @@ int main(int argc, char* argv[]) {
         
         // Reset test input frame state (but keep mouse state from pending simulation)
         test_input::reset_frame();
+        
+        // Auto-release mouse after click to prevent stuck-down state.
+        // simulate_click() sets left_down=true but never releases it, which means
+        // subsequent clicks can't trigger just_pressed (prev_mouse_down is already true).
+        // We detect the press->down transition and release after 2 frames so that
+        // BeginUIContextManager sees left_down=true for at least one full frame.
+        {
+            static bool prev_left_down = false;
+            static int release_countdown = -1;
+            auto& m = afterhours::testing::input_injector::detail::mouse;
+            
+            // Detect new press (transition from not-down to down)
+            if (m.left_down && !prev_left_down) {
+                release_countdown = 2; // Release 2 frames after press detected
+            }
+            prev_left_down = m.left_down;
+            
+            // Count down and release
+            if (release_countdown > 0) {
+                release_countdown--;
+            } else if (release_countdown == 0) {
+                release_countdown = -1;
+                if (m.left_down) {
+                    m.left_down = false;
+                    m.just_released = true;
+                }
+                prev_left_down = false;
+            }
+        }
         
         // Clear visible text registry at start of frame (for E2E tests)
         test_input::clearVisibleTextRegistry();

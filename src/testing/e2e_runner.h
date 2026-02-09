@@ -28,6 +28,7 @@ void initializeRunner(
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
     ecs::LayoutComponent& layoutComp,
+    ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
 );
 
@@ -46,6 +47,7 @@ void initializeRunnerBatch(
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
     ecs::LayoutComponent& layoutComp,
+    ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
 );
 

@@ -86,6 +86,9 @@ endif
 # Accessibility enforcement (warn and clamp small font sizes)
 ACCESSIBILITY_CXXFLAGS := -DAFTERHOURS_ENFORCE_MIN_FONT_SIZE
 
+# E2E testing support (auto-register rendered text for expect_text assertions)
+E2E_CXXFLAGS := -DAFTER_HOURS_ENABLE_E2E_TESTING
+
 # Debug text overflow (show red indicators when text can't fit in containers)
 # Enabled by default, disable with DEBUG_TEXT_OVERFLOW=0
 DEBUG_TEXT_OVERFLOW ?= 1
@@ -98,7 +101,7 @@ endif
 # Combine all CXXFLAGS
 CXXFLAGS := $(CXXSTD) $(CXXFLAGS_BASE) $(CXXFLAGS_SUPPRESS) $(CXXFLAGS_TIME_TRACE) \
     $(MACOS_FLAGS) $(COVERAGE_CXXFLAGS) $(MCP_CXXFLAGS) $(ACCESSIBILITY_CXXFLAGS) \
-    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(RAYLIB_FLAGS)
+    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS) $(RAYLIB_FLAGS)
 
 # Include directories (use -isystem for vendor to suppress their warnings)
 INCLUDES := -isystem vendor/
@@ -250,7 +253,8 @@ TEST_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/test/%.o,$(notdir $(TEST_SRC)))
 TEST_EXE := $(OUTPUT_DIR)/run_tests$(EXT)
 
 # Test compiler flags (no raylib, no GUI)
-TEST_CXXFLAGS := $(CXXSTD) -g -Wall -Wextra -Wpedantic \
+# Use -O2 for fast test execution; -g for debug symbols on failure
+TEST_CXXFLAGS := $(CXXSTD) -O2 -g -Wall -Wextra -Wpedantic \
     $(COVERAGE_CXXFLAGS) \
     -Wno-deprecated-volatile -Wno-missing-field-initializers
 

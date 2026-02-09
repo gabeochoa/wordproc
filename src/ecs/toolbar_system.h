@@ -10,6 +10,7 @@
 #include "../editor/document_io.h"
 #include "components.h"
 #include "component_helpers.h"
+#include "../external.h"
 
 namespace ecs {
 
@@ -331,6 +332,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // === Style Dropdown ===
         float styleDropdownWidth = theme::layout::scale(120);
         std::string styleLabel = toolbar.currentStyle;
+        test_input::registerVisibleText(styleLabel);
         
         int styleDropBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, styleDropBtnId),
@@ -354,6 +356,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             
             for (size_t i = 0; i < toolbar.styles.size(); ++i) {
                 bool isSelected = (toolbar.styles[i] == toolbar.currentStyle);
+                test_input::registerVisibleText(toolbar.styles[i]);
                 // Dropdown items inside the list: use absolute positioning too
                 float itemY = formattingBarY + dropdownHeight + buttonPadding + 2.0f + static_cast<float>(i) * theme::layout::scale(20);
                 if (button(ctx, mk(uiRoot, 3001 + static_cast<int>(i)),
@@ -380,6 +383,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float fontDropdownWidth = theme::layout::scale(140);
         float fontDropdownX = fmtX;
         std::string fontLabel = toolbar.currentFont;
+        test_input::registerVisibleText(fontLabel);
         
         int fontDropBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, fontDropBtnId),
@@ -402,6 +406,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             
             for (size_t i = 0; i < toolbar.fonts.size(); ++i) {
                 bool isSelected = (toolbar.fonts[i] == toolbar.currentFont);
+                test_input::registerVisibleText(toolbar.fonts[i]);
                 float itemY = formattingBarY + dropdownHeight + buttonPadding + 2.0f + static_cast<float>(i) * theme::layout::scale(20);
                 if (button(ctx, mk(uiRoot, 3101 + static_cast<int>(i)),
                     ComponentConfig{}
@@ -431,6 +436,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float fontSizeDropdownWidth = theme::layout::scale(50);
         float fontSizeDropdownX = fmtX;
         std::string fontSizeLabel = std::to_string(toolbar.currentFontSize);
+        test_input::registerVisibleText(fontSizeLabel);
         
         int fontSizeDropBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, fontSizeDropBtnId),
@@ -454,6 +460,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             for (size_t i = 0; i < toolbar.fontSizes.size(); ++i) {
                 bool isSelected = (toolbar.fontSizes[i] == toolbar.currentFontSize);
                 std::string sizeStr = std::to_string(toolbar.fontSizes[i]);
+                test_input::registerVisibleText(sizeStr);
                 float itemY = formattingBarY + dropdownHeight + buttonPadding + 2.0f + static_cast<float>(i) * theme::layout::scale(20);
                 if (button(ctx, mk(uiRoot, 3201 + static_cast<int>(i)),
                     ComponentConfig{}
@@ -609,6 +616,37 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                                 afterhours::Color{0, 0, 0, 255}, afterhours::Color{0, 0, 0, 255}, 1.0f)
                     .with_alignment(afterhours::ui::TextAlignment::Center)
                     .with_debug_name("tooltip"));
+        }
+        
+        // === Close dropdowns on click outside ===
+        // If mouse was pressed and no dropdown button is hovered, close all dropdowns
+        if (ctx.mouse.just_pressed && (toolbar.styleDropdownOpen || toolbar.fontDropdownOpen || toolbar.fontSizeDropdownOpen)) {
+            float mx = ctx.mouse.pos.x;
+            float my = ctx.mouse.pos.y;
+            // Check if click is inside any dropdown button or dropdown list
+            bool insideDropdown = false;
+            // Style dropdown button: (buttonPadding, fmtBtnY, styleDropdownWidth, dropdownHeight)
+            float sdx = buttonPadding, sdy = fmtBtnY, sdw = theme::layout::scale(120), sdh = theme::layout::scale(22);
+            if (mx >= sdx && mx <= sdx + sdw && my >= sdy && my <= sdy + sdh) insideDropdown = true;
+            // Font dropdown button
+            float fdx = sdx + sdw + buttonPadding * 2, fdy = fmtBtnY, fdw = theme::layout::scale(140), fdh = theme::layout::scale(22);
+            if (mx >= fdx && mx <= fdx + fdw && my >= fdy && my <= fdy + fdh) insideDropdown = true;
+            // Font size dropdown button
+            float fsdx = fdx + fdw + buttonPadding * 2, fsdy = fmtBtnY, fsdw = theme::layout::scale(50), fsdh = theme::layout::scale(22);
+            if (mx >= fsdx && mx <= fsdx + fsdw && my >= fsdy && my <= fsdy + fsdh) insideDropdown = true;
+            // Dropdown lists (below the formatting bar)
+            float listY = formattingBarY + theme::layout::scale(22) + buttonPadding;
+            float listBottom = listY + 400; // generous height to cover any open list
+            if (my >= listY && my <= listBottom) {
+                if (toolbar.styleDropdownOpen && mx >= sdx && mx <= sdx + sdw) insideDropdown = true;
+                if (toolbar.fontDropdownOpen && mx >= fdx && mx <= fdx + fdw) insideDropdown = true;
+                if (toolbar.fontSizeDropdownOpen && mx >= fsdx && mx <= fsdx + fsdw) insideDropdown = true;
+            }
+            if (!insideDropdown) {
+                toolbar.styleDropdownOpen = false;
+                toolbar.fontDropdownOpen = false;
+                toolbar.fontSizeDropdownOpen = false;
+            }
         }
     }
 };

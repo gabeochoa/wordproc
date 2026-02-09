@@ -268,7 +268,7 @@ inline void drawDropdownTriangle(float cx, float cy, raylib::Color color) {
     raylib::DrawTriangle(v1, v3, v2, color);  // Note: raylib requires CCW winding
 }
 
-// Render system that draws toolbar icon overlays, dropdown triangles, and menu access key underlines
+// Render system that draws toolbar icon overlays and dropdown triangles
 // Must run AFTER afterhours UI render systems
 struct ToolbarOverlayRenderSystem : afterhours::System<ToolbarComponent> {
     
@@ -281,6 +281,30 @@ struct ToolbarOverlayRenderSystem : afterhours::System<ToolbarComponent> {
             return;
         }
         
+        // Check if any menu dropdown is open — if so, skip overlay drawing
+        // because the overlay uses raw raylib (drawn after all render layers)
+        // and would appear on top of the menu dropdown items
+        bool anyMenuOpen = false;
+        auto menuEntities = afterhours::EntityQuery({.force_merge = true})
+                               .whereHasComponent<MenuComponent>()
+                               .gen();
+        if (!menuEntities.empty()) {
+            const auto& menu = menuEntities[0].get().get<MenuComponent>();
+            for (const auto& m : menu.menus) {
+                if (m.open) { anyMenuOpen = true; break; }
+            }
+        }
+        
+        // Also check toolbar dropdowns
+        bool anyToolbarDropdownOpen = toolbar.styleDropdownOpen || 
+                                      toolbar.fontDropdownOpen || 
+                                      toolbar.fontSizeDropdownOpen;
+        
+        // Skip all overlay drawing when any popup is open to avoid z-order issues
+        if (anyMenuOpen || anyToolbarDropdownOpen) {
+            return;
+        }
+        
         // Draw all toolbar icons
         for (const auto& item : toolbar.iconOverlays) {
             drawToolbarIcon(item.icon, item.x, item.y, item.w, item.enabled);
@@ -289,54 +313,6 @@ struct ToolbarOverlayRenderSystem : afterhours::System<ToolbarComponent> {
         // Draw dropdown triangles
         for (const auto& tri : toolbar.dropdownTriangles) {
             drawDropdownTriangle(tri.x, tri.y, theme::BUTTON_TEXT);
-        }
-        
-        // Draw menu access key underlines
-        auto menuEntities = afterhours::EntityQuery({.force_merge = true})
-                               .whereHasComponent<MenuComponent>()
-                               .gen();
-        if (!menuEntities.empty()) {
-            const auto& menu = menuEntities[0].get().get<MenuComponent>();
-            drawMenuAccessKeyUnderlines(menu);
-        }
-    }
-    
-    // Draw underlines under the access key (first character) of each menu header
-    static void drawMenuAccessKeyUnderlines(const MenuComponent& menu) {
-        int menuFontSize = 14;
-        float headerX = theme::layout::scale(4.0f);
-        float headerY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT);
-        float menuBarHeight = theme::layout::scale(theme::layout::MENU_BAR_HEIGHT);
-        
-        for (size_t i = 0; i < menu.menus.size(); ++i) {
-            const auto& menuDef = menu.menus[i];
-            float buttonWidth = static_cast<float>(
-                theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
-            
-            // The text is centered in the button. Calculate position of first character.
-            float textW = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize));
-            float textStart = headerX + (buttonWidth - textW) / 2.0f;
-            
-            // Measure width of first character for underline
-            if (!menuDef.label.empty()) {
-                std::string firstChar = menuDef.label.substr(0, 1);
-                float charW = static_cast<float>(theme::MeasureUIText(firstChar.c_str(), menuFontSize));
-                
-                // Determine color based on highlight state
-                bool isOpen = menuDef.open;
-                raylib::Color underlineColor = isOpen ? theme::MENU_TEXT_HOVER : theme::MENU_TEXT;
-                
-                // Draw underline 1px below the text baseline
-                float underlineY = headerY + menuBarHeight - theme::layout::scale(4.0f);
-                raylib::DrawLine(
-                    static_cast<int>(textStart),
-                    static_cast<int>(underlineY),
-                    static_cast<int>(textStart + charW),
-                    static_cast<int>(underlineY),
-                    underlineColor);
-            }
-            
-            headerX += buttonWidth;
         }
     }
 };

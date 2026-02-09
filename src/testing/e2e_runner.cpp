@@ -160,16 +160,18 @@ static std::string toLower(const std::string& s) {
     return result;
 }
 
-// Set up extended callbacks with menu and layout support
+// Set up extended callbacks with menu, layout, and toolbar support
 static void setupCallbacksEx(
     ScriptRunner& runner,
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
     ecs::LayoutComponent& layoutComp,
+    ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
 ) {
     // Set up property getter for validation (extended version)
-    runner.set_property_getter([&docComp, &menuComp, &layoutComp](const std::string& prop) -> std::string {
+    runner.set_property_getter([&docComp, &menuComp, &layoutComp, &toolbarComp](const std::string& prop) -> std::string {
+        (void)toolbarComp; // Available if needed for future property queries
         const auto& buffer = docComp.buffer;
         const auto& style = buffer.textStyle();
         
@@ -495,7 +497,7 @@ static void setupCallbacksEx(
     // Note: document_dump command is now handled by ECS system in e2e_commands.h
     
     // Set up document clearer (for batch mode)
-    runner.set_reset_callback([&docComp, &menuComp, &layoutComp]() {
+    runner.set_reset_callback([&docComp, &menuComp, &layoutComp, &toolbarComp]() {
         // Reset document state
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
@@ -546,6 +548,11 @@ static void setupCallbacksEx(
         layoutComp.splitViewEnabled = false;
         layoutComp.splitViewHorizontal = true;
         
+        // Reset toolbar dropdown state
+        toolbarComp.styleDropdownOpen = false;
+        toolbarComp.fontDropdownOpen = false;
+        toolbarComp.fontSizeDropdownOpen = false;
+        
         // Reset theme
         theme::applyDarkMode(false);
         
@@ -563,6 +570,7 @@ void initializeRunner(
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
     ecs::LayoutComponent& layoutComp,
+    ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
 ) {
     if (scriptPath.empty()) {
@@ -585,7 +593,7 @@ void initializeRunner(
     
     fprintf(stderr, "[E2E DEBUG] Setting up callbacks for script\n");
     fflush(stderr);
-    setupCallbacksEx(runner, docComp, menuComp, layoutComp, screenshotDir);
+    setupCallbacksEx(runner, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
     fprintf(stderr, "[E2E DEBUG] Callbacks setup complete\n");
     fflush(stderr);
 }
@@ -596,6 +604,7 @@ void initializeRunnerBatch(
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
     ecs::LayoutComponent& layoutComp,
+    ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
 ) {
     if (scriptDir.empty()) {
@@ -610,7 +619,7 @@ void initializeRunnerBatch(
         return;
     }
     
-    setupCallbacksEx(runner, docComp, menuComp, layoutComp, screenshotDir);
+    setupCallbacksEx(runner, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
 }
 
 }  // namespace e2e

@@ -1,0 +1,29 @@
+# Test: Verify Font dropdown on formatting toolbar opens and shows items
+# Validates that clicking the Font dropdown shows all font options
+
+# Wait for window to render
+wait 5
+
+# Verify the current font label is visible
+expect_text "Times New Roman"
+
+# Click the Font dropdown button
+# Style dropdown: x=2, width=120 -> ends at 122
+# Gap: 4px padding -> font dropdown starts at ~126
+# Font dropdown width=140, center = 126 + 70 = 196
+# Y center: 85 (same as style dropdown)
+click 196 85
+
+# Wait for dropdown to open
+wait 3
+
+# Take screenshot to verify dropdown is open and visible
+screenshot toolbar_font_dropdown
+
+# Verify font dropdown items are visible
+expect_text "Arial"
+expect_text "Courier New"
+
+# Click elsewhere to close the dropdown
+click 500 300
+wait 2

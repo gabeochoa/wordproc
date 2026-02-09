@@ -1,0 +1,32 @@
+# Test: Verify Style dropdown on formatting toolbar opens and shows items
+# Validates that clicking the Style dropdown shows all paragraph style options
+
+# Wait for window to render
+wait 5
+
+# Verify the current style label is visible
+expect_text "Normal"
+
+# Click the Style dropdown button
+# Formatting bar Y: TITLE_BAR(24) + MENU_BAR(20) + TOOLBAR(28) = 72
+# Button Y center: 72 + 2 (padding) + 11 (half height) = 85
+# Button X: starts at 2, width=120, center = 62
+click 62 85
+
+# Wait for dropdown to open
+wait 3
+
+# Take screenshot to verify dropdown is open and visible (not behind toolbar)
+screenshot toolbar_style_dropdown
+
+# Verify dropdown items are visible
+expect_text "Heading 1"
+expect_text "Heading 2"
+expect_text "Title"
+
+# Click elsewhere to close the dropdown
+click 500 300
+wait 2
+
+# Verify dropdown closed (style didn't change)
+expect_text "Normal"
