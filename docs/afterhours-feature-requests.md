@@ -1,6 +1,80 @@
-# Afterhours Feature Requests
+# Afterhours Migration & Feature Requests
 
-Collected from the design audit (2026-02-08) and UI migration work.
+Collected from the design audit (2026-02-08), UI migration work, and submodule upgrade planning.
+
+**Current afterhours**: `6b7ac9b` (wordproc) → `cca68c4` (latest, ~10 commits behind)
+
+---
+
+# Part A: Migration Tasks (no upstream changes needed)
+
+These can be done now with the current or latest afterhours.
+
+## M1. Update afterhours submodule ✅
+
+Updated to `cca68c4` (10 commits: checkbox defaults refactor, validation system, resolution-independent sizing helpers, drawing primitives, scroll_view improvements, mutable render system signatures).
+
+---
+
+## M2. Remove `const_cast` in render systems ✅
+
+Switched `EditorRenderSystem::for_each_with` and `MenuSystem::for_each_with` to mutable signatures. Zero `const_cast` remaining in `src/`.
+
+---
+
+## M3. Replace direct raylib draw calls with afterhours wrappers ✅
+
+All ~111 `raylib::Draw*` calls replaced with `afterhours::draw_*` equivalents:
+- `src/util/drawing.h` — 4 calls migrated
+- `src/ui/theme.h` — 2 calls migrated
+- `src/ecs/render_system.h` — 52 calls migrated
+- `src/ecs/toolbar_overlay_render.h` — 47 calls migrated
+- `src/renderer/` — deleted (dead code, never used)
+
+---
+
+## M4. Mark AfterhoursGaps docs as resolved ✅
+
+Deleted entire `AfterhoursGaps/` directory (~15 files). All information consolidated into this document.
+
+---
+
+## M5. Adopt afterhours CommandHistory\<T\> ✅ (already done)
+
+`text_buffer.h` already uses `afterhours::CommandHistory<TextBuffer>`. No work needed.
+
+---
+
+## M6. Use afterhours text_input utilities ✅ (already done)
+
+`text_buffer.cpp` already uses `afterhours::text_input::find_word_start` and `find_word_end`. No work needed.
+
+---
+
+## M7. Enable validation ✅
+
+Enabled `enable_development_validation()` in `main.cpp` after `initUIContext`. Registered all validation systems (`register_systems<InputAction>`) after render systems. Logs warnings for off-screen elements, poor contrast, tiny fonts, etc.
+
+---
+
+## Migration Status
+
+All 7 migration tasks are **complete** ✅. Summary:
+
+| Task | Status | Notes |
+|------|--------|-------|
+| M1 — Update submodule | ✅ | `6b7ac9b` → `cca68c4` |
+| M2 — Remove const_cast | ✅ | 0 const_cast in src/ |
+| M3 — Replace raylib draws | ✅ | 0 `raylib::Draw*` in src/ |
+| M4 — Clean up gap docs | ✅ | `AfterhoursGaps/` deleted |
+| M5 — CommandHistory | ✅ | Already adopted |
+| M6 — Text utils | ✅ | Already adopted |
+| M7 — Validation | ✅ | Development mode enabled |
+
+---
+
+# Part B: Feature Requests (need upstream afterhours changes)
+
 These items cannot be implemented locally without changes to the afterhours library.
 
 ---

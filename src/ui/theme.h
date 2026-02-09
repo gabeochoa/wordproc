@@ -2,6 +2,7 @@
 
 #include "../rl.h"
 #include "../settings.h"
+#include <afterhours/src/drawing_helpers.h>
 
 // Win95-style color theme with Mac OS 3.1 accents
 // All colors are centralized here for easy theming
@@ -119,10 +120,11 @@ void applyDarkMode(bool enabled);
 inline void DrawUIText(const char* text, int x, int y, int baseFontSize, raylib::Color color) {
     int scaledSize = layout::scaleInt(baseFontSize);
     if (UI_FONT_LOADED) {
-        raylib::DrawTextEx(UI_FONT, text, {static_cast<float>(x), static_cast<float>(y)}, 
-                          static_cast<float>(scaledSize), 1.0f, color);
+        afterhours::draw_text_ex(UI_FONT, text, {static_cast<float>(x), static_cast<float>(y)}, 
+                                 static_cast<float>(scaledSize), 1.0f, color);
     } else {
-        raylib::DrawText(text, x, y, scaledSize, color);
+        afterhours::draw_text(text, static_cast<float>(x), static_cast<float>(y),
+                              static_cast<float>(scaledSize), color);
     }
 }
 

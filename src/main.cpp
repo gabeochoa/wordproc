@@ -28,6 +28,7 @@
 #include "ui/menu_setup.h"
 #include "ui/theme.h"
 #include "ui/ui_context.h"
+#include <afterhours/src/plugins/ui/validation_systems.h>
 #include "ui/win95_widgets.h"
 #include "util/drawing.h"
 #include "util/clipboard.h"
@@ -198,7 +199,19 @@ int main(int argc, char* argv[]) {
         ui_imm::initUIContext(
             Settings::get().get_screen_width(),
             Settings::get().get_screen_height());
-        
+
+        // Set global default font so validation doesn't warn about missing fonts
+        afterhours::ui::imm::UIStylingDefaults::get()
+            .set_default_font(afterhours::ui::UIComponent::DEFAULT_FONT,
+                              afterhours::ui::pixels(14.0f));
+
+        // Enable UI validation in development builds (logs warnings for
+        // layout issues like off-screen elements, tiny fonts, poor contrast)
+        // Skip in test mode to avoid log spam slowing down E2E tests
+        if (!testModeEnabled) {
+            afterhours::ui::imm::UIStylingDefaults::get().enable_development_validation();
+        }
+
         // Initialize test input provider when in test mode
         // This registers the TestInputProvider singleton for ECS systems to query
         if (testModeEnabled) {
@@ -326,6 +339,12 @@ int main(int argc, char* argv[]) {
     // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
     systemManager.register_render_system(std::make_unique<ecs::MenuSystem>());
     // Note: Screenshots are now handled in EditorRenderSystem.after() before EndDrawing()
+
+    // Validation systems (log warnings for layout/accessibility violations)
+    // Only register in non-test mode to avoid slowing E2E tests
+    if (!testModeEnabled) {
+        afterhours::ui::validation::register_systems<InputAction>(systemManager);
+    }
 
     // Measure startup time
     auto readyTime = std::chrono::high_resolution_clock::now();
