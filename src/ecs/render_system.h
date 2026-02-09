@@ -668,10 +668,10 @@ struct EditorRenderSystem
                 
                 // Draw inch number
                 std::string inchStr = std::to_string(inch);
-                int textWidth = theme::MeasureUIText(inchStr.c_str(), 8);
+                int textWidth = theme::MeasureUIText(inchStr.c_str(), 10);
                 theme::DrawUIText(inchStr.c_str(), x - textWidth / 2, 
-                                static_cast<int>(rulerY) + theme::layout::scaleInt(2), 
-                                8, theme::RULER_TEXT);
+                                static_cast<int>(rulerY) + theme::layout::scaleInt(1), 
+                                10, theme::RULER_TEXT);
                 
                 // Draw half-inch marks
                 if (inch < maxInches) {

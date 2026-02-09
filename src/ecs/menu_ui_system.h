@@ -172,6 +172,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
                     .with_custom_text_color(highlighted ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
                     .with_alignment(afterhours::ui::TextAlignment::Center)
+                    .with_justify_content(afterhours::ui::JustifyContent::Center)
+                    .with_align_items(afterhours::ui::AlignItems::Center)
                     .with_roundness(0.0f)
                     .with_render_layer(1));
             
@@ -237,7 +239,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_bevel(afterhours::ui::BevelStyle::Raised,
                                 toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
                     .with_roundness(0.0f)
-                    .with_render_layer(10));
+                    .with_render_layer(50));
             
             // Render each menu item
             float itemY = dropdownY + 2.0f;
@@ -246,16 +248,26 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 const auto& item = menuDef.items[itemIdx];
                 
                 if (item.separator) {
-                    // Separator line
-                    div(ctx, mk(entity, 10000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
+                    // Etched separator: dark line on top, light line below (Win95 style)
+                    int sepBaseId = 10000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
+                    div(ctx, mk(entity, sepBaseId),
                         ComponentConfig{}
-                            .with_debug_name("separator")
-                            .with_size(ComponentSize{pixels(maxWidth - 4.0f), pixels(2.0f)})
+                            .with_debug_name("separator_dark")
+                            .with_size(ComponentSize{pixels(maxWidth - 8.0f), pixels(1.0f)})
                             .with_absolute_position()
-                            .with_translate(dropdownX + 2.0f, itemY + 3.0f)
+                            .with_translate(dropdownX + 4.0f, itemY + 3.0f)
                             .with_custom_background(toAhColor(theme::BORDER_DARK))
                             .with_roundness(0.0f)
-                            .with_render_layer(11));
+                            .with_render_layer(51));
+                    div(ctx, mk(entity, sepBaseId + 50),
+                        ComponentConfig{}
+                            .with_debug_name("separator_light")
+                            .with_size(ComponentSize{pixels(maxWidth - 8.0f), pixels(1.0f)})
+                            .with_absolute_position()
+                            .with_translate(dropdownX + 4.0f, itemY + 4.0f)
+                            .with_custom_background(toAhColor(theme::BORDER_LIGHT))
+                            .with_roundness(0.0f)
+                            .with_render_layer(51));
                     itemY += theme::layout::scale(8.0f);
                 } else {
                     // Build full label: mark + label + padded shortcut
@@ -306,8 +318,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 !item.enabled ? toAhColor(theme::MENU_DISABLED) :
                                 hovered ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
                             .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_justify_content(afterhours::ui::JustifyContent::Center)
                             .with_roundness(0.0f)
-                            .with_render_layer(11));
+                            .with_render_layer(51));
                     
                     // Handle item click: dispatch action via lastClickedResult
                     if (itemResult && item.enabled) {

@@ -46,7 +46,9 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
         .with_roundness(0.0f)
         .with_custom_background(bg)
         .with_custom_text_color(textColor)
-        .with_alignment(afterhours::ui::TextAlignment::Center);
+        .with_alignment(afterhours::ui::TextAlignment::Center)
+        .with_justify_content(JustifyContent::Center)
+        .with_align_items(AlignItems::Center);
 
     // Win95 Office-style hover: flat when idle, raised on hover, sunken when pressed
     if (pressed) {
@@ -102,7 +104,9 @@ inline ComponentConfig absDropdownButton(float x, float y, float width, float he
                     ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
         .with_roundness(0.0f)
         .with_padding(Padding{.top = pixels(2), .right = pixels(4), .bottom = pixels(2), .left = pixels(4)})
-        .with_alignment(afterhours::ui::TextAlignment::Left);
+        .with_alignment(afterhours::ui::TextAlignment::Left)
+        .with_justify_content(JustifyContent::Center)
+        .with_align_items(AlignItems::FlexStart);
 }
 
 // Toolbar Render System - renders the standard toolbar and formatting toolbar
@@ -348,10 +352,10 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         // Style dropdown list
         if (toolbar.styleDropdownOpen && !toolbar.styles.empty()) {
-            auto styleList = div(ctx, mk(uiRoot, 3000),
+            div(ctx, mk(uiRoot, 3000),
                 ah_win95::win95DropdownListStyle(styleDropdownWidth, static_cast<int>(toolbar.styles.size()))
                     .with_translate(fmtX, formattingBarY + dropdownHeight + buttonPadding)
-                    .with_render_layer(10)
+                    .with_render_layer(50)
                     .with_debug_name("dropdown_style_list"));
             
             for (size_t i = 0; i < toolbar.styles.size(); ++i) {
@@ -368,7 +372,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_custom_background(isSelected ? ui_imm::win95_colors::HIGHLIGHT : ui_imm::win95_colors::TEXT_AREA)
                         .with_custom_text_color(isSelected ? ui_imm::win95_colors::TEXT_WHITE : ui_imm::win95_colors::TEXT)
                         .with_roundness(0.0f)
-                        .with_render_layer(11)
+                        .with_render_layer(51)
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_debug_name("style_item_" + std::to_string(i)))) {
                     toolbar.currentStyle = toolbar.styles[i];
@@ -398,10 +402,10 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         // Font dropdown list
         if (toolbar.fontDropdownOpen && !toolbar.fonts.empty()) {
-            auto fontList = div(ctx, mk(uiRoot, 3100),
+            div(ctx, mk(uiRoot, 3100),
                 ah_win95::win95DropdownListStyle(fontDropdownWidth, static_cast<int>(toolbar.fonts.size()))
                     .with_translate(fontDropdownX, formattingBarY + dropdownHeight + buttonPadding)
-                    .with_render_layer(10)
+                    .with_render_layer(50)
                     .with_debug_name("dropdown_font_list"));
             
             for (size_t i = 0; i < toolbar.fonts.size(); ++i) {
@@ -417,7 +421,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_custom_background(isSelected ? ui_imm::win95_colors::HIGHLIGHT : ui_imm::win95_colors::TEXT_AREA)
                         .with_custom_text_color(isSelected ? ui_imm::win95_colors::TEXT_WHITE : ui_imm::win95_colors::TEXT)
                         .with_roundness(0.0f)
-                        .with_render_layer(11)
+                        .with_render_layer(51)
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_debug_name("font_item_" + std::to_string(i)))) {
                     toolbar.currentFont = toolbar.fonts[i];
@@ -451,10 +455,10 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         // Font size dropdown list
         if (toolbar.fontSizeDropdownOpen && !toolbar.fontSizes.empty()) {
-            auto sizeList = div(ctx, mk(uiRoot, 3200),
+            div(ctx, mk(uiRoot, 3200),
                 ah_win95::win95DropdownListStyle(fontSizeDropdownWidth, static_cast<int>(toolbar.fontSizes.size()))
                     .with_translate(fontSizeDropdownX, formattingBarY + dropdownHeight + buttonPadding)
-                    .with_render_layer(10)
+                    .with_render_layer(50)
                     .with_debug_name("dropdown_fontsize_list"));
             
             for (size_t i = 0; i < toolbar.fontSizes.size(); ++i) {
@@ -471,7 +475,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_custom_background(isSelected ? ui_imm::win95_colors::HIGHLIGHT : ui_imm::win95_colors::TEXT_AREA)
                         .with_custom_text_color(isSelected ? ui_imm::win95_colors::TEXT_WHITE : ui_imm::win95_colors::TEXT)
                         .with_roundness(0.0f)
-                        .with_render_layer(11)
+                        .with_render_layer(51)
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_debug_name("size_item_" + std::to_string(i)))) {
                     toolbar.currentFontSize = toolbar.fontSizes[i];
@@ -497,6 +501,11 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         toolbar.italicActive = currentStyle.italic;
         toolbar.underlineActive = currentStyle.underline;
         
+        // Register formatting button labels for E2E testing
+        test_input::registerVisibleText("B");
+        test_input::registerVisibleText("I");
+        test_input::registerVisibleText("U");
+
         int boldBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, boldBtnId),
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.boldActive, ctx.was_hot(boldBtnId))

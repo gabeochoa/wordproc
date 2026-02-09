@@ -7,6 +7,7 @@
 #include "../ui/ah_win95_widgets.h"
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
+#include "../external.h"
 #include "components.h"
 
 namespace ecs {
@@ -32,7 +33,9 @@ inline ComponentConfig titleBarButton(float x, float y, float w, float h) {
         .with_bevel(afterhours::ui::BevelStyle::Raised,
                     ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
         .with_roundness(0.0f)
-        .with_alignment(afterhours::ui::TextAlignment::Center);
+        .with_alignment(afterhours::ui::TextAlignment::Center)
+        .with_justify_content(afterhours::ui::JustifyContent::Center)
+        .with_align_items(afterhours::ui::AlignItems::Center);
 }
 
 // Title Bar System - renders the blue title bar using Afterhours UI
@@ -69,6 +72,9 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
 
         Entity& uiRoot = ui_imm::getUIRootEntity();
 
+        // Register title bar text for E2E testing
+        test_input::registerVisibleText(title);
+
         // Title bar div — blue background, white text, left-aligned
         div(ctx, mk(uiRoot, 9000),
             ComponentConfig{}
@@ -92,6 +98,9 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         float btnH = theme::layout::scale(14);
         float btnPad = theme::layout::scale(2);
         float btnY = (titleBarHeight - btnH) / 2.0f;
+
+        // Register control button labels for E2E testing
+        test_input::registerVisibleText("X");
 
         // Close button (rightmost)
         float closeX = screenWidth - btnW - btnPad;

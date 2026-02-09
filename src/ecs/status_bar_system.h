@@ -7,6 +7,7 @@
 #include "../ui/ah_win95_widgets.h"
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
+#include "../external.h"
 #include "components.h"
 
 namespace ecs {
@@ -67,6 +68,19 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
         char timeStr[16];
         std::strftime(timeStr, sizeof(timeStr), "%I:%M %p", localTime);
         std::string rightText = std::format("REC   MRK   EXT   OVR      {}", timeStr);
+
+        // Register status bar text for E2E testing
+        test_input::registerVisibleText(leftText);
+        test_input::registerVisibleText(rightText);
+
+        // Register document text for E2E testing (visible lines)
+        size_t lineCount = doc.buffer.lineCount();
+        for (size_t i = 0; i < lineCount; ++i) {
+            std::string line = doc.buffer.lineString(i);
+            if (!line.empty()) {
+                test_input::registerVisibleText(line);
+            }
+        }
 
         // === Status bar background ===
         div(ctx, mk(uiRoot, 8000),
