@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
             "file=%s,size=%zu,lines=%zu,chars=%zu,load_ms=%.3f,total_ms=%.3f,"
             "target=100,pass=%s",
             loadFile.c_str(), fileSize, buffer.lineCount(),
-            buffer.getText().size(), loadMs, totalMs,
+            buffer.textSize(), loadMs, totalMs,
             totalMs <= 100.0 ? "true" : "false");
 
         return totalMs <= 100.0 ? 0 : 1;

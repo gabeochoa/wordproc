@@ -131,7 +131,7 @@ struct HandleDocumentDumpCommand : System<testing::PendingE2ECommand> {
 
     std::ofstream file(cmd.arg(0));
     if (file.is_open()) {
-      file << doc_comp->buffer.getText();
+      doc_comp->buffer.writeTextTo(file);
       cmd.consume();
     } else {
       cmd.fail("Failed to open file: " + cmd.arg(0));

@@ -9,17 +9,19 @@ std::vector<WrappedLine> layoutWrappedLines(const TextBuffer &buffer,
         return result;
     }
 
-    const auto &lines = buffer.lines();
-    for (std::size_t row = 0; row < lines.size(); ++row) {
-        const std::string &line = lines[row];
-        if (line.empty()) {
+    std::size_t numLines = buffer.lineCount();
+    for (std::size_t row = 0; row < numLines; ++row) {
+        LineSpan span = buffer.lineSpan(row);
+        if (span.length == 0) {
             result.push_back(WrappedLine{row, 0, 0, ""});
             continue;
         }
 
+        // Only materialize the string for the WrappedLine.text field
+        std::string line = buffer.lineString(row);
         std::size_t start = 0;
-        while (start < line.size()) {
-            std::size_t len = std::min(max_columns, line.size() - start);
+        while (start < span.length) {
+            std::size_t len = std::min(max_columns, span.length - start);
             result.push_back(
                 WrappedLine{row, start, len, line.substr(start, len)});
             start += len;
@@ -29,7 +31,7 @@ std::vector<WrappedLine> layoutWrappedLines(const TextBuffer &buffer,
     return result;
 }
 
-// SoA layout implementation - avoids string copies
+// SoA layout implementation - zero allocation
 // Uses parallel arrays for better cache locality during iteration
 LayoutResult layoutWrappedLinesSoA(const TextBuffer &buffer,
                                    std::size_t max_columns) {
@@ -38,26 +40,27 @@ LayoutResult layoutWrappedLinesSoA(const TextBuffer &buffer,
         return result;
     }
 
-    const auto &lines = buffer.lines();
+    std::size_t numLines = buffer.lineCount();
 
     // Pre-compute total wrapped lines for reservation
     std::size_t estimated_count = 0;
-    for (const auto &line : lines) {
+    for (std::size_t row = 0; row < numLines; ++row) {
+        LineSpan span = buffer.lineSpan(row);
         estimated_count +=
-            line.empty() ? 1 : (line.size() + max_columns - 1) / max_columns;
+            span.length == 0 ? 1 : (span.length + max_columns - 1) / max_columns;
     }
     result.reserve(estimated_count);
 
-    for (std::size_t row = 0; row < lines.size(); ++row) {
-        const std::string &line = lines[row];
-        if (line.empty()) {
+    for (std::size_t row = 0; row < numLines; ++row) {
+        LineSpan span = buffer.lineSpan(row);
+        if (span.length == 0) {
             result.push_back(row, 0, 0);
             continue;
         }
 
         std::size_t start = 0;
-        while (start < line.size()) {
-            std::size_t len = std::min(max_columns, line.size() - start);
+        while (start < span.length) {
+            std::size_t len = std::min(max_columns, span.length - start);
             result.push_back(row, start, len);
             start += len;
         }

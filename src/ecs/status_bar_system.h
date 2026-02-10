@@ -76,9 +76,11 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
         // Register document text for E2E testing (visible lines)
         size_t lineCount = doc.buffer.lineCount();
         for (size_t i = 0; i < lineCount; ++i) {
-            std::string line = doc.buffer.lineString(i);
-            if (!line.empty()) {
-                test_input::registerVisibleText(line);
+            auto view = doc.buffer.lineView(i);
+            if (view && view.length > 0) {
+                test_input::registerVisibleText(std::string(view.data, view.length));
+            } else if (!view && doc.buffer.lineSpan(i).length > 0) {
+                test_input::registerVisibleText(doc.buffer.lineString(i));
             }
         }
 

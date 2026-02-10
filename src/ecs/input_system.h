@@ -129,7 +129,7 @@ struct TextInputSystem
                 recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
             } else {
                 std::size_t offset = doc.buffer.caretOffset();
-                if (offset < doc.buffer.getText().size()) {
+                if (offset < doc.buffer.textSize()) {
                     char deleted = doc.buffer.charAtOffset(offset);
                     recordDeleteRevision(doc, offset, std::string(1, deleted));
                 }

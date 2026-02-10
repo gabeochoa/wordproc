@@ -30,9 +30,24 @@ DocumentResult exportDocumentHtml(const TextBuffer& buffer,
     }
 
     std::ostringstream body;
-    std::vector<std::string> lines = buffer.lines();
-    for (const auto& line : lines) {
-        body << escapeHtml(line) << "\n";
+    for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+        auto view = buffer.lineView(i);
+        if (view) {
+            // Zero-copy: escape directly from buffer pointer
+            for (std::size_t j = 0; j < view.length; ++j) {
+                char ch = view.data[j];
+                switch (ch) {
+                    case '&': body << "&amp;"; break;
+                    case '<': body << "&lt;"; break;
+                    case '>': body << "&gt;"; break;
+                    case '"': body << "&quot;"; break;
+                    default: body.put(ch); break;
+                }
+            }
+        } else {
+            body << escapeHtml(buffer.lineString(i));
+        }
+        body << '\n';
     }
 
     out << "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\"/>\n";

@@ -28,6 +28,30 @@ class GapBuffer {
     // Get entire buffer as string (for compatibility)
     std::string toString() const;
 
+    // Write contents directly to an output stream (zero intermediate string)
+    void writeTo(std::ostream& out) const;
+
+    // Call a function for each contiguous region of content.
+    // The callback receives (const char* data, size_t len) once or twice
+    // (before-gap region, then after-gap region). This is the zero-copy
+    // primitive that everything else should build on.
+    template <typename Fn>
+    void forEachRegion(Fn&& fn) const {
+        if (gap_start_ > 0) {
+            fn(buffer_.data(), gap_start_);
+        }
+        std::size_t after_gap_len = buffer_.size() - gap_end_;
+        if (after_gap_len > 0) {
+            fn(buffer_.data() + gap_end_, after_gap_len);
+        }
+    }
+
+    // Raw region accessors for direct pointer access
+    const char* beforeGapData() const { return buffer_.data(); }
+    std::size_t beforeGapSize() const { return gap_start_; }
+    const char* afterGapData() const { return buffer_.data() + gap_end_; }
+    std::size_t afterGapSize() const { return buffer_.size() - gap_end_; }
+
     void clear();
 
     // Reserve capacity for bulk loading (avoids reallocations)

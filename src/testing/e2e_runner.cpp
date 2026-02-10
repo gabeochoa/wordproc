@@ -177,7 +177,7 @@ static void setupCallbacksEx(
         
         // Basic text properties
         if (prop == "text") return buffer.getText();
-        if (prop == "text_length") return std::to_string(buffer.getText().size());
+        if (prop == "text_length") return std::to_string(buffer.textSize());
         if (prop == "line_count") return std::to_string(buffer.lineCount());
         if (prop == "bold") return style.bold ? "true" : "false";
         if (prop == "italic") return style.italic ? "true" : "false";
@@ -406,7 +406,7 @@ static void setupCallbacksEx(
             // Calculate absolute position
             std::size_t pos = 0;
             for (std::size_t i = 0; i < buffer.caret().row && i < buffer.lineCount(); ++i) {
-                pos += buffer.lineString(i).size() + 1;  // +1 for newline
+                pos += buffer.lineSpan(i).length + 1;  // +1 for newline
             }
             pos += buffer.caret().column;
             return std::to_string(pos);
@@ -428,7 +428,7 @@ static void setupCallbacksEx(
         // text_shorter_than_NUMBER - check if text length < NUMBER
         if (prop.length() > 18 && prop.substr(0, 18) == "text_shorter_than_") {
             int maxLen = std::stoi(prop.substr(18));
-            return buffer.getText().size() < static_cast<std::size_t>(maxLen) ? "true" : "false";
+            return buffer.textSize() < static_cast<std::size_t>(maxLen) ? "true" : "false";
         }
         if (prop.substr(0, 10) == "regex_find") {
             std::string pattern = prop.substr(11);

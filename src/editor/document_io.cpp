@@ -205,6 +205,18 @@ static Table deserializeTable(const nlohmann::json &j) {
     return table;
 }
 
+// Internal: read entire file into string (binary, single allocation)
+static std::string readFileRaw(const std::string &path) {
+    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
+    if (!ifs.is_open()) return {};
+    auto fileSize = ifs.tellg();
+    if (fileSize <= 0) return {};
+    ifs.seekg(0, std::ios::beg);
+    std::string raw(static_cast<std::size_t>(fileSize), '\0');
+    ifs.read(raw.data(), fileSize);
+    return raw;
+}
+
 bool saveTextFile(const TextBuffer &buffer, const std::string &path) {
     auto result = saveTextFileEx(buffer, path);
     return result.success;
@@ -314,15 +326,18 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                               const std::string &path) {
     DocumentResult result;
 
-    std::ifstream ifs(path);
-    if (!ifs.is_open()) {
-        result.error = "Could not open file: " + path;
+    std::string raw = readFileRaw(path);
+    if (raw.empty()) {
+        // Could be a truly empty file or a read error — check existence
+        if (!std::filesystem::exists(path)) {
+            result.error = "Could not open file: " + path;
+            return result;
+        }
+        // Empty file is valid
+        buffer.setText("");
+        result.success = true;
         return result;
     }
-
-    std::ostringstream contents;
-    contents << ifs.rdbuf();
-    std::string raw = contents.str();
 
     const std::filesystem::path input_path(path);
     std::string extension = input_path.extension().string();
@@ -565,27 +580,25 @@ DocumentResult loadDocumentWithTables(TextBuffer &buffer,
                                       DocumentSettings &settings,
                                       TableList &tables,
                                       const std::string &path) {
-    // First load the basic document
+    // Read file once, reuse the raw string for both document and tables
+    std::string raw = readFileRaw(path);
+    if (raw.empty()) {
+        DocumentResult result;
+        result.error = "Could not open file: " + path;
+        return result;
+    }
+
+    // Load the basic document using the raw string we already have
     DocumentResult result = loadDocumentEx(buffer, settings, path);
     
     if (!result.success && !result.usedFallback) {
         return result;
     }
     
-    // Now try to load tables from the file
-    std::ifstream ifs(path);
-    if (!ifs.is_open()) {
-        return result;  // Return previous result
-    }
-    
-    std::ostringstream contents;
-    contents << ifs.rdbuf();
-    std::string raw = contents.str();
-    
+    // Parse tables from the same raw string — no second file read
     try {
         nlohmann::json doc = nlohmann::json::parse(raw);
         
-        // Load tables
         if (doc.contains("tables")) {
             tables.clear();
             for (const auto &table_entry : doc["tables"]) {

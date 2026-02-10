@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <ostream>
 
 GapBuffer::GapBuffer(std::size_t initial_capacity) {
     buffer_.resize(initial_capacity);
@@ -110,26 +111,54 @@ const char* GapBuffer::data(std::size_t pos, std::size_t len) const {
 }
 
 void GapBuffer::copyTo(std::size_t pos, std::size_t len, char* out) const {
-    for (std::size_t i = 0; i < len; ++i) {
-        out[i] = at(pos + i);
+    if (len == 0) return;
+
+    // Fast path: range entirely before gap
+    if (pos + len <= gap_start_) {
+        std::memcpy(out, &buffer_[pos], len);
+        return;
     }
+
+    // Fast path: range entirely after gap
+    if (pos >= gap_start_) {
+        std::size_t buf_pos = gap_end_ + (pos - gap_start_);
+        std::memcpy(out, &buffer_[buf_pos], len);
+        return;
+    }
+
+    // Range spans the gap: copy in two parts
+    std::size_t before_len = gap_start_ - pos;
+    std::memcpy(out, &buffer_[pos], before_len);
+    std::size_t after_len = len - before_len;
+    std::memcpy(out + before_len, &buffer_[gap_end_], after_len);
 }
 
 std::string GapBuffer::toString() const {
     std::string result;
-    result.reserve(size());
+    std::size_t total = size();
+    result.resize(total);
 
-    // Before gap
-    for (std::size_t i = 0; i < gap_start_; ++i) {
-        result.push_back(buffer_[i]);
+    // Two memcpy calls instead of per-char pushback
+    if (gap_start_ > 0) {
+        std::memcpy(&result[0], buffer_.data(), gap_start_);
     }
-
-    // After gap
-    for (std::size_t i = gap_end_; i < buffer_.size(); ++i) {
-        result.push_back(buffer_[i]);
+    std::size_t after_gap_len = buffer_.size() - gap_end_;
+    if (after_gap_len > 0) {
+        std::memcpy(&result[gap_start_], buffer_.data() + gap_end_, after_gap_len);
     }
 
     return result;
+}
+
+void GapBuffer::writeTo(std::ostream& out) const {
+    if (gap_start_ > 0) {
+        out.write(buffer_.data(), static_cast<std::streamsize>(gap_start_));
+    }
+    std::size_t after_gap_len = buffer_.size() - gap_end_;
+    if (after_gap_len > 0) {
+        out.write(buffer_.data() + gap_end_,
+                  static_cast<std::streamsize>(after_gap_len));
+    }
 }
 
 void GapBuffer::clear() {

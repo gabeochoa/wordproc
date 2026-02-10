@@ -32,14 +32,27 @@ DocumentResult exportDocumentPdf(const TextBuffer& buffer,
     if (fontSize <= 0) fontSize = 12;
     int lineHeight = fontSize + 4;
 
-    std::vector<std::string> lines = buffer.lines();
     std::ostringstream content;
     content << "BT\n/F1 " << fontSize << " Tf\n";
     content << "72 720 Td\n";
-    for (std::size_t i = 0; i < lines.size(); ++i) {
-        std::string line = escapePdfText(lines[i]);
-        content << "(" << line << ") Tj\n";
-        if (i + 1 < lines.size()) {
+    std::size_t numLines = buffer.lineCount();
+    for (std::size_t i = 0; i < numLines; ++i) {
+        content << "(";
+        auto view = buffer.lineView(i);
+        if (view) {
+            // Zero-copy: escape directly from buffer pointer
+            for (std::size_t j = 0; j < view.length; ++j) {
+                char ch = view.data[j];
+                if (ch == '(' || ch == ')' || ch == '\\') {
+                    content.put('\\');
+                }
+                content.put(ch);
+            }
+        } else {
+            content << escapePdfText(buffer.lineString(i));
+        }
+        content << ") Tj\n";
+        if (i + 1 < numLines) {
             content << "0 -" << lineHeight << " Td\n";
         }
     }

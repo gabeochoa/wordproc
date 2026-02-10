@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -281,13 +282,34 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int baseX = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING + gutterOffset;
         int availableWidth = static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
 
-        std::string line = (span.length > 0) ? buffer.lineString(row) : "";
-        auto expandTabs = [tabWidth](const std::string& input) {
-            if (tabWidth <= 0) return input;
+        // Zero-copy line access: use lineView() to avoid allocation on most lines.
+        // Only the line currently being edited (where the gap is) needs a copy.
+        auto view = buffer.lineView(row);
+        std::string lineStorage;  // Only used if view fails or tabs need expanding
+        const char* lineData;
+        std::size_t lineLen;
+        if (view) {
+            lineData = view.data;
+            lineLen = view.length;
+        } else if (span.length > 0) {
+            lineStorage = buffer.lineString(row);
+            lineData = lineStorage.data();
+            lineLen = lineStorage.size();
+        } else {
+            lineData = "";
+            lineLen = 0;
+        }
+
+        // Expand tabs — only allocates if there are actual tab characters
+        auto expandTabs = [tabWidth](const char* data, std::size_t len) -> std::string {
+            if (tabWidth <= 0) return std::string(data, len);
+            // Fast check: any tabs?
+            if (!std::memchr(data, '\t', len)) return std::string(data, len);
             std::string expanded;
-            expanded.reserve(input.size());
+            expanded.reserve(len);
             int col = 0;
-            for (char ch : input) {
+            for (std::size_t i = 0; i < len; ++i) {
+                char ch = data[i];
                 if (ch == '\t') {
                     int spaces = tabWidth - (col % tabWidth);
                     expanded.append(static_cast<std::size_t>(spaces), ' ');
@@ -299,7 +321,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
             return expanded;
         };
-        std::string displayLine = expandTabs(line);
+        std::string displayLine = expandTabs(lineData, lineLen);
         
         // Get paragraph style for this line
         ParagraphStyle paraStyle = buffer.lineParagraphStyle(row);
@@ -433,10 +455,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 std::size_t endCol =
                     (row == selEnd.row) ? selEnd.column : span.length;
 
-                if (startCol < endCol && !line.empty()) {
-                    std::string beforeSel = expandTabs(line.substr(0, startCol));
+                if (startCol < endCol && !displayLine.empty()) {
+                    std::string beforeSel = displayLine.substr(0, startCol);
                     std::string selectedText =
-                        expandTabs(line.substr(startCol, endCol - startCol));
+                        displayLine.substr(startCol, endCol - startCol);
 
                     int selX =
                         x + raylib::MeasureText(beforeSel.c_str(), lineFontSize);
@@ -451,7 +473,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         }
 
         // Draw text with paragraph style applied
-        if (!line.empty()) {
+        if (!displayLine.empty()) {
             // Register document text for E2E tests
             test_input::registerVisibleText(displayLine);
             
@@ -525,7 +547,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Draw caret
         if (caretVisible && row == caret.row) {
             std::string beforeCaret =
-                expandTabs(line.substr(0, std::min(caret.column, line.length())));
+                displayLine.substr(0, std::min(caret.column, displayLine.length()));
             int caretX = x + raylib::MeasureText(beforeCaret.c_str(), lineFontSize);
             afterhours::draw_rectangle(
                 raylib::Rectangle{static_cast<float>(caretX), static_cast<float>(y), 2.0f,

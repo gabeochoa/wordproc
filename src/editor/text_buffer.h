@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iosfwd>
 #include <memory>
 #include <string>
 #include <vector>
@@ -132,6 +133,16 @@ class TextBuffer {
     // Get line content as string (for compatibility - involves copy)
     std::string lineString(std::size_t row) const;
 
+    // Zero-copy line access: returns pointer + length directly into the gap buffer.
+    // Returns {nullptr, 0} if the line spans the gap (rare — only the line being
+    // edited). Callers should fall back to lineString() in that case.
+    struct LineView {
+        const char* data = nullptr;
+        std::size_t length = 0;
+        explicit operator bool() const { return data != nullptr; }
+    };
+    LineView lineView(std::size_t row) const;
+
     // Legacy API - returns vector of strings (slower, allocates)
     // Kept for compatibility with existing tests and rendering
     std::vector<std::string> lines() const;
@@ -151,6 +162,16 @@ class TextBuffer {
     void insertText(const std::string& text);
     void setText(const std::string& text);
     std::string getText() const;
+
+    // Zero-copy text access: write contents directly to a stream
+    void writeTextTo(std::ostream& out) const;
+
+    // Zero-copy text access: get size without building a string
+    std::size_t textSize() const;
+
+    // Direct access to gap buffer for zero-copy iteration
+    const GapBuffer& chars() const { return chars_; }
+
     TextStats stats() const;
     TextStyle textStyle() const;
     void setTextStyle(const TextStyle& style);

@@ -28,11 +28,28 @@ DocumentResult exportDocumentRtf(const TextBuffer& buffer,
         return result;
     }
 
-    std::string text = buffer.getText();
     out << "{\\rtf1\\ansi\\deff0\n";
     out << "{\\fonttbl{\\f0 " << settings.textStyle.font << ";}}\n";
     out << "\\fs" << (settings.textStyle.fontSize * 2) << " ";
-    out << escapeRtf(text);
+    // Write line-by-line using zero-copy access where possible
+    for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+        if (i > 0) out << "\\par\n";
+        auto view = buffer.lineView(i);
+        if (view) {
+            // Zero-copy path: escape directly from buffer pointer
+            for (std::size_t j = 0; j < view.length; ++j) {
+                char ch = view.data[j];
+                switch (ch) {
+                    case '\\': out << "\\\\"; break;
+                    case '{': out << "\\{"; break;
+                    case '}': out << "\\}"; break;
+                    default: out.put(ch); break;
+                }
+            }
+        } else {
+            out << escapeRtf(buffer.lineString(i));
+        }
+    }
     out << "\n}\n";
 
     result.success = true;

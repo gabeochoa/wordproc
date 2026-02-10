@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <ostream>
 #include <regex>
 
 // Afterhours text utilities for word navigation
@@ -33,9 +34,35 @@ std::string TextBuffer::lineString(std::size_t row) const {
         return "";
     }
 
+    // Try zero-copy first
+    const char* ptr = chars_.data(span.offset, span.length);
+    if (ptr) {
+        return std::string(ptr, span.length);
+    }
+
+    // Line spans the gap — copy via bulk memcpy
     std::string result(span.length, '\0');
     chars_.copyTo(span.offset, span.length, &result[0]);
     return result;
+}
+
+TextBuffer::LineView TextBuffer::lineView(std::size_t row) const {
+    if (row >= line_spans_.size()) {
+        return {nullptr, 0};
+    }
+
+    const LineSpan& span = line_spans_[row];
+    if (span.length == 0) {
+        return {"", 0};  // Empty line — point to a valid empty string
+    }
+
+    const char* ptr = chars_.data(span.offset, span.length);
+    if (ptr) {
+        return {ptr, span.length};
+    }
+
+    // Line spans the gap — caller must fall back to lineString()
+    return {nullptr, span.length};
 }
 
 std::vector<std::string> TextBuffer::lines() const {
@@ -382,36 +409,59 @@ void TextBuffer::setText(const std::string& text) {
     version_++;  // Content changed - invalidate render cache
 
     if (!text.empty()) {
-        // Optimized two-pass approach:
-        // Pass 1: Clean CRLF (copies to temp buffer)
-        // Pass 2: Build line index (scans cleaned buffer)
-        // Then bulk load to gap buffer (single memcpy)
-        
-        std::string cleaned;
-        cleaned.reserve(text.size());
-        
-        for (char ch : text) {
-            if (ch != '\r') {
-                cleaned.push_back(ch);
+        // Fast path: check if we even have \r chars to strip.
+        // Most files on Unix/macOS won't, so we can skip the copy entirely.
+        bool hasCR = std::memchr(text.data(), '\r', text.size()) != nullptr;
+
+        const char* data;
+        std::size_t len;
+        std::string cleaned;  // Only used if hasCR
+
+        if (hasCR) {
+            // Strip \r characters (Windows line endings)
+            cleaned.reserve(text.size());
+            const char* src = text.data();
+            const char* end = src + text.size();
+            while (src < end) {
+                // Find next \r using memchr (often SIMD-optimized)
+                const char* cr = static_cast<const char*>(
+                    std::memchr(src, '\r', static_cast<std::size_t>(end - src)));
+                if (!cr) {
+                    cleaned.append(src, static_cast<std::size_t>(end - src));
+                    break;
+                }
+                cleaned.append(src, static_cast<std::size_t>(cr - src));
+                src = cr + 1;
             }
+            data = cleaned.data();
+            len = cleaned.size();
+        } else {
+            // Zero-copy: use the input directly
+            data = text.data();
+            len = text.size();
         }
-        
+
         // Bulk load into gap buffer (single memcpy, no per-char overhead)
-        chars_.setContent(cleaned.data(), cleaned.size());
-        
-        // Build line index in single pass over cleaned data
-        line_spans_.reserve(cleaned.size() / 40 + 1);  // Estimate ~40 chars per line
+        chars_.setContent(data, len);
+
+        // Single-pass line index build using memchr (SIMD-optimized).
+        // Reserve generously to avoid reallocation on most documents.
+        // Average line length ~27 chars for prose, ~40 for code.
+        line_spans_.reserve(len / 20 + 1);
         std::size_t line_start = 0;
-        const char* data = cleaned.data();
-        std::size_t len = cleaned.size();
-        
-        for (std::size_t i = 0; i < len; ++i) {
-            if (data[i] == '\n') {
-                line_spans_.push_back({line_start, i - line_start});
-                line_start = i + 1;
-            }
+        const char* scan = data;
+        const char* end = data + len;
+
+        while (scan < end) {
+            const char* nl = static_cast<const char*>(
+                std::memchr(scan, '\n', static_cast<std::size_t>(end - scan)));
+            if (!nl) break;
+            std::size_t pos = static_cast<std::size_t>(nl - data);
+            line_spans_.push_back({line_start, pos - line_start});
+            line_start = pos + 1;
+            scan = nl + 1;
         }
-        
+
         // Add final line (may be empty)
         line_spans_.push_back({line_start, len - line_start});
     } else {
@@ -431,29 +481,35 @@ void TextBuffer::setText(const std::string& text) {
 
 std::string TextBuffer::getText() const { return chars_.toString(); }
 
+void TextBuffer::writeTextTo(std::ostream& out) const { chars_.writeTo(out); }
+
+std::size_t TextBuffer::textSize() const { return chars_.size(); }
+
 TextStats TextBuffer::stats() const {
     TextStats stats;
-    std::string text = getText();
     stats.lines = line_spans_.size();
 
+    // Iterate directly over gap buffer regions — no allocation, no copy
     bool inWord = false;
-    for (std::size_t i = 0; i < text.size(); ++i) {
-        char ch = text[i];
-        if (ch != '\n') {
-            stats.characters++;
-        }
-        if (std::isalnum(static_cast<unsigned char>(ch))) {
-            if (!inWord) {
-                stats.words++;
-                inWord = true;
+    chars_.forEachRegion([&](const char* data, std::size_t len) {
+        for (std::size_t i = 0; i < len; ++i) {
+            char ch = data[i];
+            if (ch != '\n') {
+                stats.characters++;
             }
-        } else {
-            inWord = false;
+            if (std::isalnum(static_cast<unsigned char>(ch))) {
+                if (!inWord) {
+                    stats.words++;
+                    inWord = true;
+                }
+            } else {
+                inWord = false;
+            }
+            if (ch == '.' || ch == '!' || ch == '?') {
+                stats.sentences++;
+            }
         }
-        if (ch == '.' || ch == '!' || ch == '?') {
-            stats.sentences++;
-        }
-    }
+    });
 
     // Paragraphs: count non-empty lines
     for (const auto& span : line_spans_) {
