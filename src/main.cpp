@@ -2,9 +2,6 @@
 
 #include <chrono>
 #include <filesystem>
-#include <fstream>
-#include <format>
-#include <sstream>
 #include <string>
 
 #include "ecs/component_helpers.h"
@@ -42,33 +39,6 @@ bool g_mcp_mode = false;
 int g_saved_stdout_fd = -1;
 #endif
 
-// Take a screenshot with a descriptive name
-void takeScreenshot(const std::string& dir, const std::string& name) {
-    // Use absolute path for screenshot
-    std::filesystem::path screenshotDir = std::filesystem::absolute(dir);
-    std::filesystem::create_directories(screenshotDir);
-    std::filesystem::path path = screenshotDir / (name + ".png");
-    raylib::TakeScreenshot(path.c_str());
-}
-
-// #region agent log
-static void debugLog(const char* location, const char* message,
-                     const char* hypothesisId, const char* runId,
-                     const std::string& dataJson) {
-    const char* logPath = "/Users/gabeochoa/p/wordproc/.cursor/debug.log";
-    auto now = std::chrono::system_clock::now();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch())
-                  .count();
-    std::ofstream out(logPath, std::ios::app);
-    if (!out.is_open()) return;
-    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
-        << "\",\"hypothesisId\":\"" << hypothesisId << "\",\"location\":\""
-        << location << "\",\"message\":\"" << message << "\",\"data\":"
-        << dataJson << ",\"timestamp\":" << ms << "}\n";
-}
-// #endregion agent log
-
 int main(int argc, char* argv[]) {
     argh::parser cmdl(argc, argv);
 
@@ -79,14 +49,8 @@ int main(int argc, char* argv[]) {
     std::string testScriptPath;
     std::string testScriptDir;  // For batch mode
     float e2eTimeout = 30.0f;  // Default 30 second timeout for E2E tests
-    // Parse --screenshot-dir, --frame-limit, --test-script, and --test-script-dir arguments
-    // argh uses the params() map for named parameters
-    fprintf(stderr, "[DEBUG ARGS] params().size() = %zu\n", cmdl.params().size());
-    fflush(stderr);
+    // Parse named parameters
     for (auto& [name, value] : cmdl.params()) {
-        LOG_INFO("Parsed param: %s = %s", name.c_str(), value.c_str());
-        fprintf(stderr, "[DEBUG ARGS] param: '%s' = '%s'\n", name.c_str(), value.c_str());
-        fflush(stderr);
         if (name == "screenshot-dir") {
             screenshotDir = value;
         } else if (name == "frame-limit") {
@@ -103,18 +67,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"frameLimit\":" << frameLimit << ",\"testScriptPathLen\":"
-             << testScriptPath.size() << ",\"testScriptDirLen\":"
-             << testScriptDir.size() << ",\"testModeFlag\":"
-             << (cmdl["--test-mode"] ? "true" : "false") << "}";
-        debugLog("main.cpp:73", "Parsed test args", "H1", "e2e-hang-pre",
-                 data.str());
-    }
-    // #endregion agent log
-    
     // Check for e2e-debug flag (can be --e2e-debug or --e2e-debug=true)
     bool e2eDebugOverlay = cmdl["e2e-debug"] || cmdl("e2e-debug");
     LOG_INFO("screenshotDir = %s, frameLimit = %d", screenshotDir.c_str(), frameLimit);
@@ -338,7 +290,6 @@ int main(int argc, char* argv[]) {
     ui_imm::registerModalRenderSystems(systemManager);
     // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
     systemManager.register_render_system(std::make_unique<ecs::MenuSystem>());
-    // Note: Screenshots are now handled in EditorRenderSystem.after() before EndDrawing()
 
     // Validation systems (log warnings for layout/accessibility violations)
     // Only register in non-test mode to avoid slowing E2E tests
@@ -362,23 +313,12 @@ int main(int argc, char* argv[]) {
     
     // Initialize E2E script runner if script specified
     e2e::ScriptRunner scriptRunner;
-    fprintf(stderr, "[E2E DEBUG MAIN] testScriptPath='%s', testScriptDir='%s'\n", 
-            testScriptPath.c_str(), testScriptDir.c_str());
-    fflush(stderr);
-    
     if (!testScriptDir.empty()) {
-        // Batch mode: load all scripts from directory (with menu/layout support)
-        fprintf(stderr, "[E2E DEBUG MAIN] Initializing batch runner\n");
-        fflush(stderr);
+        // Batch mode: load all scripts from directory
         e2e::initializeRunnerBatch(scriptRunner, testScriptDir, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
     } else if (!testScriptPath.empty()) {
-        // Single script mode (with menu/layout support)
-        fprintf(stderr, "[E2E DEBUG MAIN] Initializing single script runner for: %s\n", testScriptPath.c_str());
-        fflush(stderr);
+        // Single script mode
         e2e::initializeRunner(scriptRunner, testScriptPath, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
-    } else {
-        fprintf(stderr, "[E2E DEBUG MAIN] No test script specified\n");
-        fflush(stderr);
     }
     
     // Set E2E timeout (default 30s, can be increased for large document tests)
@@ -402,33 +342,12 @@ int main(int argc, char* argv[]) {
     }
     if (!testScriptPath.empty() && !scriptRunner.hasCommands()) {
         LOG_WARNING("E2E script has no commands: %s", testScriptPath.c_str());
-        // #region agent log
-        debugLog("main.cpp:286", "No commands loaded for script", "H2",
-                 "e2e-hang-pre", "{\"hasCommands\":false}");
-        // #endregion agent log
         return 1;
     }
     if (!testScriptDir.empty() && !scriptRunner.hasCommands()) {
         LOG_WARNING("E2E script directory has no commands: %s", testScriptDir.c_str());
-        // #region agent log
-        debugLog("main.cpp:293", "No commands loaded for directory", "H2",
-                 "e2e-hang-pre", "{\"hasCommands\":false}");
-        // #endregion agent log
         return 1;
     }
-
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"hasCommands\":" << (scriptRunner.hasCommands() ? "true" : "false")
-             << ",\"frameLimit\":" << frameLimit
-             << ",\"testScriptPath\":\"" << testScriptPath
-             << "\",\"testScriptDir\":\"" << testScriptDir
-             << "\",\"screenshotDir\":\"" << screenshotDir << "\"}";
-        debugLog("main.cpp:301", "Runner initialized", "H5", "e2e-hang-suite",
-                 data.str());
-    }
-    // #endregion agent log
 
     // Send deferred toast notification for auto-save recovery
     // (must happen after toast systems are registered)
@@ -508,29 +427,11 @@ int main(int argc, char* argv[]) {
         
         // Execute E2E script AFTER systems run (visible text is now registered for validation)
         if (scriptRunner.hasCommands() && !scriptRunner.isFinished()) {
-            // Note: Debug overlay not yet supported by afterhours E2ERunner
-            // testComp.e2eDebugOverlay would be set here if supported
-            
-            static int tickCount = 0;
-            tickCount++;
-            if (tickCount <= 5) {
-                fprintf(stderr, "[E2E DEBUG] Calling scriptRunner.tick() #%d\n", tickCount);
-                fflush(stderr);
-            }
             scriptRunner.tick();
             
             // If script finished, print results and exit
             if (scriptRunner.isFinished()) {
-                // #region agent log
-                debugLog("main.cpp:404", "Script finished", "H3",
-                         "e2e-hang-pre",
-                         std::string("{\"hasFailed\":") +
-                             (scriptRunner.hasFailed() ? "true" : "false") +
-                             "}");
-                // #endregion agent log
                 scriptRunner.printResults();
-                takeScreenshot(screenshotDir, "final");
-                
                 Settings::get().write_save_file();
                 return scriptRunner.hasFailed() ? 1 : 0;
             }
@@ -542,19 +443,6 @@ int main(int argc, char* argv[]) {
         // Check for test mode exit
         if (testComp.enabled && testComp.frameLimit > 0 &&
             loopFrames >= testComp.frameLimit) {
-            // #region agent log
-            {
-                std::ostringstream data;
-                data << "{\"loopFrames\":" << loopFrames
-                     << ",\"frameLimit\":" << testComp.frameLimit
-                     << ",\"scriptFinished\":"
-                     << (scriptRunner.isFinished() ? "true" : "false") << "}";
-                debugLog("main.cpp:418", "Frame limit reached", "H1",
-                         "e2e-hang-pre", data.str());
-            }
-            // #endregion agent log
-            takeScreenshot(testComp.screenshotDir, "final");
-
             // Output FPS test results
             if (testComp.fpsTestMode && testComp.fpsSamples > 0) {
                 float avgFps =
@@ -580,19 +468,6 @@ int main(int argc, char* argv[]) {
             if (elapsed > static_cast<long long>(e2eTimeout - 2.0f)) {
                 LOG_WARNING("E2E timeout after %lld seconds",
                             static_cast<long long>(elapsed));
-                // #region agent log
-                {
-                    std::ostringstream data;
-                    data << "{\"elapsedSeconds\":" << elapsed
-                         << ",\"loopFrames\":" << loopFrames
-                         << ",\"scriptFinished\":"
-                         << (scriptRunner.isFinished() ? "true" : "false")
-                         << "}";
-                    debugLog("main.cpp:442", "E2E timeout", "H4",
-                             "e2e-hang-pre", data.str());
-                }
-                // #endregion agent log
-                takeScreenshot(testComp.screenshotDir, "final");
                 break;
             }
         }
