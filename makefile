@@ -5,23 +5,17 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
     CXX := clang++
     EXT := .exe
-    RAYLIB_FLAGS := $(shell pkg-config --cflags raylib)
-    RAYLIB_LIB := $(shell pkg-config --libs raylib)
     MACOS_FLAGS := -DBACKWARD
-    FRAMEWORKS := -framework CoreFoundation -framework OpenGL \
+    FRAMEWORKS := -framework CoreFoundation \
         -framework Metal -framework MetalKit -framework Cocoa -framework QuartzCore
 else ifeq ($(OS),Windows_NT)
     CXX := g++
     EXT := .exe
-    RAYLIB_FLAGS := -IF:/RayLib/include
-    RAYLIB_LIB := F:/RayLib/lib/raylib.dll
     MACOS_FLAGS :=
     FRAMEWORKS :=
 else
     CXX := clang++
     EXT :=
-    RAYLIB_FLAGS := $(shell pkg-config --cflags raylib)
-    RAYLIB_LIB := $(shell pkg-config --libs raylib)
     MACOS_FLAGS :=
     FRAMEWORKS :=
 endif
@@ -102,13 +96,13 @@ endif
 # Combine all CXXFLAGS
 CXXFLAGS := $(CXXSTD) $(CXXFLAGS_BASE) $(CXXFLAGS_SUPPRESS) $(CXXFLAGS_TIME_TRACE) \
     $(MACOS_FLAGS) $(COVERAGE_CXXFLAGS) $(MCP_CXXFLAGS) $(ACCESSIBILITY_CXXFLAGS) \
-    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS) $(RAYLIB_FLAGS)
+    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS)
 
 # Include directories (use -isystem for vendor to suppress their warnings)
 INCLUDES := -isystem vendor/ -isystem vendor/afterhours/vendor/
 
 # Library flags
-LDFLAGS := -L. -Lvendor/ $(RAYLIB_LIB) $(FRAMEWORKS) $(COVERAGE_LDFLAGS)
+LDFLAGS := -L. -Lvendor/ $(FRAMEWORKS) $(COVERAGE_LDFLAGS)
 
 # Directories
 OBJ_DIR := output/objs

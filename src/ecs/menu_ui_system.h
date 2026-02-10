@@ -151,7 +151,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             float buttonWidth = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
             
             // Register menu label for E2E tests
-            test_input::registerVisibleText(menuDef.label);
+            test_input::register_visible_text(menuDef.label);
             
             int headerId = 500 + static_cast<int>(menuIdx);
             
@@ -298,7 +298,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                     
                     // Register menu item label for E2E tests
-                    test_input::registerVisibleText(item.label);
+                    test_input::register_visible_text(item.label);
                     
                     int itemId = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
                     float itemHeight = theme::layout::scale(20.0f);

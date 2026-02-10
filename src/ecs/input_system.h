@@ -12,6 +12,7 @@
 #include "../rl.h"
 #include "../settings.h"
 // test_input:: available via rl.h -> external.h
+#include "../ui/input.h"     // Centralized input wrappers (input::isKeyPressed etc.)
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"  // for toast_notify
 #include "component_helpers.h"
@@ -139,7 +140,7 @@ struct TextInputSystem
         }
 
         // Tab inserts spaces (tab stops)
-        if (IsKeyPressed(afterhours::keys::TAB)) {
+        if (input::isKeyPressed(afterhours::keys::TAB)) {
             int width = std::max(1, doc.docSettings.tabWidth);
             std::string spaces(static_cast<std::size_t>(width), ' ');
             std::size_t offset = doc.buffer.caretOffset();
@@ -568,7 +569,7 @@ struct NavigationSystem
         }
 
         // Mouse wheel scrolling
-        float wheelMove = GetMouseWheelMove();
+        float wheelMove = input::getMouseWheelMove();
         bool scrolledWithWheel = false;
         if (wheelMove != 0.0f) {
             int scrollLines = static_cast<int>(-wheelMove * 3);

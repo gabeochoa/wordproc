@@ -43,7 +43,7 @@ namespace ecs {
 inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize, 
                                   afterhours::Color color) {
     theme::DrawUIText(text, x, y, fontSize, color);
-    test_input::registerVisibleText(text);
+    test_input::register_visible_text(text);
 }
 
 // Helper to draw text with font and register it for E2E testing
@@ -52,7 +52,7 @@ inline void drawTextExWithRegistry(afterhours::Font font, const char* text,
                                     float spacing, afterhours::Color color) {
     afterhours::draw_text_ex(font, text, pos, fontSize, spacing,
                              afterhours::Color{color.r, color.g, color.b, color.a});
-    test_input::registerVisibleText(text);
+    test_input::register_visible_text(text);
 }
 
 // Draw a page background with shadow (for paged mode)
@@ -475,7 +475,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Draw text with paragraph style applied
         if (!displayLine.empty()) {
             // Register document text for E2E tests
-            test_input::registerVisibleText(displayLine);
+            test_input::register_visible_text(displayLine);
             
             // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
@@ -655,7 +655,7 @@ struct EditorRenderSystem
                        LayoutComponent& layout, MenuComponent& menu,
                        const float) override {
         // F1 to show help window
-        if (IsKeyPressed(afterhours::keys::F1)) {
+        if (input::isKeyPressed(afterhours::keys::F1)) {
             menu.showHelpWindow = !menu.showHelpWindow;
             menu.helpScrollOffset = 0;
         }
@@ -861,7 +861,7 @@ struct MenuSystem
         // are now rendered by MenuUISystem using afterhours modal.h
 
         // F1 to show help window
-        if (IsKeyPressed(afterhours::keys::F1)) {
+        if (input::isKeyPressed(afterhours::keys::F1)) {
             menu.showHelpWindow = !menu.showHelpWindow;
         }
     }

@@ -4,8 +4,6 @@
 #include <afterhours/src/plugins/files.h>
 #include <afterhours/src/plugins/ui/theme.h>
 
-#include <cstdarg>
-#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -20,20 +18,7 @@
 
 using namespace afterhours;
 
-#ifdef AFTER_HOURS_ENABLE_MCP
-extern bool g_mcp_mode;
-
-// Custom log callback that writes to stderr instead of stdout
-static void mcp_trace_log_callback(int logLevel, const char *text,
-                                   va_list args) {
-    if (logLevel < afterhours::graphics::LOG_ERROR) {
-        return;  // In MCP mode, only log errors
-    }
-    char buffer[1024];
-    vsnprintf(buffer, sizeof(buffer), text, args);
-    fprintf(stderr, "%s\n", buffer);
-}
-#endif
+// MCP log callback was raylib-specific; Metal uses afterhours logging directly
 
 static void load_gamepad_mappings() {
     std::ifstream ifs(
@@ -49,38 +34,16 @@ static void load_gamepad_mappings() {
 
 Preload::Preload() {}
 
-Preload &Preload::init(const char *title) {
+Preload &Preload::init(const char * /*title*/) {
     {
         SCOPED_TIMER("files::init");
         files::init("Prime Pressure", "resources");
     }
 
-    int width = Settings::get().get_screen_width();
-    int height = Settings::get().get_screen_height();
+    // Window creation, config flags, and target FPS are now handled by
+    // afterhours::graphics::run() via RunConfig.  Nothing else to do here.
 
-    // In MCP mode, redirect raylib logs to stderr to keep stdout clean for JSON
-#ifdef AFTER_HOURS_ENABLE_MCP
-    if (g_mcp_mode) {
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::SetTraceLogCallback(mcp_trace_log_callback);
-#endif
-    }
-#endif
-
-    // Set log level BEFORE InitWindow to suppress init messages
-    afterhours::graphics::set_trace_log_level(afterhours::graphics::LOG_ERROR);
-
-    // Set config flags BEFORE InitWindow for faster setup
-    // FLAG_WINDOW_RESIZABLE set here avoids SetWindowState call after
-    afterhours::graphics::set_config_flags(afterhours::graphics::FLAG_WINDOW_RESIZABLE);
-
-    {
-        SCOPED_TIMER("InitWindow");
-        afterhours::graphics::init_window(width, height, title);
-        // Note: SetWindowSize removed - redundant, size already in InitWindow
-    }
-
-    afterhours::graphics::set_target_fps(200);
+    afterhours::graphics::set_exit_key(0);
 
     // Skip audio initialization for word processor - not needed
     // Audio can be lazy-initialized later if sound effects are added
@@ -94,8 +57,6 @@ Preload &Preload::init(const char *title) {
     //     }
     //     raylib::SetMasterVolume(1.f);
     // }
-
-    afterhours::graphics::set_exit_key(0);
 
     // Skip gamepad mappings - word processor doesn't need gamepad support
     // load_gamepad_mappings();

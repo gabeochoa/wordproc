@@ -73,7 +73,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         Entity& uiRoot = ui_imm::getUIRootEntity();
 
         // Register title bar text for E2E testing
-        test_input::registerVisibleText(title);
+        test_input::register_visible_text(title);
 
         // Title bar div — blue background, white text, left-aligned
         div(ctx, mk(uiRoot, 9000),
@@ -100,7 +100,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         float btnY = (titleBarHeight - btnH) / 2.0f;
 
         // Register control button labels for E2E testing
-        test_input::registerVisibleText("X");
+        test_input::register_visible_text("X");
 
         // Close button (rightmost)
         float closeX = screenWidth - btnW - btnPad;

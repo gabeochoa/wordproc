@@ -70,17 +70,17 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
         std::string rightText = std::format("REC   MRK   EXT   OVR      {}", timeStr);
 
         // Register status bar text for E2E testing
-        test_input::registerVisibleText(leftText);
-        test_input::registerVisibleText(rightText);
+        test_input::register_visible_text(leftText);
+        test_input::register_visible_text(rightText);
 
         // Register document text for E2E testing (visible lines)
         size_t lineCount = doc.buffer.lineCount();
         for (size_t i = 0; i < lineCount; ++i) {
             auto view = doc.buffer.lineView(i);
             if (view && view.length > 0) {
-                test_input::registerVisibleText(std::string(view.data, view.length));
+                test_input::register_visible_text(std::string(view.data, view.length));
             } else if (!view && doc.buffer.lineSpan(i).length > 0) {
-                test_input::registerVisibleText(doc.buffer.lineString(i));
+                test_input::register_visible_text(doc.buffer.lineString(i));
             }
         }
 
