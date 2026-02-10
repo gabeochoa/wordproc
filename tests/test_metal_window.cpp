@@ -1,8 +1,9 @@
-// Standalone test: Metal window with input verification
+// Standalone test: Metal window with 2D drawing
 // Build: make output/test_metal.exe
 // AFTER_HOURS_USE_METAL is set via -D flag from the Makefile
 
 #include <afterhours/src/graphics/graphics.h>
+#include <afterhours/src/drawing_helpers.h>
 #include <afterhours/src/core/key_codes.h>
 #include <cstdio>
 #include <chrono>
@@ -17,7 +18,7 @@ int main() {
     gfx::RunConfig cfg;
     cfg.width = 800;
     cfg.height = 600;
-    cfg.title = "Metal Input Test - press keys, move mouse, ESC to quit";
+    cfg.title = "Metal Drawing Test - ESC to quit";
     cfg.target_fps = 60;
 
     int frame_count = 0;
@@ -32,56 +33,58 @@ int main() {
         gfx::begin_drawing();
         struct { unsigned char r, g, b, a; } bg{40, 44, 52, 255};
         gfx::clear_background(bg);
+
+        // Draw some colored rectangles
+        afterhours::draw_rectangle(
+            RectangleType{50, 50, 200, 100},
+            afterhours::Color{220, 50, 50, 255});  // Red
+
+        afterhours::draw_rectangle(
+            RectangleType{300, 50, 200, 100},
+            afterhours::Color{50, 180, 50, 255});  // Green
+
+        afterhours::draw_rectangle(
+            RectangleType{550, 50, 200, 100},
+            afterhours::Color{50, 100, 220, 255}); // Blue
+
+        // Draw an outline
+        afterhours::draw_rectangle_outline(
+            RectangleType{50, 200, 700, 150},
+            afterhours::Color{255, 255, 255, 255}, 2.0f);
+
+        // Draw some lines
+        afterhours::draw_line(50, 400, 750, 400,
+            afterhours::Color{255, 200, 50, 255});  // Yellow line
+
+        // Draw a circle
+        afterhours::draw_circle(400, 480, 50.0f,
+            afterhours::Color{200, 100, 255, 255});  // Purple circle
+
+        // Draw a triangle
+        afterhours::draw_triangle(
+            Vector2Type{650, 500},
+            Vector2Type{750, 550},
+            Vector2Type{650, 550},
+            afterhours::Color{50, 220, 220, 255});  // Cyan triangle
+
         gfx::end_drawing();
 
         frame_count++;
-
-        // Print mouse position every 60 frames
-        if (frame_count % 60 == 0) {
-            auto pos = API::get_mouse_position();
-            fprintf(stderr, "[frame %d] mouse=(%.0f, %.0f)\n",
-                    frame_count, pos.x, pos.y);
-        }
-
-        // Report any key presses
-        for (int k = 0; k < 512; k++) {
-            if (API::is_key_pressed(k)) {
-                fprintf(stderr, "[frame %d] key pressed: %d\n", frame_count, k);
-            }
-        }
-
-        // Report mouse clicks
-        for (int b = 0; b < 3; b++) {
-            if (API::is_mouse_button_pressed(b)) {
-                auto pos = API::get_mouse_position();
-                fprintf(stderr, "[frame %d] mouse button %d clicked at (%.0f, %.0f)\n",
-                        frame_count, b, pos.x, pos.y);
-            }
-        }
-
-        // Report scroll
-        float scroll = API::get_mouse_wheel_move();
-        if (scroll != 0.f) {
-            fprintf(stderr, "[frame %d] scroll: %.2f\n", frame_count, scroll);
-        }
-
-        // Report char input
-        int ch;
-        while ((ch = API::get_char_pressed()) != 0) {
-            fprintf(stderr, "[frame %d] char: '%c' (%d)\n", frame_count, (char)ch, ch);
+        if (frame_count == 1) {
+            auto t1 = std::chrono::high_resolution_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+            fprintf(stderr, "[metal-test] first frame (%.1f ms), w=%d h=%d\n",
+                   ms, gfx::get_screen_width(), gfx::get_screen_height());
         }
 
         // ESC to quit
         if (API::is_key_pressed(afterhours::keys::ESCAPE)) {
-            fprintf(stderr, "[metal-test] ESC pressed, quitting\n");
             gfx::request_quit();
         }
     };
 
     cfg.cleanup = [&]() {
-        auto t1 = std::chrono::high_resolution_clock::now();
-        double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-        fprintf(stderr, "[metal-test] cleanup, %d frames, %.1f ms total\n", frame_count, ms);
+        fprintf(stderr, "[metal-test] cleanup, %d frames\n", frame_count);
     };
 
     gfx::run(cfg);

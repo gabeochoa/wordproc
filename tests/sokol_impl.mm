@@ -10,3 +10,14 @@
 #include <sokol/sokol_glue.h>
 #include <sokol/sokol_time.h>
 #include <sokol/sokol_log.h>
+
+// 2D drawing and text rendering
+#define SOKOL_GL_IMPL
+#include <sokol/sokol_gl.h>
+
+#define FONTSTASH_IMPLEMENTATION
+#include <fontstash/stb_truetype.h>
+#include <fontstash/fontstash.h>
+
+#define SOKOL_FONTSTASH_IMPL
+#include <sokol/sokol_fontstash.h>
