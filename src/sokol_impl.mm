@@ -22,3 +22,33 @@
 
 #define SOKOL_FONTSTASH_IMPL
 #include <sokol/sokol_fontstash.h>
+
+// ── Screenshot support ──
+// Uses macOS screencapture tool with the window ID to capture Metal content.
+#import <AppKit/AppKit.h>
+
+extern "C" void metal_take_screenshot(const char* filename) {
+    @autoreleasepool {
+        // Find our window
+        NSWindow* window = [NSApp mainWindow];
+        if (!window) {
+            // Try keyWindow if mainWindow is nil
+            window = [NSApp keyWindow];
+        }
+        if (!window) {
+            NSLog(@"take_screenshot: no window available");
+            return;
+        }
+
+        CGWindowID windowID = (CGWindowID)[window windowNumber];
+        NSString* path = [NSString stringWithUTF8String:filename];
+
+        // Use screencapture command-line tool with -l flag for window ID
+        NSString* cmd = [NSString stringWithFormat:@"/usr/sbin/screencapture -x -o -l %u %@",
+                         windowID, path];
+        int ret = system([cmd UTF8String]);
+        if (ret != 0) {
+            NSLog(@"take_screenshot: screencapture failed with code %d", ret);
+        }
+    }
+}

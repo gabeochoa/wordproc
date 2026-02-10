@@ -576,9 +576,9 @@ struct EditorRenderSystem
                                 ScrollComponent,
                                 LayoutComponent, MenuComponent> {
     void once(const float) const override {
-        afterhours::graphics::begin_drawing();
-        afterhours::graphics::clear_background(theme::WINDOW_BG);
-        // Note: Visible text registry is cleared in main.cpp at start of frame
+        // Note: begin_drawing() and clear_background() are now called in app_frame()
+        // before sm.run(dt), so that all render systems (including RenderImm for UI)
+        // draw within the same GPU pass.
     }
 
     void after(const float) const override {
@@ -645,7 +645,7 @@ struct EditorRenderSystem
                                  afterhours::Color{255, 200, 100, 255});
             }
         }
-        afterhours::graphics::end_drawing();
+        // Note: end_drawing() is now called in app_frame() after sm.run(dt)
     }
 
     void for_each_with(afterhours::Entity& /*entity*/,

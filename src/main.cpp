@@ -277,6 +277,12 @@ static void app_init() {
         e2e::E2EConfig e2eConfig;
         e2eConfig.doc_comp = &docComp;
         e2eConfig.menu_comp = &menuComp;
+        e2eConfig.screenshot_callback = [](const std::string& name) {
+            std::filesystem::path dir = std::filesystem::absolute(app_state::screenshotDir);
+            std::filesystem::create_directories(dir);
+            std::filesystem::path path = dir / (name + ".png");
+            afterhours::graphics::take_screenshot(path.c_str());
+        };
         e2e::register_e2e_systems(sm, e2eConfig);
     }
     
@@ -383,7 +389,14 @@ static void app_frame() {
         }
     }
 
+    // Begin the GPU render pass — all draw calls (from systems, UI, overlays)
+    // must happen between begin_drawing() and end_drawing().
+    afterhours::graphics::begin_drawing();
+    afterhours::graphics::clear_background(theme::WINDOW_BG);
+
     // Run all systems through the SystemManager
+    // This includes EditorRenderSystem (document/ruler/text) and
+    // RenderImm (UI buttons, divs, title bar, etc.)
     app_state::systemManager->run(dt);
     
     // Execute E2E script AFTER systems run (visible text is now registered for validation)
@@ -396,6 +409,7 @@ static void app_frame() {
             runner->printResults();
             Settings::get().write_save_file();
             app_state::returnCode = runner->hasFailed() ? 1 : 0;
+            afterhours::graphics::end_drawing();
             afterhours::graphics::request_quit();
             return;
         }
@@ -403,6 +417,9 @@ static void app_frame() {
         // Clear debug overlay when not running
         testComp->e2eDebugOverlay = false;
     }
+
+    // End the GPU render pass — flush all accumulated draw commands
+    afterhours::graphics::end_drawing();
 
     // Check for test mode exit
     if (testComp->enabled && testComp->frameLimit > 0 &&
