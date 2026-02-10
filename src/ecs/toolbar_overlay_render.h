@@ -15,7 +15,7 @@ namespace ecs {
 // Draw a simple 16x16 pixel-art icon at (cx, cy) center position
 // All icons use simple geometric primitives (lines, rectangles, triangles)
 inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bool enabled) {
-    raylib::Color fg = enabled ? theme::BUTTON_TEXT : theme::MENU_DISABLED;
+    afterhours::Color fg = enabled ? theme::BUTTON_TEXT : theme::MENU_DISABLED;
     
     // Scale icon to fit within button (leaving 4px padding)
     float pad = size * 0.2f;
@@ -31,11 +31,11 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             float fold = iw * 0.3f;
             // Page body
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0, y0, iw, ih}, fg);
+                Rectangle{x0, y0, iw, ih}, fg);
             // Inner white fill
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0 + 1, y0 + 1, iw - 2, ih - 2},
-                raylib::Color{255, 255, 255, 255});
+                Rectangle{x0 + 1, y0 + 1, iw - 2, ih - 2},
+                afterhours::Color{255, 255, 255, 255});
             // Corner fold (triangle in top-right)
             afterhours::draw_line(static_cast<int>(x0 + iw - fold), static_cast<int>(y0),
                                   static_cast<int>(x0 + iw - fold), static_cast<int>(y0 + fold), fg);
@@ -49,38 +49,38 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             float tabH = ih * 0.2f;
             // Folder tab (top-left)
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0, y0, tabW, tabH},
-                raylib::Color{255, 220, 100, 255});
+                Rectangle{x0, y0, tabW, tabH},
+                afterhours::Color{255, 220, 100, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0, y0, tabW, tabH}, fg);
+                Rectangle{x0, y0, tabW, tabH}, fg);
             // Folder body
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0, y0 + tabH, iw, ih - tabH},
-                raylib::Color{255, 220, 100, 255});
+                Rectangle{x0, y0 + tabH, iw, ih - tabH},
+                afterhours::Color{255, 220, 100, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0, y0 + tabH, iw, ih - tabH}, fg);
+                Rectangle{x0, y0 + tabH, iw, ih - tabH}, fg);
             break;
         }
         case ToolbarIcon::Save: {
             // Floppy disk
             // Outer rectangle
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0, y0, iw, ih},
-                raylib::Color{50, 50, 180, 255});
+                Rectangle{x0, y0, iw, ih},
+                afterhours::Color{50, 50, 180, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0, y0, iw, ih}, fg);
+                Rectangle{x0, y0, iw, ih}, fg);
             // Metal slider (top center)
             float sliderW = iw * 0.5f;
             float sliderH = ih * 0.25f;
             float sliderX = x0 + (iw - sliderW) / 2.0f;
             afterhours::draw_rectangle(
-                raylib::Rectangle{sliderX, y0, sliderW, sliderH},
-                raylib::Color{192, 192, 192, 255});
+                Rectangle{sliderX, y0, sliderW, sliderH},
+                afterhours::Color{192, 192, 192, 255});
             // Label area (bottom)
             float labelH = ih * 0.35f;
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0 + 2, y0 + ih - labelH, iw - 4, labelH},
-                raylib::Color{240, 240, 240, 255});
+                Rectangle{x0 + 2, y0 + ih - labelH, iw - 4, labelH},
+                afterhours::Color{240, 240, 240, 255});
             break;
         }
         case ToolbarIcon::Print: {
@@ -91,24 +91,24 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             float paperW = iw * 0.6f;
             float paperX = x0 + (iw - paperW) / 2.0f;
             afterhours::draw_rectangle(
-                raylib::Rectangle{paperX, y0, paperW, bodyY - y0 + 2},
-                raylib::Color{255, 255, 255, 255});
+                Rectangle{paperX, y0, paperW, bodyY - y0 + 2},
+                afterhours::Color{255, 255, 255, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{paperX, y0, paperW, bodyY - y0 + 2}, fg);
+                Rectangle{paperX, y0, paperW, bodyY - y0 + 2}, fg);
             // Printer body
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0, bodyY, iw, bodyH},
-                raylib::Color{192, 192, 192, 255});
+                Rectangle{x0, bodyY, iw, bodyH},
+                afterhours::Color{192, 192, 192, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0, bodyY, iw, bodyH}, fg);
+                Rectangle{x0, bodyY, iw, bodyH}, fg);
             // Output tray
             float trayW = iw * 0.7f;
             float trayX = x0 + (iw - trayW) / 2.0f;
             afterhours::draw_rectangle(
-                raylib::Rectangle{trayX, bodyY + bodyH, trayW, ih - bodyH - ih * 0.25f},
-                raylib::Color{192, 192, 192, 255});
+                Rectangle{trayX, bodyY + bodyH, trayW, ih - bodyH - ih * 0.25f},
+                afterhours::Color{192, 192, 192, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{trayX, bodyY + bodyH, trayW, ih - bodyH - ih * 0.25f}, fg);
+                Rectangle{trayX, bodyY + bodyH, trayW, ih - bodyH - ih * 0.25f}, fg);
             break;
         }
         case ToolbarIcon::Cut: {
@@ -134,16 +134,16 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             float offset = iw * 0.2f;
             // Back page (offset right/down)
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0 + offset, y0 + offset, iw - offset, ih - offset},
-                raylib::Color{255, 255, 255, 255});
+                Rectangle{x0 + offset, y0 + offset, iw - offset, ih - offset},
+                afterhours::Color{255, 255, 255, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0 + offset, y0 + offset, iw - offset, ih - offset}, fg);
+                Rectangle{x0 + offset, y0 + offset, iw - offset, ih - offset}, fg);
             // Front page (top-left)
             afterhours::draw_rectangle(
-                raylib::Rectangle{x0, y0, iw - offset, ih - offset},
-                raylib::Color{255, 255, 255, 255});
+                Rectangle{x0, y0, iw - offset, ih - offset},
+                afterhours::Color{255, 255, 255, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{x0, y0, iw - offset, ih - offset}, fg);
+                Rectangle{x0, y0, iw - offset, ih - offset}, fg);
             // Lines on front page
             float lineY = y0 + 3;
             for (int i = 0; i < 3 && lineY < y0 + ih - offset - 3; ++i) {
@@ -159,20 +159,20 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             float clipX = x0 + (iw - clipW) / 2.0f;
             // Clipboard body
             afterhours::draw_rectangle(
-                raylib::Rectangle{clipX, y0 + 2, clipW, ih - 2},
-                raylib::Color{200, 180, 120, 255});
+                Rectangle{clipX, y0 + 2, clipW, ih - 2},
+                afterhours::Color{200, 180, 120, 255});
             afterhours::draw_rectangle_outline(
-                raylib::Rectangle{clipX, y0 + 2, clipW, ih - 2}, fg);
+                Rectangle{clipX, y0 + 2, clipW, ih - 2}, fg);
             // Clip at top
             float clipTabW = clipW * 0.5f;
             float clipTabX = clipX + (clipW - clipTabW) / 2.0f;
             afterhours::draw_rectangle(
-                raylib::Rectangle{clipTabX, y0, clipTabW, 4},
-                raylib::Color{128, 128, 128, 255});
+                Rectangle{clipTabX, y0, clipTabW, 4},
+                afterhours::Color{128, 128, 128, 255});
             // Paper on clipboard
             afterhours::draw_rectangle(
-                raylib::Rectangle{clipX + 2, y0 + 5, clipW - 4, ih - 9},
-                raylib::Color{255, 255, 255, 255});
+                Rectangle{clipX + 2, y0 + 5, clipW - 4, ih - 9},
+                afterhours::Color{255, 255, 255, 255});
             break;
         }
         case ToolbarIcon::Undo: {
@@ -260,12 +260,12 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
 }
 
 // Draw a small filled downward-pointing triangle for dropdown arrows
-inline void drawDropdownTriangle(float cx, float cy, raylib::Color color) {
+inline void drawDropdownTriangle(float cx, float cy, afterhours::Color color) {
     float halfW = 3.0f;
     float halfH = 2.0f;
-    raylib::Vector2 v1 = {cx - halfW, cy - halfH};
-    raylib::Vector2 v2 = {cx + halfW, cy - halfH};
-    raylib::Vector2 v3 = {cx, cy + halfH};
+    vec2 v1 = {cx - halfW, cy - halfH};
+    vec2 v2 = {cx + halfW, cy - halfH};
+    vec2 v3 = {cx, cy + halfH};
     afterhours::draw_triangle(v1, v3, v2, color);  // Note: raylib requires CCW winding
 }
 

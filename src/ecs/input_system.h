@@ -139,7 +139,7 @@ struct TextInputSystem
         }
 
         // Tab inserts spaces (tab stops)
-        if (IsKeyPressed(raylib::KEY_TAB)) {
+        if (IsKeyPressed(afterhours::keys::TAB)) {
             int width = std::max(1, doc.docSettings.tabWidth);
             std::string spaces(static_cast<std::size_t>(width), ' ');
             std::size_t offset = doc.buffer.caretOffset();
@@ -490,8 +490,8 @@ struct NavigationSystem
             // Use test_input which handles both real and synthetic keys
             return test_input::is_key_down(key);
         };
-        bool shift_down = isKeyDownOrSynthetic(raylib::KEY_LEFT_SHIFT) ||
-                          isKeyDownOrSynthetic(raylib::KEY_RIGHT_SHIFT);
+        bool shift_down = isKeyDownOrSynthetic(afterhours::keys::LEFT_SHIFT) ||
+                          isKeyDownOrSynthetic(afterhours::keys::RIGHT_SHIFT);
 
         auto navigateWithSelection = [&](auto moveFunc) {
             CaretPosition before = doc.buffer.caret();
@@ -601,7 +601,7 @@ struct AutoSaveSystem
             return;
         }
 
-        double now = raylib::GetTime();
+        double now = afterhours::graphics::get_time();
         if ((now - doc.lastAutoSaveTime) < doc.autoSaveIntervalSeconds) {
             return;
         }
@@ -650,8 +650,8 @@ struct LayoutUpdateSystem
     void for_each_with(afterhours::Entity& /*entity*/, LayoutComponent& layout,
                        DocumentComponent& doc, ScrollComponent& scroll,
                        const float) override {
-        int w = raylib::GetScreenWidth();
-        int h = raylib::GetScreenHeight();
+        int w = afterhours::graphics::get_screen_width();
+        int h = afterhours::graphics::get_screen_height();
         layout::updateLayout(layout, w, h);
 
         // Calculate visible lines

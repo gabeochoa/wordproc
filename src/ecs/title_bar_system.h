@@ -126,7 +126,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
             titleBarButton(minX, btnY, btnW, btnH)
                 .with_label("_")
                 .with_debug_name("btn_minimize"))) {
-            raylib::MinimizeWindow();
+            afterhours::graphics::minimize_window();
         }
     }
 };

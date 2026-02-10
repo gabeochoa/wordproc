@@ -35,7 +35,7 @@ using afterhours::ui::imm::mk;
 using afterhours::ui::pixels;
 using afterhours::ui::percent;
 
-inline afterhours::Color toAhColor(const raylib::Color& color) {
+inline afterhours::Color toAhColor(const afterhours::Color& color) {
     return {color.r, color.g, color.b, color.a};
 }
 
@@ -982,14 +982,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             ComponentConfig{}
                                 .with_label("Action")
                                 .with_size(ComponentSize{h720(200), h720(20)})
-                                .with_custom_text_color(toAhColor(raylib::DARKGRAY))
+                                .with_custom_text_color(toAhColor(afterhours::Color{80, 80, 80, 255}))
                                 .with_render_layer(CONTENT_LAYER));
                         
                         div(ctx, mk(headerRow.ent(), 1),
                             ComponentConfig{}
                                 .with_label("Shortcut")
                                 .with_size(ComponentSize{h720(200), h720(20)})
-                                .with_custom_text_color(toAhColor(raylib::DARKGRAY))
+                                .with_custom_text_color(toAhColor(afterhours::Color{80, 80, 80, 255}))
                                 .with_render_layer(CONTENT_LAYER));
                     }
                     

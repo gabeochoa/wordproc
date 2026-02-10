@@ -358,8 +358,8 @@ int main(int argc, char* argv[]) {
     int loopFrames = 0;
     const bool e2eActive = !testScriptPath.empty() || !testScriptDir.empty();
     const auto e2eStartTime = std::chrono::steady_clock::now();
-    while (!raylib::WindowShouldClose()) {
-        float dt = raylib::GetFrameTime();
+    while (!afterhours::graphics::window_should_close()) {
+        float dt = afterhours::graphics::get_frame_time();
         loopFrames++;
         
         // Reset test input frame state (but keep mouse state from pending simulation)
@@ -401,7 +401,7 @@ int main(int argc, char* argv[]) {
         if (testComp.fpsTestMode && testComp.frameCount > 0) {
             // Skip first few frames (warm-up)
             if (testComp.frameCount > 5) {
-                float fps = raylib::GetFPS();
+                float fps = afterhours::graphics::get_fps();
                 testComp.fpsSum += fps;
                 testComp.fpsSamples++;
                 if (fps < testComp.fpsMin) testComp.fpsMin = fps;

@@ -1,5 +1,7 @@
 #include "action_map.h"
+#include <afterhours/src/core/key_codes.h>
 // test_input:: and input_injector:: available via rl.h -> external.h
+// afterhours::graphics::is_key_pressed_repeat via graphics.h (included through rl.h)
 
 namespace input {
 
@@ -29,16 +31,16 @@ static bool isKeyPressedRepeatHelper(int key) {
         return true;
     }
     // Use raylib's key repeat for real input
-    return raylib::IsKeyPressedRepeat(key);
+    return afterhours::graphics::is_key_pressed_repeat(key);
 }
 
 bool ActionMap::isBindingPressed(const KeyBinding& binding) const {
-    bool ctrl = isKeyDownHelper(raylib::KEY_LEFT_CONTROL) ||
-                isKeyDownHelper(raylib::KEY_RIGHT_CONTROL);
-    bool shift = isKeyDownHelper(raylib::KEY_LEFT_SHIFT) ||
-                 isKeyDownHelper(raylib::KEY_RIGHT_SHIFT);
-    bool alt = isKeyDownHelper(raylib::KEY_LEFT_ALT) ||
-               isKeyDownHelper(raylib::KEY_RIGHT_ALT);
+    bool ctrl = isKeyDownHelper(afterhours::keys::LEFT_CONTROL) ||
+                isKeyDownHelper(afterhours::keys::RIGHT_CONTROL);
+    bool shift = isKeyDownHelper(afterhours::keys::LEFT_SHIFT) ||
+                 isKeyDownHelper(afterhours::keys::RIGHT_SHIFT);
+    bool alt = isKeyDownHelper(afterhours::keys::LEFT_ALT) ||
+               isKeyDownHelper(afterhours::keys::RIGHT_ALT);
 
     if (ctrl != binding.ctrl || shift != binding.shift || alt != binding.alt) {
         return false;
@@ -57,12 +59,12 @@ bool ActionMap::isActionPressed(Action action) const {
 }
 
 bool ActionMap::isBindingPressedRepeat(const KeyBinding& binding) const {
-    bool ctrl = isKeyDownHelper(raylib::KEY_LEFT_CONTROL) ||
-                isKeyDownHelper(raylib::KEY_RIGHT_CONTROL);
-    bool shift = isKeyDownHelper(raylib::KEY_LEFT_SHIFT) ||
-                 isKeyDownHelper(raylib::KEY_RIGHT_SHIFT);
-    bool alt = isKeyDownHelper(raylib::KEY_LEFT_ALT) ||
-               isKeyDownHelper(raylib::KEY_RIGHT_ALT);
+    bool ctrl = isKeyDownHelper(afterhours::keys::LEFT_CONTROL) ||
+                isKeyDownHelper(afterhours::keys::RIGHT_CONTROL);
+    bool shift = isKeyDownHelper(afterhours::keys::LEFT_SHIFT) ||
+                 isKeyDownHelper(afterhours::keys::RIGHT_SHIFT);
+    bool alt = isKeyDownHelper(afterhours::keys::LEFT_ALT) ||
+               isKeyDownHelper(afterhours::keys::RIGHT_ALT);
 
     if (ctrl != binding.ctrl || shift != binding.shift || alt != binding.alt) {
         return false;
@@ -282,27 +284,27 @@ const char* presetName(Preset preset) {
 
 // Helper to bind common navigation keys (same across all presets)
 static void bindNavigationKeys(ActionMap& map) {
-    map.bind({raylib::KEY_LEFT, false, false, false}, Action::MoveLeft);
-    map.bind({raylib::KEY_RIGHT, false, false, false}, Action::MoveRight);
-    map.bind({raylib::KEY_UP, false, false, false}, Action::MoveUp);
-    map.bind({raylib::KEY_DOWN, false, false, false}, Action::MoveDown);
-    map.bind({raylib::KEY_PAGE_UP, false, false, false}, Action::PageUp);
-    map.bind({raylib::KEY_PAGE_DOWN, false, false, false}, Action::PageDown);
+    map.bind({afterhours::keys::LEFT, false, false, false}, Action::MoveLeft);
+    map.bind({afterhours::keys::RIGHT, false, false, false}, Action::MoveRight);
+    map.bind({afterhours::keys::UP, false, false, false}, Action::MoveUp);
+    map.bind({afterhours::keys::DOWN, false, false, false}, Action::MoveDown);
+    map.bind({afterhours::keys::PAGE_UP, false, false, false}, Action::PageUp);
+    map.bind({afterhours::keys::PAGE_DOWN, false, false, false}, Action::PageDown);
     
     // Also bind with shift for selection (shift is handled separately in NavigationSystem)
-    map.bind({raylib::KEY_LEFT, false, true, false}, Action::MoveLeft);
-    map.bind({raylib::KEY_RIGHT, false, true, false}, Action::MoveRight);
-    map.bind({raylib::KEY_UP, false, true, false}, Action::MoveUp);
-    map.bind({raylib::KEY_DOWN, false, true, false}, Action::MoveDown);
-    map.bind({raylib::KEY_PAGE_UP, false, true, false}, Action::PageUp);
-    map.bind({raylib::KEY_PAGE_DOWN, false, true, false}, Action::PageDown);
+    map.bind({afterhours::keys::LEFT, false, true, false}, Action::MoveLeft);
+    map.bind({afterhours::keys::RIGHT, false, true, false}, Action::MoveRight);
+    map.bind({afterhours::keys::UP, false, true, false}, Action::MoveUp);
+    map.bind({afterhours::keys::DOWN, false, true, false}, Action::MoveDown);
+    map.bind({afterhours::keys::PAGE_UP, false, true, false}, Action::PageUp);
+    map.bind({afterhours::keys::PAGE_DOWN, false, true, false}, Action::PageDown);
 
     // Editing (same across presets)
-    map.bind({raylib::KEY_ENTER, false, false, false}, Action::InsertNewline);
-    map.bind({raylib::KEY_KP_ENTER, false, false, false},
+    map.bind({afterhours::keys::ENTER, false, false, false}, Action::InsertNewline);
+    map.bind({afterhours::keys::KP_ENTER, false, false, false},
              Action::InsertNewline);
-    map.bind({raylib::KEY_BACKSPACE, false, false, false}, Action::Backspace);
-    map.bind({raylib::KEY_DELETE, false, false, false}, Action::Delete);
+    map.bind({afterhours::keys::BACKSPACE, false, false, false}, Action::Backspace);
+    map.bind({afterhours::keys::DELETE_KEY, false, false, false}, Action::Delete);
 }
 
 // Windows-style bindings: Ctrl+key
@@ -310,100 +312,100 @@ static void bindWindowsPreset(ActionMap& map) {
     bindNavigationKeys(map);
 
     // Word/line navigation: Ctrl+Arrow, Home/End
-    map.bind({raylib::KEY_LEFT, true, false, false}, Action::MoveWordLeft);
-    map.bind({raylib::KEY_RIGHT, true, false, false}, Action::MoveWordRight);
-    map.bind({raylib::KEY_HOME, false, false, false}, Action::MoveLineStart);
-    map.bind({raylib::KEY_END, false, false, false}, Action::MoveLineEnd);
-    map.bind({raylib::KEY_HOME, true, false, false}, Action::MoveDocumentStart);
-    map.bind({raylib::KEY_END, true, false, false}, Action::MoveDocumentEnd);
+    map.bind({afterhours::keys::LEFT, true, false, false}, Action::MoveWordLeft);
+    map.bind({afterhours::keys::RIGHT, true, false, false}, Action::MoveWordRight);
+    map.bind({afterhours::keys::HOME, false, false, false}, Action::MoveLineStart);
+    map.bind({afterhours::keys::END, false, false, false}, Action::MoveLineEnd);
+    map.bind({afterhours::keys::HOME, true, false, false}, Action::MoveDocumentStart);
+    map.bind({afterhours::keys::END, true, false, false}, Action::MoveDocumentEnd);
     
     // Word/line navigation with shift (for selection)
-    map.bind({raylib::KEY_LEFT, true, true, false}, Action::MoveWordLeft);
-    map.bind({raylib::KEY_RIGHT, true, true, false}, Action::MoveWordRight);
-    map.bind({raylib::KEY_HOME, false, true, false}, Action::MoveLineStart);
-    map.bind({raylib::KEY_END, false, true, false}, Action::MoveLineEnd);
-    map.bind({raylib::KEY_HOME, true, true, false}, Action::MoveDocumentStart);
-    map.bind({raylib::KEY_END, true, true, false}, Action::MoveDocumentEnd);
+    map.bind({afterhours::keys::LEFT, true, true, false}, Action::MoveWordLeft);
+    map.bind({afterhours::keys::RIGHT, true, true, false}, Action::MoveWordRight);
+    map.bind({afterhours::keys::HOME, false, true, false}, Action::MoveLineStart);
+    map.bind({afterhours::keys::END, false, true, false}, Action::MoveLineEnd);
+    map.bind({afterhours::keys::HOME, true, true, false}, Action::MoveDocumentStart);
+    map.bind({afterhours::keys::END, true, true, false}, Action::MoveDocumentEnd);
 
     // Selection, clipboard, undo/redo: Ctrl+key
-    map.bind({raylib::KEY_A, true, false, false}, Action::SelectAll);
-    map.bind({raylib::KEY_C, true, false, false}, Action::Copy);
-    map.bind({raylib::KEY_X, true, false, false}, Action::Cut);
-    map.bind({raylib::KEY_V, true, false, false}, Action::Paste);
-    map.bind({raylib::KEY_Z, true, false, false}, Action::Undo);
-    map.bind({raylib::KEY_Y, true, false, false}, Action::Redo);
+    map.bind({afterhours::keys::A, true, false, false}, Action::SelectAll);
+    map.bind({afterhours::keys::C, true, false, false}, Action::Copy);
+    map.bind({afterhours::keys::X, true, false, false}, Action::Cut);
+    map.bind({afterhours::keys::V, true, false, false}, Action::Paste);
+    map.bind({afterhours::keys::Z, true, false, false}, Action::Undo);
+    map.bind({afterhours::keys::Y, true, false, false}, Action::Redo);
 
     // File operations: Ctrl+key
-    map.bind({raylib::KEY_N, true, false, false}, Action::New);
-    map.bind({raylib::KEY_O, true, false, false}, Action::Open);
-    map.bind({raylib::KEY_S, true, false, false}, Action::Save);
+    map.bind({afterhours::keys::N, true, false, false}, Action::New);
+    map.bind({afterhours::keys::O, true, false, false}, Action::Open);
+    map.bind({afterhours::keys::S, true, false, false}, Action::Save);
 
     // Formatting: Ctrl+key
-    map.bind({raylib::KEY_B, true, false, false}, Action::ToggleBold);
-    map.bind({raylib::KEY_I, true, false, false}, Action::ToggleItalic);
-    map.bind({raylib::KEY_U, true, false, false}, Action::ToggleUnderline);
-    map.bind({raylib::KEY_S, true, true, false}, Action::ToggleStrikethrough);  // Ctrl+Shift+S
-    map.bind({raylib::KEY_EQUAL, true, true, false}, Action::ToggleSuperscript);
-    map.bind({raylib::KEY_MINUS, true, true, false}, Action::ToggleSubscript);
-    map.bind({raylib::KEY_ONE, true, false, false}, Action::FontGaegu);
-    map.bind({raylib::KEY_TWO, true, false, false}, Action::FontGaramond);
-    map.bind({raylib::KEY_EQUAL, true, false, false}, Action::IncreaseFontSize);
-    map.bind({raylib::KEY_KP_ADD, true, false, false},
+    map.bind({afterhours::keys::B, true, false, false}, Action::ToggleBold);
+    map.bind({afterhours::keys::I, true, false, false}, Action::ToggleItalic);
+    map.bind({afterhours::keys::U, true, false, false}, Action::ToggleUnderline);
+    map.bind({afterhours::keys::S, true, true, false}, Action::ToggleStrikethrough);  // Ctrl+Shift+S
+    map.bind({afterhours::keys::EQUAL, true, true, false}, Action::ToggleSuperscript);
+    map.bind({afterhours::keys::MINUS, true, true, false}, Action::ToggleSubscript);
+    map.bind({afterhours::keys::ONE, true, false, false}, Action::FontGaegu);
+    map.bind({afterhours::keys::TWO, true, false, false}, Action::FontGaramond);
+    map.bind({afterhours::keys::EQUAL, true, false, false}, Action::IncreaseFontSize);
+    map.bind({afterhours::keys::KP_ADD, true, false, false},
              Action::IncreaseFontSize);
-    map.bind({raylib::KEY_MINUS, true, false, false}, Action::DecreaseFontSize);
-    map.bind({raylib::KEY_KP_SUBTRACT, true, false, false},
+    map.bind({afterhours::keys::MINUS, true, false, false}, Action::DecreaseFontSize);
+    map.bind({afterhours::keys::KP_SUBTRACT, true, false, false},
              Action::DecreaseFontSize);
-    map.bind({raylib::KEY_ZERO, true, false, false}, Action::ResetFontSize);
+    map.bind({afterhours::keys::ZERO, true, false, false}, Action::ResetFontSize);
     
     // Paragraph styles: Ctrl+Alt+number for headings, Ctrl+Alt+0 for normal
-    map.bind({raylib::KEY_ZERO, true, false, true}, Action::StyleNormal);
-    map.bind({raylib::KEY_ONE, true, false, true}, Action::StyleHeading1);
-    map.bind({raylib::KEY_TWO, true, false, true}, Action::StyleHeading2);
-    map.bind({raylib::KEY_THREE, true, false, true}, Action::StyleHeading3);
-    map.bind({raylib::KEY_FOUR, true, false, true}, Action::StyleHeading4);
-    map.bind({raylib::KEY_FIVE, true, false, true}, Action::StyleHeading5);
-    map.bind({raylib::KEY_SIX, true, false, true}, Action::StyleHeading6);
+    map.bind({afterhours::keys::ZERO, true, false, true}, Action::StyleNormal);
+    map.bind({afterhours::keys::ONE, true, false, true}, Action::StyleHeading1);
+    map.bind({afterhours::keys::TWO, true, false, true}, Action::StyleHeading2);
+    map.bind({afterhours::keys::THREE, true, false, true}, Action::StyleHeading3);
+    map.bind({afterhours::keys::FOUR, true, false, true}, Action::StyleHeading4);
+    map.bind({afterhours::keys::FIVE, true, false, true}, Action::StyleHeading5);
+    map.bind({afterhours::keys::SIX, true, false, true}, Action::StyleHeading6);
     
     // Text alignment: Ctrl+L/E/R/J (standard Word shortcuts)
-    map.bind({raylib::KEY_L, true, false, false}, Action::AlignLeft);
-    map.bind({raylib::KEY_E, true, false, false}, Action::AlignCenter);
-    map.bind({raylib::KEY_R, true, false, false}, Action::AlignRight);
-    map.bind({raylib::KEY_J, true, false, false}, Action::AlignJustify);
+    map.bind({afterhours::keys::L, true, false, false}, Action::AlignLeft);
+    map.bind({afterhours::keys::E, true, false, false}, Action::AlignCenter);
+    map.bind({afterhours::keys::R, true, false, false}, Action::AlignRight);
+    map.bind({afterhours::keys::J, true, false, false}, Action::AlignJustify);
     
     // Indentation: Ctrl+] to increase, Ctrl+[ to decrease (standard Word shortcuts)
-    map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
-    map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
+    map.bind({afterhours::keys::RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
+    map.bind({afterhours::keys::LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
     
     // Line spacing: Ctrl+Shift+1/5/2 for single/1.5/double
-    map.bind({raylib::KEY_ONE, true, true, false}, Action::LineSpacingSingle);
-    map.bind({raylib::KEY_FIVE, true, true, false}, Action::LineSpacing1_5);
-    map.bind({raylib::KEY_TWO, true, true, false}, Action::LineSpacingDouble);
+    map.bind({afterhours::keys::ONE, true, true, false}, Action::LineSpacingSingle);
+    map.bind({afterhours::keys::FIVE, true, true, false}, Action::LineSpacing1_5);
+    map.bind({afterhours::keys::TWO, true, true, false}, Action::LineSpacingDouble);
 
     // View controls
-    map.bind({raylib::KEY_EQUAL, true, false, true}, Action::ZoomIn);
-    map.bind({raylib::KEY_MINUS, true, false, true}, Action::ZoomOut);
-    map.bind({raylib::KEY_ZERO, true, false, true}, Action::ZoomReset);
-    map.bind({raylib::KEY_F11, false, false, false}, Action::ToggleFocusMode);
-    map.bind({raylib::KEY_V, true, false, true}, Action::ToggleSplitView);
-    map.bind({raylib::KEY_D, true, false, true}, Action::ToggleDarkMode);
+    map.bind({afterhours::keys::EQUAL, true, false, true}, Action::ZoomIn);
+    map.bind({afterhours::keys::MINUS, true, false, true}, Action::ZoomOut);
+    map.bind({afterhours::keys::ZERO, true, false, true}, Action::ZoomReset);
+    map.bind({afterhours::keys::F11, false, false, false}, Action::ToggleFocusMode);
+    map.bind({afterhours::keys::V, true, false, true}, Action::ToggleSplitView);
+    map.bind({afterhours::keys::D, true, false, true}, Action::ToggleDarkMode);
     
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers
-    map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
-    map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
+    map.bind({afterhours::keys::EIGHT, true, true, false}, Action::ToggleBulletedList);
+    map.bind({afterhours::keys::SEVEN, true, true, false}, Action::ToggleNumberedList);
     
     // Find and Replace
-    map.bind({raylib::KEY_F, true, false, false}, Action::Find);
-    map.bind({raylib::KEY_G, true, false, false}, Action::FindNext);
-    map.bind({raylib::KEY_F3, false, false, false}, Action::FindNext);
-    map.bind({raylib::KEY_G, true, true, false}, Action::FindPrevious);
-    map.bind({raylib::KEY_F3, false, true, false}, Action::FindPrevious);
-    map.bind({raylib::KEY_H, true, false, false}, Action::Replace);
+    map.bind({afterhours::keys::F, true, false, false}, Action::Find);
+    map.bind({afterhours::keys::G, true, false, false}, Action::FindNext);
+    map.bind({afterhours::keys::F3, false, false, false}, Action::FindNext);
+    map.bind({afterhours::keys::G, true, true, false}, Action::FindPrevious);
+    map.bind({afterhours::keys::F3, false, true, false}, Action::FindPrevious);
+    map.bind({afterhours::keys::H, true, false, false}, Action::Replace);
     
     // Paragraph spacing: Ctrl+Alt+Up/Down for before, Ctrl+Shift+Alt+Up/Down for after
-    map.bind({raylib::KEY_UP, true, false, true}, Action::IncreaseSpaceBefore);
-    map.bind({raylib::KEY_DOWN, true, false, true}, Action::DecreaseSpaceBefore);
-    map.bind({raylib::KEY_UP, true, true, true}, Action::IncreaseSpaceAfter);
-    map.bind({raylib::KEY_DOWN, true, true, true}, Action::DecreaseSpaceAfter);
+    map.bind({afterhours::keys::UP, true, false, true}, Action::IncreaseSpaceBefore);
+    map.bind({afterhours::keys::DOWN, true, false, true}, Action::DecreaseSpaceBefore);
+    map.bind({afterhours::keys::UP, true, true, true}, Action::IncreaseSpaceAfter);
+    map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
@@ -416,100 +418,100 @@ static void bindMacOSPreset(ActionMap& map) {
     bindNavigationKeys(map);
 
     // Word navigation: Option+Arrow (Alt in raylib)
-    map.bind({raylib::KEY_LEFT, false, false, true}, Action::MoveWordLeft);
-    map.bind({raylib::KEY_RIGHT, false, false, true}, Action::MoveWordRight);
+    map.bind({afterhours::keys::LEFT, false, false, true}, Action::MoveWordLeft);
+    map.bind({afterhours::keys::RIGHT, false, false, true}, Action::MoveWordRight);
 
     // Line navigation: Cmd+Arrow (Ctrl in raylib as Cmd substitute)
-    map.bind({raylib::KEY_LEFT, true, false, false}, Action::MoveLineStart);
-    map.bind({raylib::KEY_RIGHT, true, false, false}, Action::MoveLineEnd);
-    map.bind({raylib::KEY_UP, true, false, false}, Action::MoveDocumentStart);
-    map.bind({raylib::KEY_DOWN, true, false, false}, Action::MoveDocumentEnd);
+    map.bind({afterhours::keys::LEFT, true, false, false}, Action::MoveLineStart);
+    map.bind({afterhours::keys::RIGHT, true, false, false}, Action::MoveLineEnd);
+    map.bind({afterhours::keys::UP, true, false, false}, Action::MoveDocumentStart);
+    map.bind({afterhours::keys::DOWN, true, false, false}, Action::MoveDocumentEnd);
 
     // Home/End also work for line start/end
-    map.bind({raylib::KEY_HOME, false, false, false}, Action::MoveLineStart);
-    map.bind({raylib::KEY_END, false, false, false}, Action::MoveLineEnd);
+    map.bind({afterhours::keys::HOME, false, false, false}, Action::MoveLineStart);
+    map.bind({afterhours::keys::END, false, false, false}, Action::MoveLineEnd);
 
     // Selection, clipboard: Cmd+key (Ctrl as substitute)
-    map.bind({raylib::KEY_A, true, false, false}, Action::SelectAll);
-    map.bind({raylib::KEY_C, true, false, false}, Action::Copy);
-    map.bind({raylib::KEY_X, true, false, false}, Action::Cut);
-    map.bind({raylib::KEY_V, true, false, false}, Action::Paste);
+    map.bind({afterhours::keys::A, true, false, false}, Action::SelectAll);
+    map.bind({afterhours::keys::C, true, false, false}, Action::Copy);
+    map.bind({afterhours::keys::X, true, false, false}, Action::Cut);
+    map.bind({afterhours::keys::V, true, false, false}, Action::Paste);
 
     // Undo: Cmd+Z, Redo: Cmd+Shift+Z (macOS style)
-    map.bind({raylib::KEY_Z, true, false, false}, Action::Undo);
-    map.bind({raylib::KEY_Z, true, true, false}, Action::Redo);  // Cmd+Shift+Z
+    map.bind({afterhours::keys::Z, true, false, false}, Action::Undo);
+    map.bind({afterhours::keys::Z, true, true, false}, Action::Redo);  // Cmd+Shift+Z
 
     // File operations: Cmd+key (Ctrl as substitute)
-    map.bind({raylib::KEY_N, true, false, false}, Action::New);
-    map.bind({raylib::KEY_O, true, false, false}, Action::Open);
-    map.bind({raylib::KEY_S, true, false, false}, Action::Save);
+    map.bind({afterhours::keys::N, true, false, false}, Action::New);
+    map.bind({afterhours::keys::O, true, false, false}, Action::Open);
+    map.bind({afterhours::keys::S, true, false, false}, Action::Save);
 
     // Formatting: Cmd+key
-    map.bind({raylib::KEY_B, true, false, false}, Action::ToggleBold);
-    map.bind({raylib::KEY_I, true, false, false}, Action::ToggleItalic);
-    map.bind({raylib::KEY_U, true, false, false}, Action::ToggleUnderline);
-    map.bind({raylib::KEY_S, true, true, false}, Action::ToggleStrikethrough);  // Cmd+Shift+S
-    map.bind({raylib::KEY_EQUAL, true, true, false}, Action::ToggleSuperscript);
-    map.bind({raylib::KEY_MINUS, true, true, false}, Action::ToggleSubscript);
-    map.bind({raylib::KEY_ONE, true, false, false}, Action::FontGaegu);
-    map.bind({raylib::KEY_TWO, true, false, false}, Action::FontGaramond);
-    map.bind({raylib::KEY_EQUAL, true, false, false}, Action::IncreaseFontSize);
-    map.bind({raylib::KEY_KP_ADD, true, false, false},
+    map.bind({afterhours::keys::B, true, false, false}, Action::ToggleBold);
+    map.bind({afterhours::keys::I, true, false, false}, Action::ToggleItalic);
+    map.bind({afterhours::keys::U, true, false, false}, Action::ToggleUnderline);
+    map.bind({afterhours::keys::S, true, true, false}, Action::ToggleStrikethrough);  // Cmd+Shift+S
+    map.bind({afterhours::keys::EQUAL, true, true, false}, Action::ToggleSuperscript);
+    map.bind({afterhours::keys::MINUS, true, true, false}, Action::ToggleSubscript);
+    map.bind({afterhours::keys::ONE, true, false, false}, Action::FontGaegu);
+    map.bind({afterhours::keys::TWO, true, false, false}, Action::FontGaramond);
+    map.bind({afterhours::keys::EQUAL, true, false, false}, Action::IncreaseFontSize);
+    map.bind({afterhours::keys::KP_ADD, true, false, false},
              Action::IncreaseFontSize);
-    map.bind({raylib::KEY_MINUS, true, false, false}, Action::DecreaseFontSize);
-    map.bind({raylib::KEY_KP_SUBTRACT, true, false, false},
+    map.bind({afterhours::keys::MINUS, true, false, false}, Action::DecreaseFontSize);
+    map.bind({afterhours::keys::KP_SUBTRACT, true, false, false},
              Action::DecreaseFontSize);
-    map.bind({raylib::KEY_ZERO, true, false, false}, Action::ResetFontSize);
+    map.bind({afterhours::keys::ZERO, true, false, false}, Action::ResetFontSize);
     
     // Paragraph styles: Ctrl+Alt+number for headings (same as Windows)
-    map.bind({raylib::KEY_ZERO, true, false, true}, Action::StyleNormal);
-    map.bind({raylib::KEY_ONE, true, false, true}, Action::StyleHeading1);
-    map.bind({raylib::KEY_TWO, true, false, true}, Action::StyleHeading2);
-    map.bind({raylib::KEY_THREE, true, false, true}, Action::StyleHeading3);
-    map.bind({raylib::KEY_FOUR, true, false, true}, Action::StyleHeading4);
-    map.bind({raylib::KEY_FIVE, true, false, true}, Action::StyleHeading5);
-    map.bind({raylib::KEY_SIX, true, false, true}, Action::StyleHeading6);
+    map.bind({afterhours::keys::ZERO, true, false, true}, Action::StyleNormal);
+    map.bind({afterhours::keys::ONE, true, false, true}, Action::StyleHeading1);
+    map.bind({afterhours::keys::TWO, true, false, true}, Action::StyleHeading2);
+    map.bind({afterhours::keys::THREE, true, false, true}, Action::StyleHeading3);
+    map.bind({afterhours::keys::FOUR, true, false, true}, Action::StyleHeading4);
+    map.bind({afterhours::keys::FIVE, true, false, true}, Action::StyleHeading5);
+    map.bind({afterhours::keys::SIX, true, false, true}, Action::StyleHeading6);
     
     // Text alignment: Cmd+L/E/R/J (same shortcuts as Windows)
-    map.bind({raylib::KEY_L, true, false, false}, Action::AlignLeft);
-    map.bind({raylib::KEY_E, true, false, false}, Action::AlignCenter);
-    map.bind({raylib::KEY_R, true, false, false}, Action::AlignRight);
-    map.bind({raylib::KEY_J, true, false, false}, Action::AlignJustify);
+    map.bind({afterhours::keys::L, true, false, false}, Action::AlignLeft);
+    map.bind({afterhours::keys::E, true, false, false}, Action::AlignCenter);
+    map.bind({afterhours::keys::R, true, false, false}, Action::AlignRight);
+    map.bind({afterhours::keys::J, true, false, false}, Action::AlignJustify);
     
     // Indentation: Cmd+] to increase, Cmd+[ to decrease
-    map.bind({raylib::KEY_RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
-    map.bind({raylib::KEY_LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
+    map.bind({afterhours::keys::RIGHT_BRACKET, true, false, false}, Action::IndentIncrease);
+    map.bind({afterhours::keys::LEFT_BRACKET, true, false, false}, Action::IndentDecrease);
     
     // Line spacing: Cmd+Shift+1/5/2 for single/1.5/double
-    map.bind({raylib::KEY_ONE, true, true, false}, Action::LineSpacingSingle);
-    map.bind({raylib::KEY_FIVE, true, true, false}, Action::LineSpacing1_5);
-    map.bind({raylib::KEY_TWO, true, true, false}, Action::LineSpacingDouble);
+    map.bind({afterhours::keys::ONE, true, true, false}, Action::LineSpacingSingle);
+    map.bind({afterhours::keys::FIVE, true, true, false}, Action::LineSpacing1_5);
+    map.bind({afterhours::keys::TWO, true, true, false}, Action::LineSpacingDouble);
 
     // View controls
-    map.bind({raylib::KEY_EQUAL, true, false, true}, Action::ZoomIn);
-    map.bind({raylib::KEY_MINUS, true, false, true}, Action::ZoomOut);
-    map.bind({raylib::KEY_ZERO, true, false, true}, Action::ZoomReset);
-    map.bind({raylib::KEY_F11, false, false, false}, Action::ToggleFocusMode);
-    map.bind({raylib::KEY_V, true, false, true}, Action::ToggleSplitView);
-    map.bind({raylib::KEY_D, true, false, true}, Action::ToggleDarkMode);
+    map.bind({afterhours::keys::EQUAL, true, false, true}, Action::ZoomIn);
+    map.bind({afterhours::keys::MINUS, true, false, true}, Action::ZoomOut);
+    map.bind({afterhours::keys::ZERO, true, false, true}, Action::ZoomReset);
+    map.bind({afterhours::keys::F11, false, false, false}, Action::ToggleFocusMode);
+    map.bind({afterhours::keys::V, true, false, true}, Action::ToggleSplitView);
+    map.bind({afterhours::keys::D, true, false, true}, Action::ToggleDarkMode);
     
     // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
-    map.bind({raylib::KEY_EIGHT, true, true, false}, Action::ToggleBulletedList);
-    map.bind({raylib::KEY_SEVEN, true, true, false}, Action::ToggleNumberedList);
+    map.bind({afterhours::keys::EIGHT, true, true, false}, Action::ToggleBulletedList);
+    map.bind({afterhours::keys::SEVEN, true, true, false}, Action::ToggleNumberedList);
     
     // Find and Replace
-    map.bind({raylib::KEY_F, true, false, false}, Action::Find);
-    map.bind({raylib::KEY_G, true, false, false}, Action::FindNext);
-    map.bind({raylib::KEY_F3, false, false, false}, Action::FindNext);
-    map.bind({raylib::KEY_G, true, true, false}, Action::FindPrevious);
-    map.bind({raylib::KEY_F3, false, true, false}, Action::FindPrevious);
-    map.bind({raylib::KEY_H, true, false, false}, Action::Replace);
+    map.bind({afterhours::keys::F, true, false, false}, Action::Find);
+    map.bind({afterhours::keys::G, true, false, false}, Action::FindNext);
+    map.bind({afterhours::keys::F3, false, false, false}, Action::FindNext);
+    map.bind({afterhours::keys::G, true, true, false}, Action::FindPrevious);
+    map.bind({afterhours::keys::F3, false, true, false}, Action::FindPrevious);
+    map.bind({afterhours::keys::H, true, false, false}, Action::Replace);
     
     // Paragraph spacing: Cmd+Alt+Up/Down for before, Cmd+Shift+Alt+Up/Down for after
-    map.bind({raylib::KEY_UP, true, false, true}, Action::IncreaseSpaceBefore);
-    map.bind({raylib::KEY_DOWN, true, false, true}, Action::DecreaseSpaceBefore);
-    map.bind({raylib::KEY_UP, true, true, true}, Action::IncreaseSpaceAfter);
-    map.bind({raylib::KEY_DOWN, true, true, true}, Action::DecreaseSpaceAfter);
+    map.bind({afterhours::keys::UP, true, false, true}, Action::IncreaseSpaceBefore);
+    map.bind({afterhours::keys::DOWN, true, false, true}, Action::DecreaseSpaceBefore);
+    map.bind({afterhours::keys::UP, true, true, true}, Action::IncreaseSpaceAfter);
+    map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -722,175 +724,175 @@ const char* actionDisplayName(Action action) {
 std::string keyName(int keyCode) {
     switch (keyCode) {
         // Letters
-        case raylib::KEY_A:
+        case afterhours::keys::A:
             return "A";
-        case raylib::KEY_B:
+        case afterhours::keys::B:
             return "B";
-        case raylib::KEY_C:
+        case afterhours::keys::C:
             return "C";
-        case raylib::KEY_D:
+        case afterhours::keys::D:
             return "D";
-        case raylib::KEY_E:
+        case afterhours::keys::E:
             return "E";
-        case raylib::KEY_F:
+        case afterhours::keys::F:
             return "F";
-        case raylib::KEY_G:
+        case afterhours::keys::G:
             return "G";
-        case raylib::KEY_H:
+        case afterhours::keys::H:
             return "H";
-        case raylib::KEY_I:
+        case afterhours::keys::I:
             return "I";
-        case raylib::KEY_J:
+        case afterhours::keys::J:
             return "J";
-        case raylib::KEY_K:
+        case afterhours::keys::K:
             return "K";
-        case raylib::KEY_L:
+        case afterhours::keys::L:
             return "L";
-        case raylib::KEY_M:
+        case afterhours::keys::M:
             return "M";
-        case raylib::KEY_N:
+        case afterhours::keys::N:
             return "N";
-        case raylib::KEY_O:
+        case afterhours::keys::O:
             return "O";
-        case raylib::KEY_P:
+        case afterhours::keys::P:
             return "P";
-        case raylib::KEY_Q:
+        case afterhours::keys::Q:
             return "Q";
-        case raylib::KEY_R:
+        case afterhours::keys::R:
             return "R";
-        case raylib::KEY_S:
+        case afterhours::keys::S:
             return "S";
-        case raylib::KEY_T:
+        case afterhours::keys::T:
             return "T";
-        case raylib::KEY_U:
+        case afterhours::keys::U:
             return "U";
-        case raylib::KEY_V:
+        case afterhours::keys::V:
             return "V";
-        case raylib::KEY_W:
+        case afterhours::keys::W:
             return "W";
-        case raylib::KEY_X:
+        case afterhours::keys::X:
             return "X";
-        case raylib::KEY_Y:
+        case afterhours::keys::Y:
             return "Y";
-        case raylib::KEY_Z:
+        case afterhours::keys::Z:
             return "Z";
 
         // Numbers
-        case raylib::KEY_ZERO:
+        case afterhours::keys::ZERO:
             return "0";
-        case raylib::KEY_ONE:
+        case afterhours::keys::ONE:
             return "1";
-        case raylib::KEY_TWO:
+        case afterhours::keys::TWO:
             return "2";
-        case raylib::KEY_THREE:
+        case afterhours::keys::THREE:
             return "3";
-        case raylib::KEY_FOUR:
+        case afterhours::keys::FOUR:
             return "4";
-        case raylib::KEY_FIVE:
+        case afterhours::keys::FIVE:
             return "5";
-        case raylib::KEY_SIX:
+        case afterhours::keys::SIX:
             return "6";
-        case raylib::KEY_SEVEN:
+        case afterhours::keys::SEVEN:
             return "7";
-        case raylib::KEY_EIGHT:
+        case afterhours::keys::EIGHT:
             return "8";
-        case raylib::KEY_NINE:
+        case afterhours::keys::NINE:
             return "9";
 
         // Function keys
-        case raylib::KEY_F1:
+        case afterhours::keys::F1:
             return "F1";
-        case raylib::KEY_F2:
+        case afterhours::keys::F2:
             return "F2";
-        case raylib::KEY_F3:
+        case afterhours::keys::F3:
             return "F3";
-        case raylib::KEY_F4:
+        case afterhours::keys::F4:
             return "F4";
-        case raylib::KEY_F5:
+        case afterhours::keys::F5:
             return "F5";
-        case raylib::KEY_F6:
+        case afterhours::keys::F6:
             return "F6";
-        case raylib::KEY_F7:
+        case afterhours::keys::F7:
             return "F7";
-        case raylib::KEY_F8:
+        case afterhours::keys::F8:
             return "F8";
-        case raylib::KEY_F9:
+        case afterhours::keys::F9:
             return "F9";
-        case raylib::KEY_F10:
+        case afterhours::keys::F10:
             return "F10";
-        case raylib::KEY_F11:
+        case afterhours::keys::F11:
             return "F11";
-        case raylib::KEY_F12:
+        case afterhours::keys::F12:
             return "F12";
 
         // Special keys
-        case raylib::KEY_SPACE:
+        case afterhours::keys::SPACE:
             return "Space";
-        case raylib::KEY_ESCAPE:
+        case afterhours::keys::ESCAPE:
             return "Escape";
-        case raylib::KEY_ENTER:
+        case afterhours::keys::ENTER:
             return "Enter";
-        case raylib::KEY_TAB:
+        case afterhours::keys::TAB:
             return "Tab";
-        case raylib::KEY_BACKSPACE:
+        case afterhours::keys::BACKSPACE:
             return "Backspace";
-        case raylib::KEY_INSERT:
+        case afterhours::keys::INSERT:
             return "Insert";
-        case raylib::KEY_DELETE:
+        case afterhours::keys::DELETE_KEY:
             return "Delete";
-        case raylib::KEY_HOME:
+        case afterhours::keys::HOME:
             return "Home";
-        case raylib::KEY_END:
+        case afterhours::keys::END:
             return "End";
-        case raylib::KEY_PAGE_UP:
+        case afterhours::keys::PAGE_UP:
             return "Page Up";
-        case raylib::KEY_PAGE_DOWN:
+        case afterhours::keys::PAGE_DOWN:
             return "Page Down";
 
         // Arrow keys
-        case raylib::KEY_UP:
+        case afterhours::keys::UP:
             return "Up";
-        case raylib::KEY_DOWN:
+        case afterhours::keys::DOWN:
             return "Down";
-        case raylib::KEY_LEFT:
+        case afterhours::keys::LEFT:
             return "Left";
-        case raylib::KEY_RIGHT:
+        case afterhours::keys::RIGHT:
             return "Right";
 
         // Symbols
-        case raylib::KEY_MINUS:
+        case afterhours::keys::MINUS:
             return "-";
-        case raylib::KEY_EQUAL:
+        case afterhours::keys::EQUAL:
             return "=";
-        case raylib::KEY_COMMA:
+        case afterhours::keys::COMMA:
             return ",";
-        case raylib::KEY_PERIOD:
+        case afterhours::keys::PERIOD:
             return ".";
-        case raylib::KEY_SLASH:
+        case afterhours::keys::SLASH:
             return "/";
-        case raylib::KEY_SEMICOLON:
+        case afterhours::keys::SEMICOLON:
             return ";";
-        case raylib::KEY_APOSTROPHE:
+        case afterhours::keys::APOSTROPHE:
             return "'";
-        case raylib::KEY_LEFT_BRACKET:
+        case afterhours::keys::LEFT_BRACKET:
             return "[";
-        case raylib::KEY_RIGHT_BRACKET:
+        case afterhours::keys::RIGHT_BRACKET:
             return "]";
-        case raylib::KEY_BACKSLASH:
+        case afterhours::keys::BACKSLASH:
             return "\\";
-        case raylib::KEY_GRAVE:
+        case afterhours::keys::GRAVE:
             return "`";
 
         // Keypad
-        case raylib::KEY_KP_ADD:
+        case afterhours::keys::KP_ADD:
             return "Num+";
-        case raylib::KEY_KP_SUBTRACT:
+        case afterhours::keys::KP_SUBTRACT:
             return "Num-";
-        case raylib::KEY_KP_MULTIPLY:
+        case afterhours::keys::KP_MULTIPLY:
             return "Num*";
-        case raylib::KEY_KP_DIVIDE:
+        case afterhours::keys::KP_DIVIDE:
             return "Num/";
-        case raylib::KEY_KP_ENTER:
+        case afterhours::keys::KP_ENTER:
             return "NumEnter";
 
         default:
@@ -922,106 +924,106 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     };
 
     // Navigation
-    addBinding(Action::MoveLeft, {raylib::KEY_LEFT, false, false, false});
-    addBinding(Action::MoveRight, {raylib::KEY_RIGHT, false, false, false});
-    addBinding(Action::MoveUp, {raylib::KEY_UP, false, false, false});
-    addBinding(Action::MoveDown, {raylib::KEY_DOWN, false, false, false});
-    addBinding(Action::MoveWordLeft, {raylib::KEY_LEFT, true, false, false});
-    addBinding(Action::MoveWordRight, {raylib::KEY_RIGHT, true, false, false});
-    addBinding(Action::MoveLineStart, {raylib::KEY_HOME, false, false, false});
-    addBinding(Action::MoveLineEnd, {raylib::KEY_END, false, false, false});
+    addBinding(Action::MoveLeft, {afterhours::keys::LEFT, false, false, false});
+    addBinding(Action::MoveRight, {afterhours::keys::RIGHT, false, false, false});
+    addBinding(Action::MoveUp, {afterhours::keys::UP, false, false, false});
+    addBinding(Action::MoveDown, {afterhours::keys::DOWN, false, false, false});
+    addBinding(Action::MoveWordLeft, {afterhours::keys::LEFT, true, false, false});
+    addBinding(Action::MoveWordRight, {afterhours::keys::RIGHT, true, false, false});
+    addBinding(Action::MoveLineStart, {afterhours::keys::HOME, false, false, false});
+    addBinding(Action::MoveLineEnd, {afterhours::keys::END, false, false, false});
     addBinding(Action::MoveDocumentStart,
-               {raylib::KEY_HOME, true, false, false});
-    addBinding(Action::MoveDocumentEnd, {raylib::KEY_END, true, false, false});
-    addBinding(Action::PageUp, {raylib::KEY_PAGE_UP, false, false, false});
-    addBinding(Action::PageDown, {raylib::KEY_PAGE_DOWN, false, false, false});
+               {afterhours::keys::HOME, true, false, false});
+    addBinding(Action::MoveDocumentEnd, {afterhours::keys::END, true, false, false});
+    addBinding(Action::PageUp, {afterhours::keys::PAGE_UP, false, false, false});
+    addBinding(Action::PageDown, {afterhours::keys::PAGE_DOWN, false, false, false});
 
     // Editing
-    addBinding(Action::InsertNewline, {raylib::KEY_ENTER, false, false, false});
-    addBinding(Action::Backspace, {raylib::KEY_BACKSPACE, false, false, false});
-    addBinding(Action::Delete, {raylib::KEY_DELETE, false, false, false});
+    addBinding(Action::InsertNewline, {afterhours::keys::ENTER, false, false, false});
+    addBinding(Action::Backspace, {afterhours::keys::BACKSPACE, false, false, false});
+    addBinding(Action::Delete, {afterhours::keys::DELETE_KEY, false, false, false});
 
     // Clipboard
-    addBinding(Action::SelectAll, {raylib::KEY_A, true, false, false});
-    addBinding(Action::Copy, {raylib::KEY_C, true, false, false});
-    addBinding(Action::Cut, {raylib::KEY_X, true, false, false});
-    addBinding(Action::Paste, {raylib::KEY_V, true, false, false});
+    addBinding(Action::SelectAll, {afterhours::keys::A, true, false, false});
+    addBinding(Action::Copy, {afterhours::keys::C, true, false, false});
+    addBinding(Action::Cut, {afterhours::keys::X, true, false, false});
+    addBinding(Action::Paste, {afterhours::keys::V, true, false, false});
 
     // Undo/Redo
-    addBinding(Action::Undo, {raylib::KEY_Z, true, false, false});
-    addBinding(Action::Redo, {raylib::KEY_Y, true, false, false});
+    addBinding(Action::Undo, {afterhours::keys::Z, true, false, false});
+    addBinding(Action::Redo, {afterhours::keys::Y, true, false, false});
 
     // File
-    addBinding(Action::New, {raylib::KEY_N, true, false, false});
-    addBinding(Action::Open, {raylib::KEY_O, true, false, false});
-    addBinding(Action::Save, {raylib::KEY_S, true, false, false});
+    addBinding(Action::New, {afterhours::keys::N, true, false, false});
+    addBinding(Action::Open, {afterhours::keys::O, true, false, false});
+    addBinding(Action::Save, {afterhours::keys::S, true, false, false});
 
     // Formatting
-    addBinding(Action::ToggleBold, {raylib::KEY_B, true, false, false});
-    addBinding(Action::ToggleItalic, {raylib::KEY_I, true, false, false});
-    addBinding(Action::ToggleUnderline, {raylib::KEY_U, true, false, false});
-    addBinding(Action::ToggleStrikethrough, {raylib::KEY_S, true, true, false});
-    addBinding(Action::ToggleSuperscript, {raylib::KEY_EQUAL, true, true, false});
-    addBinding(Action::ToggleSubscript, {raylib::KEY_MINUS, true, true, false});
+    addBinding(Action::ToggleBold, {afterhours::keys::B, true, false, false});
+    addBinding(Action::ToggleItalic, {afterhours::keys::I, true, false, false});
+    addBinding(Action::ToggleUnderline, {afterhours::keys::U, true, false, false});
+    addBinding(Action::ToggleStrikethrough, {afterhours::keys::S, true, true, false});
+    addBinding(Action::ToggleSuperscript, {afterhours::keys::EQUAL, true, true, false});
+    addBinding(Action::ToggleSubscript, {afterhours::keys::MINUS, true, true, false});
     addBinding(Action::IncreaseFontSize,
-               {raylib::KEY_EQUAL, true, false, false});
+               {afterhours::keys::EQUAL, true, false, false});
     addBinding(Action::DecreaseFontSize,
-               {raylib::KEY_MINUS, true, false, false});
-    addBinding(Action::ResetFontSize, {raylib::KEY_ZERO, true, false, false});
+               {afterhours::keys::MINUS, true, false, false});
+    addBinding(Action::ResetFontSize, {afterhours::keys::ZERO, true, false, false});
     
     // Paragraph styles
-    addBinding(Action::StyleNormal, {raylib::KEY_ZERO, true, false, true});
-    addBinding(Action::StyleHeading1, {raylib::KEY_ONE, true, false, true});
-    addBinding(Action::StyleHeading2, {raylib::KEY_TWO, true, false, true});
-    addBinding(Action::StyleHeading3, {raylib::KEY_THREE, true, false, true});
-    addBinding(Action::StyleHeading4, {raylib::KEY_FOUR, true, false, true});
-    addBinding(Action::StyleHeading5, {raylib::KEY_FIVE, true, false, true});
-    addBinding(Action::StyleHeading6, {raylib::KEY_SIX, true, false, true});
+    addBinding(Action::StyleNormal, {afterhours::keys::ZERO, true, false, true});
+    addBinding(Action::StyleHeading1, {afterhours::keys::ONE, true, false, true});
+    addBinding(Action::StyleHeading2, {afterhours::keys::TWO, true, false, true});
+    addBinding(Action::StyleHeading3, {afterhours::keys::THREE, true, false, true});
+    addBinding(Action::StyleHeading4, {afterhours::keys::FOUR, true, false, true});
+    addBinding(Action::StyleHeading5, {afterhours::keys::FIVE, true, false, true});
+    addBinding(Action::StyleHeading6, {afterhours::keys::SIX, true, false, true});
     
     // Alignment
-    addBinding(Action::AlignLeft, {raylib::KEY_L, true, false, false});
-    addBinding(Action::AlignCenter, {raylib::KEY_E, true, false, false});
-    addBinding(Action::AlignRight, {raylib::KEY_R, true, false, false});
-    addBinding(Action::AlignJustify, {raylib::KEY_J, true, false, false});
+    addBinding(Action::AlignLeft, {afterhours::keys::L, true, false, false});
+    addBinding(Action::AlignCenter, {afterhours::keys::E, true, false, false});
+    addBinding(Action::AlignRight, {afterhours::keys::R, true, false, false});
+    addBinding(Action::AlignJustify, {afterhours::keys::J, true, false, false});
     
     // Indentation
-    addBinding(Action::IndentIncrease, {raylib::KEY_RIGHT_BRACKET, true, false, false});
-    addBinding(Action::IndentDecrease, {raylib::KEY_LEFT_BRACKET, true, false, false});
+    addBinding(Action::IndentIncrease, {afterhours::keys::RIGHT_BRACKET, true, false, false});
+    addBinding(Action::IndentDecrease, {afterhours::keys::LEFT_BRACKET, true, false, false});
     
     // Line spacing: Ctrl+Shift+1/5/2 (Word-like shortcuts with Shift modifier)
-    addBinding(Action::LineSpacingSingle, {raylib::KEY_ONE, true, true, false});
-    addBinding(Action::LineSpacing1_5, {raylib::KEY_FIVE, true, true, false});
-    addBinding(Action::LineSpacingDouble, {raylib::KEY_TWO, true, true, false});
+    addBinding(Action::LineSpacingSingle, {afterhours::keys::ONE, true, true, false});
+    addBinding(Action::LineSpacing1_5, {afterhours::keys::FIVE, true, true, false});
+    addBinding(Action::LineSpacingDouble, {afterhours::keys::TWO, true, true, false});
 
     // View controls
-    addBinding(Action::ZoomIn, {raylib::KEY_EQUAL, true, false, true});
-    addBinding(Action::ZoomOut, {raylib::KEY_MINUS, true, false, true});
-    addBinding(Action::ZoomReset, {raylib::KEY_ZERO, true, false, true});
-    addBinding(Action::ToggleFocusMode, {raylib::KEY_F11, false, false, false});
-    addBinding(Action::ToggleSplitView, {raylib::KEY_V, true, false, true});
-    addBinding(Action::ToggleDarkMode, {raylib::KEY_D, true, false, true});
+    addBinding(Action::ZoomIn, {afterhours::keys::EQUAL, true, false, true});
+    addBinding(Action::ZoomOut, {afterhours::keys::MINUS, true, false, true});
+    addBinding(Action::ZoomReset, {afterhours::keys::ZERO, true, false, true});
+    addBinding(Action::ToggleFocusMode, {afterhours::keys::F11, false, false, false});
+    addBinding(Action::ToggleSplitView, {afterhours::keys::V, true, false, true});
+    addBinding(Action::ToggleDarkMode, {afterhours::keys::D, true, false, true});
     
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers (like some word processors)
-    addBinding(Action::ToggleBulletedList, {raylib::KEY_EIGHT, true, true, false});
-    addBinding(Action::ToggleNumberedList, {raylib::KEY_SEVEN, true, true, false});
+    addBinding(Action::ToggleBulletedList, {afterhours::keys::EIGHT, true, true, false});
+    addBinding(Action::ToggleNumberedList, {afterhours::keys::SEVEN, true, true, false});
     
     // Find and Replace
-    addBinding(Action::Find, {raylib::KEY_F, true, false, false});
-    addBinding(Action::FindNext, {raylib::KEY_G, true, false, false});
-    addBinding(Action::FindPrevious, {raylib::KEY_G, true, true, false});
-    addBinding(Action::Replace, {raylib::KEY_H, true, false, false});
+    addBinding(Action::Find, {afterhours::keys::F, true, false, false});
+    addBinding(Action::FindNext, {afterhours::keys::G, true, false, false});
+    addBinding(Action::FindPrevious, {afterhours::keys::G, true, true, false});
+    addBinding(Action::Replace, {afterhours::keys::H, true, false, false});
     
     // Paragraph spacing
-    addBinding(Action::IncreaseSpaceBefore, {raylib::KEY_UP, true, false, true});
-    addBinding(Action::DecreaseSpaceBefore, {raylib::KEY_DOWN, true, false, true});
-    addBinding(Action::IncreaseSpaceAfter, {raylib::KEY_UP, true, true, true});
-    addBinding(Action::DecreaseSpaceAfter, {raylib::KEY_DOWN, true, true, true});
+    addBinding(Action::IncreaseSpaceBefore, {afterhours::keys::UP, true, false, true});
+    addBinding(Action::DecreaseSpaceBefore, {afterhours::keys::DOWN, true, false, true});
+    addBinding(Action::IncreaseSpaceAfter, {afterhours::keys::UP, true, true, true});
+    addBinding(Action::DecreaseSpaceAfter, {afterhours::keys::DOWN, true, true, true});
     
     // Page breaks
-    addBinding(Action::InsertPageBreak, {raylib::KEY_ENTER, true, false, false});  // Ctrl+Enter
+    addBinding(Action::InsertPageBreak, {afterhours::keys::ENTER, true, false, false});  // Ctrl+Enter
     
     // Hyperlinks
-    addBinding(Action::InsertHyperlink, {raylib::KEY_K, true, false, false});  // Ctrl+K
+    addBinding(Action::InsertHyperlink, {afterhours::keys::K, true, false, false});  // Ctrl+K
 
     return result;
 }

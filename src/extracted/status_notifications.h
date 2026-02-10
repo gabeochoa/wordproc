@@ -130,7 +130,7 @@ struct NotificationCleanupSystem : System<ProvidesNotifications> {
                      float /*dt*/) override {
     // Get current time from raylib or your time source
 #ifdef AFTER_HOURS_USE_RAYLIB
-    double current_time = raylib::GetTime();
+    double current_time = afterhours::graphics::get_time();
 #else
     double current_time = 0.0; // Replace with your time source
 #endif
@@ -153,7 +153,7 @@ inline ProvidesNotifications* get_provider() {
 inline void info(const std::string& msg) {
   if (auto* p = get_provider()) {
 #ifdef AFTER_HOURS_USE_RAYLIB
-    p->info(msg, raylib::GetTime());
+    p->info(msg, afterhours::graphics::get_time());
 #endif
   }
 }
@@ -162,7 +162,7 @@ inline void info(const std::string& msg) {
 inline void success(const std::string& msg) {
   if (auto* p = get_provider()) {
 #ifdef AFTER_HOURS_USE_RAYLIB
-    p->success(msg, raylib::GetTime());
+    p->success(msg, afterhours::graphics::get_time());
 #endif
   }
 }
@@ -171,7 +171,7 @@ inline void success(const std::string& msg) {
 inline void warning(const std::string& msg) {
   if (auto* p = get_provider()) {
 #ifdef AFTER_HOURS_USE_RAYLIB
-    p->warning(msg, raylib::GetTime());
+    p->warning(msg, afterhours::graphics::get_time());
 #endif
   }
 }
@@ -180,7 +180,7 @@ inline void warning(const std::string& msg) {
 inline void error(const std::string& msg) {
   if (auto* p = get_provider()) {
 #ifdef AFTER_HOURS_USE_RAYLIB
-    p->error(msg, raylib::GetTime());
+    p->error(msg, afterhours::graphics::get_time());
 #endif
   }
 }

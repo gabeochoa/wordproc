@@ -31,7 +31,7 @@ inline int getCharPressed() {
 // Mouse Input (test-aware via test_input)
 // ============================================================
 
-inline raylib::Vector2 getMousePosition() {
+inline vec2 getMousePosition() {
     return test_input::get_mouse_position();
 }
 

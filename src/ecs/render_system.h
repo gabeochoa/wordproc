@@ -41,15 +41,15 @@ namespace ecs {
 // Helper to draw text and register it for E2E testing
 // Uses the UI font for consistent rendering across all UI elements
 inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize, 
-                                  raylib::Color color) {
+                                  afterhours::Color color) {
     theme::DrawUIText(text, x, y, fontSize, color);
     test_input::registerVisibleText(text);
 }
 
 // Helper to draw text with font and register it for E2E testing
-inline void drawTextExWithRegistry(raylib::Font font, const char* text, 
-                                    raylib::Vector2 pos, float fontSize, 
-                                    float spacing, raylib::Color color) {
+inline void drawTextExWithRegistry(afterhours::Font font, const char* text, 
+                                    vec2 pos, float fontSize, 
+                                    float spacing, afterhours::Color color) {
     afterhours::draw_text_ex(font, text, pos, fontSize, spacing,
                              afterhours::Color{color.r, color.g, color.b, color.a});
     test_input::registerVisibleText(text);
@@ -62,13 +62,13 @@ inline void drawPageBackground(const LayoutComponent& layout) {
     float pageY = layout.textArea.y + 10.0f;  // 10px margin from top
 
     // Draw page shadow
-    raylib::Rectangle shadowRect = {layout.pageOffsetX + 4.0f, pageY + 4.0f,
+    Rectangle shadowRect = {layout.pageOffsetX + 4.0f, pageY + 4.0f,
                                     layout.pageDisplayWidth,
                                     layout.pageDisplayHeight};
     afterhours::draw_rectangle(shadowRect, {100, 100, 100, 128});
 
     // Draw page (white background)
-    raylib::Rectangle pageRect = {layout.pageOffsetX, pageY,
+    Rectangle pageRect = {layout.pageOffsetX, pageY,
                                   layout.pageDisplayWidth,
                                   layout.pageDisplayHeight};
     afterhours::draw_rectangle(pageRect, {255, 255, 255, 255});
@@ -78,7 +78,7 @@ inline void drawPageBackground(const LayoutComponent& layout) {
 
     // Draw margin guidelines (dotted or light lines)
     float marginScaled = layout.pageMargin * layout.pageScale;
-    raylib::Color marginColor = raylib::Color{200, 200, 200, 100};
+    afterhours::Color marginColor = afterhours::Color{200, 200, 200, 100};
 
     // Left margin
     afterhours::draw_line(static_cast<int>(layout.pageOffsetX + marginScaled),
@@ -133,12 +133,12 @@ inline void renderTable(const Table& table, float tableX, float tableY,
             float cellH = bounds.height;
             
             // Draw cell background
-            raylib::Color bgColor = {cell.backgroundColor.r, cell.backgroundColor.g,
+            afterhours::Color bgColor = {cell.backgroundColor.r, cell.backgroundColor.g,
                                      cell.backgroundColor.b, cell.backgroundColor.a};
-            afterhours::draw_rectangle(raylib::Rectangle{cellX, cellY, cellW, cellH}, bgColor);
+            afterhours::draw_rectangle(Rectangle{cellX, cellY, cellW, cellH}, bgColor);
             
             // Draw cell border
-            raylib::Color borderColor = raylib::BLACK;
+            afterhours::Color borderColor = afterhours::Color{0, 0, 0, 255};
             switch (cell.borders.top) {
                 case BorderStyle::Thin:
                     afterhours::draw_line(static_cast<int>(cellX), static_cast<int>(cellY),
@@ -217,7 +217,7 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                 int textX = static_cast<int>(cellX) + cell.paddingLeft;
                 int textY = static_cast<int>(cellY) + cell.paddingTop;
                 int fontSize = cell.textStyle.fontSize;
-                raylib::Color textColor = {cell.textStyle.textColor.r, cell.textStyle.textColor.g,
+                afterhours::Color textColor = {cell.textStyle.textColor.r, cell.textStyle.textColor.g,
                                           cell.textStyle.textColor.b, cell.textStyle.textColor.a};
                 afterhours::draw_text(cell.content.c_str(), textX, textY, fontSize, textColor);
             }
@@ -225,8 +225,8 @@ inline void renderTable(const Table& table, float tableX, float tableY,
             // Highlight current cell if editing
             if (isEditing && row == currentCell.row && col == currentCell.col) {
                 afterhours::draw_rectangle_outline(
-                    raylib::Rectangle{cellX, cellY, cellW, cellH},
-                    raylib::Color{0, 120, 215, 255}, 2.0f);  // Blue highlight
+                    Rectangle{cellX, cellY, cellW, cellH},
+                    afterhours::Color{0, 120, 215, 255}, 2.0f);  // Blue highlight
             }
         }
     }
@@ -351,21 +351,21 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             int lineEnd = static_cast<int>(textArea.x + textArea.width) - 20;
             
             // Draw a dashed line to indicate page break
-            raylib::Color breakColor = {128, 128, 128, 255};  // Gray
+            afterhours::Color breakColor = {128, 128, 128, 255};  // Gray
             for (int px = lineStart; px < lineEnd; px += 8) {
                 afterhours::draw_line(px, breakY, px + 4, breakY, breakColor);
             }
             
             // Draw "Page Break" text in center
             const char* breakText = "Page Break";
-            int textWidth = raylib::MeasureText(breakText, 10);
+            int textWidth = afterhours::graphics::measure_text(breakText, 10);
             int textX = lineStart + (lineEnd - lineStart - textWidth) / 2;
             
             // Draw background for text
             afterhours::draw_rectangle(
-                raylib::Rectangle{static_cast<float>(textX - 4), static_cast<float>(breakY - 6),
+                Rectangle{static_cast<float>(textX - 4), static_cast<float>(breakY - 6),
                                   static_cast<float>(textWidth + 8), 12.0f},
-                raylib::Color{255, 255, 255, 255});
+                afterhours::Color{255, 255, 255, 255});
             theme::DrawUIText(breakText, textX, breakY - 5, 10, breakColor);
             
             y += 20;  // Add space for the page break indicator
@@ -378,11 +378,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             std::snprintf(lineNumStr, sizeof(lineNumStr), "%d", lineNum);
             
             // Measure line number text to right-align in gutter
-            int numWidth = raylib::MeasureText(lineNumStr, 14);
+            int numWidth = afterhours::graphics::measure_text(lineNumStr, 14);
             int gutterX = static_cast<int>(textArea.x) + static_cast<int>(lineNumberGutterWidth) - numWidth - 8;
             
             // Draw line number in gray
-            raylib::Color lineNumColor = {128, 128, 128, 255};
+            afterhours::Color lineNumColor = {128, 128, 128, 255};
             theme::DrawUIText(lineNumStr, gutterX, y, 14, lineNumColor);
         }
         
@@ -405,7 +405,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int indentedWidth = availableWidth - totalIndent - listIndent;
         
         // Calculate text width for alignment
-        int textWidth = displayLine.empty() ? 0 : raylib::MeasureText(displayLine.c_str(), lineFontSize);
+        int textWidth = displayLine.empty() ? 0 : afterhours::graphics::measure_text(displayLine.c_str(), lineFontSize);
         
         // Apply text alignment (within the indented area)
         TextAlignment alignment = buffer.lineAlignment(row);
@@ -433,7 +433,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             int markerX = baseX + totalIndent + (listLevel * 20);
             
             TextStyle globalStyle = buffer.textStyle();
-            raylib::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
+            afterhours::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
                                        globalStyle.textColor.b, globalStyle.textColor.a};
             
             if (listType == ListType::Bulleted) {
@@ -461,11 +461,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         displayLine.substr(startCol, endCol - startCol);
 
                     int selX =
-                        x + raylib::MeasureText(beforeSel.c_str(), lineFontSize);
+                        x + afterhours::graphics::measure_text(beforeSel.c_str(), lineFontSize);
                     int selWidth =
-                        raylib::MeasureText(selectedText.c_str(), lineFontSize);
+                        afterhours::graphics::measure_text(selectedText.c_str(), lineFontSize);
                     afterhours::draw_rectangle(
-                        raylib::Rectangle{static_cast<float>(selX), static_cast<float>(y),
+                        Rectangle{static_cast<float>(selX), static_cast<float>(y),
                                           static_cast<float>(selWidth), static_cast<float>(lineHeight)},
                         theme::SELECTION_BG);
                 }
@@ -480,16 +480,16 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
             
-            // Convert TextColor to raylib::Color
-            raylib::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
+            // Convert TextColor to backend-agnostic Color
+            afterhours::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
                                        globalStyle.textColor.b, globalStyle.textColor.a};
             
             // Draw highlight background if set
             if (!globalStyle.highlightColor.isNone()) {
-                raylib::Color highlightColor = {globalStyle.highlightColor.r, globalStyle.highlightColor.g,
+                afterhours::Color highlightColor = {globalStyle.highlightColor.r, globalStyle.highlightColor.g,
                                                 globalStyle.highlightColor.b, globalStyle.highlightColor.a};
                 afterhours::draw_rectangle(
-                    raylib::Rectangle{static_cast<float>(x), static_cast<float>(y),
+                    Rectangle{static_cast<float>(x), static_cast<float>(y),
                                       static_cast<float>(textWidth), static_cast<float>(lineHeight)},
                     highlightColor);
             }
@@ -509,7 +509,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 int dropFontSize = lineFontSize * span.dropCapLines;
                 afterhours::draw_text(dropChar.c_str(), x, y - lineFontSize / 2,
                                  dropFontSize, textColor);
-                int dropWidth = raylib::MeasureText(dropChar.c_str(), dropFontSize);
+                int dropWidth = afterhours::graphics::measure_text(dropChar.c_str(), dropFontSize);
                 textToDraw = textToDraw.substr(1);
                 if (!textToDraw.empty()) {
                     x += dropWidth + 4;
@@ -523,7 +523,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 afterhours::draw_text(textToDraw.c_str(), x + 1, y + textYOffset, textFontSize, textColor);
             } else if (paragraphStyleIsItalic(paraStyle) || globalStyle.italic) {
                 // For subtitle italic style, draw in a slightly different shade
-                raylib::Color italicColor = {static_cast<unsigned char>(textColor.r / 2 + 64),
+                afterhours::Color italicColor = {static_cast<unsigned char>(textColor.r / 2 + 64),
                                              static_cast<unsigned char>(textColor.g / 2 + 64),
                                              static_cast<unsigned char>(textColor.b / 2 + 64), textColor.a};
                 afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, italicColor);
@@ -548,9 +548,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         if (caretVisible && row == caret.row) {
             std::string beforeCaret =
                 displayLine.substr(0, std::min(caret.column, displayLine.length()));
-            int caretX = x + raylib::MeasureText(beforeCaret.c_str(), lineFontSize);
+            int caretX = x + afterhours::graphics::measure_text(beforeCaret.c_str(), lineFontSize);
             afterhours::draw_rectangle(
-                raylib::Rectangle{static_cast<float>(caretX), static_cast<float>(y), 2.0f,
+                Rectangle{static_cast<float>(caretX), static_cast<float>(y), 2.0f,
                                   static_cast<float>(lineHeight)},
                 theme::CARET_COLOR);
         }
@@ -576,8 +576,8 @@ struct EditorRenderSystem
                                 ScrollComponent,
                                 LayoutComponent, MenuComponent> {
     void once(const float) const override {
-        raylib::BeginDrawing();
-        raylib::ClearBackground(theme::WINDOW_BG);
+        afterhours::graphics::begin_drawing();
+        afterhours::graphics::clear_background(theme::WINDOW_BG);
         // Note: Visible text registry is cleared in main.cpp at start of frame
     }
 
@@ -596,7 +596,7 @@ struct EditorRenderSystem
                     std::filesystem::create_directories(testConfig.screenshotDir);
                     std::string pathStr = testConfig.screenshotDir + "/01_startup.png";
                     LOG_INFO("Taking startup screenshot: %s", pathStr.c_str());
-                    raylib::TakeScreenshot(pathStr.c_str());
+                    afterhours::graphics::take_screenshot(pathStr.c_str());
                     // Verify screenshot was taken
                     if (std::filesystem::exists(pathStr)) {
                         LOG_INFO("Screenshot saved successfully");
@@ -608,7 +608,7 @@ struct EditorRenderSystem
             
             // Draw E2E debug overlay if enabled
             if (testConfig.e2eDebugOverlay && !testConfig.e2eCurrentCommand.empty()) {
-                int screenWidth = raylib::GetScreenWidth();
+                int screenWidth = afterhours::graphics::get_screen_width();
                 int overlayWidth = 400;
                 int overlayHeight = 50;
                 int overlayX = screenWidth - overlayWidth - 10;
@@ -616,13 +616,13 @@ struct EditorRenderSystem
                 
                 // Draw semi-transparent background
                 afterhours::draw_rectangle(
-                    raylib::Rectangle{static_cast<float>(overlayX), static_cast<float>(overlayY),
+                    Rectangle{static_cast<float>(overlayX), static_cast<float>(overlayY),
                                       static_cast<float>(overlayWidth), static_cast<float>(overlayHeight)},
-                    raylib::Color{0, 0, 0, 200});
+                    afterhours::Color{0, 0, 0, 200});
                 afterhours::draw_rectangle_outline(
-                    raylib::Rectangle{static_cast<float>(overlayX), static_cast<float>(overlayY),
+                    Rectangle{static_cast<float>(overlayX), static_cast<float>(overlayY),
                                       static_cast<float>(overlayWidth), static_cast<float>(overlayHeight)},
-                    raylib::Color{255, 255, 0, 255}, 1.0f);
+                    afterhours::Color{255, 255, 0, 255}, 1.0f);
                 
                 // Draw current command
                 std::string cmdText = testConfig.e2eCurrentCommand;
@@ -630,7 +630,7 @@ struct EditorRenderSystem
                     cmdText = cmdText.substr(0, 37) + "...";
                 }
                 theme::DrawUIText(cmdText.c_str(), overlayX + 5, overlayY + 5, 14, 
-                                 raylib::Color{255, 255, 255, 255});
+                                 afterhours::Color{255, 255, 255, 255});
                 
                 // Draw timeout countdown
                 std::string timeoutText;
@@ -642,10 +642,10 @@ struct EditorRenderSystem
                     timeoutText = "<no timeout>";
                 }
                 theme::DrawUIText(timeoutText.c_str(), overlayX + 5, overlayY + 25, 14, 
-                                 raylib::Color{255, 200, 100, 255});
+                                 afterhours::Color{255, 200, 100, 255});
             }
         }
-        raylib::EndDrawing();
+        afterhours::graphics::end_drawing();
     }
 
     void for_each_with(afterhours::Entity& /*entity*/,
@@ -655,7 +655,7 @@ struct EditorRenderSystem
                        LayoutComponent& layout, MenuComponent& menu,
                        const float) override {
         // F1 to show help window
-        if (IsKeyPressed(raylib::KEY_F1)) {
+        if (IsKeyPressed(afterhours::keys::F1)) {
             menu.showHelpWindow = !menu.showHelpWindow;
             menu.helpScrollOffset = 0;
         }
@@ -666,7 +666,7 @@ struct EditorRenderSystem
                                                theme::layout::MENU_BAR_HEIGHT + 
                                                theme::layout::TOOLBAR_HEIGHT + 
                                                theme::layout::FORMATTING_BAR_HEIGHT);
-            raylib::Rectangle rulerRect = {
+            Rectangle rulerRect = {
                 0, rulerY,
                 static_cast<float>(layout.screenWidth),
                 theme::layout::scale(theme::layout::RULER_HEIGHT)
@@ -716,14 +716,14 @@ struct EditorRenderSystem
         }
 
         // Draw text area background
-        raylib::Rectangle textAreaRect = {layout.textArea.x, layout.textArea.y,
+        Rectangle textAreaRect = {layout.textArea.x, layout.textArea.y,
                                           layout.textArea.width,
                                           layout.textArea.height};
 
         // In paged mode, draw a gray background; in pageless mode, draw white
         if (layout.pageMode == PageMode::Paged) {
             afterhours::draw_rectangle(textAreaRect,
-                                     raylib::Color{128, 128, 128, 255});
+                                     afterhours::Color{128, 128, 128, 255});
             util::drawSunkenBorder(textAreaRect);
 
             // Draw the page with shadow and margins
@@ -777,7 +777,7 @@ struct EditorRenderSystem
             int visibleLines = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
 
             // Scroll bar track (sunken background)
-            afterhours::draw_rectangle(raylib::Rectangle{sbX, sbY, sbWidth, sbHeight},
+            afterhours::draw_rectangle(Rectangle{sbX, sbY, sbWidth, sbHeight},
                                        theme::BUTTON_FACE);
             // Sunken border on track
             afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(sbY),
@@ -799,7 +799,7 @@ struct EditorRenderSystem
 
                 // Raised thumb
                 afterhours::draw_rectangle(
-                    raylib::Rectangle{sbX + 1, thumbY, sbWidth - 2, thumbHeight},
+                    Rectangle{sbX + 1, thumbY, sbWidth - 2, thumbHeight},
                     theme::BUTTON_FACE);
                 // 3D border on thumb (raised)
                 afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(thumbY),
@@ -827,8 +827,8 @@ struct EditorRenderSystem
                 int markerX = static_cast<int>(effectiveArea.x + effectiveArea.width) - 8;
                 if (markerY > static_cast<int>(effectiveArea.y + effectiveArea.height)) continue;
                 afterhours::draw_rectangle(
-                    raylib::Rectangle{static_cast<float>(markerX), static_cast<float>(markerY), 6.0f, 6.0f},
-                    raylib::Color{255, 200, 0, 255});
+                    Rectangle{static_cast<float>(markerX), static_cast<float>(markerY), 6.0f, 6.0f},
+                    afterhours::Color{255, 200, 0, 255});
             }
         }
 
@@ -861,7 +861,7 @@ struct MenuSystem
         // are now rendered by MenuUISystem using afterhours modal.h
 
         // F1 to show help window
-        if (IsKeyPressed(raylib::KEY_F1)) {
+        if (IsKeyPressed(afterhours::keys::F1)) {
             menu.showHelpWindow = !menu.showHelpWindow;
         }
     }

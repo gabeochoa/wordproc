@@ -29,8 +29,8 @@ using afterhours::ui::ComponentSize;
 using afterhours::ui::Padding;
 using afterhours::ui::Margin;
 
-// Helper to convert raylib::Color to afterhours::Color
-inline afterhours::Color rlToAh(const raylib::Color& c) { return {c.r, c.g, c.b, c.a}; }
+// Color conversion helper (identity when using same type, needed for backend abstraction)
+inline afterhours::Color rlToAh(const afterhours::Color& c) { return c; }
 
 // Helper: create an absolute-positioned toolbar button at (x, y) with given size
 // Win95 Office-style: flat by default, raised border on hover, sunken when pressed

@@ -77,9 +77,9 @@ void Settings::update_resolution(afterhours::window_manager::Resolution rez) {
 }
 
 void match_fullscreen_to_setting(bool fs_enabled) {
-    if (raylib::IsWindowFullscreen() && fs_enabled) return;
-    if (!raylib::IsWindowFullscreen() && !fs_enabled) return;
-    raylib::ToggleFullscreen();
+    if (afterhours::graphics::is_window_fullscreen() && fs_enabled) return;
+    if (!afterhours::graphics::is_window_fullscreen() && !fs_enabled) return;
+    afterhours::graphics::toggle_fullscreen();
 }
 
 void Settings::refresh_settings() {
@@ -88,7 +88,7 @@ void Settings::refresh_settings() {
 
 void Settings::toggle_fullscreen() {
     data->fullscreen_enabled = !data->fullscreen_enabled;
-    raylib::ToggleFullscreen();
+    afterhours::graphics::toggle_fullscreen();
     save_if_auto();
 }
 

@@ -22,7 +22,7 @@ static void takeScreenshot(const std::string& dir, const std::string& name) {
     std::filesystem::path screenshotDir = std::filesystem::absolute(dir);
     std::filesystem::create_directories(screenshotDir);
     std::filesystem::path path = screenshotDir / (name + ".png");
-    raylib::TakeScreenshot(path.c_str());
+    afterhours::graphics::take_screenshot(path.c_str());
 }
 
 // Set up common callbacks for the runner
