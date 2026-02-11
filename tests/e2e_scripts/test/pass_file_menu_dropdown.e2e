@@ -7,10 +7,8 @@ wait 5
 # Verify File button is visible first
 expect_text "File"
 
-# Click on File button (x=28 is center of File button, y=34 is center of menu bar)
-# File button: starts at x=4, width=48px, so center is x=28
-# Menu bar: starts at y=24 (title bar height), height=20px, so center is y=34
-click 28 34
+# Click on File button using text-based click (no hardcoded coords)
+click_text "File"
 
 # Wait for click to be processed and menu to open
 wait 2

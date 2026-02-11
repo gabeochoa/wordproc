@@ -7,12 +7,8 @@ wait 5
 # Verify the current font label is visible
 expect_text "Times New Roman"
 
-# Click the Font dropdown button
-# Style dropdown: x=2, width=120 -> ends at 122
-# Gap: 4px padding -> font dropdown starts at ~126
-# Font dropdown width=140, center = 126 + 70 = 196
-# Y center: 85 (same as style dropdown)
-click 196 85
+# Click the Font dropdown button using text-based click
+click_text "Times New Roman"
 
 # Wait for dropdown to open
 wait 3

@@ -7,12 +7,8 @@ wait 5
 # Verify the current font size is visible
 expect_text "10"
 
-# Click the Font Size dropdown button
-# Style dropdown: x=2, width=120 -> ends at 122, gap 4 -> 126
-# Font dropdown: x=126, width=140 -> ends at 266, gap 4 -> 270
-# Font Size dropdown: x=270, width=50, center = 270 + 25 = 295
-# Y center: 85
-click 295 85
+# Click the Font Size dropdown button using text-based click
+click_text "10"
 
 # Wait for dropdown to open
 wait 3

@@ -7,9 +7,8 @@ wait 5
 # Verify View button is visible
 expect_text "View"
 
-# Click on View button
-# File(~48px) + Edit(~40px) = ~88px from left, center of View ~= 90
-click 90 34
+# Click on View button using text-based click
+click_text "View"
 
 # Wait for menu to open
 wait 2

@@ -7,11 +7,8 @@ wait 5
 # Verify the current style label is visible
 expect_text "Normal"
 
-# Click the Style dropdown button
-# Formatting bar Y: TITLE_BAR(24) + MENU_BAR(20) + TOOLBAR(28) = 72
-# Button Y center: 72 + 2 (padding) + 11 (half height) = 85
-# Button X: starts at 2, width=120, center = 62
-click 62 85
+# Click the Style dropdown button using text-based click
+click_text "Normal"
 
 # Wait for dropdown to open
 wait 3
