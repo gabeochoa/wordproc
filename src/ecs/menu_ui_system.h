@@ -175,6 +175,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_justify_content(afterhours::ui::JustifyContent::FlexStart)
                     .with_align_items(afterhours::ui::AlignItems::Center)
                     .with_roundness(0.0f)
+                    .with_bevel(highlighted ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
+                                toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
                     .with_render_layer(1));
             
             // Handle header click: toggle this menu, close others
