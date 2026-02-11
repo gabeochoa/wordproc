@@ -84,7 +84,7 @@ inline int scaleInt(int baseSize) {
 // Base sizes (before scaling)
 constexpr int FONT_SIZE = 18;  // UI font size (title, menus, status bar) - increased for better readability
 constexpr int TITLE_BAR_HEIGHT = 24;
-constexpr int MENU_BAR_HEIGHT = 20;
+constexpr int MENU_BAR_HEIGHT = 23;
 constexpr int TOOLBAR_HEIGHT = 28;
 constexpr int FORMATTING_BAR_HEIGHT = 28;
 constexpr int RULER_HEIGHT = 20;

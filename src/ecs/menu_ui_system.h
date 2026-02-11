@@ -147,7 +147,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             bool isOpen = menuDef.open;
             
             // Calculate button width using actual text measurement (matching original Win95 DrawMenuBar)
-            int menuFontSize = 22;
+            int menuFontSize = 16;
             float buttonWidth = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
             
             // Register menu label for E2E tests
@@ -171,8 +171,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_translate(headerX, headerY)
                     .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
                     .with_custom_text_color(highlighted ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
-                    .with_alignment(afterhours::ui::TextAlignment::Center)
-                    .with_justify_content(afterhours::ui::JustifyContent::Center)
+                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                    .with_justify_content(afterhours::ui::JustifyContent::FlexStart)
                     .with_align_items(afterhours::ui::AlignItems::Center)
                     .with_roundness(0.0f)
                     .with_render_layer(1));
@@ -205,7 +205,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             if (!menuDef.open) continue;
             
             // Calculate dropdown position (matching menu header widths)
-            int menuFontSize = 22;
+            int menuFontSize = 16;
             float dropdownX = theme::layout::scale(4.0f);
             for (size_t i = 0; i < menuIdx; ++i) {
                 dropdownX += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
