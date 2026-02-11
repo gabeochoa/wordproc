@@ -266,7 +266,7 @@ inline void drawDropdownTriangle(float cx, float cy, afterhours::Color color) {
     vec2 v1 = {cx - halfW, cy - halfH};
     vec2 v2 = {cx + halfW, cy - halfH};
     vec2 v3 = {cx, cy + halfH};
-    afterhours::draw_triangle(v1, v3, v2, color);  // Note: raylib requires CCW winding
+    afterhours::draw_triangle(v1, v3, v2, color);  // Note: CCW winding order
 }
 
 // Render system that draws toolbar icon overlays and dropdown triangles

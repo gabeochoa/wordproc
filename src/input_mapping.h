@@ -36,38 +36,23 @@ inline auto get_mapping() {
 
     mapping[to_int(InputAction::WidgetLeft)] = {
         afterhours::keys::LEFT,
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_LEFT,
-#endif
     };
 
     mapping[to_int(InputAction::WidgetRight)] = {
         afterhours::keys::RIGHT,
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
-#endif
     };
 
     mapping[to_int(InputAction::WidgetBack)] = {
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_UP,
-#endif
         afterhours::keys::UP,
     };
 
     mapping[to_int(InputAction::WidgetNext)] = {
         afterhours::keys::TAB,
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_DOWN,
-#endif
         afterhours::keys::DOWN,
     };
 
     mapping[to_int(InputAction::WidgetPress)] = {
         afterhours::keys::ENTER,
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
-#endif
     };
 
     mapping[to_int(InputAction::WidgetMod)] = {
@@ -80,9 +65,6 @@ inline auto get_mapping() {
 
     mapping[to_int(InputAction::PauseButton)] = {
         afterhours::keys::ESCAPE,
-#ifdef AFTER_HOURS_USE_RAYLIB
-        raylib::GAMEPAD_BUTTON_MIDDLE_RIGHT,
-#endif
     };
 
     mapping[to_int(InputAction::ToggleUIDebug)] = {

@@ -180,7 +180,7 @@ private:
   std::unordered_map<KeyBinding, ActionEnum, KeyBindingHash> bindings_;
   std::unordered_map<ActionEnum, KeyBinding> action_to_binding_;
 
-  // Key codes (raylib values)
+  // Key codes (afterhours::keys values)
   static constexpr int KEY_LEFT_CONTROL = 341;
   static constexpr int KEY_RIGHT_CONTROL = 345;
   static constexpr int KEY_LEFT_SHIFT = 340;
@@ -271,7 +271,7 @@ actions.bind(input::KeyBinding::simple(KEY_W), GameAction::MoveUp);
 actions.bind(input::KeyBinding::simple(KEY_SPACE), GameAction::Jump);
 actions.bind(input::KeyBinding::ctrl(KEY_S), GameAction::Save);
 
-// Check in update loop (using raylib functions)
+// Check in update loop
 if (actions.is_action_pressed(GameAction::Jump, IsKeyPressed, IsKeyDown)) {
   player.jump();
 }

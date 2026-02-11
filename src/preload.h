@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include "external.h"  // Must be first - defines AFTER_HOURS_USE_RAYLIB
+#include "external.h"  // Must be first - defines backend selection
 
 SINGLETON_FWD(Preload)
 struct Preload {

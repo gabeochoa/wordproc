@@ -109,8 +109,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
                 .with_label("X")
                 .with_debug_name("btn_close"))) {
             // Request window close
-            // Note: raylib doesn't have a clean "close" API from within,
-            // but we can set a flag that the main loop checks
+            // Set a flag that the main loop checks to close the window
         }
 
         // Maximize button

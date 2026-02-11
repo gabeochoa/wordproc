@@ -18,7 +18,7 @@
 
 using namespace afterhours;
 
-// MCP log callback was raylib-specific; Metal uses afterhours logging directly
+// MCP log callback — Metal uses afterhours logging directly
 
 static void load_gamepad_mappings() {
     std::ifstream ifs(
@@ -47,16 +47,7 @@ Preload &Preload::init(const char * /*title*/) {
 
     // Skip audio initialization for word processor - not needed
     // Audio can be lazy-initialized later if sound effects are added
-    // This saves ~150-900ms on startup
-    // {
-    //     SCOPED_TIMER("InitAudioDevice");
-    //     raylib::SetAudioStreamBufferSizeDefault(4096);
-    //     raylib::InitAudioDevice();
-    //     if (!raylib::IsAudioDeviceReady()) {
-    //         log_warn("audio device not ready; continuing without audio");
-    //     }
-    //     raylib::SetMasterVolume(1.f);
-    // }
+    // Audio initialization skipped — not yet ported to Metal backend
 
     // Skip gamepad mappings - word processor doesn't need gamepad support
     // load_gamepad_mappings();
@@ -133,10 +124,7 @@ Preload &Preload::make_singleton() {
 }
 
 Preload::~Preload() {
-    // Audio device cleanup skipped - not initialized for word processor
-    // if (raylib::IsAudioDeviceReady()) {
-    //     raylib::CloseAudioDevice();
-    // }
+    // Audio device cleanup skipped — not yet ported to Metal backend
     if (afterhours::graphics::is_window_ready()) {
         afterhours::graphics::close_window();
     }

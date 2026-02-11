@@ -3,8 +3,8 @@
 // Centralized input functions that route through afterhours/test_input
 // This ensures all input goes through test-aware wrappers for E2E testing
 //
-// Usage: Replace raylib::IsKeyPressed(key) with input::isKeyPressed(key)
-//        Replace raylib::GetMousePosition() with input::getMousePosition()
+// Usage: Use input::isKeyPressed(key) and input::getMousePosition()
+//        These route through test-aware wrappers for E2E testing
 
 #include "../external.h"  // For test_input:: namespace and afterhours types
 #include <afterhours/src/plugins/input_system.h>

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-// Menu item structure (independent of raylib)
+// Menu item structure
 struct MenuItemData {
     std::string label;
     std::string shortcut;
@@ -12,7 +12,7 @@ struct MenuItemData {
     bool isSeparator = false;
 };
 
-// Menu structure for testing (without raylib dependencies)
+// Menu structure for testing
 struct MenuData {
     std::string label;
     std::vector<MenuItemData> items;

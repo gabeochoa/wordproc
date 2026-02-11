@@ -24,13 +24,13 @@ static bool isKeyPressedHelper(int key) {
 }
 
 // Helper for key press with repeat (for held navigation keys)
-// Uses raylib's built-in key repeat, with fallback for test mode
+// Uses built-in key repeat, with fallback for test mode
 static bool isKeyPressedRepeatHelper(int key) {
     // In test mode, just use regular press (no repeat in tests)
     if (test_input::is_key_pressed(key)) {
         return true;
     }
-    // Use raylib's key repeat for real input
+    // Use platform key repeat for real input
     return afterhours::graphics::is_key_pressed_repeat(key);
 }
 
@@ -408,20 +408,19 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 }
 
-// macOS-style bindings: uses Ctrl as Cmd equivalent (raylib doesn't expose Cmd)
+// macOS-style bindings: uses Ctrl as Cmd equivalent
 // Key differences from Windows:
-// - Option+Arrow for word navigation (Alt in raylib)
-// - Cmd+Arrow for line/document navigation (Ctrl in raylib, mapped as Cmd
-// substitute)
+// - Option+Arrow for word navigation (Alt key)
+// - Cmd+Arrow for line/document navigation (Ctrl as Cmd substitute)
 // - Cmd+Shift+Z for Redo instead of Cmd+Y
 static void bindMacOSPreset(ActionMap& map) {
     bindNavigationKeys(map);
 
-    // Word navigation: Option+Arrow (Alt in raylib)
+    // Word navigation: Option+Arrow (Alt key)
     map.bind({afterhours::keys::LEFT, false, false, true}, Action::MoveWordLeft);
     map.bind({afterhours::keys::RIGHT, false, false, true}, Action::MoveWordRight);
 
-    // Line navigation: Cmd+Arrow (Ctrl in raylib as Cmd substitute)
+    // Line navigation: Cmd+Arrow (Ctrl as Cmd substitute)
     map.bind({afterhours::keys::LEFT, true, false, false}, Action::MoveLineStart);
     map.bind({afterhours::keys::RIGHT, true, false, false}, Action::MoveLineEnd);
     map.bind({afterhours::keys::UP, true, false, false}, Action::MoveDocumentStart);

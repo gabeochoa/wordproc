@@ -118,7 +118,7 @@ inline bool DARK_MODE_ENABLED = false;
 void applyDarkMode(bool enabled);
 
 // Helper function to draw text with the UI font
-// Falls back to raylib default font if UI_FONT not loaded
+// Falls back to default font if UI_FONT not loaded
 // Automatically applies UI scaling to font size
 inline void DrawUIText(const char* text, int x, int y, int baseFontSize, Color color) {
     int scaledSize = layout::scaleInt(baseFontSize);

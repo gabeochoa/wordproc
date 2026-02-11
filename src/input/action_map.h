@@ -193,7 +193,7 @@ class ActionMap {
 enum class Preset {
     SystemDefault,  // Auto-detect based on platform
     WindowsCtrl,    // Windows-style: Ctrl+key for commands
-    MacOSCmd        // macOS-style: Uses Ctrl as "Cmd" equivalent (since raylib
+    MacOSCmd        // macOS-style: Uses Ctrl as "Cmd" equivalent (since backend
                     // doesn't expose Cmd)
 };
 
