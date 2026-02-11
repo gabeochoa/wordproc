@@ -27,6 +27,15 @@
 // Uses macOS screencapture tool with the window ID to capture Metal content.
 #import <AppKit/AppKit.h>
 
+extern "C" void metal_minimize_window() {
+    @autoreleasepool {
+        NSWindow* window = (__bridge NSWindow*)sapp_macos_get_window();
+        if (window) {
+            [window miniaturize:nil];
+        }
+    }
+}
+
 extern "C" void metal_take_screenshot(const char* filename) {
     @autoreleasepool {
         // Find our window — try mainWindow, keyWindow, then fall back to

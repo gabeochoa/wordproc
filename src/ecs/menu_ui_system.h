@@ -1,7 +1,6 @@
 #pragma once
 
 // Menu UI System using Afterhours immediate-mode UI
-// No direct Raylib calls - everything goes through Afterhours
 
 #include <afterhours/ah.h>
 #include <afterhours/src/plugins/ui.h>
