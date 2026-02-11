@@ -29,11 +29,21 @@
 
 extern "C" void metal_take_screenshot(const char* filename) {
     @autoreleasepool {
-        // Find our window
+        // Find our window — try mainWindow, keyWindow, then fall back to
+        // the first window in the app's window list (needed for test mode
+        // where the window may not be key/main).
         NSWindow* window = [NSApp mainWindow];
         if (!window) {
-            // Try keyWindow if mainWindow is nil
             window = [NSApp keyWindow];
+        }
+        if (!window) {
+            NSArray<NSWindow*>* windows = [NSApp windows];
+            for (NSWindow* w in windows) {
+                if ([w isVisible]) {
+                    window = w;
+                    break;
+                }
+            }
         }
         if (!window) {
             NSLog(@"take_screenshot: no window available");
