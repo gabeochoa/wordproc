@@ -3,8 +3,10 @@
 #pragma once
 
 #include "e2e_commands.h"
+#include "../input_mapping.h"
 
 #include <afterhours/src/plugins/e2e_testing/e2e_testing.h>
+#include <afterhours/src/plugins/e2e_testing/ui_commands.h>
 
 namespace e2e {
 
@@ -42,10 +44,13 @@ inline void register_e2e_systems(SystemManager &sm, const E2EConfig &config) {
   sm.register_update_system(
       std::make_unique<HandleResetTestStateCommand>(config.reset_callback));
 
-  // Phase 4: App-specific command handlers
+  // Phase 4: UI commands (click_text, click_button, focus_ui, etc.)
+  ui_commands::register_ui_commands<InputAction>(sm);
+
+  // Phase 5: App-specific command handlers
   e2e_commands::register_app_commands(sm, config.doc_comp, config.menu_comp);
 
-  // Phase 5: Unknown command handler + Cleanup (must be last)
+  // Phase 6: Unknown command handler + Cleanup (must be last)
   register_unknown_handler(sm);
   register_cleanup(sm);
 }

@@ -4,8 +4,6 @@
 #include <afterhours/src/plugins/files.h>
 #include <afterhours/src/plugins/ui/theme.h>
 
-#include <cstdarg>
-#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -20,20 +18,7 @@
 
 using namespace afterhours;
 
-#ifdef AFTER_HOURS_ENABLE_MCP
-extern bool g_mcp_mode;
-
-// Custom log callback that writes to stderr instead of stdout
-static void mcp_trace_log_callback(int logLevel, const char *text,
-                                   va_list args) {
-    if (logLevel < raylib::LOG_ERROR) {
-        return;  // In MCP mode, only log errors
-    }
-    char buffer[1024];
-    vsnprintf(buffer, sizeof(buffer), text, args);
-    fprintf(stderr, "%s\n", buffer);
-}
-#endif
+// MCP log callback — Metal uses afterhours logging directly
 
 static void load_gamepad_mappings() {
     std::ifstream ifs(
@@ -49,51 +34,20 @@ static void load_gamepad_mappings() {
 
 Preload::Preload() {}
 
-Preload &Preload::init(const char *title) {
+Preload &Preload::init(const char * /*title*/) {
     {
         SCOPED_TIMER("files::init");
         files::init("Prime Pressure", "resources");
     }
 
-    int width = Settings::get().get_screen_width();
-    int height = Settings::get().get_screen_height();
+    // Window creation, config flags, and target FPS are now handled by
+    // afterhours::graphics::run() via RunConfig.  Nothing else to do here.
 
-    // In MCP mode, redirect raylib logs to stderr to keep stdout clean for JSON
-#ifdef AFTER_HOURS_ENABLE_MCP
-    if (g_mcp_mode) {
-        raylib::SetTraceLogCallback(mcp_trace_log_callback);
-    }
-#endif
-
-    // Set log level BEFORE InitWindow to suppress init messages
-    raylib::SetTraceLogLevel(raylib::LOG_ERROR);
-
-    // Set config flags BEFORE InitWindow for faster setup
-    // FLAG_WINDOW_RESIZABLE set here avoids SetWindowState call after
-    raylib::SetConfigFlags(raylib::FLAG_WINDOW_RESIZABLE);
-
-    {
-        SCOPED_TIMER("InitWindow");
-        raylib::InitWindow(width, height, title);
-        // Note: SetWindowSize removed - redundant, size already in InitWindow
-    }
-
-    raylib::SetTargetFPS(200);
+    afterhours::graphics::set_exit_key(0);
 
     // Skip audio initialization for word processor - not needed
     // Audio can be lazy-initialized later if sound effects are added
-    // This saves ~150-900ms on startup
-    // {
-    //     SCOPED_TIMER("InitAudioDevice");
-    //     raylib::SetAudioStreamBufferSizeDefault(4096);
-    //     raylib::InitAudioDevice();
-    //     if (!raylib::IsAudioDeviceReady()) {
-    //         log_warn("audio device not ready; continuing without audio");
-    //     }
-    //     raylib::SetMasterVolume(1.f);
-    // }
-
-    raylib::SetExitKey(0);
+    // Audio initialization skipped — not yet ported to Metal backend
 
     // Skip gamepad mappings - word processor doesn't need gamepad support
     // load_gamepad_mappings();
@@ -130,8 +84,7 @@ Preload &Preload::make_singleton() {
             fontMgr.load_font("Garamond", document_font.c_str());
             
             // Load sans-serif UI font for manual Win95 widget rendering (DrawUIText)
-            theme::UI_FONT = raylib::LoadFont(ui_font_path.c_str());
-            raylib::SetTextureFilter(theme::UI_FONT.texture, raylib::TEXTURE_FILTER_BILINEAR);
+            theme::UI_FONT = afterhours::load_font_from_file(ui_font_path.c_str());
             theme::UI_FONT_LOADED = true;
         }
 
@@ -171,11 +124,8 @@ Preload &Preload::make_singleton() {
 }
 
 Preload::~Preload() {
-    // Audio device cleanup skipped - not initialized for word processor
-    // if (raylib::IsAudioDeviceReady()) {
-    //     raylib::CloseAudioDevice();
-    // }
-    if (raylib::IsWindowReady()) {
-        raylib::CloseWindow();
+    // Audio device cleanup skipped — not yet ported to Metal backend
+    if (afterhours::graphics::is_window_ready()) {
+        afterhours::graphics::close_window();
     }
 }

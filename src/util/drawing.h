@@ -7,7 +7,7 @@
 namespace util {
 
 // Draw Win95-style 3D border (sunken effect for text area)
-inline void drawSunkenBorder(raylib::Rectangle rect) {
+inline void drawSunkenBorder(Rectangle rect) {
     // Top and left (dark)
     afterhours::draw_line(static_cast<int>(rect.x), static_cast<int>(rect.y),
                           static_cast<int>(rect.x + rect.width),

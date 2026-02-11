@@ -5,7 +5,7 @@
 wait 5
 
 # Open File menu
-click 28 34
+click_text "File"
 wait 2
 
 # Verify File menu is open
@@ -20,7 +20,7 @@ click 500 300
 wait 2
 
 # Open Edit menu
-click 57 34
+click_text "Edit"
 wait 2
 
 # Verify Edit menu items are visible (not File menu items)

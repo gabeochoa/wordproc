@@ -18,7 +18,7 @@ struct S_Data {
 
     bool fullscreen_enabled = false;
     std::vector<std::string> recent_files;
-    float ui_scale = 1.0f;  // UI scaling factor (0.5 - 2.0)
+    float ui_scale = 1.2f;  // UI scaling factor (0.5 - 4.0)
 
     std::filesystem::path loaded_from;
 };
@@ -77,9 +77,9 @@ void Settings::update_resolution(afterhours::window_manager::Resolution rez) {
 }
 
 void match_fullscreen_to_setting(bool fs_enabled) {
-    if (raylib::IsWindowFullscreen() && fs_enabled) return;
-    if (!raylib::IsWindowFullscreen() && !fs_enabled) return;
-    raylib::ToggleFullscreen();
+    if (afterhours::graphics::is_window_fullscreen() && fs_enabled) return;
+    if (!afterhours::graphics::is_window_fullscreen() && !fs_enabled) return;
+    afterhours::graphics::toggle_fullscreen();
 }
 
 void Settings::refresh_settings() {
@@ -88,7 +88,7 @@ void Settings::refresh_settings() {
 
 void Settings::toggle_fullscreen() {
     data->fullscreen_enabled = !data->fullscreen_enabled;
-    raylib::ToggleFullscreen();
+    afterhours::graphics::toggle_fullscreen();
     save_if_auto();
 }
 
@@ -130,7 +130,7 @@ float Settings::get_ui_scale() const {
 
 void Settings::set_ui_scale(float scale) {
     // Clamp to valid range
-    data->ui_scale = std::max(0.5f, std::min(2.0f, scale));
+    data->ui_scale = std::max(0.5f, std::min(4.0f, scale));
     save_if_auto();
 }
 

@@ -19,13 +19,6 @@
 #pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif
 
-namespace raylib {
-inline Vector2 operator*(float s, Vector2 a) { return Vector2Scale(a, s); }
-inline Vector3 operator*(float s, Vector3 a) { return Vector3Scale(a, s); }
-}  // namespace raylib
-
-#include <GLFW/glfw3.h>
-
 #undef MAGIC_ENUM_RANGE_MAX
 #define MAGIC_ENUM_RANGE_MAX 400
 #include <magic_enum/magic_enum.hpp>
@@ -42,18 +35,19 @@ inline Vector3 operator*(float s, Vector3 a) { return Vector3Scale(a, s); }
 #include <afterhours/src/developer.h>
 
 namespace afterhours {
-using vec2 = raylib::Vector2;
+using vec2 = Vector2Type;
 }
+
 #include <afterhours/src/plugins/input_system.h>
 #include <afterhours/src/plugins/texture_manager.h>
 #include <afterhours/src/plugins/window_manager.h>
 
 #include <cassert>
 
-typedef raylib::Vector2 vec2;
-typedef raylib::Vector3 vec3;
-typedef raylib::Vector4 vec4;
-using raylib::Rectangle;
+typedef Vector2Type vec2;
+struct vec3 { float x, y, z; };
+struct vec4 { float x, y, z, w; };
+using Rectangle = RectangleType;
 
 #include <afterhours/src/plugins/autolayout.h>
 #include <afterhours/src/plugins/ui.h>
@@ -67,8 +61,4 @@ using afterhours::ui::imm::DefaultSpacing;
 #pragma GCC diagnostic pop
 #endif
 
-// Owned by game.cpp
-extern bool running;
-extern raylib::RenderTexture2D mainRT;
-extern raylib::RenderTexture2D screenRT;
-extern raylib::Font uiFont;
+// Game state managed via afterhours::graphics::run() callbacks

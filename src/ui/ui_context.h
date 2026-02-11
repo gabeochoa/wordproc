@@ -220,7 +220,7 @@ inline void initTestModeUI() {
 
 // Note: Test input system registration is no longer needed.
 // Test input is handled via afterhours::testing::test_input which intercepts
-// raylib input calls when test_input::test_mode is true.
+// input calls when test_input::test_mode is true.
 
 }  // namespace ui_imm
 

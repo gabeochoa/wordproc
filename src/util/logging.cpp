@@ -1,15 +1,18 @@
 #include "logging.h"
 
-#include "../rl.h"
+#include <chrono>
 
 namespace logging {
 
 ScopedTimer::ScopedTimer(const char* n) : name(n) {
-    startTime = raylib::GetTime();
+    startTime = std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 }
 
 ScopedTimer::~ScopedTimer() {
-    double elapsed = (raylib::GetTime() - startTime) * 1000.0;
+    double now = std::chrono::duration<double>(
+        std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    double elapsed = (now - startTime) * 1000.0;
     info("%s took %.3f ms", name, elapsed);
 }
 

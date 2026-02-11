@@ -35,65 +35,61 @@ inline auto get_mapping() {
     std::map<int, afterhours::input::ValidInputs> mapping;
 
     mapping[to_int(InputAction::WidgetLeft)] = {
-        raylib::KEY_LEFT,
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_LEFT,
+        afterhours::keys::LEFT,
     };
 
     mapping[to_int(InputAction::WidgetRight)] = {
-        raylib::KEY_RIGHT,
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
+        afterhours::keys::RIGHT,
     };
 
     mapping[to_int(InputAction::WidgetBack)] = {
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_UP,
-        raylib::KEY_UP,
+        afterhours::keys::UP,
     };
 
     mapping[to_int(InputAction::WidgetNext)] = {
-        raylib::KEY_TAB,
-        raylib::GAMEPAD_BUTTON_LEFT_FACE_DOWN,
-        raylib::KEY_DOWN,
+        afterhours::keys::TAB,
+        afterhours::keys::DOWN,
     };
 
     mapping[to_int(InputAction::WidgetPress)] = {
-        raylib::KEY_ENTER,
-        raylib::GAMEPAD_BUTTON_RIGHT_FACE_DOWN,
+        afterhours::keys::ENTER,
     };
 
     mapping[to_int(InputAction::WidgetMod)] = {
-        raylib::KEY_LEFT_SHIFT,
+        afterhours::keys::LEFT_SHIFT,
     };
 
     mapping[to_int(InputAction::MenuBack)] = {
-        raylib::KEY_ESCAPE,
+        afterhours::keys::ESCAPE,
     };
 
     mapping[to_int(InputAction::PauseButton)] = {
-        raylib::KEY_ESCAPE, raylib::GAMEPAD_BUTTON_MIDDLE_RIGHT};
+        afterhours::keys::ESCAPE,
+    };
 
     mapping[to_int(InputAction::ToggleUIDebug)] = {
-        raylib::KEY_GRAVE,
+        afterhours::keys::GRAVE,
     };
 
     mapping[to_int(InputAction::ToggleUILayoutDebug)] = {
-        raylib::KEY_EQUAL,
+        afterhours::keys::EQUAL,
     };
 
     // Text input actions
     mapping[to_int(InputAction::TextBackspace)] = {
-        raylib::KEY_BACKSPACE,
+        afterhours::keys::BACKSPACE,
     };
 
     mapping[to_int(InputAction::TextDelete)] = {
-        raylib::KEY_DELETE,
+        afterhours::keys::DELETE_KEY,
     };
 
     mapping[to_int(InputAction::TextHome)] = {
-        raylib::KEY_HOME,
+        afterhours::keys::HOME,
     };
 
     mapping[to_int(InputAction::TextEnd)] = {
-        raylib::KEY_END,
+        afterhours::keys::END,
     };
 
     return mapping;

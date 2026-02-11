@@ -128,12 +128,7 @@ struct ProvidesNotifications : BaseComponent {
 struct NotificationCleanupSystem : System<ProvidesNotifications> {
   void for_each_with(Entity& /*entity*/, ProvidesNotifications& notifs,
                      float /*dt*/) override {
-    // Get current time from raylib or your time source
-#ifdef AFTER_HOURS_USE_RAYLIB
-    double current_time = raylib::GetTime();
-#else
-    double current_time = 0.0; // Replace with your time source
-#endif
+    double current_time = afterhours::graphics::get_time();
     notifs.cleanup(current_time);
   }
 };
@@ -152,36 +147,28 @@ inline ProvidesNotifications* get_provider() {
 /// Show an info notification
 inline void info(const std::string& msg) {
   if (auto* p = get_provider()) {
-#ifdef AFTER_HOURS_USE_RAYLIB
-    p->info(msg, raylib::GetTime());
-#endif
+    p->info(msg, afterhours::graphics::get_time());
   }
 }
 
 /// Show a success notification
 inline void success(const std::string& msg) {
   if (auto* p = get_provider()) {
-#ifdef AFTER_HOURS_USE_RAYLIB
-    p->success(msg, raylib::GetTime());
-#endif
+    p->success(msg, afterhours::graphics::get_time());
   }
 }
 
 /// Show a warning notification
 inline void warning(const std::string& msg) {
   if (auto* p = get_provider()) {
-#ifdef AFTER_HOURS_USE_RAYLIB
-    p->warning(msg, raylib::GetTime());
-#endif
+    p->warning(msg, afterhours::graphics::get_time());
   }
 }
 
 /// Show an error notification
 inline void error(const std::string& msg) {
   if (auto* p = get_provider()) {
-#ifdef AFTER_HOURS_USE_RAYLIB
-    p->error(msg, raylib::GetTime());
-#endif
+    p->error(msg, afterhours::graphics::get_time());
   }
 }
 

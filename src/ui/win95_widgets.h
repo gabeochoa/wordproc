@@ -34,7 +34,7 @@ struct Menu {
     std::string label;
     std::vector<MenuItem> items;
     bool open = false;
-    raylib::Rectangle bounds;
+    Rectangle bounds;
 };
 
 }  // namespace win95

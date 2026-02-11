@@ -8,63 +8,66 @@
 // All colors are centralized here for easy theming
 namespace theme {
 
+// Use backend-agnostic types
+using Color = afterhours::Color;
+
 // Window chrome
-inline raylib::Color WINDOW_BG = {192, 192, 192, 255};   // Win95 gray
-inline raylib::Color TITLE_BAR = {0, 0, 128, 255};       // Win95 blue
-inline raylib::Color TITLE_TEXT = {255, 255, 255, 255};  // White
+inline Color WINDOW_BG = {192, 192, 192, 255};   // Win95 gray
+inline Color TITLE_BAR = {0, 0, 128, 255};       // Win95 blue
+inline Color TITLE_TEXT = {255, 255, 255, 255};  // White
 
 // Text editing area
-inline raylib::Color TEXT_AREA_BG = {255, 255, 255, 255};  // White
-inline raylib::Color TEXT_COLOR = {0, 0, 0, 255};          // Black
-inline raylib::Color CARET_COLOR = {0, 0, 0, 255};         // Black
-inline raylib::Color SELECTION_BG = {0, 0, 128, 255};      // Blue highlight
-inline raylib::Color SELECTION_TEXT = {255, 255, 255,
+inline Color TEXT_AREA_BG = {255, 255, 255, 255};  // White
+inline Color TEXT_COLOR = {0, 0, 0, 255};          // Black
+inline Color CARET_COLOR = {0, 0, 0, 255};         // Black
+inline Color SELECTION_BG = {0, 0, 128, 255};      // Blue highlight
+inline Color SELECTION_TEXT = {255, 255, 255,
                                        255};  // White text on selection
 
 // 3D borders
-inline raylib::Color BORDER_LIGHT = {255, 255, 255, 255};  // 3D border light
-inline raylib::Color BORDER_DARK = {128, 128, 128, 255};   // 3D border dark
+inline Color BORDER_LIGHT = {255, 255, 255, 255};  // 3D border light
+inline Color BORDER_DARK = {128, 128, 128, 255};   // 3D border dark
 
 // Status bar
-inline raylib::Color STATUS_BAR = {192, 192, 192, 255};  // Status bar gray
-inline raylib::Color STATUS_ERROR = {200, 0, 0, 255};    // Error message red
-inline raylib::Color STATUS_SUCCESS = {0, 100, 0,
+inline Color STATUS_BAR = {192, 192, 192, 255};  // Status bar gray
+inline Color STATUS_ERROR = {200, 0, 0, 255};    // Error message red
+inline Color STATUS_SUCCESS = {0, 100, 0,
                                        255};  // Success message green
 
 // Menu colors (Win95 style)
-inline raylib::Color MENU_BG = {192, 192, 192, 255};
-inline raylib::Color MENU_HOVER = {0, 0, 128, 255};
-inline raylib::Color MENU_TEXT = {0, 0, 0, 255};
-inline raylib::Color MENU_TEXT_HOVER = {255, 255, 255, 255};
-inline raylib::Color MENU_DISABLED = {128, 128, 128, 255};
-inline raylib::Color MENU_SEPARATOR = {128, 128, 128, 255};
+inline Color MENU_BG = {192, 192, 192, 255};
+inline Color MENU_HOVER = {0, 0, 128, 255};
+inline Color MENU_TEXT = {0, 0, 0, 255};
+inline Color MENU_TEXT_HOVER = {255, 255, 255, 255};
+inline Color MENU_DISABLED = {128, 128, 128, 255};
+inline Color MENU_SEPARATOR = {128, 128, 128, 255};
 
 // Dialog colors
-inline raylib::Color DIALOG_BG = {192, 192, 192, 255};
-inline raylib::Color DIALOG_TITLE_BG = {0, 0, 128, 255};
-inline raylib::Color DIALOG_TITLE_TEXT = {255, 255, 255, 255};
+inline Color DIALOG_BG = {192, 192, 192, 255};
+inline Color DIALOG_TITLE_BG = {0, 0, 128, 255};
+inline Color DIALOG_TITLE_TEXT = {255, 255, 255, 255};
 
 // Button colors
-inline raylib::Color BUTTON_BG = {192, 192, 192, 255};
-inline raylib::Color BUTTON_FACE = {192, 192, 192, 255};
-inline raylib::Color BUTTON_TEXT = {0, 0, 0, 255};
-inline raylib::Color BUTTON_PRESSED_BG = {128, 128, 128, 255};
+inline Color BUTTON_BG = {192, 192, 192, 255};
+inline Color BUTTON_FACE = {192, 192, 192, 255};
+inline Color BUTTON_TEXT = {0, 0, 0, 255};
+inline Color BUTTON_PRESSED_BG = {128, 128, 128, 255};
 
 // Toolbar colors
-inline raylib::Color TOOLBAR_BG = {192, 192, 192, 255};
-inline raylib::Color TOOLBAR_HOVER_BG = {220, 220, 220, 255};
-inline raylib::Color TOOLBAR_PRESSED_BG = {160, 160, 160, 255};
-inline raylib::Color TOOLBAR_BUTTON_HOVER = {220, 220, 220, 255};
-inline raylib::Color TOOLBAR_BUTTON_PRESSED = {160, 160, 160, 255};
-inline raylib::Color TOOLBAR_SEPARATOR = {128, 128, 128, 255};
+inline Color TOOLBAR_BG = {192, 192, 192, 255};
+inline Color TOOLBAR_HOVER_BG = {220, 220, 220, 255};
+inline Color TOOLBAR_PRESSED_BG = {160, 160, 160, 255};
+inline Color TOOLBAR_BUTTON_HOVER = {220, 220, 220, 255};
+inline Color TOOLBAR_BUTTON_PRESSED = {160, 160, 160, 255};
+inline Color TOOLBAR_SEPARATOR = {128, 128, 128, 255};
 
 // Ruler colors
-inline raylib::Color RULER_BG = {255, 255, 255, 255};
-inline raylib::Color RULER_MARKS = {0, 0, 0, 255};
-inline raylib::Color RULER_TEXT = {0, 0, 0, 255};
+inline Color RULER_BG = {255, 255, 255, 255};
+inline Color RULER_MARKS = {0, 0, 0, 255};
+inline Color RULER_TEXT = {0, 0, 0, 255};
 
 // UI Font - initialized in preload, used for all UI text rendering
-inline raylib::Font UI_FONT;
+inline afterhours::Font UI_FONT;
 inline bool UI_FONT_LOADED = false;
 
 // UI layout constants
@@ -80,8 +83,8 @@ inline int scaleInt(int baseSize) {
 
 // Base sizes (before scaling)
 constexpr int FONT_SIZE = 18;  // UI font size (title, menus, status bar) - increased for better readability
-constexpr int TITLE_BAR_HEIGHT = 24;
-constexpr int MENU_BAR_HEIGHT = 20;
+constexpr int TITLE_BAR_HEIGHT = 26;
+constexpr int MENU_BAR_HEIGHT = 23;
 constexpr int TOOLBAR_HEIGHT = 28;
 constexpr int FORMATTING_BAR_HEIGHT = 28;
 constexpr int RULER_HEIGHT = 20;
@@ -115,9 +118,9 @@ inline bool DARK_MODE_ENABLED = false;
 void applyDarkMode(bool enabled);
 
 // Helper function to draw text with the UI font
-// Falls back to raylib default font if UI_FONT not loaded
+// Falls back to default font if UI_FONT not loaded
 // Automatically applies UI scaling to font size
-inline void DrawUIText(const char* text, int x, int y, int baseFontSize, raylib::Color color) {
+inline void DrawUIText(const char* text, int x, int y, int baseFontSize, Color color) {
     int scaledSize = layout::scaleInt(baseFontSize);
     if (UI_FONT_LOADED) {
         afterhours::draw_text_ex(UI_FONT, text, {static_cast<float>(x), static_cast<float>(y)}, 
@@ -129,7 +132,7 @@ inline void DrawUIText(const char* text, int x, int y, int baseFontSize, raylib:
 }
 
 // Overload for std::string
-inline void DrawUIText(const std::string& text, int x, int y, int fontSize, raylib::Color color) {
+inline void DrawUIText(const std::string& text, int x, int y, int fontSize, Color color) {
     DrawUIText(text.c_str(), x, y, fontSize, color);
 }
 
@@ -138,10 +141,10 @@ inline void DrawUIText(const std::string& text, int x, int y, int fontSize, rayl
 inline int MeasureUIText(const char* text, int baseFontSize) {
     int scaledSize = layout::scaleInt(baseFontSize);
     if (UI_FONT_LOADED) {
-        raylib::Vector2 size = raylib::MeasureTextEx(UI_FONT, text, static_cast<float>(scaledSize), 1.0f);
+        vec2 size = afterhours::measure_text(UI_FONT, text, static_cast<float>(scaledSize), 1.0f);
         return static_cast<int>(size.x);
     } else {
-        return raylib::MeasureText(text, scaledSize);
+        return afterhours::graphics::measure_text(text, scaledSize);
     }
 }
 

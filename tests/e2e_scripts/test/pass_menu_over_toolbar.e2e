@@ -7,7 +7,7 @@
 wait 5
 
 # Open the File menu
-click 28 34
+click_text "File"
 wait 3
 
 # Take screenshot - menu should be visible above toolbar
@@ -23,7 +23,7 @@ click 500 300
 wait 2
 
 # Open the Edit menu
-click 57 34
+click_text "Edit"
 wait 3
 
 # Take screenshot

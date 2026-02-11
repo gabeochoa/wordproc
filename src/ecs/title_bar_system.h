@@ -73,7 +73,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         Entity& uiRoot = ui_imm::getUIRootEntity();
 
         // Register title bar text for E2E testing
-        test_input::registerVisibleText(title);
+        test_input::register_visible_text(title);
 
         // Title bar div — blue background, white text, left-aligned
         div(ctx, mk(uiRoot, 9000),
@@ -100,7 +100,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         float btnY = (titleBarHeight - btnH) / 2.0f;
 
         // Register control button labels for E2E testing
-        test_input::registerVisibleText("X");
+        test_input::register_visible_text("X");
 
         // Close button (rightmost)
         float closeX = screenWidth - btnW - btnPad;
@@ -109,8 +109,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
                 .with_label("X")
                 .with_debug_name("btn_close"))) {
             // Request window close
-            // Note: raylib doesn't have a clean "close" API from within,
-            // but we can set a flag that the main loop checks
+            // Set a flag that the main loop checks to close the window
         }
 
         // Maximize button
@@ -126,7 +125,7 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
             titleBarButton(minX, btnY, btnW, btnH)
                 .with_label("_")
                 .with_debug_name("btn_minimize"))) {
-            raylib::MinimizeWindow();
+            afterhours::graphics::minimize_window();
         }
     }
 };

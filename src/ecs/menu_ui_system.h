@@ -35,7 +35,7 @@ using afterhours::ui::imm::mk;
 using afterhours::ui::pixels;
 using afterhours::ui::percent;
 
-inline afterhours::Color toAhColor(const raylib::Color& color) {
+inline afterhours::Color toAhColor(const afterhours::Color& color) {
     return {color.r, color.g, color.b, color.a};
 }
 
@@ -147,11 +147,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             bool isOpen = menuDef.open;
             
             // Calculate button width using actual text measurement (matching original Win95 DrawMenuBar)
-            int menuFontSize = 14;
+            int menuFontSize = 16;
             float buttonWidth = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
             
             // Register menu label for E2E tests
-            test_input::registerVisibleText(menuDef.label);
+            test_input::register_visible_text(menuDef.label);
             
             int headerId = 500 + static_cast<int>(menuIdx);
             
@@ -171,10 +171,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_translate(headerX, headerY)
                     .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
                     .with_custom_text_color(highlighted ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
-                    .with_alignment(afterhours::ui::TextAlignment::Center)
-                    .with_justify_content(afterhours::ui::JustifyContent::Center)
+                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                    .with_justify_content(afterhours::ui::JustifyContent::FlexStart)
                     .with_align_items(afterhours::ui::AlignItems::Center)
                     .with_roundness(0.0f)
+                    .with_bevel(highlighted ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
+                                toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
                     .with_render_layer(1));
             
             // Handle header click: toggle this menu, close others
@@ -205,7 +207,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             if (!menuDef.open) continue;
             
             // Calculate dropdown position (matching menu header widths)
-            int menuFontSize = 14;
+            int menuFontSize = 16;
             float dropdownX = theme::layout::scale(4.0f);
             for (size_t i = 0; i < menuIdx; ++i) {
                 dropdownX += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
@@ -298,7 +300,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                     
                     // Register menu item label for E2E tests
-                    test_input::registerVisibleText(item.label);
+                    test_input::register_visible_text(item.label);
                     
                     int itemId = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
                     float itemHeight = theme::layout::scale(20.0f);
@@ -982,14 +984,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             ComponentConfig{}
                                 .with_label("Action")
                                 .with_size(ComponentSize{h720(200), h720(20)})
-                                .with_custom_text_color(toAhColor(raylib::DARKGRAY))
+                                .with_custom_text_color(toAhColor(afterhours::Color{80, 80, 80, 255}))
                                 .with_render_layer(CONTENT_LAYER));
                         
                         div(ctx, mk(headerRow.ent(), 1),
                             ComponentConfig{}
                                 .with_label("Shortcut")
                                 .with_size(ComponentSize{h720(200), h720(20)})
-                                .with_custom_text_color(toAhColor(raylib::DARKGRAY))
+                                .with_custom_text_color(toAhColor(afterhours::Color{80, 80, 80, 255}))
                                 .with_render_layer(CONTENT_LAYER));
                     }
                     

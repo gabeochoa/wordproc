@@ -7,8 +7,8 @@ wait 5
 # Verify Edit button is visible
 expect_text "Edit"
 
-# Click on Edit button (x=57, y=34 based on existing menu tests)
-click 57 34
+# Click on Edit button using text-based click
+click_text "Edit"
 
 # Wait for menu to open
 wait 2

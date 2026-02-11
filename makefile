@@ -5,22 +5,17 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
     CXX := clang++
     EXT := .exe
-    RAYLIB_FLAGS := $(shell pkg-config --cflags raylib)
-    RAYLIB_LIB := $(shell pkg-config --libs raylib)
     MACOS_FLAGS := -DBACKWARD
-    FRAMEWORKS := -framework CoreFoundation -framework OpenGL
+    FRAMEWORKS := -framework CoreFoundation \
+        -framework Metal -framework MetalKit -framework Cocoa -framework QuartzCore
 else ifeq ($(OS),Windows_NT)
     CXX := g++
     EXT := .exe
-    RAYLIB_FLAGS := -IF:/RayLib/include
-    RAYLIB_LIB := F:/RayLib/lib/raylib.dll
     MACOS_FLAGS :=
     FRAMEWORKS :=
 else
     CXX := clang++
     EXT :=
-    RAYLIB_FLAGS := $(shell pkg-config --cflags raylib)
-    RAYLIB_LIB := $(shell pkg-config --libs raylib)
     MACOS_FLAGS :=
     FRAMEWORKS :=
 endif
@@ -101,13 +96,13 @@ endif
 # Combine all CXXFLAGS
 CXXFLAGS := $(CXXSTD) $(CXXFLAGS_BASE) $(CXXFLAGS_SUPPRESS) $(CXXFLAGS_TIME_TRACE) \
     $(MACOS_FLAGS) $(COVERAGE_CXXFLAGS) $(MCP_CXXFLAGS) $(ACCESSIBILITY_CXXFLAGS) \
-    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS) $(RAYLIB_FLAGS)
+    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS)
 
 # Include directories (use -isystem for vendor to suppress their warnings)
-INCLUDES := -isystem vendor/
+INCLUDES := -isystem vendor/ -isystem vendor/afterhours/vendor/
 
 # Library flags
-LDFLAGS := -L. -Lvendor/ $(RAYLIB_LIB) $(FRAMEWORKS) $(COVERAGE_LDFLAGS)
+LDFLAGS := -L. -Lvendor/ $(FRAMEWORKS) $(COVERAGE_LDFLAGS)
 
 # Directories
 OBJ_DIR := output/objs
@@ -126,8 +121,13 @@ MAIN_SRC += $(wildcard src/util/*.cpp)
 MAIN_SRC += $(wildcard src/input/*.cpp)
 MAIN_SRC += $(wildcard src/fonts/*.cpp)
 
+# Objective-C++ source files (for Metal/Sokol)
+MAIN_MM_SRC := $(wildcard src/*.mm)
+MAIN_MM_OBJS := $(MAIN_MM_SRC:src/%.mm=$(OBJ_DIR)/main/%.o)
+
 # Object files
 MAIN_OBJS := $(MAIN_SRC:src/%.cpp=$(OBJ_DIR)/main/%.o)
+MAIN_OBJS += $(MAIN_MM_OBJS)
 MAIN_OBJS += $(OBJ_DIR)/main/vendor_afterhours_files.o
 
 # Dependency files
@@ -162,6 +162,12 @@ $(OBJ_DIR)/main/%.o: src/%.cpp | $(OBJ_DIR)/main
 	@echo "Compiling $<..."
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ -MMD -MP -MF $(@:.o=.d) -MT $@
+
+# Compile Objective-C++ files (sokol Metal implementation)
+$(OBJ_DIR)/main/%.o: src/%.mm | $(OBJ_DIR)/main
+	@echo "Compiling (ObjC++) $<..."
+	@mkdir -p $(dir $@)
+	$(CXX) -ObjC++ $(CXXFLAGS) $(INCLUDES) -c $< -o $@ -MMD -MP -MF $(@:.o=.d) -MT $@
 
 # Compile afterhours files.cpp
 $(OBJ_DIR)/main/vendor_afterhours_files.o: vendor/afterhours/src/plugins/files.cpp | $(OBJ_DIR)/main
@@ -357,5 +363,26 @@ profile-startup: $(MAIN_EXE)
 	@echo "Running sampling profile..."
 	@bash ./tests/run_sample_profile.sh
 
-.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark profile-startup
+# Metal backend test (standalone window test, no raylib)
+METAL_TEST_EXE := $(OUTPUT_DIR)/test_metal$(EXT)
+METAL_FRAMEWORKS := -framework Metal -framework MetalKit -framework Cocoa -framework QuartzCore
+
+$(OBJ_DIR)/test/sokol_impl.o: tests/sokol_impl.mm | $(OBJ_DIR)/test
+	@echo "Compiling (ObjC++) $<..."
+	$(CXX) -ObjC++ $(CXXSTD) -g -isystem vendor/ -isystem vendor/afterhours/vendor/ -c $< -o $@
+
+$(OBJ_DIR)/test/test_metal_window.o: tests/test_metal_window.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $<..."
+	$(CXX) $(CXXSTD) -g -isystem vendor/ -isystem vendor/afterhours/vendor/ -DAFTER_HOURS_USE_METAL -c $< -o $@
+
+$(METAL_TEST_EXE): $(OBJ_DIR)/test/test_metal_window.o $(OBJ_DIR)/test/sokol_impl.o | $(OUTPUT_DIR)/.stamp
+	@echo "Linking $(METAL_TEST_EXE)..."
+	$(CXX) $^ $(METAL_FRAMEWORKS) -o $@
+	@echo "Built $(METAL_TEST_EXE)"
+
+test-metal: $(METAL_TEST_EXE)
+	@echo "Running Metal window test..."
+	./$(METAL_TEST_EXE)
+
+.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark profile-startup test-metal
 

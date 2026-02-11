@@ -29,8 +29,8 @@ using afterhours::ui::ComponentSize;
 using afterhours::ui::Padding;
 using afterhours::ui::Margin;
 
-// Helper to convert raylib::Color to afterhours::Color
-inline afterhours::Color rlToAh(const raylib::Color& c) { return {c.r, c.g, c.b, c.a}; }
+// Color conversion helper (identity when using same type, needed for backend abstraction)
+inline afterhours::Color rlToAh(const afterhours::Color& c) { return c; }
 
 // Helper: create an absolute-positioned toolbar button at (x, y) with given size
 // Win95 Office-style: flat by default, raised border on hover, sunken when pressed
@@ -336,7 +336,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // === Style Dropdown ===
         float styleDropdownWidth = theme::layout::scale(120);
         std::string styleLabel = toolbar.currentStyle;
-        test_input::registerVisibleText(styleLabel);
+        test_input::register_visible_text(styleLabel);
         
         int styleDropBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, styleDropBtnId),
@@ -360,7 +360,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             
             for (size_t i = 0; i < toolbar.styles.size(); ++i) {
                 bool isSelected = (toolbar.styles[i] == toolbar.currentStyle);
-                test_input::registerVisibleText(toolbar.styles[i]);
+                test_input::register_visible_text(toolbar.styles[i]);
                 // Dropdown items inside the list: use absolute positioning too
                 float itemY = formattingBarY + dropdownHeight + buttonPadding + 2.0f + static_cast<float>(i) * theme::layout::scale(20);
                 if (button(ctx, mk(uiRoot, 3001 + static_cast<int>(i)),
@@ -387,7 +387,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float fontDropdownWidth = theme::layout::scale(140);
         float fontDropdownX = fmtX;
         std::string fontLabel = toolbar.currentFont;
-        test_input::registerVisibleText(fontLabel);
+        test_input::register_visible_text(fontLabel);
         
         int fontDropBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, fontDropBtnId),
@@ -410,7 +410,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             
             for (size_t i = 0; i < toolbar.fonts.size(); ++i) {
                 bool isSelected = (toolbar.fonts[i] == toolbar.currentFont);
-                test_input::registerVisibleText(toolbar.fonts[i]);
+                test_input::register_visible_text(toolbar.fonts[i]);
                 float itemY = formattingBarY + dropdownHeight + buttonPadding + 2.0f + static_cast<float>(i) * theme::layout::scale(20);
                 if (button(ctx, mk(uiRoot, 3101 + static_cast<int>(i)),
                     ComponentConfig{}
@@ -440,7 +440,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float fontSizeDropdownWidth = theme::layout::scale(50);
         float fontSizeDropdownX = fmtX;
         std::string fontSizeLabel = std::to_string(toolbar.currentFontSize);
-        test_input::registerVisibleText(fontSizeLabel);
+        test_input::register_visible_text(fontSizeLabel);
         
         int fontSizeDropBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, fontSizeDropBtnId),
@@ -464,7 +464,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             for (size_t i = 0; i < toolbar.fontSizes.size(); ++i) {
                 bool isSelected = (toolbar.fontSizes[i] == toolbar.currentFontSize);
                 std::string sizeStr = std::to_string(toolbar.fontSizes[i]);
-                test_input::registerVisibleText(sizeStr);
+                test_input::register_visible_text(sizeStr);
                 float itemY = formattingBarY + dropdownHeight + buttonPadding + 2.0f + static_cast<float>(i) * theme::layout::scale(20);
                 if (button(ctx, mk(uiRoot, 3201 + static_cast<int>(i)),
                     ComponentConfig{}
@@ -502,9 +502,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         toolbar.underlineActive = currentStyle.underline;
         
         // Register formatting button labels for E2E testing
-        test_input::registerVisibleText("B");
-        test_input::registerVisibleText("I");
-        test_input::registerVisibleText("U");
+        test_input::register_visible_text("B");
+        test_input::register_visible_text("I");
+        test_input::register_visible_text("U");
 
         int boldBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, boldBtnId),
