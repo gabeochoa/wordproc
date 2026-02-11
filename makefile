@@ -214,7 +214,7 @@ sign: $(MAIN_EXE)
 	$(sign_cmd) $(MAIN_EXE)
 
 run: output
-	timeout 60 ./$(MAIN_EXE) || true
+	timeout 60 ./$(MAIN_EXE) test_files/public_domain/complete_shakespeare.txt || true
 
 # Utility targets
 .PHONY: all clean clean-all deps output sign run

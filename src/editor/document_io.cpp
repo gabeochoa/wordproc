@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <sstream>
 
+#include "../util/logging.h"
 #include "table.h"
 
 // Helper to convert PageMode to string
@@ -324,9 +325,14 @@ DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
 
 DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                               const std::string &path) {
+    SCOPED_TIMER("loadDocumentEx total");
     DocumentResult result;
 
-    std::string raw = readFileRaw(path);
+    std::string raw;
+    {
+        SCOPED_TIMER("  file I/O (readFileRaw)");
+        raw = readFileRaw(path);
+    }
     if (raw.empty()) {
         // Could be a truly empty file or a read error — check existence
         if (!std::filesystem::exists(path)) {
@@ -344,6 +350,7 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     if (extension == ".txt" || extension == ".md") {
+        SCOPED_TIMER("  setText (plain text)");
         buffer.setText(raw);
         result.success = true;
         result.usedFallback = true;
@@ -357,7 +364,11 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
     }
 
     try {
-        nlohmann::json doc = nlohmann::json::parse(raw);
+        nlohmann::json doc;
+        {
+            SCOPED_TIMER("  JSON parse");
+            doc = nlohmann::json::parse(raw);
+        }
 
         // Check version
         if (doc.contains("version")) {
@@ -371,9 +382,11 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
         }
 
         if (doc.contains("text")) {
+            SCOPED_TIMER("  setText from JSON");
             buffer.setText(doc.at("text").get<std::string>());
         } else {
             // JSON but no text field - use raw
+            SCOPED_TIMER("  setText raw fallback");
             buffer.setText(raw);
             result.usedFallback = true;
         }

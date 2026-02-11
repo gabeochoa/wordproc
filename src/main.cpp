@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <future>
 #include <string>
 
 #include "ecs/component_helpers.h"
@@ -39,6 +40,16 @@ bool g_mcp_mode = false;
 int g_saved_stdout_fd = -1;
 #endif
 
+// ── Background file preloading ──
+// Loads the document on a background thread while Sokol/Metal creates the window.
+// The ~300ms window creation time is otherwise dead CPU time.
+struct PreloadedDocument {
+    TextBuffer buffer;
+    DocumentSettings docSettings;
+    bool loaded = false;
+    std::string error;
+};
+
 // ── Shared state between main() and the run() callbacks ──
 namespace app_state {
 
@@ -53,6 +64,9 @@ bool e2eDebugOverlay = false;
 bool fpsTestMode = false;
 bool benchmarkMode = false;
 std::string loadFile;
+
+// Background document preload (launched before sapp_run, collected in app_init)
+std::future<PreloadedDocument> preloadFuture;
 
 // Runtime state (used during frame callback)
 afterhours::SystemManager* systemManager = nullptr;
@@ -88,27 +102,26 @@ static void app_init() {
 
     {
         SCOPED_TIMER("UI context init");
-        // Initialize Afterhours immediate-mode UI context with Win95 theme
-        // Use actual window dimensions so mouse coordinates match UI layout
-        ui_imm::initUIContext(
-            Settings::get().get_screen_width(),
-            Settings::get().get_screen_height());
-
-        // Set global default font so validation doesn't warn about missing fonts
-        afterhours::ui::imm::UIStylingDefaults::get()
-            .set_default_font(afterhours::ui::UIComponent::DEFAULT_FONT,
-                              afterhours::ui::pixels(14.0f));
-
-        // Enable UI validation in development builds (logs warnings for
-        // layout issues like off-screen elements, tiny fonts, poor contrast)
-        // Skip in test mode to avoid log spam slowing down E2E tests
-        if (!app_state::testModeEnabled) {
-            afterhours::ui::imm::UIStylingDefaults::get().enable_development_validation();
+        {
+            SCOPED_TIMER("  initUIContext");
+            ui_imm::initUIContext(
+                Settings::get().get_screen_width(),
+                Settings::get().get_screen_height());
         }
 
-        // Initialize test input provider when in test mode
-        // This registers the TestInputProvider singleton for ECS systems to query
+        {
+            SCOPED_TIMER("  UIStylingDefaults setup");
+            afterhours::ui::imm::UIStylingDefaults::get()
+                .set_default_font(afterhours::ui::UIComponent::DEFAULT_FONT,
+                                  afterhours::ui::pixels(14.0f));
+
+            if (!app_state::testModeEnabled) {
+                afterhours::ui::imm::UIStylingDefaults::get().enable_development_validation();
+            }
+        }
+
         if (app_state::testModeEnabled) {
+            SCOPED_TIMER("  initTestModeUI");
             ui_imm::initTestModeUI();
         }
     }
@@ -117,6 +130,7 @@ static void app_init() {
     auto& editorEntity = EntityHelper::createEntity();
     app_state::editorEntity = &editorEntity;
 
+    SCOPED_TIMER("Entity + component setup");
     // Add document component
     auto& docComp = editorEntity.addComponent<ecs::DocumentComponent>();
     app_state::docComp = &docComp;
@@ -125,8 +139,21 @@ static void app_init() {
         docComp.autoSaveEnabled = false;
     }
 
-    // Load file if specified
-    if (!app_state::loadFile.empty() && std::filesystem::exists(app_state::loadFile)) {
+    // Collect pre-loaded document from background thread.
+    // The background thread was launched in main() before sapp_run(), so it has
+    // had ~300ms of window-creation time to finish. This should be instant.
+    if (app_state::preloadFuture.valid()) {
+        SCOPED_TIMER("Collect preloaded document");
+        auto preloaded = app_state::preloadFuture.get();
+        if (preloaded.loaded) {
+            docComp.buffer = std::move(preloaded.buffer);
+            docComp.docSettings = std::move(preloaded.docSettings);
+        } else if (!preloaded.error.empty()) {
+            LOG_WARNING("Failed to load file: %s", preloaded.error.c_str());
+        }
+    } else if (!app_state::loadFile.empty() && std::filesystem::exists(app_state::loadFile)) {
+        // Fallback: synchronous load (e.g., benchmark mode or no file specified)
+        SCOPED_TIMER("Load document file (sync fallback)");
         auto result = loadTextFileEx(docComp.buffer, app_state::loadFile);
         if (!result.success) {
             LOG_WARNING("Failed to load file: %s", result.error.c_str());
@@ -153,7 +180,10 @@ static void app_init() {
 
     auto& menuComp = editorEntity.addComponent<ecs::MenuComponent>();
     app_state::menuComp = &menuComp;
-    menuComp.menus = menu_setup::createMenuBar(Settings::get().get_recent_files());
+    {
+        SCOPED_TIMER("createMenuBar");
+        menuComp.menus = menu_setup::createMenuBar(Settings::get().get_recent_files());
+    }
     menuComp.recentFilesCount =
         static_cast<int>(Settings::get().get_recent_files().size());
 
@@ -186,62 +216,65 @@ static void app_init() {
     static SystemManager sm;
     app_state::systemManager = &sm;
 
-    // Register pre-layout UI systems (context begin, clear children)
-    ui_imm::registerUIPreLayoutSystems(sm);
-    
-    // UI-creating systems must run BETWEEN pre-layout and post-layout
-    // so their entities are included in BuildUIEntityMapping and RunAutoLayout
-    sm.register_update_system(
-        std::make_unique<ecs::MenuUISystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::ToolbarRenderSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::StatusBarSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::TitleBarSystem>());
-    
-    // Register post-layout UI systems (entity mapping, autolayout, interactions)
-    // This builds the mapping and computes sizes for all UI elements created above
-    ui_imm::registerUIPostLayoutSystems(sm);
+    {
+        SCOPED_TIMER("Register all systems");
+        // Register pre-layout UI systems (context begin, clear children)
+        ui_imm::registerUIPreLayoutSystems(sm);
+        
+        // UI-creating systems must run BETWEEN pre-layout and post-layout
+        // so their entities are included in BuildUIEntityMapping and RunAutoLayout
+        sm.register_update_system(
+            std::make_unique<ecs::MenuUISystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::ToolbarRenderSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::StatusBarSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::TitleBarSystem>());
+        
+        // Register post-layout UI systems (entity mapping, autolayout, interactions)
+        // This builds the mapping and computes sizes for all UI elements created above
+        ui_imm::registerUIPostLayoutSystems(sm);
 
-    // Update systems (run every frame for input/logic)
-    sm.register_update_system(
-        std::make_unique<ecs::CaretBlinkSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::LayoutUpdateSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::TextInputSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::KeyboardShortcutSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::AutoSaveSystem>());
-    sm.register_update_system(
-        std::make_unique<ecs::NavigationSystem>());
-    
-    // Toast notification systems (update and layout)
-    ui_imm::registerToastSystems(sm);
-    
-    // Modal dialog systems (input blocking, focus trapping)
-    ui_imm::registerModalSystems(sm);
+        // Update systems (run every frame for input/logic)
+        sm.register_update_system(
+            std::make_unique<ecs::CaretBlinkSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::LayoutUpdateSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::TextInputSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::KeyboardShortcutSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::AutoSaveSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::NavigationSystem>());
+        
+        // Toast notification systems (update and layout)
+        ui_imm::registerToastSystems(sm);
+        
+        // Modal dialog systems (input blocking, focus trapping)
+        ui_imm::registerModalSystems(sm);
 
-    // Render systems (run after update for drawing)
-    // EditorRenderSystem must be first - it calls BeginDrawing() in once()
-    sm.register_render_system(
-        std::make_unique<ecs::EditorRenderSystem>());
-    // Afterhours UI render systems (renders buttons, divs, etc.)
-    ui_imm::registerUIRenderSystems(sm);
-    // Toolbar icon overlays and dropdown triangles (drawn AFTER afterhours UI)
-    sm.register_render_system(
-        std::make_unique<ecs::ToolbarOverlayRenderSystem>());
-    // Modal backdrop rendering (draws dimmed overlay behind modals)
-    ui_imm::registerModalRenderSystems(sm);
-    // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
-    sm.register_render_system(std::make_unique<ecs::MenuSystem>());
+        // Render systems (run after update for drawing)
+        // EditorRenderSystem must be first - it calls BeginDrawing() in once()
+        sm.register_render_system(
+            std::make_unique<ecs::EditorRenderSystem>());
+        // Afterhours UI render systems (renders buttons, divs, etc.)
+        ui_imm::registerUIRenderSystems(sm);
+        // Toolbar icon overlays and dropdown triangles (drawn AFTER afterhours UI)
+        sm.register_render_system(
+            std::make_unique<ecs::ToolbarOverlayRenderSystem>());
+        // Modal backdrop rendering (draws dimmed overlay behind modals)
+        ui_imm::registerModalRenderSystems(sm);
+        // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
+        sm.register_render_system(std::make_unique<ecs::MenuSystem>());
 
-    // Validation systems (log warnings for layout/accessibility violations)
-    // Only register in non-test mode to avoid slowing E2E tests
-    if (!app_state::testModeEnabled) {
-        afterhours::ui::validation::register_systems<InputAction>(sm);
+        // Validation systems (log warnings for layout/accessibility violations)
+        // Only register in non-test mode to avoid slowing E2E tests
+        if (!app_state::testModeEnabled) {
+            afterhours::ui::validation::register_systems<InputAction>(sm);
+        }
     }
 
     // Measure startup time
@@ -511,6 +544,23 @@ int main(int argc, char* argv[]) {
 
     // Track startup time
     app_state::startTime = std::chrono::high_resolution_clock::now();
+
+    // Launch background document loading ASAP.
+    // sapp_run() will block for ~300ms creating the Metal window — we use that
+    // dead time to read the file, parse JSON, and build the TextBuffer.
+    // By the time app_init() fires, the document is already in memory.
+    if (!app_state::benchmarkMode && !app_state::loadFile.empty() &&
+        std::filesystem::exists(app_state::loadFile)) {
+        LOG_INFO("Launching background document preload: %s", app_state::loadFile.c_str());
+        app_state::preloadFuture = std::async(std::launch::async, [filePath = app_state::loadFile]() {
+            PreloadedDocument data;
+            SCOPED_TIMER("Background document preload");
+            auto result = loadDocumentEx(data.buffer, data.docSettings, filePath);
+            data.loaded = result.success;
+            data.error = result.error;
+            return data;
+        });
+    }
 
     // Headless benchmark: just load file and report timing
     if (app_state::benchmarkMode) {

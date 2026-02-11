@@ -43,7 +43,10 @@ Preload &Preload::init(const char * /*title*/) {
     // Window creation, config flags, and target FPS are now handled by
     // afterhours::graphics::run() via RunConfig.  Nothing else to do here.
 
-    afterhours::graphics::set_exit_key(0);
+    {
+        SCOPED_TIMER("set_exit_key");
+        afterhours::graphics::set_exit_key(0);
+    }
 
     // Skip audio initialization for word processor - not needed
     // Audio can be lazy-initialized later if sound effects are added
@@ -63,9 +66,18 @@ Preload &Preload::make_singleton() {
     {
         {
             SCOPED_TIMER("Afterhours singleton setup");
-            input::add_singleton_components(sophie, get_mapping());
-            window_manager::add_singleton_components(sophie, 200);
-            ui::add_singleton_components<ui_imm::InputAction>(sophie);
+            {
+                SCOPED_TIMER("  input::add_singleton_components");
+                input::add_singleton_components(sophie, get_mapping());
+            }
+            {
+                SCOPED_TIMER("  window_manager::add_singleton_components");
+                window_manager::add_singleton_components(sophie, 200);
+            }
+            {
+                SCOPED_TIMER("  ui::add_singleton_components");
+                ui::add_singleton_components<ui_imm::InputAction>(sophie);
+            }
         }
 
         // Load fonts for UI and document rendering
@@ -77,20 +89,30 @@ Preload &Preload::make_singleton() {
         {
             SCOPED_TIMER("Load fonts");
             auto& fontMgr = sophie.get<ui::FontManager>();
-            // Sans-serif font for all UI chrome (menus, toolbar, title bar, status bar)
-            fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, ui_font_path.c_str());
-            fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, ui_font_path.c_str());
-            // Serif font available for document-related rendering
-            fontMgr.load_font("Garamond", document_font.c_str());
-            
-            // Load sans-serif UI font for manual Win95 widget rendering (DrawUIText)
-            theme::UI_FONT = afterhours::load_font_from_file(ui_font_path.c_str());
-            theme::UI_FONT_LOADED = true;
+            {
+                SCOPED_TIMER("  font: DEFAULT_FONT (Roboto)");
+                fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, ui_font_path.c_str());
+            }
+            {
+                SCOPED_TIMER("  font: SYMBOL_FONT (Roboto)");
+                fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, ui_font_path.c_str());
+            }
+            {
+                SCOPED_TIMER("  font: Garamond");
+                fontMgr.load_font("Garamond", document_font.c_str());
+            }
+            {
+                SCOPED_TIMER("  font: UI_FONT (manual load)");
+                theme::UI_FONT = afterhours::load_font_from_file(ui_font_path.c_str());
+                theme::UI_FONT_LOADED = true;
+            }
         }
 
-        // Register loaded fonts with FontLoader for P2 font listing
-        fonts::FontLoader::get().loadStartupFonts(
-            sophie.get<ui::FontManager>());
+        {
+            SCOPED_TIMER("  FontLoader::loadStartupFonts");
+            fonts::FontLoader::get().loadStartupFonts(
+                sophie.get<ui::FontManager>());
+        }
 
         {
             SCOPED_TIMER("Theme setup");
