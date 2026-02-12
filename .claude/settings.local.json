@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --no-pager log --oneline -20)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(dd:*)",
+      "Bash(python3:*)",
+      "Bash(make all:*)",
+      "Bash(./tests/run_e2e.sh:*)",
+      "Bash(wc:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
