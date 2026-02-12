@@ -60,6 +60,7 @@ int frameLimit = 0;
 std::string testScriptPath;
 std::string testScriptDir;
 float e2eTimeout = 30.0f;
+float e2eWaitScale = 1.0f;
 bool e2eDebugOverlay = false;
 bool fpsTestMode = false;
 bool benchmarkMode = false;
@@ -304,6 +305,7 @@ static void app_init() {
     
     // Set E2E timeout (default 30s, can be increased for large document tests)
     runner.set_timeout(app_state::e2eTimeout);
+    runner.set_wait_scale(app_state::e2eWaitScale);
     
     // Register E2E command handler systems if running tests
     if (runner.hasCommands()) {
@@ -324,8 +326,10 @@ static void app_init() {
     (void)app_state::e2eDebugOverlay;
 
     if ((!app_state::testScriptPath.empty() || !app_state::testScriptDir.empty()) && app_state::frameLimit == 0) {
-        // Calculate frame limit from timeout (60 fps * timeout seconds, with some buffer)
-        app_state::frameLimit = static_cast<int>(app_state::e2eTimeout * 60 * 1.5f);
+        // Frame limit is a safety net - the runner's real-time timeout is the primary guard.
+        // Use 240fps estimate (apps often exceed 60fps without vsync) with generous 3x buffer.
+        float speedFactor = (app_state::e2eWaitScale < 1.0f) ? (1.0f / app_state::e2eWaitScale) : 1.0f;
+        app_state::frameLimit = static_cast<int>(app_state::e2eTimeout * 240 * 3.0f * speedFactor);
         testComp.frameLimit = app_state::frameLimit;
     }
     if (!app_state::testScriptPath.empty() && !runner.hasCommands()) {
@@ -511,6 +515,8 @@ int main(int argc, char* argv[]) {
             app_state::testScriptDir = value;
         } else if (name == "e2e-timeout") {
             app_state::e2eTimeout = std::stof(value);
+        } else if (name == "e2e-speed") {
+            app_state::e2eWaitScale = 1.0f / std::stof(value);
         } else if (name == "e2e-debug") {
             // Value can be "true", "1", or just present
             // This is handled below after scriptRunner is set up

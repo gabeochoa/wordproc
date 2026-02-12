@@ -1,0 +1,8 @@
+# Test: Open a file that doesn't exist
+# Expected: FAIL (command should fail because file does not exist)
+
+open_file test_files/this_path_does_not_exist.txt
+wait 2
+
+# Should never reach here
+validate text=should not get here

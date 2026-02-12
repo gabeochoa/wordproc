@@ -23,6 +23,7 @@ NC='\033[0m' # No Color
 RECURSIVE=false
 TEST_PATH=""
 TIMEOUT=60
+SPEED=5
 
 # Parse arguments
 usage() {
@@ -33,6 +34,7 @@ usage() {
     echo "OPTIONS:"
     echo "  -r, --recursive     Recursively find all .e2e files in subdirectories"
     echo "  -t, --timeout SEC   Set timeout in seconds (default: 60)"
+    echo "  -s, --speed MULT    Speed multiplier for waits (default: 10, 1=realtime)"
     echo "  -h, --help          Show this help message"
     echo ""
     echo "PATH:"
@@ -56,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--timeout)
             TIMEOUT="$2"
+            shift 2
+            ;;
+        -s|--speed)
+            SPEED="$2"
             shift 2
             ;;
         -h|--help)
@@ -156,14 +162,8 @@ fi
 if [ -n "$TEST_SOURCE" ]; then
     if [ "$RECURSIVE" = true ]; then
         echo -e "${BLUE}Recursively copying tests from: $TEST_SOURCE${NC}"
-        # Preserve directory structure for recursive copy
-        cd "$TEST_SOURCE"
-        find . -name "*.e2e" -type f | while read -r file; do
-            dir=$(dirname "$file")
-            mkdir -p "$TEMP_TEST_DIR/$dir"
-            cp "$file" "$TEMP_TEST_DIR/$file"
-        done
-        cd - > /dev/null
+        # Flatten all .e2e files into temp dir (app doesn't recurse subdirs)
+        find "$TEST_SOURCE" -name "*.e2e" -type f -exec cp {} "$TEMP_TEST_DIR/" \;
     else
         echo -e "${BLUE}Copying tests from: $TEST_SOURCE${NC}"
         # Only copy tests from top level
@@ -204,6 +204,7 @@ $TIMEOUT_CMD "$EXECUTABLE" \
     --test-script-dir="$TEMP_TEST_DIR" \
     --screenshot-dir="$SCREENSHOT_DIR" \
     --e2e-timeout="$TIMEOUT" \
+    --e2e-speed="$SPEED" \
     2>&1 | tee "$LOG_FILE"
 exit_code=${PIPESTATUS[0]}
 set -e

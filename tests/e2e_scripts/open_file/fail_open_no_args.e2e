@@ -1,0 +1,8 @@
+# Test: Open file with no arguments
+# Expected: FAIL (command requires a file path argument)
+
+open_file
+wait 2
+
+# Should never reach here
+validate text=should not get here

@@ -1,0 +1,9 @@
+# Test: Open a unicode .wpdoc file
+# Validates that open_file loads a document with unicode content
+
+open_file test_files/should_pass/unicode.wpdoc
+wait 2
+
+validate line_count=1
+
+screenshot e2e_open_unicode

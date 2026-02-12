@@ -1,0 +1,9 @@
+# Test: Open a file with a single very long line
+# Validates that open_file handles a long single line
+
+open_file test_files/non_document/single_line_long.txt
+wait 2
+
+validate line_count=2
+
+screenshot e2e_open_long_line

@@ -3,7 +3,7 @@
 
 type "abc 123"
 wait 1
-validate regex_find=[0-9]+=true
+validate regex_match_[0-9]+=true
 
 screenshot e2e_regex_find
 

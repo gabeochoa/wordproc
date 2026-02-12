@@ -1,0 +1,7 @@
+# Test: Open a file containing only whitespace
+# Validates that open_file handles whitespace-only content
+
+open_file test_files/non_document/just_whitespace.txt
+wait 2
+
+screenshot e2e_open_whitespace

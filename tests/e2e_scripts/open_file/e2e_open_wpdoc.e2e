@@ -1,0 +1,9 @@
+# Test: Open a minimal .wpdoc file
+# Validates that open_file loads a valid wpdoc document
+
+open_file test_files/should_pass/minimal.wpdoc
+wait 2
+
+validate text=Hello
+
+screenshot e2e_open_wpdoc

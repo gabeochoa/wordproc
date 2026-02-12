@@ -1,0 +1,9 @@
+# Test: Open a markdown file
+# Validates that open_file loads a .md file as plain text
+
+open_file test_files/should_pass/markdown.md
+wait 2
+
+validate line_count=15
+
+screenshot e2e_open_markdown

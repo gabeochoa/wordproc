@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../ecs/components.h"
+#include "../editor/document_io.h"
 
 #include <afterhours/src/plugins/e2e_testing/e2e_testing.h>
 
@@ -173,6 +174,40 @@ struct HandleOutlineClickCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'open_file path' - opens a file directly into the document
+struct HandleOpenFileCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("open_file"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("open_file requires file path");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+
+    const auto &file_path = cmd.arg(0);
+    DocumentResult result = loadDocumentEx(doc_comp->buffer,
+                                           doc_comp->docSettings,
+                                           file_path);
+    if (result.success) {
+      doc_comp->filePath = file_path;
+      doc_comp->isDirty = false;
+      doc_comp->comments.clear();
+      doc_comp->revisions.clear();
+      cmd.consume();
+    } else {
+      cmd.fail("Failed to open file: " + file_path +
+               (result.error.empty() ? "" : " (" + result.error + ")"));
+    }
+  }
+};
+
 // Register all app-specific commands
 inline void register_app_commands(
     SystemManager &sm,
@@ -196,6 +231,10 @@ inline void register_app_commands(
   auto outline_click = std::make_unique<HandleOutlineClickCommand>();
   outline_click->doc_comp = doc_comp;
   sm.register_update_system(std::move(outline_click));
+
+  auto open_file = std::make_unique<HandleOpenFileCommand>();
+  open_file->doc_comp = doc_comp;
+  sm.register_update_system(std::move(open_file));
 }
 
 } // namespace e2e_commands

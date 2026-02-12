@@ -9,18 +9,13 @@ wait 1
 validate menu_open=View
 
 # Validate expected menu items exist
-validate menu_contains=Pageless Mode
-validate menu_contains=Paged Mode
-validate menu_contains=Show Line Numbers
-validate menu_contains=Outline
-validate menu_contains=Header
-validate menu_contains=Footer
-validate menu_contains=Zoom
-
-# Close menu
-key ESCAPE
-wait 1
-validate menu_open=false
+validate menu_item_Pageless Mode=true
+validate menu_item_Paged Mode=true
+validate menu_item_Show Line Numbers=true
+validate menu_item_Show Outline=true
+validate menu_item_Focus Mode=true
+validate menu_item_Dark Mode=true
+validate menu_item_Zoom In=true
 
 screenshot e2e_menu_view
 

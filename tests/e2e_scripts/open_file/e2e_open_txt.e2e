@@ -1,0 +1,9 @@
+# Test: Open a plain text file
+# Validates that open_file loads a .txt file as plain text
+
+open_file test_files/should_pass/plain_text.txt
+wait 2
+
+validate line_count=6
+
+screenshot e2e_open_txt

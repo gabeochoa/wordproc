@@ -1,0 +1,8 @@
+# Test: Open a .e2e file (blocked by extension check)
+# Expected: FAIL (loadDocumentEx blocks .e2e files)
+
+open_file tests/e2e_scripts/test/pass_basic_typing.e2e
+wait 2
+
+# Should never reach here
+validate text=should not get here

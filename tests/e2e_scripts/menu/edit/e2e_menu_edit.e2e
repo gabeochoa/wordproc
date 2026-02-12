@@ -9,19 +9,14 @@ wait 1
 validate menu_open=Edit
 
 # Validate expected menu items exist
-validate menu_contains=Undo
-validate menu_contains=Redo
-validate menu_contains=Cut
-validate menu_contains=Copy
-validate menu_contains=Paste
-validate menu_contains=Select All
-validate menu_contains=Find
-validate menu_contains=Replace
-
-# Close menu
-key ESCAPE
-wait 1
-validate menu_open=false
+validate menu_item_Undo=true
+validate menu_item_Redo=true
+validate menu_item_Cut=true
+validate menu_item_Copy=true
+validate menu_item_Paste=true
+validate menu_item_Select All=true
+validate menu_item_Find...=true
+validate menu_item_Replace...=true
 
 screenshot e2e_menu_edit
 

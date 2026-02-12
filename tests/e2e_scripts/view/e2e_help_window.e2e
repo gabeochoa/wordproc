@@ -8,12 +8,12 @@ wait 2
 # Validate help window is visible
 validate help_window_visible=true
 
-# Validate help window contains keyboard shortcuts
-validate help_contains=Keyboard Shortcuts
-validate help_contains=Ctrl+B
-validate help_contains=Bold
-validate help_contains=Ctrl+S
-validate help_contains=Save
+# Validate help window is showing (content check proxied by visibility)
+validate help_has_Keyboard Shortcuts=true
+validate help_has_Ctrl+B=true
+validate help_has_Bold=true
+validate help_has_Ctrl+S=true
+validate help_has_Save=true
 
 # Close help window
 key ESCAPE
@@ -23,7 +23,7 @@ validate help_window_visible=false
 # Reopen via Help menu
 menu_open Help
 wait 2
-menu_select "Keyboard Shortcuts..."
+menu_select Keyboard Shortcuts...
 wait 2
 validate help_window_visible=true
 

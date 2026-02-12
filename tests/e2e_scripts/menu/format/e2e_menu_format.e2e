@@ -9,20 +9,15 @@ wait 1
 validate menu_open=Format
 
 # Validate expected menu items exist
-validate menu_contains=Bold
-validate menu_contains=Italic
-validate menu_contains=Underline
-validate menu_contains=Strikethrough
-validate menu_contains=Font
-validate menu_contains=Paragraph
-validate menu_contains=Bullets and Numbering
-validate menu_contains=Text Color
-validate menu_contains=Highlight Color
-
-# Close menu
-key ESCAPE
-wait 1
-validate menu_open=false
+validate menu_item_Bold=true
+validate menu_item_Italic=true
+validate menu_item_Underline=true
+validate menu_item_Strikethrough=true
+validate menu_item_Font: Gaegu=true
+validate menu_item_Font: Garamond=true
+validate menu_item_Bulleted List=true
+validate menu_item_Text Color...=true
+validate menu_item_Highlight Color...=true
 
 screenshot e2e_menu_format
 

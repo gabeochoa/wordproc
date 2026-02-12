@@ -205,12 +205,12 @@ static void setupCallbacksEx(
             }
             return "false";
         }
-        if (prop.substr(0, 13) == "menu_contains") {
-            // Parse: menu_contains=ItemName
-            // Check if any open menu contains this item
+        // menu_item_ITEMNAME=true/false — check if any menu contains an item
+        if (prop.length() > 10 && prop.substr(0, 10) == "menu_item_") {
+            std::string itemName = prop.substr(10);
             for (const auto& menu : menuComp.menus) {
                 for (const auto& item : menu.items) {
-                    if (item.label == prop.substr(14)) return "true";
+                    if (item.label == itemName) return "true";
                 }
             }
             return "false";
@@ -301,11 +301,9 @@ static void setupCallbacksEx(
             return "false";
         }
         if (prop == "help_window_visible") return menuComp.showHelpWindow ? "true" : "false";
-        if (prop.substr(0, 13) == "help_contains") {
-            // Check if help window contains the specified text
-            // Help window shows keyboard shortcuts from action_map
-            // Since we can't directly inspect the rendered help window,
-            // we return true if help is visible (implying it contains shortcuts)
+        // help_has_TEXT=true/false — check if help window is visible
+        // (content check not possible, so we just verify visibility)
+        if (prop.length() > 9 && prop.substr(0, 9) == "help_has_") {
             return menuComp.showHelpWindow ? "true" : "false";
         }
         
@@ -430,8 +428,9 @@ static void setupCallbacksEx(
             int maxLen = std::stoi(prop.substr(18));
             return buffer.textSize() < static_cast<std::size_t>(maxLen) ? "true" : "false";
         }
-        if (prop.substr(0, 10) == "regex_find") {
-            std::string pattern = prop.substr(11);
+        // regex_match_PATTERN=true/false — check if regex pattern matches buffer
+        if (prop.length() > 12 && prop.substr(0, 12) == "regex_match_") {
+            std::string pattern = prop.substr(12);
             FindOptions options;
             options.useRegex = true;
             FindResult result = buffer.find(pattern, options);

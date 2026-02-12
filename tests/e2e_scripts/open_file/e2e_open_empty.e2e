@@ -1,0 +1,9 @@
+# Test: Open an empty .wpdoc file
+# Validates that open_file handles an empty document
+
+open_file test_files/should_pass/empty.wpdoc
+wait 2
+
+validate text=
+
+screenshot e2e_open_empty

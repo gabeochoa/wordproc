@@ -1,0 +1,9 @@
+# Test: Open a malformed JSON .wpdoc file
+# loadDocumentEx falls back to plain text on malformed JSON, so this succeeds
+
+open_file test_files/should_fail/malformed_json.wpdoc
+wait 2
+
+validate line_count=6
+
+screenshot e2e_open_malformed_json

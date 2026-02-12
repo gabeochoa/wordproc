@@ -1,0 +1,7 @@
+# Test: Open a binary file
+# loadDocumentEx loads binary content as raw text, so this succeeds
+
+open_file test_files/non_document/binary.dat
+wait 2
+
+screenshot e2e_open_binary

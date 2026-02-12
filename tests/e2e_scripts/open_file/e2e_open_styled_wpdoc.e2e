@@ -1,0 +1,11 @@
+# Test: Open a styled .wpdoc file
+# Validates that open_file loads a wpdoc with bold and italic styles
+
+open_file test_files/should_pass/styled.wpdoc
+wait 2
+
+validate text=Bold and Italic text sample
+validate bold=true
+validate italic=true
+
+screenshot e2e_open_styled_wpdoc

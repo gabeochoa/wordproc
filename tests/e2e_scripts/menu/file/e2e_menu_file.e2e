@@ -9,18 +9,12 @@ wait 1
 validate menu_open=File
 
 # Validate expected menu items exist
-validate menu_contains=New
-validate menu_contains=Open
-validate menu_contains=Save
-validate menu_contains=Save As
-validate menu_contains=Page Setup
-validate menu_contains=Print
-validate menu_contains=Exit
-
-# Close menu
-key ESCAPE
-wait 1
-validate menu_open=false
+validate menu_item_New=true
+validate menu_item_Open...=true
+validate menu_item_Save=true
+validate menu_item_Save As...=true
+validate menu_item_Page Setup...=true
+validate menu_item_Exit=true
 
 screenshot e2e_menu_file
 

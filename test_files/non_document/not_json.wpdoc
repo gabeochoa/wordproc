@@ -1,0 +1,2 @@
+This is not JSON but has a .wpdoc extension.
+It should be loaded as plain text fallback.
