@@ -963,13 +963,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 auto bindings = input::getBindingsList(defaultMap);
                 
                 // Create scrollable container for keybindings list
-                auto scrollContainer = scroll_view(ctx, mk(result.ent(), 0),
+                auto scrollContainer = div(ctx, mk(result.ent(), 0),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(380)})
                         .with_padding(Spacing::sm)
                         .with_render_layer(CONTENT_LAYER));
-                
                 if (scrollContainer) {
+                    scrollContainer.ent().addComponent<HasScrollView>();
                     // Header row
                     auto headerRow = div(ctx, mk(scrollContainer.ent(), 0),
                         ComponentConfig{}

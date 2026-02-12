@@ -22,6 +22,9 @@
 #include "preload.h"
 #include "rl.h"
 #include "settings.h"
+#ifdef __EMSCRIPTEN__
+#include <afterhours/src/plugins/files.h>
+#endif
 #include "testing/e2e_runner.h"
 #include "ui/menu_setup.h"
 #include "ui/theme.h"
@@ -305,7 +308,6 @@ static void app_init() {
     
     // Set E2E timeout (default 30s, can be increased for large document tests)
     runner.set_timeout(app_state::e2eTimeout);
-    runner.set_wait_scale(app_state::e2eWaitScale);
     
     // Register E2E command handler systems if running tests
     if (runner.hasCommands()) {
@@ -551,6 +553,7 @@ int main(int argc, char* argv[]) {
     // Track startup time
     app_state::startTime = std::chrono::high_resolution_clock::now();
 
+#ifndef __EMSCRIPTEN__
     // Launch background document loading ASAP.
     // sapp_run() will block for ~300ms creating the Metal window — we use that
     // dead time to read the file, parse JSON, and build the TextBuffer.
@@ -604,6 +607,14 @@ int main(int argc, char* argv[]) {
 
         return totalMs <= 100.0 ? 0 : 1;
     }
+#endif // !__EMSCRIPTEN__
+
+#ifdef __EMSCRIPTEN__
+    // On Emscripten, files::init() normally runs inside app_init() (after
+    // graphics::run starts), but we need it here so Settings can find its
+    // config path on the virtual filesystem.
+    afterhours::files::init("Prime Pressure", "resources");
+#endif
 
     {
         SCOPED_TIMER("Settings load");

@@ -4,6 +4,7 @@
 #include <afterhours/src/plugins/files.h>
 #include <afterhours/src/plugins/ui/theme.h>
 
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -36,8 +37,13 @@ Preload::Preload() {}
 
 Preload &Preload::init(const char * /*title*/) {
     {
+        // On Emscripten, files::init() is called early in main() (before
+        // graphics::run) so Settings can find its config path on the virtual
+        // filesystem. Skip the duplicate call here.
+#ifndef __EMSCRIPTEN__
         SCOPED_TIMER("files::init");
         files::init("Prime Pressure", "resources");
+#endif
     }
 
     // Window creation, config flags, and target FPS are now handled by
@@ -75,8 +81,8 @@ Preload &Preload::make_singleton() {
                 window_manager::add_singleton_components(sophie, 200);
             }
             {
-                SCOPED_TIMER("  ui::add_singleton_components");
-                ui::add_singleton_components<ui_imm::InputAction>(sophie);
+                SCOPED_TIMER("  ui::init_ui_plugin");
+                ui::init_ui_plugin<ui_imm::InputAction>();
             }
         }
 
@@ -86,9 +92,11 @@ Preload &Preload::make_singleton() {
         std::string ui_font_path =
             files::get_resource_path("fonts", "Roboto-Regular.ttf").string();
 
+        // FontManager lives on the UI root entity created by init_ui_plugin.
+        auto& fontMgr = EntityHelper::get_singleton_cmp_enforce<ui::FontManager>();
+
         {
             SCOPED_TIMER("Load fonts");
-            auto& fontMgr = sophie.get<ui::FontManager>();
             {
                 SCOPED_TIMER("  font: DEFAULT_FONT (Roboto)");
                 fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, ui_font_path.c_str());
@@ -110,8 +118,7 @@ Preload &Preload::make_singleton() {
 
         {
             SCOPED_TIMER("  FontLoader::loadStartupFonts");
-            fonts::FontLoader::get().loadStartupFonts(
-                sophie.get<ui::FontManager>());
+            fonts::FontLoader::get().loadStartupFonts(fontMgr);
         }
 
         {
@@ -135,12 +142,8 @@ Preload &Preload::make_singleton() {
             ui::imm::UIStylingDefaults::get().set_grid_snapping(true);
         }
 
-        sophie.addComponent<ui::AutoLayoutRoot>();
-        sophie.addComponent<ui::UIComponentDebug>("sophie");
-        sophie.addComponent<ui::UIComponent>(sophie.id)
-            .set_desired_width(afterhours::ui::screen_pct(1.f))
-            .set_desired_height(afterhours::ui::screen_pct(1.f))
-            .enable_font(afterhours::ui::UIComponent::DEFAULT_FONT, 75.f);
+        // init_ui_plugin() already creates AutoLayoutRoot and UIComponent
+        // on the UI root entity. No need to add them to sophie.
     }
     return *this;
 }

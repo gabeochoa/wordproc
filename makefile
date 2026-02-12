@@ -108,8 +108,8 @@ LDFLAGS := -L. -Lvendor/ $(FRAMEWORKS) $(COVERAGE_LDFLAGS)
 OBJ_DIR := output/objs
 OUTPUT_DIR := output
 
-# Source files
-MAIN_SRC := $(wildcard src/*.cpp)
+# Source files (exclude web-only sokol_impl_web.cpp from native build)
+MAIN_SRC := $(filter-out src/sokol_impl_web.cpp,$(wildcard src/*.cpp))
 MAIN_SRC += $(wildcard src/editor/*.cpp)
 MAIN_SRC += $(wildcard src/editor/export/*.cpp)
 MAIN_SRC += $(wildcard src/components/*.cpp)
@@ -385,4 +385,111 @@ test-metal: $(METAL_TEST_EXE)
 	./$(METAL_TEST_EXE)
 
 .PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark profile-startup test-metal
+
+# ==============================================================================
+# WEBASSEMBLY BUILD
+# ==============================================================================
+
+EMCC := em++
+
+WEB_OBJ_DIR := output/objs_web
+WEB_OUTPUT_DIR := output/web
+
+# Web source files: same as native, but sokol_impl_web.cpp replaces sokol_impl.mm.
+# afterhours' files.cpp handles Emscripten paths automatically via __EMSCRIPTEN__.
+WEB_SRC := $(wildcard src/*.cpp)
+WEB_SRC += $(wildcard src/editor/*.cpp)
+WEB_SRC += $(wildcard src/editor/export/*.cpp)
+WEB_SRC += $(wildcard src/components/*.cpp)
+WEB_SRC += $(wildcard src/systems/*.cpp)
+WEB_SRC += $(wildcard src/ui/*.cpp)
+WEB_SRC += $(wildcard src/testing/*.cpp)
+WEB_SRC += $(wildcard src/engine/*.cpp)
+WEB_SRC += $(wildcard src/util/*.cpp)
+WEB_SRC += $(wildcard src/input/*.cpp)
+WEB_SRC += $(wildcard src/fonts/*.cpp)
+
+WEB_OBJS := $(WEB_SRC:src/%.cpp=$(WEB_OBJ_DIR)/main/%.o)
+WEB_OBJS += $(WEB_OBJ_DIR)/main/vendor_afterhours_files.o
+
+WEB_DEPS := $(WEB_OBJS:.o=.d)
+
+WEB_EXE := $(WEB_OUTPUT_DIR)/wordproc.html
+
+# WASM compiler flags
+# AFTER_HOURS_USE_WEB selects the Sokol/WebGL2 backend. Afterhours only knows
+# about USE_METAL (Sokol) vs USE_RAYLIB, so USE_WEB implies USE_METAL for now.
+WEB_CXXFLAGS := -std=c++23 -O2 \
+    -DAFTER_HOURS_USE_WEB -DAFTER_HOURS_USE_METAL \
+    -DFMT_CONSTEVAL= \
+    -Wall -Wextra -Wpedantic \
+    -Wno-deprecated-volatile -Wno-missing-field-initializers \
+    -Wno-c99-extensions -Wno-unused-function -Wno-sign-conversion \
+    -Wno-implicit-int-float-conversion -Wno-implicit-float-conversion \
+    -Wno-format-nonliteral -Wno-format-security -Wno-format-y2k \
+    -Wno-import -Wno-inline -Wno-invalid-pch \
+    -Wno-long-long -Wno-missing-format-attribute \
+    -Wno-missing-noreturn -Wno-packed -Wno-redundant-decls \
+    -Wno-sequence-point -Wno-trigraphs -Wno-variadic-macros \
+    -Wno-volatile-register-var \
+    -fno-common \
+    -DAFTER_HOURS_UI_SINGLE_COLLECTION \
+    $(ACCESSIBILITY_CXXFLAGS)
+
+# WASM linker flags
+WEB_LDFLAGS := \
+    -s USE_WEBGL2=1 \
+    -s FULL_ES3=1 \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s INITIAL_MEMORY=67108864 \
+    --shell-file src/web/shell.html \
+    --preload-file resources/fonts/Roboto-Regular.ttf@/resources/fonts/Roboto-Regular.ttf \
+    --preload-file resources/fonts/EBGaramond-Regular.ttf@/resources/fonts/EBGaramond-Regular.ttf \
+    --preload-file resources/fonts/Gaegu-Bold.ttf@/resources/fonts/Gaegu-Bold.ttf \
+    --preload-file resources/fonts/Fredoka-VariableFont_wdth,wght.ttf@/resources/fonts/Fredoka-VariableFont_wdth,wght.ttf \
+    --preload-file resources/fonts/BlackOpsOne-Regular.ttf@/resources/fonts/BlackOpsOne-Regular.ttf \
+    --preload-file resources/fonts/AtkinsonHyperlegible-Regular.ttf@/resources/fonts/AtkinsonHyperlegible-Regular.ttf \
+    --preload-file resources/fonts/eqprorounded-regular.ttf@/resources/fonts/eqprorounded-regular.ttf \
+    --preload-file resources/fonts/SymbolsNerdFont-Regular.ttf@/resources/fonts/SymbolsNerdFont-Regular.ttf \
+    --preload-file resources/dictionaries@/resources/dictionaries \
+    --preload-file resources/templates@/resources/templates
+
+# Create web directories
+$(WEB_OUTPUT_DIR)/.stamp:
+	@mkdir -p $(WEB_OUTPUT_DIR)
+	@touch $@
+
+$(WEB_OBJ_DIR)/main:
+	@mkdir -p $(WEB_OBJ_DIR)/main
+
+# Compile web object files
+$(WEB_OBJ_DIR)/main/%.o: src/%.cpp | $(WEB_OBJ_DIR)/main
+	@echo "Compiling (web) $<..."
+	@mkdir -p $(dir $@)
+	$(EMCC) $(WEB_CXXFLAGS) $(INCLUDES) -c $< -o $@ -MMD -MP -MF $(@:.o=.d) -MT $@
+
+# Compile afterhours files.cpp for web (handles Emscripten via __EMSCRIPTEN__)
+$(WEB_OBJ_DIR)/main/vendor_afterhours_files.o: vendor/afterhours/src/plugins/files.cpp | $(WEB_OBJ_DIR)/main
+	@echo "Compiling (web) vendor/afterhours/src/plugins/files.cpp..."
+	@mkdir -p $(dir $@)
+	$(EMCC) $(WEB_CXXFLAGS) $(INCLUDES) -c $< -o $@ -MMD -MP -MF $(@:.o=.d) -MT $@
+
+# Include web dependency files
+-include $(WEB_DEPS)
+
+# Link web build
+$(WEB_EXE): $(WEB_OBJS) | $(WEB_OUTPUT_DIR)/.stamp
+	@echo "Linking (web) $(WEB_EXE)..."
+	$(EMCC) $(WEB_CXXFLAGS) $(WEB_OBJS) $(WEB_LDFLAGS) -o $@
+	@echo "Built $(WEB_EXE)"
+
+web: $(WEB_EXE)
+
+clean-web:
+	@echo "Cleaning web build artifacts..."
+	rm -rf $(WEB_OBJ_DIR)
+	rm -f $(WEB_OUTPUT_DIR)/wordproc.*
+	@echo "Web clean complete"
+
+.PHONY: web clean-web
 

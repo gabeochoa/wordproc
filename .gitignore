@@ -79,6 +79,9 @@ build-analysis.txt
 # Compilation database
 compile_commands.json
 
+# Emscripten SDK (installed by scripts/setup_emsdk.sh)
+emsdk/
+
 # Cursor IDE
 .cursor/
 
