@@ -9,7 +9,9 @@
       "Bash(make all:*)",
       "Bash(./tests/run_e2e.sh:*)",
       "Bash(wc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(du:*)"
     ]
   }
 }
