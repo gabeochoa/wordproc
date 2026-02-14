@@ -1,0 +1,36 @@
+# Screenshot each menu dropdown for visual inspection
+
+# Screenshot the app with no menu open
+screenshot 01_idle
+
+# File menu
+menu_open "File"
+screenshot 02_file_menu
+
+# Close by opening Edit
+menu_open "Edit"
+screenshot 03_edit_menu
+
+# View menu
+menu_open "View"
+screenshot 04_view_menu
+
+# Insert menu
+menu_open "Insert"
+screenshot 05_insert_menu
+
+# Format menu
+menu_open "Format"
+screenshot 06_format_menu
+
+# Tools menu
+menu_open "Tools"
+screenshot 07_tools_menu
+
+# Table menu
+menu_open "Table"
+screenshot 08_table_menu
+
+# Help menu
+menu_open "Help"
+screenshot 09_help_menu

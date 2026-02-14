@@ -68,19 +68,15 @@ inline ComponentConfig menuBarItemConfig(const std::string& label,
     return config;
 }
 
-// Create Win95-style dropdown item config
+// Create Win95-style dropdown item config (label only, shortcut rendered
+// separately as a right-aligned overlay).
 inline ComponentConfig dropdownItemConfig(const std::string& label,
-                                          const std::string& shortcut,
+                                          const std::string& /*shortcut*/,
                                           bool isHovered, bool enabled) {
-    std::string fullLabel = label;
-    if (!shortcut.empty()) {
-        // Pad with spaces to push shortcut to the right
-        fullLabel += "        " + shortcut;
-    }
-
     auto config = ComponentConfig{}
-                      .with_label(fullLabel)
+                      .with_label(label)
                       .with_size(ComponentSize{percent(1.0f), pixels(20)})
+                      .with_alignment(TextAlignment::Left)
                       .with_padding(Padding{.left = DefaultSpacing::small(),
                                             .right = DefaultSpacing::small()});
 
@@ -189,6 +185,17 @@ int renderMenuBar(UIContextT& ctx, Entity& parent, MenuBarState& state) {
 
                 auto itemResult = imm::button(
                     ctx, mk(dropdown, static_cast<int>(itemIdx)), itemConfig);
+
+                // Right-aligned shortcut overlay (non-interactive, sits on top)
+                if (!item.shortcut.empty()) {
+                    imm::div(ctx, mk(dropdown, 1000 + static_cast<int>(itemIdx)),
+                        ComponentConfig{}
+                            .with_label(item.shortcut)
+                            .with_size(ComponentSize{percent(1.0f), pixels(20)})
+                            .with_alignment(TextAlignment::Right)
+                            .with_padding(Padding{.right = DefaultSpacing::small()})
+                            .with_skip_tabbing(true));
+                }
 
                 // Update hover state
                 if (itemResult.ent().has<ui::UIComponent>()) {

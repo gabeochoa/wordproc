@@ -291,31 +291,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(51));
                     itemY += theme::layout::scale(8.0f);
                 } else {
-                    // Build full label: mark + label + padded shortcut
-                    std::string fullLabel;
-                    
-                    // Prepend mark character if present
+                    // Build mark prefix
+                    std::string markPrefix;
                     if (item.mark != win95::MenuMark::None) {
                         switch (item.mark) {
-                            case win95::MenuMark::Checkmark: fullLabel = "\xE2\x9C\x93 "; break;
-                            case win95::MenuMark::Radio:     fullLabel = "\xE2\x80\xA2 "; break;
-                            case win95::MenuMark::Dash:      fullLabel = "- "; break;
+                            case win95::MenuMark::Checkmark: markPrefix = "\xE2\x9C\x93 "; break;
+                            case win95::MenuMark::Radio:     markPrefix = "\xE2\x80\xA2 "; break;
+                            case win95::MenuMark::Dash:      markPrefix = "- "; break;
                             case win95::MenuMark::None: break;
                             default: break;
                         }
                     } else {
-                        fullLabel = "  ";  // Reserve space for mark column
-                    }
-                    
-                    fullLabel += item.label;
-                    
-                    if (!item.shortcut.empty()) {
-                        size_t currentLen = fullLabel.length();
-                        size_t targetLen = 24;
-                        if (currentLen < targetLen) {
-                            fullLabel += std::string(targetLen - currentLen, ' ');
-                        }
-                        fullLabel += item.shortcut;
+                        markPrefix = "  ";  // Reserve space for mark column
                     }
                     
                     // Register menu item label for E2E tests
@@ -325,25 +312,46 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     float itemHeight = theme::layout::scale(20.0f);
                     
                     // Determine hover highlight using direct mouse position check
-                    // (was_hot uses entity IDs, not MK IDs, so it would never match)
                     bool hovered = afterhours::ui::is_mouse_inside(
                         ctx.mouse.pos, {dropdownX + 2.0f, itemY, maxWidth - 4.0f, itemHeight}) && item.enabled;
                     
+                    auto textColor = !item.enabled ? toAhColor(theme::MENU_DISABLED) :
+                                     hovered ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT);
+                    
+                    // Button with left-aligned label
                     auto itemResult = button(ctx, mk(entity, itemId),
                         ComponentConfig{}
                             .with_debug_name("item_" + item.label)
-                            .with_label(fullLabel)
+                            .with_label(markPrefix + item.label)
                             .with_size(ComponentSize{pixels(maxWidth - 4.0f), pixels(itemHeight)})
                             .with_absolute_position()
                             .with_translate(dropdownX + 2.0f, itemY)
                             .with_custom_background(hovered ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
-                            .with_custom_text_color(
-                                !item.enabled ? toAhColor(theme::MENU_DISABLED) :
-                                hovered ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
+                            .with_custom_text_color(textColor)
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_justify_content(afterhours::ui::JustifyContent::Center)
                             .with_roundness(0.0f)
                             .with_render_layer(51));
+                    
+                    // Shortcut label: separate div positioned at right edge of item
+                    if (!item.shortcut.empty()) {
+                        float shortcutWidth = static_cast<float>(
+                            theme::MeasureUIText(item.shortcut.c_str(), 14) + 8);
+                        float shortcutX = dropdownX + 2.0f + (maxWidth - 4.0f) - shortcutWidth;
+                        div(ctx, mk(entity, 30000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
+                            ComponentConfig{}
+                                .with_label(item.shortcut)
+                                .with_size(ComponentSize{pixels(shortcutWidth), pixels(itemHeight)})
+                                .with_absolute_position()
+                                .with_translate(shortcutX, itemY)
+                                .with_color_usage(afterhours::ui::Theme::Usage::None)
+                                .with_custom_text_color(textColor)
+                                .with_alignment(afterhours::ui::TextAlignment::Right)
+                                .with_justify_content(afterhours::ui::JustifyContent::Center)
+                                .with_roundness(0.0f)
+                                .with_render_layer(51)
+                                .with_skip_tabbing(true));
+                    }
                     
                     // Handle item click: dispatch action via lastClickedResult
                     if (itemResult && item.enabled) {
