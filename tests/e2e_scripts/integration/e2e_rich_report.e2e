@@ -1,0 +1,196 @@
+# Integration Test: Rich report with tables, shapes, hyperlinks, bookmarks
+# Exercises: tables, drawings, hyperlinks, bookmarks, page breaks, mixed content
+
+# --- Title page ---
+key CTRL+E
+menu_open Format
+menu_select "Title"
+wait 1
+type "Annual Performance Report"
+key ENTER
+
+menu_open Format
+menu_select "Subtitle"
+wait 1
+type "Fiscal Year 2025-2026"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+key CTRL+L
+key ENTER
+type "Prepared by: Operations Division"
+key ENTER
+type "Classification: Internal Use Only"
+
+# --- Page break before content ---
+menu_open Insert
+menu_select "Page Break"
+wait 1
+
+# --- Executive Summary with bookmark ---
+menu_open Format
+menu_select "Heading 1"
+wait 1
+type "Executive Summary"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+
+# Add a bookmark at this heading
+menu_open Insert
+menu_select "Bookmark..."
+wait 1
+
+type "Total revenue grew 18% year-over-year, exceeding the target of 15%. Operating expenses were held to a 7% increase through process automation and vendor consolidation."
+key ENTER
+key ENTER
+
+# --- Insert text that will become a hyperlink ---
+type "Full financial data available at company portal"
+key ENTER
+key ENTER
+
+# Use find to select "company portal" then hyperlink it
+set_find_term company portal
+wait 1
+menu_open Edit
+menu_select "Find Next"
+wait 1
+validate has_selection=true
+
+menu_open Insert
+menu_select "Hyperlink..."
+wait 1
+
+# Move to end of document to continue typing
+key CTRL+END
+wait 1
+
+# --- Department Performance with table ---
+menu_open Format
+menu_select "Heading 1"
+wait 1
+type "Department Performance"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+type "The following table summarizes key metrics by department:"
+key ENTER
+
+# Insert a 3x3 table
+menu_open Insert
+menu_select "Table..."
+wait 1
+
+key ENTER
+
+# --- Add a chart placeholder (shape) ---
+type "Figure 1: Revenue Growth Trend"
+key ENTER
+
+menu_open Insert
+menu_select "Shape: Rectangle"
+wait 1
+
+menu_open Insert
+menu_select "Shape: Arrow"
+wait 1
+
+key ENTER
+key ENTER
+
+# --- Risk Assessment section ---
+menu_open Format
+menu_select "Heading 1"
+wait 1
+type "Risk Assessment"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+
+# Text with inline bold emphasis
+type "Three "
+key CTRL+B
+type "critical risks"
+key CTRL+B
+type " were identified during the review period:"
+key ENTER
+
+menu_open Format
+menu_select "Numbered List"
+wait 1
+type "Supply chain disruption probability increased to 23%"
+key ENTER
+type "Cybersecurity threat level elevated following industry-wide incidents"
+key ENTER
+type "Regulatory changes in EU markets requiring compliance updates"
+menu_open Format
+menu_select "Numbered List"
+wait 1
+key ENTER
+key ENTER
+
+# --- Insert a footnote ---
+menu_open Insert
+menu_select "Footnote"
+wait 1
+
+key ENTER
+
+# --- Conclusion ---
+menu_open Format
+menu_select "Heading 1"
+wait 1
+type "Conclusion and Next Steps"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+type "The organization is well-positioned for continued growth. Priority investments in automation and cybersecurity will be critical for maintaining momentum through FY2027."
+
+wait 2
+
+# === Final document validation ===
+validate is_dirty=true
+
+# Content checks
+validate text_contains_Annual Performance Report=true
+validate text_contains_Fiscal Year 2025-2026=true
+validate text_contains_Executive Summary=true
+validate text_contains_revenue grew 18%=true
+validate text_contains_company portal=true
+validate text_contains_Department Performance=true
+validate text_contains_Risk Assessment=true
+validate text_contains_critical risks=true
+validate text_contains_Supply chain disruption=true
+validate text_contains_Cybersecurity threat=true
+validate text_contains_Conclusion and Next Steps=true
+validate text_contains_FY2027=true
+
+# Structural checks - embedded objects
+validate has_table=true
+validate table_count=1
+validate has_drawing=true
+validate drawing_count=2
+validate has_hyperlink=true
+validate hyperlink_count=1
+validate has_bookmark=true
+validate bookmark_count=1
+validate has_footnote=true
+validate footnote_count=1
+
+# Formatting at caret (end of doc, should be normal)
+validate bold=false
+validate paragraph_style=normal
+validate alignment=left
+
+screenshot e2e_rich_report

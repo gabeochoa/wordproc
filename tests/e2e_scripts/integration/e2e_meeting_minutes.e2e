@@ -1,0 +1,140 @@
+# Integration Test: Meeting minutes with track changes, comments, undo/redo
+# Exercises: track changes, comments, undo, redo, find/replace, formatting
+
+# --- Header ---
+key CTRL+B
+type "MEETING MINUTES"
+key CTRL+B
+key ENTER
+type "Project Alpha - Sprint Review"
+key ENTER
+type "Date: February 10, 2026 | Location: Conference Room B"
+key ENTER
+key ENTER
+
+# --- Attendees ---
+key CTRL+B
+type "Attendees:"
+key CTRL+B
+key ENTER
+type "Sarah Chen (PM), David Park (Lead Dev), Maria Lopez (QA), Tom Wilson (Design)"
+key ENTER
+key ENTER
+
+# --- Agenda items ---
+key CTRL+B
+type "Agenda:"
+key CTRL+B
+key ENTER
+
+menu_open Format
+menu_select "Numbered List"
+wait 1
+type "Sprint velocity review"
+key ENTER
+type "Demo of authentication module"
+key ENTER
+type "QA test results discussion"
+key ENTER
+type "Next sprint planning"
+
+# End list
+menu_open Format
+menu_select "Numbered List"
+wait 1
+key ENTER
+key ENTER
+
+# --- Discussion section ---
+key CTRL+B
+type "Discussion Notes:"
+key CTRL+B
+key ENTER
+key ENTER
+type "The team completed 34 of 40 story points this sprint. David demonstrated the new OAuth2 integration which passed all security audits."
+key ENTER
+key ENTER
+type "Maria reported 3 critical bugs in the payment module. All have been assigned to the next sprint."
+key ENTER
+key ENTER
+
+# --- Action items ---
+key CTRL+B
+type "Action Items:"
+key CTRL+B
+key ENTER
+
+menu_open Format
+menu_select "Bulleted List"
+wait 1
+type "David: Fix payment validation by Feb 14"
+key ENTER
+type "Sarah: Update roadmap with revised timeline"
+key ENTER
+type "Maria: Complete regression test suite for auth module"
+key ENTER
+type "Tom: Deliver mockups for settings page redesign"
+
+menu_open Format
+menu_select "Bulleted List"
+wait 1
+key ENTER
+key ENTER
+
+# --- Enable track changes and make an edit ---
+menu_open Edit
+menu_select "Track Changes"
+wait 1
+validate track_changes_enabled=true
+
+type "AMENDMENT: Budget increase approved for Q2 tooling."
+
+wait 1
+validate revision_count=51
+
+# --- Add a comment on selected text ---
+# Select the word "AMENDMENT"
+key HOME
+wait 1
+
+# Add a comment
+add_comment "Needs director sign-off before finalizing"
+wait 1
+validate comment_count=1
+
+# --- Use find to locate specific text ---
+set_find_term OAuth2
+wait 1
+menu_open Edit
+menu_select "Find Next"
+wait 1
+validate has_selection=true
+validate selected_text=OAuth2
+
+# --- Now accept all changes ---
+menu_open Edit
+menu_select "Accept All Changes"
+wait 1
+validate revision_count=0
+
+wait 2
+
+# === Final document validation ===
+validate is_dirty=true
+validate track_changes_enabled=true
+
+# Content checks
+validate text_contains_MEETING MINUTES=true
+validate text_contains_Project Alpha=true
+validate text_contains_Sarah Chen (PM)=true
+validate text_contains_Sprint velocity review=true
+validate text_contains_OAuth2 integration=true
+validate text_contains_3 critical bugs=true
+validate text_contains_David: Fix payment validation=true
+validate text_contains_AMENDMENT: Budget increase=true
+
+# Structural checks
+validate comment_count=1
+
+screenshot e2e_meeting_minutes
+

@@ -1,0 +1,136 @@
+# Integration Test: Build research notes with headings, lists, footnotes
+# Exercises: paragraph styles, bullet/numbered lists, footnotes, formatting
+
+# --- Title ---
+menu_open Format
+menu_select "Title"
+wait 1
+type "Climate Impact Assessment: Urban Heat Islands"
+key ENTER
+
+# --- Subtitle ---
+menu_open Format
+menu_select "Subtitle"
+wait 1
+type "A Literature Review and Data Analysis"
+key ENTER
+
+# --- Back to Normal for body ---
+menu_open Format
+menu_select "Normal"
+wait 1
+key ENTER
+
+# --- Section 1: Heading ---
+menu_open Format
+menu_select "Heading 1"
+wait 1
+type "1. Introduction"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+type "Urban heat islands represent one of the most significant environmental challenges facing modern cities. This study examines data from 42 metropolitan areas across three continents."
+key ENTER
+key ENTER
+
+# Insert a footnote for the citation
+menu_open Insert
+menu_select "Footnote"
+wait 1
+
+# --- Section 2 with bullet list ---
+key ENTER
+menu_open Format
+menu_select "Heading 2"
+wait 1
+type "2. Key Findings"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+
+# Bulleted list
+menu_open Format
+menu_select "Bulleted List"
+wait 1
+type "Average temperature differential: 3.2C above surrounding rural areas"
+key ENTER
+type "Peak differential recorded during summer months: up to 8.1C"
+key ENTER
+type "Nighttime temperatures showed 40% greater differential than daytime"
+key ENTER
+type "Green infrastructure reduced local temperatures by 1.5-2.8C"
+key ENTER
+
+# End list
+menu_open Format
+menu_select "Bulleted List"
+wait 1
+
+# --- Section 3 with numbered list ---
+key ENTER
+menu_open Format
+menu_select "Heading 2"
+wait 1
+type "3. Recommendations"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+
+menu_open Format
+menu_select "Numbered List"
+wait 1
+type "Increase urban tree canopy coverage to 30% minimum"
+key ENTER
+type "Mandate cool-roof materials for new commercial construction"
+key ENTER
+type "Establish urban green corridors connecting existing parks"
+key ENTER
+type "Implement pervious pavement standards for parking areas"
+key ENTER
+
+# End list
+menu_open Format
+menu_select "Numbered List"
+wait 1
+
+# --- Conclusion ---
+key ENTER
+menu_open Format
+menu_select "Heading 1"
+wait 1
+type "4. Conclusion"
+key ENTER
+
+menu_open Format
+menu_select "Normal"
+wait 1
+type "The evidence strongly supports aggressive urban greening policies. Cities that implemented comprehensive heat mitigation strategies saw measurable improvements within 3-5 years."
+
+wait 2
+
+# === Final document validation ===
+validate is_dirty=true
+
+# Content checks
+validate text_contains_Climate Impact Assessment=true
+validate text_contains_Literature Review=true
+validate text_contains_1. Introduction=true
+validate text_contains_42 metropolitan areas=true
+validate text_contains_2. Key Findings=true
+validate text_contains_3.2C above surrounding=true
+validate text_contains_3. Recommendations=true
+validate text_contains_urban tree canopy=true
+validate text_contains_4. Conclusion=true
+validate text_contains_3-5 years=true
+
+# Structural checks
+validate footnote_count=1
+
+screenshot e2e_research_notes
+

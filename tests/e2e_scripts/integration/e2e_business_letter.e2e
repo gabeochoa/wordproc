@@ -1,0 +1,109 @@
+# Integration Test: Build a complete business letter from scratch
+# Exercises: alignment, bold, italic, multiple paragraphs, keyboard nav
+
+# --- Date line, right-aligned ---
+key CTRL+R
+type "February 12, 2026"
+key ENTER
+key ENTER
+
+# --- Sender address, left-aligned ---
+key CTRL+L
+key CTRL+B
+type "Acme Corporation"
+key CTRL+B
+key ENTER
+type "1234 Innovation Drive"
+key ENTER
+type "San Francisco, CA 94105"
+key ENTER
+key ENTER
+
+# --- Recipient ---
+type "Ms. Jane Smith"
+key ENTER
+type "Widget Industries"
+key ENTER
+type "5678 Commerce Blvd"
+key ENTER
+type "New York, NY 10001"
+key ENTER
+key ENTER
+
+# --- Subject line, bold and underlined ---
+key CTRL+B
+key CTRL+U
+type "RE: Partnership Proposal Q1 2026"
+key CTRL+B
+key CTRL+U
+key ENTER
+key ENTER
+
+# --- Body paragraph 1 ---
+type "Dear Ms. Smith,"
+key ENTER
+key ENTER
+type "Thank you for taking the time to meet with our team last Thursday. We were impressed by the "
+key CTRL+I
+type "innovative approach"
+key CTRL+I
+type " your company has taken in the logistics sector."
+key ENTER
+key ENTER
+
+# --- Body paragraph 2 ---
+type "As discussed, we would like to propose a joint venture targeting the European market. Our initial projections suggest a "
+key CTRL+B
+type "revenue increase of 35%"
+key CTRL+B
+type " within the first fiscal year."
+key ENTER
+key ENTER
+
+# --- Body paragraph 3 ---
+type "Please find the attached financial projections and market analysis. We look forward to your response by March 15, 2026."
+key ENTER
+key ENTER
+
+# --- Closing ---
+type "Sincerely,"
+key ENTER
+key ENTER
+key CTRL+B
+type "John A. Doe"
+key CTRL+B
+key ENTER
+type "VP of Business Development"
+key ENTER
+type "Acme Corporation"
+
+wait 2
+
+# === Final document validation ===
+validate line_count=26
+validate is_dirty=true
+
+# Key content checks
+validate text_contains_February 12, 2026=true
+validate text_contains_Acme Corporation=true
+validate text_contains_Ms. Jane Smith=true
+validate text_contains_RE: Partnership Proposal Q1 2026=true
+validate text_contains_Dear Ms. Smith,=true
+validate text_contains_innovative approach=true
+validate text_contains_revenue increase of 35%=true
+validate text_contains_March 15, 2026=true
+validate text_contains_Sincerely,=true
+validate text_contains_John A. Doe=true
+validate text_contains_VP of Business Development=true
+
+# Check the caret is at the end on the last line
+validate caret_row=25
+
+# Verify formatting at caret (last line is plain text)
+validate bold=false
+validate italic=false
+validate underline=false
+validate alignment=left
+
+screenshot e2e_business_letter
+
