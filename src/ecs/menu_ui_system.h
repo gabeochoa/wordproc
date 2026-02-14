@@ -148,15 +148,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             // Calculate button width using actual text measurement (matching original Win95 DrawMenuBar)
             int menuFontSize = 16;
             float buttonWidth = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+            float menuBarHeight = theme::layout::scale(theme::layout::MENU_BAR_HEIGHT);
             
             // Register menu label for E2E tests
             test_input::register_visible_text(menuDef.label);
             
             int headerId = 500 + static_cast<int>(menuIdx);
             
-            // Determine highlight: open OR hovered while another menu is open
+            // Determine highlight: open OR mouse hovering while another menu is open
+            // Use direct mouse position check (was_hot uses entity IDs, not MK IDs)
+            bool mouseOverHeader = afterhours::ui::is_mouse_inside(
+                ctx.mouse.pos, {headerX, headerY, buttonWidth, menuBarHeight});
             bool highlighted = isOpen;
-            if (!isOpen && anyMenuOpen && ctx.was_hot(headerId)) {
+            if (!isOpen && anyMenuOpen && mouseOverHeader) {
                 highlighted = true;
             }
             
@@ -165,7 +169,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_debug_name("menu_header_" + menuDef.label)
                     .with_label(menuDef.label)
                     .with_size(ComponentSize{pixels(buttonWidth), 
-                                            pixels(theme::layout::scale(theme::layout::MENU_BAR_HEIGHT))})
+                                            pixels(menuBarHeight)})
                     .with_absolute_position()
                     .with_translate(headerX, headerY)
                     .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
@@ -177,7 +181,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_bevel(highlighted ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
                                 toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
                     .with_render_layer(1));
-            
+
             // Handle header click: toggle this menu, close others
             if (headerResult) {
                 for (size_t j = 0; j < menu.menus.size(); ++j) {
@@ -188,7 +192,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
             
             // Handle hover-to-switch: when any menu is open and we hover a different header
-            if (anyMenuOpen && !isOpen && ctx.was_hot(headerId)) {
+            if (anyMenuOpen && !isOpen && mouseOverHeader) {
                 for (size_t j = 0; j < menu.menus.size(); ++j) {
                     menu.menus[j].open = (j == menuIdx);
                 }
@@ -304,8 +308,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     int itemId = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
                     float itemHeight = theme::layout::scale(20.0f);
                     
-                    // Determine hover highlight
-                    bool hovered = ctx.was_hot(itemId) && item.enabled;
+                    // Determine hover highlight using direct mouse position check
+                    // (was_hot uses entity IDs, not MK IDs, so it would never match)
+                    bool hovered = afterhours::ui::is_mouse_inside(
+                        ctx.mouse.pos, {dropdownX + 2.0f, itemY, maxWidth - 4.0f, itemHeight}) && item.enabled;
                     
                     auto itemResult = button(ctx, mk(entity, itemId),
                         ComponentConfig{}
@@ -342,32 +348,55 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
         
         // Close menus on click outside (if no header or item was interacted with)
-        // Use just_pressed (not just_released) to avoid closing menus on mouse-up
-        // after opening them on mouse-down in the same click gesture.
+        // Use direct mouse position checks against known rects instead of was_hot(),
+        // because was_hot() compares entity IDs but we only have MK IDs here.
         if (anyMenuOpen && !headerInteracted && !itemInteracted) {
             if (ctx.mouse.just_pressed) {
-                // Check if click was outside all menu areas
                 bool clickInMenu = false;
-                // Check header buttons
-                for (size_t i = 0; i < menu.menus.size(); ++i) {
-                    if (ctx.was_hot(500 + static_cast<int>(i))) { clickInMenu = true; break; }
-                }
-                // Check dropdown items  
-                if (!clickInMenu) {
-                    for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
-                        if (!menu.menus[menuIdx].open) continue;
-                        for (size_t itemIdx = 0; itemIdx < menu.menus[menuIdx].items.size(); ++itemIdx) {
-                            int id = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
-                            if (ctx.was_hot(id)) { clickInMenu = true; break; }
-                            int sepId = 10000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
-                            if (ctx.was_hot(sepId)) { clickInMenu = true; break; }
+                
+                // Check header button rects
+                {
+                    float hx = theme::layout::scale(4.0f);
+                    float hy = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT);
+                    int menuFontSize = 16;
+                    for (size_t i = 0; i < menu.menus.size(); ++i) {
+                        float bw = static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+                        float bh = theme::layout::scale(theme::layout::MENU_BAR_HEIGHT);
+                        if (afterhours::ui::is_mouse_inside(ctx.mouse.pos, {hx, hy, bw, bh})) {
+                            clickInMenu = true;
+                            break;
                         }
-                        // Also check dropdown container
-                        int containerId = 100 + static_cast<int>(menuIdx);
-                        if (ctx.was_hot(containerId)) { clickInMenu = true; }
-                        if (clickInMenu) break;
+                        hx += bw;
                     }
                 }
+                
+                // Check dropdown rects
+                if (!clickInMenu) {
+                    int menuFontSize = 16;
+                    for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
+                        if (!menu.menus[menuIdx].open) continue;
+                        // Compute dropdown rect (same as rendering logic above)
+                        float dx = theme::layout::scale(4.0f);
+                        for (size_t i = 0; i < menuIdx; ++i) {
+                            dx += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+                        }
+                        float dy = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + theme::layout::MENU_BAR_HEIGHT);
+                        float dh = 0;
+                        for (const auto& item : menu.menus[menuIdx].items) {
+                            dh += item.separator ? theme::layout::scale(8.0f) : theme::layout::scale(20.0f);
+                        }
+                        float dw = 150.0f;
+                        for (const auto& item : menu.menus[menuIdx].items) {
+                            float tw = static_cast<float>(item.label.length() * 7 + item.shortcut.length() * 7) + 50.0f;
+                            if (tw > dw) dw = tw;
+                        }
+                        if (afterhours::ui::is_mouse_inside(ctx.mouse.pos, {dx, dy, dw, dh + 4.0f})) {
+                            clickInMenu = true;
+                            break;
+                        }
+                    }
+                }
+                
                 if (!clickInMenu) {
                     for (auto& m : menu.menus) { m.open = false; }
                     menu.activeMenuIndex = -1;
@@ -756,107 +785,6 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     Settings::get().set_ui_scale(1.0f);
                     menu.uiScaleInputStr = "100";
                     toast_notify::success("UI scale reset to 100%");
-                }
-            }
-        }
-        
-        // Save As dialog
-        if (menu.showSaveAsDialog) {
-            constexpr int SAVEAS_MODAL_ID = 50006;
-            auto result = afterhours::modal(ctx, mk(entity, SAVEAS_MODAL_ID),
-                menu.showSaveAsDialog,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(450), afterhours::ui::h720(180))
-                    .with_title("Save As"));
-            
-            if (result) {
-                using namespace afterhours::ui;
-                using namespace afterhours::ui::imm;
-                constexpr int CONTENT_LAYER = 1001;
-                
-                // Prompt label
-                div(ctx, mk(result.ent(), 0),
-                    ComponentConfig{}
-                        .with_label("Filename (path relative to current dir or absolute):")
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
-                        .with_render_layer(CONTENT_LAYER));
-                
-                // Text input
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    menu.saveAsInputStr,
-                    ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(32)})
-                        .with_background(Theme::Usage::Surface)
-                        .with_render_layer(CONTENT_LAYER));
-                
-                // Button row
-                auto buttonRow = div(ctx, mk(result.ent(), 2),
-                    ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(44)})
-                        .with_flex_direction(FlexDirection::Row)
-                        .with_justify_content(JustifyContent::Center)
-                        .with_align_items(AlignItems::Center)
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
-                        .with_render_layer(CONTENT_LAYER));
-                
-                if (button(ctx, mk(buttonRow.ent(), 0),
-                    ComponentConfig{}
-                        .with_label("Save")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_background(Theme::Usage::Primary)
-                        .with_margin(Margin{.right = DefaultSpacing::small()})
-                        .with_render_layer(CONTENT_LAYER))) {
-                    // Save to new path
-                    std::string newPath = menu.saveAsInputStr;
-                    if (!newPath.empty()) {
-                        // Query for DocumentComponent and LayoutComponent
-                        auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                               .whereHasComponent<DocumentComponent>()
-                                               .gen();
-                        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
-                                                   .whereHasComponent<LayoutComponent>()
-                                                   .gen();
-                        
-                        if (!docEntities.empty() && !layoutEntities.empty()) {
-                            auto& docComp = docEntities[0].get().get<DocumentComponent>();
-                            auto& layoutComp = layoutEntities[0].get().get<LayoutComponent>();
-                            
-                            // Sync layout settings to document settings before save
-                            docComp.docSettings.textStyle = docComp.buffer.textStyle();
-                            docComp.docSettings.pageSettings.mode = layoutComp.pageMode;
-                            docComp.docSettings.pageSettings.pageWidth = layoutComp.pageWidth;
-                            docComp.docSettings.pageSettings.pageHeight = layoutComp.pageHeight;
-                            docComp.docSettings.pageSettings.pageMargin = layoutComp.pageMargin;
-                            docComp.docSettings.pageSettings.lineWidthLimit = layoutComp.lineWidthLimit;
-                            
-                            // Save document
-                            auto saveResult = saveDocumentEx(docComp.buffer, docComp.docSettings, newPath);
-                            if (saveResult.success) {
-                                docComp.isDirty = false;
-                                docComp.filePath = newPath;
-                                if (!docComp.autoSavePath.empty()) {
-                                    std::filesystem::remove(docComp.autoSavePath);
-                                }
-                                Settings::get().add_recent_file(newPath);
-                                menu.menus = menu_setup::createMenuBar(Settings::get().get_recent_files());
-                                menu.recentFilesCount = static_cast<int>(Settings::get().get_recent_files().size());
-                                toast_notify::success("Saved as: " + std::filesystem::path(newPath).filename().string());
-                            } else {
-                                toast_notify::error("Save failed: " + saveResult.error);
-                            }
-                        }
-                    }
-                    menu.saveAsInputStr.clear();
-                    menu.showSaveAsDialog = false;
-                }
-                
-                if (button(ctx, mk(buttonRow.ent(), 1),
-                    ComponentConfig{}
-                        .with_label("Cancel")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_render_layer(CONTENT_LAYER))) {
-                    menu.saveAsInputStr.clear();
-                    menu.showSaveAsDialog = false;
                 }
             }
         }
