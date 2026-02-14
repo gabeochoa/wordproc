@@ -1,0 +1,14 @@
+# Test: Insert > Wrap Text
+# Validates menu item exists and can be selected (no-op handler)
+
+type "Some text"
+wait 1
+
+menu_open Insert
+menu_select "Wrap Text"
+wait 1
+
+# Text should be unchanged
+validate text_contains_Some text=true
+
+screenshot e2e_menu_insert_wrap_text

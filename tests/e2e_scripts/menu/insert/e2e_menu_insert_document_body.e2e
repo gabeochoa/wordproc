@@ -1,0 +1,14 @@
+# Test: Insert > Document Body
+# Validates menu item exists and can be selected (no-op handler)
+
+type "Some text"
+wait 1
+
+menu_open Insert
+menu_select "Document Body"
+wait 1
+
+# Text should be unchanged since this is currently unhandled
+validate text_contains_Some text=true
+
+screenshot e2e_menu_insert_document_body

@@ -326,6 +326,8 @@ static void setupCallbacksEx(
             if (menuComp.showAboutDialog) return "About";
             if (menuComp.showFindDialog) return "Find";
             if (menuComp.showPageSetup) return "PageSetup";
+            if (menuComp.showSettingsDialog) return "Settings";
+            if (menuComp.showWordCountDialog) return "WordCount";
             return "false";
         }
         if (prop == "help_window_visible") return menuComp.showHelpWindow ? "true" : "false";
@@ -336,7 +338,8 @@ static void setupCallbacksEx(
         }
         
         // Outline properties
-        if (prop == "outline_visible") return layoutComp.showLineNumbers ? "true" : "false";
+        if (prop == "outline_visible") return layoutComp.showOutline ? "true" : "false";
+        if (prop == "line_numbers_visible") return layoutComp.showLineNumbers ? "true" : "false";
         if (prop == "outline_items") {
             auto outline = buffer.getOutline();
             return std::to_string(outline.size());

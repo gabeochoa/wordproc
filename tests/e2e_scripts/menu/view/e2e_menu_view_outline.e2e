@@ -1,0 +1,17 @@
+# Test: View > Show Outline
+# Validates toggling the outline panel via menu
+
+validate outline_visible=false
+
+menu_open View
+menu_select "Show Outline"
+wait 1
+validate outline_visible=true
+
+# Toggle off
+menu_open View
+menu_select "Show Outline"
+wait 1
+validate outline_visible=false
+
+screenshot e2e_menu_view_outline

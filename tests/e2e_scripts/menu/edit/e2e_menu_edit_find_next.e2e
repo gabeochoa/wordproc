@@ -1,0 +1,17 @@
+# Test: Edit > Find Next
+# Validates Find Next selects the next occurrence of the search term
+
+type "apple banana apple"
+wait 1
+
+set_find_term apple
+wait 1
+
+menu_open Edit
+menu_select "Find Next"
+wait 1
+
+validate has_selection=true
+validate selected_text=apple
+
+screenshot e2e_menu_edit_find_next

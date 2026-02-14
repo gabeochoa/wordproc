@@ -1,0 +1,23 @@
+# Test: Insert > Remove Hyperlink
+# Validates adding and then removing a hyperlink
+
+type "click here"
+select_all
+wait 1
+
+menu_open Insert
+menu_select "Hyperlink..."
+wait 1
+validate has_hyperlink=true
+validate hyperlink_count=1
+
+# Move caret into the hyperlinked text
+key HOME
+wait 1
+
+menu_open Insert
+menu_select "Remove Hyperlink"
+wait 1
+validate hyperlink_count=0
+
+screenshot e2e_menu_insert_remove_hyperlink

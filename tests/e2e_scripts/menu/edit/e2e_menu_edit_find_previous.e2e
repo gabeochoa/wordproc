@@ -1,0 +1,23 @@
+# Test: Edit > Find Previous
+# Validates Find Previous selects the previous occurrence of the search term
+
+type "apple banana apple"
+wait 1
+
+set_find_term apple
+wait 1
+
+# Find Next first to move past the first occurrence
+menu_open Edit
+menu_select "Find Next"
+wait 1
+
+# Now Find Previous should go back to an earlier occurrence
+menu_open Edit
+menu_select "Find Previous"
+wait 1
+
+validate has_selection=true
+validate selected_text=apple
+
+screenshot e2e_menu_edit_find_previous

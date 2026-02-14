@@ -1,0 +1,11 @@
+# Test: Insert > Page Number
+# Validates page number placeholder is inserted
+
+menu_open Insert
+menu_select "Page Number"
+wait 1
+
+validate text_contains_[PAGE #]=true
+validate is_dirty=true
+
+screenshot e2e_menu_insert_page_number

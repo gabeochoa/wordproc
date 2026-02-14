@@ -372,6 +372,36 @@ struct HandleReplaceTextCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'set_find_term text' - sets the search term for Find Next/Previous
+struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
+  ecs::MenuComponent *menu_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("set_find_term"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("set_find_term requires search text");
+      return;
+    }
+    if (!menu_comp) {
+      cmd.fail("menu_comp not set");
+      return;
+    }
+
+    std::string term = cmd.args[0];
+    for (size_t i = 1; i < cmd.args.size(); ++i)
+      term += " " + cmd.args[i];
+    term = strip_quotes(term);
+
+    menu_comp->lastSearchTerm = term;
+    menu_comp->findInputStr = term;
+    std::strncpy(menu_comp->findInputBuffer, term.c_str(),
+                 sizeof(menu_comp->findInputBuffer) - 1);
+    cmd.consume();
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -435,6 +465,10 @@ inline void register_app_commands(
   auto replace_txt = std::make_unique<HandleReplaceTextCommand>();
   replace_txt->doc_comp = doc_comp;
   sm.register_update_system(std::move(replace_txt));
+
+  auto set_find = std::make_unique<HandleSetFindTermCommand>();
+  set_find->menu_comp = menu_comp;
+  sm.register_update_system(std::move(set_find));
 
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
   sm.register_update_system(std::move(file_dialog_set));

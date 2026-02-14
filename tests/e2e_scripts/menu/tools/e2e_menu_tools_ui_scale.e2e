@@ -1,0 +1,10 @@
+# Test: Tools > UI Scale...
+# Validates the settings dialog opens when selecting UI Scale
+
+menu_open Tools
+menu_select "UI Scale..."
+wait 1
+
+validate dialog_open=Settings
+
+screenshot e2e_menu_tools_ui_scale

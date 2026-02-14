@@ -1,0 +1,22 @@
+# Test: Edit > Reject All Changes
+# Validates rejecting changes restores the baseline text
+
+type "baseline"
+wait 1
+
+menu_open Edit
+menu_select "Track Changes"
+wait 1
+validate track_changes_enabled=true
+
+type " extra"
+wait 1
+validate revision_count=6
+
+menu_open Edit
+menu_select "Reject All Changes"
+wait 1
+validate revision_count=0
+validate text=baseline
+
+screenshot e2e_menu_edit_reject_changes

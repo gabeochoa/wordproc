@@ -1,0 +1,10 @@
+# Test: Help > About Wordproc
+# Validates the about dialog opens when selecting About
+
+menu_open Help
+menu_select "About Wordproc"
+wait 1
+
+validate dialog_open=About
+
+screenshot e2e_menu_help_about

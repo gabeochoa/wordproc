@@ -1,0 +1,29 @@
+# Test: Insert > All Shape types
+# Validates every shape type can be inserted via menu
+
+menu_open Insert
+menu_select "Shape: Line"
+wait 1
+validate drawing_count=1
+
+menu_open Insert
+menu_select "Shape: Ellipse"
+wait 1
+validate drawing_count=2
+
+menu_open Insert
+menu_select "Shape: Arrow"
+wait 1
+validate drawing_count=3
+
+menu_open Insert
+menu_select "Shape: Rounded Rect"
+wait 1
+validate drawing_count=4
+
+menu_open Insert
+menu_select "Shape: Triangle"
+wait 1
+validate drawing_count=5
+
+screenshot e2e_menu_insert_shapes_all
