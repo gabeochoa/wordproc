@@ -133,6 +133,22 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             if (m.open) { anyMenuOpen = true; break; }
         }
         
+        // When a dropdown is open, add an input gate to block clicks on
+        // lower-layer entities (e.g. the editor area). Without this,
+        // HandleClicks processes entities in creation order and a layer-0
+        // editor entity can steal 'active' before the layer-51 dropdown item.
+        if (anyMenuOpen) {
+            ctx.add_input_gate("menu_dropdown", [](afterhours::EntityID id) {
+                auto opt = afterhours::ui::UICollectionHolder::getEntityForID(id);
+                if (!opt.has_value()) return false;
+                auto& e = opt.asE();
+                if (!e.has<afterhours::ui::UIComponent>()) return false;
+                return e.get<afterhours::ui::UIComponent>().render_layer >= 1;
+            });
+        } else {
+            ctx.remove_input_gate("menu_dropdown");
+        }
+        
         // Track X position for header buttons
         float headerX = theme::layout::scale(4.0f);
         float headerY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT);
@@ -578,6 +594,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     menu.templateInputStr,
                     ComponentConfig{}
+                        .with_debug_name("template_input")
                         .with_size(ComponentSize{percent(1.0f), h720(32)})
                         .with_background(Theme::Usage::Surface)
                         .with_render_layer(CONTENT_LAYER));
@@ -594,6 +611,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 if (button(ctx, mk(buttonRow.ent(), 0),
                     ComponentConfig{}
+                        .with_debug_name("template_ok")
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)

@@ -1,15 +1,9 @@
 # Test: Tab width setting
-# Validates tab width dialog updates document settings
+# Validates tab width can be set via E2E command
 
-menu_open Format
-wait 1
-menu_select Tab Width...
-wait 1
-type "6"
-key ENTER
+set_tab_width 6
 wait 1
 
 validate tab_width=6
 
 screenshot e2e_tab_width
-

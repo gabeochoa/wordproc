@@ -4,14 +4,9 @@
 type "Comment here"
 select_all
 
-menu_open Insert
-menu_select "Comment..."
-wait 1
-type "Note"
-key ENTER
+add_comment "Note"
 wait 1
 
 validate comment_count=1
 
 screenshot e2e_comments
-

@@ -1,5 +1,5 @@
 # Test: Hyperlink creation
-# Validates hyperlink can be created
+# Validates hyperlink can be created on selected text
 
 # Type link text
 type "Visit our website"
@@ -9,15 +9,10 @@ wait 2
 select_all
 wait 2
 
-# Open Insert menu and select Hyperlink
+# Insert hyperlink (applies directly to selection with default URL)
 menu_open Insert
 wait 2
 menu_select "Hyperlink..."
-wait 2
-
-# Enter URL in dialog
-type "https://example.com"
-key ENTER
 wait 2
 
 # Validate hyperlink was created
@@ -25,4 +20,3 @@ validate has_hyperlink=true
 validate hyperlink_url=https://example.com
 
 screenshot e2e_hyperlink
-

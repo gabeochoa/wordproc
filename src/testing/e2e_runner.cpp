@@ -199,6 +199,32 @@ static void setupCallbacksEx(
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
         if (prop == "caret_row") return std::to_string(buffer.caret().row);
         if (prop == "caret_col") return std::to_string(buffer.caret().column);
+        if (prop == "superscript") return style.superscript ? "true" : "false";
+        if (prop == "subscript") return style.subscript ? "true" : "false";
+        
+        // Text statistics
+        if (prop == "word_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.words);
+        }
+        if (prop == "char_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.characters);
+        }
+        if (prop == "paragraph_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.paragraphs);
+        }
+        if (prop == "sentence_count") {
+            TextStats stats = buffer.stats();
+            return std::to_string(stats.sentences);
+        }
+        
+        // Text content search: validate text_contains_NEEDLE=true
+        if (prop.length() > 14 && prop.substr(0, 14) == "text_contains_") {
+            std::string needle = prop.substr(14);
+            return buffer.getText().find(needle) != std::string::npos ? "true" : "false";
+        }
         
         // Menu properties
         if (prop == "menu_open") {
@@ -409,6 +435,16 @@ static void setupCallbacksEx(
         
         // Extended caret properties
         if (prop == "caret_line") return std::to_string(buffer.caret().row + 1);  // 1-indexed
+        // caret_pos_greater_than_N: returns "true" if absolute caret pos > N
+        if (prop.length() > 23 && prop.substr(0, 23) == "caret_pos_greater_than_") {
+            int threshold = std::stoi(prop.substr(23));
+            std::size_t pos = 0;
+            for (std::size_t i = 0; i < buffer.caret().row && i < buffer.lineCount(); ++i) {
+                pos += buffer.lineSpan(i).length + 1;
+            }
+            pos += buffer.caret().column;
+            return static_cast<int>(pos) > threshold ? "true" : "false";
+        }
         if (prop == "caret_pos") {
             // Calculate absolute position
             std::size_t pos = 0;

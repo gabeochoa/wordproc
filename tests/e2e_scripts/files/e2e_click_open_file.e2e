@@ -1,0 +1,32 @@
+# Test: Click-based File > Open (full UI interaction)
+# Uses click_text to interact with menu buttons instead of menu_open/menu_select
+
+# Queue a path for the native dialog (test mode intercepts it)
+file_dialog_set_path test_files/e2e/hello.txt
+wait 1
+
+# Click the File menu header to open the dropdown
+click_text "File"
+wait 3
+
+# Release the mouse so the next click registers as a fresh press
+mouse_up
+wait 1
+
+# The dropdown should now be visible
+expect_text "Open..."
+
+# Click Open... to trigger the file dialog
+click_text "Open..."
+wait 5
+
+# Release mouse for clean state
+mouse_up
+wait 2
+
+# Verify the file was loaded
+validate file_path=test_files/e2e/hello.txt
+validate is_dirty=false
+expect_text "Hello, World!"
+
+screenshot e2e_click_open_file

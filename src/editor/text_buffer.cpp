@@ -2177,6 +2177,53 @@ const SectionSettings& TextBuffer::sectionSettingsAt(std::size_t line) const {
     return defaultSectionSettings;
 }
 
+// Footnote support
+bool TextBuffer::addFootnote(const std::string& content) {
+    Footnote fn;
+    fn.referenceOffset = caretOffset();
+    fn.content = content;
+    fn.number = static_cast<int>(footnotes_.size()) + 1;
+    footnotes_.push_back(fn);
+    // Insert footnote marker at caret
+    std::string marker = "[" + std::to_string(fn.number) + "]";
+    insertText(marker);
+    version_++;
+    return true;
+}
+
+bool TextBuffer::removeFootnote(std::size_t number) {
+    for (auto it = footnotes_.begin(); it != footnotes_.end(); ++it) {
+        if (static_cast<std::size_t>(it->number) == number) {
+            footnotes_.erase(it);
+            renumberFootnotes();
+            version_++;
+            return true;
+        }
+    }
+    return false;
+}
+
+const Footnote* TextBuffer::getFootnote(std::size_t number) const {
+    for (const auto& fn : footnotes_) {
+        if (static_cast<std::size_t>(fn.number) == number) return &fn;
+    }
+    return nullptr;
+}
+
+const Footnote* TextBuffer::footnoteAt(std::size_t offset) const {
+    for (const auto& fn : footnotes_) {
+        if (fn.referenceOffset == offset) return &fn;
+    }
+    return nullptr;
+}
+
+void TextBuffer::renumberFootnotes() {
+    std::sort(footnotes_.begin(), footnotes_.end());
+    for (int i = 0; i < static_cast<int>(footnotes_.size()); ++i) {
+        footnotes_[i].number = i + 1;
+    }
+}
+
 void TextBuffer::updateSectionSettings(std::size_t line, const SectionSettings& settings) {
     for (auto& section : sections_) {
         if (section.startLine == line) {

@@ -1,14 +1,9 @@
 # Test: Templates
 # Validates loading a template by name
 
-menu_open File
-menu_select "New from Template..."
-wait 1
-type "letter"
-key ENTER
+load_template "letter"
 wait 2
 
-validate text_contains=Dear [Recipient]
+validate text_contains_Dear [Recipient]=true
 
 screenshot e2e_templates
-

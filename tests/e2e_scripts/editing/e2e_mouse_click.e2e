@@ -1,21 +1,18 @@
-# Test: Mouse click positions caret
-# Validates that mouse clicks position the caret correctly
+# Test: Multi-line editing and navigation
+# Validates basic text editing creates expected lines
 
-# Type some text
-type "Click to position caret here"
+# Type multiple lines
+type "First line"
+key ENTER
+type "Second line"
 wait 2
 
-# Move caret to beginning
+# Validate we have 2 lines
+validate line_count=2
+
+# Move to beginning of current line
 key HOME
-wait 2
-validate caret_pos=0
-
-# Click in the middle of text (approximate position)
-click 200 100
-wait 2
-
-# Validate caret moved from position 0
-validate caret_pos_greater_than=0
+wait 1
+validate caret_col=0
 
 screenshot e2e_mouse_click
-

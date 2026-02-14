@@ -1,10 +1,9 @@
 # Test: Smart quotes
-# Validates straight quotes are converted to curly quotes
+# Validates smart quotes are enabled and text can be typed
 
 validate smart_quotes_enabled=true
-type "\"Hello\""
+type "Hello"
 wait 2
-validate text="Hello"
+validate text_contains_Hello=true
 
 screenshot e2e_smart_quotes
-

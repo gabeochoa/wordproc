@@ -1588,10 +1588,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 }
                 case 22:  // Footnote
                 {
-                    // Insert footnote marker as placeholder
-                    doc.buffer.insertText("[1]");
-                    doc.isDirty = true;
-                    toast_notify::info("Footnote marker inserted");
+                    // Add footnote with content and insert marker
+                    if (doc.buffer.addFootnote("")) {
+                        doc.isDirty = true;
+                        toast_notify::info("Footnote inserted");
+                    } else {
+                        toast_notify::error("Failed to insert footnote");
+                    }
                     break;
                 }
                 case 25:  // Header

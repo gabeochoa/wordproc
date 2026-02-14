@@ -14,6 +14,15 @@ namespace e2e_commands {
 
 using namespace afterhours;
 
+// Strip surrounding double-quotes from a string (the default E2E parser
+// doesn't recognise menu_open / menu_select as quoted-arg commands, so
+// the quotes end up in the argument list).
+static inline std::string strip_quotes(const std::string &s) {
+    if (s.size() >= 2 && s.front() == '"' && s.back() == '"')
+        return s.substr(1, s.size() - 2);
+    return s;
+}
+
 // Handle 'menu_open Menu' - opens a menu by name
 struct HandleMenuOpenCommand : System<testing::PendingE2ECommand> {
   ecs::MenuComponent *menu_comp = nullptr;
@@ -31,7 +40,7 @@ struct HandleMenuOpenCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    const auto &menu_name = cmd.arg(0);
+    const std::string menu_name = strip_quotes(cmd.arg(0));
     
     // Close any currently open menus first
     for (auto &menu : menu_comp->menus) {
@@ -68,11 +77,12 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    // Join all arguments to support multi-word menu items
+    // Join all arguments to support multi-word menu items, stripping quotes
     std::string item_name = cmd.args[0];
     for (size_t i = 1; i < cmd.args.size(); ++i) {
       item_name += " " + cmd.args[i];
     }
+    item_name = strip_quotes(item_name);
     
     // Debug: Check if any menu is open
     bool anyOpen = false;
@@ -209,6 +219,118 @@ struct HandleOpenFileCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'mouse_up' - releases the mouse button (needed between sequential click_text calls
+// because simulate_click leaves left_down=true and BeginUIContextManager derives just_pressed
+// from the false→true transition)
+struct HandleMouseUpCommand : System<testing::PendingE2ECommand> {
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("mouse_up"))
+      return;
+    testing::test_input::simulate_mouse_release();
+    cmd.consume();
+  }
+};
+
+// Handle 'load_template name' - directly loads a template, bypassing the dialog
+struct HandleLoadTemplateCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("load_template"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("load_template requires template name");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+
+    std::string name = strip_quotes(cmd.arg(0));
+    for (auto &ch : name) ch = static_cast<char>(std::tolower(ch));
+    std::filesystem::path templatePath =
+        std::filesystem::current_path() / "resources/templates" / (name + ".txt");
+    if (std::filesystem::exists(templatePath)) {
+      std::ifstream ifs(templatePath);
+      std::stringstream buf;
+      buf << ifs.rdbuf();
+      doc_comp->buffer.setText(buf.str());
+      doc_comp->isDirty = true;
+      cmd.consume();
+    } else {
+      cmd.fail("Template not found: " + templatePath.string());
+    }
+  }
+};
+
+// Handle 'add_comment text' - directly adds a comment to the document
+struct HandleAddCommentCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("add_comment"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("add_comment requires comment text");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+
+    // Join all args and strip quotes
+    std::string text = cmd.args[0];
+    for (size_t i = 1; i < cmd.args.size(); ++i)
+      text += " " + cmd.args[i];
+    text = strip_quotes(text);
+
+    Comment comment;
+    comment.text = text;
+    comment.author = "Test";
+    comment.createdAt = std::time(nullptr);
+    comment.startOffset = doc_comp->buffer.caret().column;
+    comment.endOffset = comment.startOffset;
+    if (doc_comp->buffer.hasSelection()) {
+      comment.startOffset = doc_comp->buffer.selectionStart().column;
+      comment.endOffset = doc_comp->buffer.selectionEnd().column;
+    }
+    doc_comp->comments.push_back(comment);
+    cmd.consume();
+  }
+};
+
+// Handle 'set_tab_width N' - directly sets tab width
+struct HandleSetTabWidthCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("set_tab_width"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("set_tab_width requires a number");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+
+    int width = std::atoi(cmd.arg(0).c_str());
+    if (width >= 1 && width <= 16) {
+      doc_comp->docSettings.tabWidth = width;
+      cmd.consume();
+    } else {
+      cmd.fail("Tab width must be 1-16, got: " + cmd.arg(0));
+    }
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -253,6 +375,21 @@ inline void register_app_commands(
   auto open_file = std::make_unique<HandleOpenFileCommand>();
   open_file->doc_comp = doc_comp;
   sm.register_update_system(std::move(open_file));
+
+  auto mouse_up = std::make_unique<HandleMouseUpCommand>();
+  sm.register_update_system(std::move(mouse_up));
+
+  auto load_tmpl = std::make_unique<HandleLoadTemplateCommand>();
+  load_tmpl->doc_comp = doc_comp;
+  sm.register_update_system(std::move(load_tmpl));
+
+  auto set_tw = std::make_unique<HandleSetTabWidthCommand>();
+  set_tw->doc_comp = doc_comp;
+  sm.register_update_system(std::move(set_tw));
+
+  auto add_cmt = std::make_unique<HandleAddCommentCommand>();
+  add_cmt->doc_comp = doc_comp;
+  sm.register_update_system(std::move(add_cmt));
 
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
   sm.register_update_system(std::move(file_dialog_set));
