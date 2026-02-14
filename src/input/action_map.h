@@ -131,6 +131,9 @@ enum class Action {
     InsertHyperlink,        // Ctrl+K - insert/edit hyperlink on selection
     RemoveHyperlink,        // Remove hyperlink from selection
 
+    // Tools
+    ShowWordCount,          // Ctrl+Shift+W - show word count dialog
+
     // Count (for iteration)
     COUNT
 };

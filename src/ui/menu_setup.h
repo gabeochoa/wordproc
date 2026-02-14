@@ -18,7 +18,7 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"New from Template...", "", true, false, nullptr},  // 1
                       {"Open...", "Ctrl+O", true, false, nullptr},          // 2
                       {"Save", "Ctrl+S", true, false, nullptr},             // 3
-                      {"Save As...", "", true, false, nullptr},             // 4
+                      {"Save As...", "F12", true, false, nullptr},           // 4
                       {"", "", false, true, nullptr},                       // 5 Separator
                       {"Export PDF...", "", true, false, nullptr},          // 6
                       {"Export HTML...", "", true, false, nullptr},         // 7
@@ -72,8 +72,8 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"Zoom Reset", "Ctrl+Alt+0", true, false, nullptr},// 5
                       {"", "", false, true, nullptr},                    // 6 Separator
                       {"Focus Mode", "F11", true, false, nullptr},       // 7
-                      {"Split View", "", true, false, nullptr},          // 8
-                      {"Dark Mode", "", true, false, nullptr},           // 9
+                      {"Split View", "Ctrl+Alt+V", true, false, nullptr}, // 8
+                      {"Dark Mode", "Ctrl+Alt+D", true, false, nullptr}, // 9
                       {"", "", false, true, nullptr},                    // 10 Separator
                       {"Line Width: Normal", "", true, false, nullptr},  // 11
                       {"Line Width: Narrow", "", true, false, nullptr},  // 12
@@ -218,7 +218,7 @@ inline std::vector<win95::Menu> createMenuBar(
     win95::Menu toolsMenu;
     toolsMenu.label = "Tools";
     toolsMenu.items = {
-        {"Word Count...", "", true, false, nullptr},             // 0
+        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 0
         {"", "", false, true, nullptr},                          // 1 Separator
         {"UI Scale...", "", true, false, nullptr},               // 2 (was Settings)
         {"Preferences...", "", false, false, nullptr}            // 3 (disabled, was Settings)

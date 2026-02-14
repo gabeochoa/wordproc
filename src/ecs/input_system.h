@@ -202,9 +202,19 @@ struct KeyboardShortcutSystem
             }
         }
 
+        // Save As - defer to top of next frame to avoid blocking mid-ECS
+        if (actionMap_.isActionPressed(Action::SaveAs) && menuComp_) {
+            menuComp_->pendingDialog = MenuComponent::PendingDialog::SaveAs;
+        }
+
         // Open - defer to top of next frame to avoid blocking mid-ECS
         if (actionMap_.isActionPressed(Action::Open) && menuComp_) {
             menuComp_->pendingDialog = MenuComponent::PendingDialog::Open;
+        }
+
+        // Word Count
+        if (actionMap_.isActionPressed(Action::ShowWordCount) && menuComp_) {
+            menuComp_->showWordCountDialog = true;
         }
 
         // Bold

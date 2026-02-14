@@ -263,6 +263,8 @@ const char* ActionMap::actionName(Action action) {
             return "InsertHyperlink";
         case Action::RemoveHyperlink:
             return "RemoveHyperlink";
+        case Action::ShowWordCount:
+            return "ShowWordCount";
         case Action::COUNT:
         default:
             return "NONE";
@@ -406,6 +408,12 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({afterhours::keys::DOWN, true, false, true}, Action::DecreaseSpaceBefore);
     map.bind({afterhours::keys::UP, true, true, true}, Action::IncreaseSpaceAfter);
     map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
+
+    // File: Save As (F12 - standard Word shortcut)
+    map.bind({afterhours::keys::F12, false, false, false}, Action::SaveAs);
+
+    // Tools: Word Count (Ctrl+Shift+W)
+    map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent
@@ -511,6 +519,12 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({afterhours::keys::DOWN, true, false, true}, Action::DecreaseSpaceBefore);
     map.bind({afterhours::keys::UP, true, true, true}, Action::IncreaseSpaceAfter);
     map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
+
+    // File: Save As (F12 - same as Windows)
+    map.bind({afterhours::keys::F12, false, false, false}, Action::SaveAs);
+
+    // Tools: Word Count (Cmd+Shift+W)
+    map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -714,6 +728,8 @@ const char* actionDisplayName(Action action) {
             return "Insert Hyperlink";
         case Action::RemoveHyperlink:
             return "Remove Hyperlink";
+        case Action::ShowWordCount:
+            return "Word Count";
         case Action::COUNT:
         default:
             return "";
@@ -1023,6 +1039,12 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     
     // Hyperlinks
     addBinding(Action::InsertHyperlink, {afterhours::keys::K, true, false, false});  // Ctrl+K
+
+    // File: Save As
+    addBinding(Action::SaveAs, {afterhours::keys::F12, false, false, false});  // F12
+
+    // Tools: Word Count
+    addBinding(Action::ShowWordCount, {afterhours::keys::W, true, true, false});  // Ctrl+Shift+W
 
     return result;
 }
