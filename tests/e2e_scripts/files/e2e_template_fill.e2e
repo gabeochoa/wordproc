@@ -1,0 +1,39 @@
+# Test: Load outline template, fill placeholders, save
+#
+# Opens a pre-built template via the open_file command,
+# replaces each placeholder with content, then validates.
+
+# Open template
+open_file test_files/outline_template.wpdoc
+wait 2
+
+# Verify template loaded
+validate line_count=12
+validate text_contains_[TITLE]=true
+
+# Replace each placeholder with content
+replace_text [TITLE] "Quarterly Business Review"
+replace_text [INTRO] "This document summarizes the key findings and recommendations from the past quarter."
+replace_text [SECTION_1] "Revenue grew by 12% compared to the previous quarter, driven primarily by new customer acquisition."
+replace_text [SECTION_2] "Three strategic initiatives are recommended for the next quarter to sustain growth momentum."
+replace_text [CONCLUSION] "The outlook remains positive with continued investment in core product development."
+wait 2
+
+# Validate the document was filled out
+validate text_contains_Quarterly Business Review=true
+validate text_contains_Revenue grew=true
+validate text_contains_outlook remains positive=true
+
+# Headings should still be present
+validate text_contains_Background=true
+validate text_contains_Recommendations=true
+validate text_contains_Summary=true
+
+# No more placeholders
+validate text_contains_[TITLE]=false
+validate text_contains_[CONCLUSION]=false
+
+validate is_dirty=true
+validate line_count=12
+
+screenshot e2e_template_fill

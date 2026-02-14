@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "text": "[TITLE]\n\n[INTRO]\n\nBackground\n[SECTION_1]\n\nRecommendations\n[SECTION_2]\n\nSummary\n[CONCLUSION]",
+  "style": {
+    "font": "EBGaramond-Regular",
+    "fontSize": 16
+  }
+}

@@ -331,6 +331,47 @@ struct HandleSetTabWidthCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'replace_text "find" "replace"' - finds and replaces text in the document
+struct HandleReplaceTextCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("replace_text"))
+      return;
+    if (!cmd.has_args(2)) {
+      cmd.fail("replace_text requires find and replace arguments");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+
+    // The E2E parser splits on whitespace, so multi-word quoted strings
+    // arrive as separate args. We need to reconstruct them.
+    // Format: replace_text FIND_TEXT "replacement text here"
+    // args might be: [FIND_TEXT, "replacement, text, here"]
+    // We take arg(0) as the find string, and join the rest as the replacement.
+    std::string findStr = strip_quotes(cmd.arg(0));
+    std::string replaceStr = cmd.args[1];
+    for (size_t i = 2; i < cmd.args.size(); ++i)
+      replaceStr += " " + cmd.args[i];
+    replaceStr = strip_quotes(replaceStr);
+
+    std::string text = doc_comp->buffer.getText();
+    auto pos = text.find(findStr);
+    if (pos != std::string::npos) {
+      text.replace(pos, findStr.length(), replaceStr);
+      doc_comp->buffer.setText(text);
+      doc_comp->isDirty = true;
+      cmd.consume();
+    } else {
+      cmd.fail("Text not found: " + findStr);
+    }
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -390,6 +431,10 @@ inline void register_app_commands(
   auto add_cmt = std::make_unique<HandleAddCommentCommand>();
   add_cmt->doc_comp = doc_comp;
   sm.register_update_system(std::move(add_cmt));
+
+  auto replace_txt = std::make_unique<HandleReplaceTextCommand>();
+  replace_txt->doc_comp = doc_comp;
+  sm.register_update_system(std::move(replace_txt));
 
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
   sm.register_update_system(std::move(file_dialog_set));
