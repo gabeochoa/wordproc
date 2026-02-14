@@ -210,6 +210,10 @@ struct MenuComponent : public afterhours::BaseComponent {
     char saveAsInputBuffer[256] = {0};
     std::string saveAsInputStr;  // For afterhours text_input
     
+    // Pending native dialog action (deferred to top of frame to avoid blocking mid-ECS)
+    enum class PendingDialog { None, Open, SaveAs };
+    PendingDialog pendingDialog = PendingDialog::None;
+    
     // Go To Bookmark dialog state
     bool showBookmarkListDialog = false;
     

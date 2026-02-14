@@ -33,6 +33,7 @@
 #include "ui/win95_widgets.h"
 #include "util/drawing.h"
 #include "util/clipboard.h"
+#include "util/file_dialog.h"
 #include "util/logging.h"
 
 // Include afterhours ECS
@@ -247,8 +248,11 @@ static void app_init() {
             std::make_unique<ecs::LayoutUpdateSystem>());
         sm.register_update_system(
             std::make_unique<ecs::TextInputSystem>());
-        sm.register_update_system(
-            std::make_unique<ecs::KeyboardShortcutSystem>());
+        {
+            auto kss = std::make_unique<ecs::KeyboardShortcutSystem>();
+            kss->menuComp_ = &menuComp;
+            sm.register_update_system(std::move(kss));
+        }
         sm.register_update_system(
             std::make_unique<ecs::AutoSaveSystem>());
         sm.register_update_system(
@@ -362,6 +366,87 @@ static void app_init() {
 // ── Frame callback: runs every frame ──
 static void app_frame() {
     if (app_state::earlyExit) return;
+
+    // Guard against re-entrant frame calls.  On macOS, blocking calls like
+    // [NSOpenPanel runModal] spin a nested run-loop that can fire the display
+    // link, which calls app_frame() again while an ECS system is still
+    // mid-execution.  Skipping the re-entrant call avoids corrupting
+    // temporary-entity state (entity_query assertion failures).
+    static bool in_frame = false;
+    if (in_frame) return;
+    in_frame = true;
+    struct FrameGuard { ~FrameGuard() { in_frame = false; } } _guard;
+
+    // ── Handle pending native file dialogs ──
+    // These are deferred from menu/shortcut systems so that the blocking
+    // [NSOpenPanel/NSSavePanel runModal] call happens outside ECS execution,
+    // preventing entity_query assertion failures from re-entrant frames.
+    if (app_state::menuComp && app_state::docComp && app_state::layoutComp) {
+        auto& menu = *app_state::menuComp;
+        auto& doc = *app_state::docComp;
+        auto& layout = *app_state::layoutComp;
+        
+        if (menu.pendingDialog == ecs::MenuComponent::PendingDialog::Open) {
+            menu.pendingDialog = ecs::MenuComponent::PendingDialog::None;
+            std::string openPath = file_dialog::open_file(
+                {".wpdoc", ".txt", ".md"});
+            if (!openPath.empty()) {
+                auto result = loadDocumentEx(doc.buffer, doc.docSettings, openPath);
+                if (result.success) {
+                    doc.filePath = openPath;
+                    doc.isDirty = false;
+                    doc.comments.clear();
+                    doc.revisions.clear();
+                    layout.pageMode = doc.docSettings.pageSettings.mode;
+                    layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
+                    layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
+                    layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
+                    layout.lineWidthLimit = doc.docSettings.pageSettings.lineWidthLimit;
+                    Settings::get().add_recent_file(openPath);
+                    menu.menus = menu_setup::createMenuBar(
+                        Settings::get().get_recent_files());
+                    menu.recentFilesCount = static_cast<int>(
+                        Settings::get().get_recent_files().size());
+                    toast_notify::success(
+                        "Opened: " + std::filesystem::path(openPath).filename().string());
+                } else {
+                    toast_notify::error("Open failed: " + result.error);
+                }
+            }
+        } else if (menu.pendingDialog == ecs::MenuComponent::PendingDialog::SaveAs) {
+            menu.pendingDialog = ecs::MenuComponent::PendingDialog::None;
+            std::string suggested = doc.filePath.empty()
+                ? "untitled.wpdoc"
+                : std::filesystem::path(doc.filePath).filename().string();
+            std::string savePath = file_dialog::save_file(
+                suggested, {".wpdoc", ".txt"});
+            if (!savePath.empty()) {
+                doc.docSettings.textStyle = doc.buffer.textStyle();
+                doc.docSettings.pageSettings.mode = layout.pageMode;
+                doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
+                doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
+                doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
+                doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
+                auto result = saveDocumentEx(doc.buffer, doc.docSettings, savePath);
+                if (result.success) {
+                    doc.isDirty = false;
+                    doc.filePath = savePath;
+                    if (!doc.autoSavePath.empty()) {
+                        std::filesystem::remove(doc.autoSavePath);
+                    }
+                    Settings::get().add_recent_file(savePath);
+                    menu.menus = menu_setup::createMenuBar(
+                        Settings::get().get_recent_files());
+                    menu.recentFilesCount = static_cast<int>(
+                        Settings::get().get_recent_files().size());
+                    toast_notify::success(
+                        "Saved as: " + std::filesystem::path(savePath).filename().string());
+                } else {
+                    toast_notify::error("Save failed: " + result.error);
+                }
+            }
+        }
+    }
 
     float dt = afterhours::graphics::get_frame_time();
     app_state::loopFrames++;
@@ -534,6 +619,7 @@ int main(int argc, char* argv[]) {
         app_state::testModeEnabled = true;
         test_input::test_mode = true;
         app::clipboard::enable_test_mode();  // Use in-memory clipboard
+        file_dialog::enable_test_mode();     // Use queued paths instead of native dialogs
     }
 
     // FPS test mode - simulates scrolling and logs FPS

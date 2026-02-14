@@ -1,0 +1,25 @@
+# Test: Native file dialog Open
+# Validates that File > Open uses file_dialog and loads the chosen file
+
+# Type some initial content to confirm it gets replaced
+type "before open"
+wait 1
+validate text=before open
+
+# Queue a path for the native dialog (test mode intercepts it)
+file_dialog_set_path test_files/e2e/hello.txt
+wait 1
+
+# Trigger File > Open via menu
+menu_open File
+wait 1
+menu_select Open...
+wait 2
+
+# Verify the file was loaded: check file_path and content
+validate file_path=test_files/e2e/hello.txt
+validate is_dirty=false
+validate line_count=2
+expect_text "Hello, World!"
+
+screenshot e2e_file_dialog_open

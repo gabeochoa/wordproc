@@ -96,7 +96,8 @@ endif
 # Combine all CXXFLAGS
 CXXFLAGS := $(CXXSTD) $(CXXFLAGS_BASE) $(CXXFLAGS_SUPPRESS) $(CXXFLAGS_TIME_TRACE) \
     $(MACOS_FLAGS) $(COVERAGE_CXXFLAGS) $(MCP_CXXFLAGS) $(ACCESSIBILITY_CXXFLAGS) \
-    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS)
+    $(DEBUG_TEXT_OVERFLOW_CXXFLAGS) $(E2E_CXXFLAGS) \
+    -DAFTER_HOURS_UI_SINGLE_COLLECTION
 
 # Include directories (use -isystem for vendor to suppress their warnings)
 INCLUDES := -isystem vendor/ -isystem vendor/afterhours/vendor/
@@ -121,9 +122,9 @@ MAIN_SRC += $(wildcard src/util/*.cpp)
 MAIN_SRC += $(wildcard src/input/*.cpp)
 MAIN_SRC += $(wildcard src/fonts/*.cpp)
 
-# Objective-C++ source files (for Metal/Sokol)
-MAIN_MM_SRC := $(wildcard src/*.mm)
-MAIN_MM_OBJS := $(MAIN_MM_SRC:src/%.mm=$(OBJ_DIR)/main/%.o)
+# Objective-C++ source files (for Metal/Sokol and native dialogs)
+MAIN_MM_SRC := $(wildcard src/*.mm) $(wildcard src/util/*.mm)
+MAIN_MM_OBJS := $(patsubst src/%.mm,$(OBJ_DIR)/main/%.o,$(MAIN_MM_SRC))
 
 # Object files
 MAIN_OBJS := $(MAIN_SRC:src/%.cpp=$(OBJ_DIR)/main/%.o)
@@ -251,6 +252,7 @@ TEST_SRC += src/editor/image.cpp
 TEST_SRC += src/editor/drawing.cpp
 TEST_SRC += src/editor/equation.cpp
 TEST_SRC += src/editor/spellcheck.cpp
+TEST_SRC += src/util/logging.cpp
 
 # Test object files
 TEST_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/test/%.o,$(notdir $(TEST_SRC)))
@@ -316,6 +318,10 @@ $(OBJ_DIR)/test/spellcheck.o: src/editor/spellcheck.cpp | $(OBJ_DIR)/test
 	@echo "Compiling $< for tests..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
+$(OBJ_DIR)/test/logging.o: src/util/logging.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
 # Link test executable
 $(TEST_EXE): $(TEST_OBJS) | $(OUTPUT_DIR)/.stamp
 	@echo "Linking $(TEST_EXE)..."
@@ -363,28 +369,7 @@ profile-startup: $(MAIN_EXE)
 	@echo "Running sampling profile..."
 	@bash ./tests/run_sample_profile.sh
 
-# Metal backend test (standalone window test, no raylib)
-METAL_TEST_EXE := $(OUTPUT_DIR)/test_metal$(EXT)
-METAL_FRAMEWORKS := -framework Metal -framework MetalKit -framework Cocoa -framework QuartzCore
-
-$(OBJ_DIR)/test/sokol_impl.o: tests/sokol_impl.mm | $(OBJ_DIR)/test
-	@echo "Compiling (ObjC++) $<..."
-	$(CXX) -ObjC++ $(CXXSTD) -g -isystem vendor/ -isystem vendor/afterhours/vendor/ -c $< -o $@
-
-$(OBJ_DIR)/test/test_metal_window.o: tests/test_metal_window.cpp | $(OBJ_DIR)/test
-	@echo "Compiling $<..."
-	$(CXX) $(CXXSTD) -g -isystem vendor/ -isystem vendor/afterhours/vendor/ -DAFTER_HOURS_USE_METAL -c $< -o $@
-
-$(METAL_TEST_EXE): $(OBJ_DIR)/test/test_metal_window.o $(OBJ_DIR)/test/sokol_impl.o | $(OUTPUT_DIR)/.stamp
-	@echo "Linking $(METAL_TEST_EXE)..."
-	$(CXX) $^ $(METAL_FRAMEWORKS) -o $@
-	@echo "Built $(METAL_TEST_EXE)"
-
-test-metal: $(METAL_TEST_EXE)
-	@echo "Running Metal window test..."
-	./$(METAL_TEST_EXE)
-
-.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark profile-startup test-metal
+.PHONY: test test-verbose bench-unit e2e e2e-full benchmark launch-benchmark profile-startup
 
 # ==============================================================================
 # WEBASSEMBLY BUILD

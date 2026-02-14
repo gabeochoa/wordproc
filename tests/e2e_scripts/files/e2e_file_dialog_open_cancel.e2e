@@ -1,0 +1,20 @@
+# Test: Native file dialog Open - cancel
+# Validates that cancelling the open dialog preserves current document
+
+# Type some content
+type "keep this content"
+wait 1
+validate text=keep this content
+
+# Don't queue a path (simulates user pressing Cancel -- returns empty string)
+# Trigger File > Open via menu
+menu_open File
+wait 1
+menu_select Open...
+wait 2
+
+# Content should be unchanged, file_path should still be empty
+validate text=keep this content
+validate file_path=
+
+screenshot e2e_file_dialog_open_cancel

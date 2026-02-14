@@ -1,0 +1,19 @@
+# Test: Native file dialog Open via Ctrl+O
+# Validates that the keyboard shortcut also uses the native dialog
+
+# Type initial content
+type "initial text"
+wait 1
+validate text=initial text
+
+# Queue a path and use Ctrl+O
+file_dialog_set_path test_files/e2e/multiline.txt
+wait 1
+key CTRL+O
+wait 2
+
+# The multiline.txt content should now be loaded (5 lines + trailing newline = 6)
+validate file_path=test_files/e2e/multiline.txt
+validate line_count=6
+
+screenshot e2e_file_dialog_open_shortcut

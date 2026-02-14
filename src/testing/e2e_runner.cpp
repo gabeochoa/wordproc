@@ -75,6 +75,8 @@ static void setupCallbacks(
             TextStats stats = buffer.stats();
             return std::to_string(stats.sentences);
         }
+        if (prop == "file_path") return docComp.filePath;
+        if (prop == "is_dirty") return docComp.isDirty ? "true" : "false";
         
         return "<unknown>";
     });
@@ -322,9 +324,16 @@ static void setupCallbacksEx(
         if (prop == "smart_quotes_enabled") {
             return docComp.docSettings.smartQuotesEnabled ? "true" : "false";
         }
+        if (prop == "file_path") return docComp.filePath;
+        if (prop == "is_dirty") return docComp.isDirty ? "true" : "false";
         if (prop == "autosave_enabled") return docComp.autoSaveEnabled ? "true" : "false";
         if (prop == "autosave_path_exists") {
             return std::filesystem::exists(docComp.autoSavePath) ? "true" : "false";
+        }
+        // file_exists_PATH — check if a file exists at the given path
+        if (prop.length() > 12 && prop.substr(0, 12) == "file_exists_") {
+            std::string path = prop.substr(12);
+            return std::filesystem::exists(path) ? "true" : "false";
         }
         if (prop == "zoom_level") {
             int pct = static_cast<int>(std::round(layoutComp.zoomLevel * 100.0f));

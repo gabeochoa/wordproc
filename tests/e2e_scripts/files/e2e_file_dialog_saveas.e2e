@@ -1,0 +1,24 @@
+# Test: Native file dialog Save As
+# Validates that File > Save As uses file_dialog and saves to chosen path
+
+# Type content to save
+type "save as test content"
+wait 1
+validate text=save as test content
+
+# Queue a save path for the native dialog
+file_dialog_set_path output/e2e_saveas_test.wpdoc
+wait 1
+
+# Trigger File > Save As via menu
+menu_open File
+wait 1
+menu_select Save As...
+wait 2
+
+# Verify content is still intact and file_path was updated
+validate text=save as test content
+validate file_path=output/e2e_saveas_test.wpdoc
+validate is_dirty=false
+
+screenshot e2e_file_dialog_saveas

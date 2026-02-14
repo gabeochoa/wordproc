@@ -347,7 +347,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
-        // Close menus on click outside (if no header or item was interacted with)
+        // Close menus on click outside and consume stray clicks.
         // Use direct mouse position checks against known rects instead of was_hot(),
         // because was_hot() compares entity IDs but we only have MK IDs here.
         if (anyMenuOpen && !headerInteracted && !itemInteracted) {
@@ -375,7 +375,6 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     int menuFontSize = 16;
                     for (size_t menuIdx = 0; menuIdx < menu.menus.size(); ++menuIdx) {
                         if (!menu.menus[menuIdx].open) continue;
-                        // Compute dropdown rect (same as rendering logic above)
                         float dx = theme::layout::scale(4.0f);
                         for (size_t i = 0; i < menuIdx; ++i) {
                             dx += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
@@ -398,9 +397,15 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
                 
                 if (!clickInMenu) {
+                    // Click was outside all menu areas: close menus and consume
+                    // the click so elements underneath don't receive it.
                     for (auto& m : menu.menus) { m.open = false; }
                     menu.activeMenuIndex = -1;
+                    ctx.mouse.just_pressed = false;
+                    ctx.mouse.just_released = false;
                 }
+                // Clicks INSIDE the menu area are left alone so HandleClicks
+                // can process them for the dropdown item buttons.
             }
         }
         

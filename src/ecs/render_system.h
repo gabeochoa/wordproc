@@ -934,45 +934,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     menu.showTemplateDialog = true;
                     break;
                 case 2:  // Open
-                {
-                    // Load document with settings (document settings saved with
-                    // file)
-                    auto result = loadDocumentEx(doc.buffer, doc.docSettings,
-                                                 doc.defaultPath);
-                    if (result.success) {
-                        doc.filePath = doc.defaultPath;
-                        doc.isDirty = false;
-                        doc.comments.clear();
-                        doc.revisions.clear();
-                        // Sync loaded document settings to layout component
-                        layout.pageMode = doc.docSettings.pageSettings.mode;
-                        layout.pageWidth =
-                            doc.docSettings.pageSettings.pageWidth;
-                        layout.pageHeight =
-                            doc.docSettings.pageSettings.pageHeight;
-                        layout.pageMargin =
-                            doc.docSettings.pageSettings.pageMargin;
-                        layout.lineWidthLimit =
-                            doc.docSettings.pageSettings.lineWidthLimit;
-                        Settings::get().add_recent_file(doc.defaultPath);
-                        menu.menus = menu_setup::createMenuBar(
-                            Settings::get().get_recent_files());
-                        menu.recentFilesCount = static_cast<int>(
-                            Settings::get().get_recent_files().size());
-                        if (doc.trackChangesEnabled &&
-                            menu.menus.size() > 1 &&
-                            menu.menus[1].items.size() > 3) {
-                            menu.menus[1].items[3].mark =
-                                win95::MenuMark::Checkmark;
-                        }
-                        toast_notify::success(
-                            "Opened: " + std::filesystem::path(doc.defaultPath)
-                                             .filename()
-                                             .string());
-                    } else {
-                        toast_notify::error("Open failed: " + result.error);
-                    }
-                } break;
+                    // Defer to top of next frame so the blocking native dialog
+                    // doesn't run inside an ECS system (avoids entity_query crash).
+                    menu.pendingDialog = MenuComponent::PendingDialog::Open;
+                    break;
                 case 3:  // Save
                 {
                     std::string savePath =
@@ -1014,12 +979,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                 } break;
                 case 4:  // Save As...
-                {
-                    // Pre-fill with current filename or default
-                    std::string suggested = doc.filePath.empty() ? "untitled.wdoc" : doc.filePath;
-                    menu.saveAsInputStr = suggested;
-                    menu.showSaveAsDialog = true;
-                } break;
+                    // Defer to top of next frame (same reason as Open).
+                    menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
+                    break;
                 case 6:  // Export PDF
                 {
                     std::filesystem::path basePath =

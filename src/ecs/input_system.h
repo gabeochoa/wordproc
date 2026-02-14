@@ -156,6 +156,7 @@ struct KeyboardShortcutSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
                                 LayoutComponent> {
     input::ActionMap actionMap_ = input::createDefaultActionMap();
+    MenuComponent* menuComp_ = nullptr;
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret,
@@ -201,31 +202,9 @@ struct KeyboardShortcutSystem
             }
         }
 
-        // Open
-        if (actionMap_.isActionPressed(Action::Open)) {
-            // Load document with settings
-            auto result =
-                loadDocumentEx(doc.buffer, doc.docSettings, doc.defaultPath);
-            if (result.success) {
-                doc.filePath = doc.defaultPath;
-                doc.isDirty = false;
-                doc.comments.clear();
-                doc.revisions.clear();
-                // Sync loaded document settings to layout component
-                layout.pageMode = doc.docSettings.pageSettings.mode;
-                layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
-                layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
-                layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
-                layout.lineWidthLimit =
-                    doc.docSettings.pageSettings.lineWidthLimit;
-                Settings::get().add_recent_file(doc.defaultPath);
-                toast_notify::success(
-                    "Opened: " + std::filesystem::path(doc.defaultPath)
-                                             .filename()
-                                             .string());
-            } else {
-                toast_notify::error("Open failed: " + result.error);
-            }
+        // Open - defer to top of next frame to avoid blocking mid-ECS
+        if (actionMap_.isActionPressed(Action::Open) && menuComp_) {
+            menuComp_->pendingDialog = MenuComponent::PendingDialog::Open;
         }
 
         // Bold

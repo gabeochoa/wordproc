@@ -4,6 +4,7 @@
 
 #include "../ecs/components.h"
 #include "../editor/document_io.h"
+#include "../util/file_dialog.h"
 
 #include <afterhours/src/plugins/e2e_testing/e2e_testing.h>
 
@@ -208,6 +209,23 @@ struct HandleOpenFileCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
+// This allows E2E tests to control what open_file/save_file return in test mode.
+struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("file_dialog_set_path"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("file_dialog_set_path requires a file path");
+      return;
+    }
+
+    file_dialog::set_test_path(cmd.arg(0));
+    cmd.consume();
+  }
+};
+
 // Register all app-specific commands
 inline void register_app_commands(
     SystemManager &sm,
@@ -235,6 +253,9 @@ inline void register_app_commands(
   auto open_file = std::make_unique<HandleOpenFileCommand>();
   open_file->doc_comp = doc_comp;
   sm.register_update_system(std::move(open_file));
+
+  auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
+  sm.register_update_system(std::move(file_dialog_set));
 }
 
 } // namespace e2e_commands
