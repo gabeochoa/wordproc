@@ -533,6 +533,143 @@ static void setupCallbacksEx(
             return "false";
         }
         
+        // Window / viewport dimensions
+        if (prop == "window_width") {
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            return pcr ? std::to_string(pcr->current_resolution.width) : "0";
+        }
+        if (prop == "window_height") {
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            return pcr ? std::to_string(pcr->current_resolution.height) : "0";
+        }
+        
+        // Menu bar accessibility: check all menu headers fit within window width
+        if (prop == "menu_bar_fits") {
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "false";
+            float totalWidth = 0;
+            int menuFontSize = 16;
+            for (const auto& m : menuComp.menus) {
+                totalWidth += static_cast<float>(
+                    theme::MeasureUIText(m.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+            }
+            return totalWidth <= static_cast<float>(pcr->current_resolution.width) ? "true" : "false";
+        }
+        
+        // Menu bar total width in pixels
+        if (prop == "menu_bar_width") {
+            float totalWidth = 0;
+            int menuFontSize = 16;
+            for (const auto& m : menuComp.menus) {
+                totalWidth += static_cast<float>(
+                    theme::MeasureUIText(m.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+            }
+            return std::to_string(static_cast<int>(totalWidth));
+        }
+        
+        // menu_header_onscreen_MENUNAME — true if that header's right edge fits in viewport
+        if (prop.length() > 21 && prop.substr(0, 21) == "menu_header_onscreen_") {
+            std::string menuName = prop.substr(21);
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "false";
+            int winW = pcr->current_resolution.width;
+            float x = 0;
+            int menuFontSize = 16;
+            for (const auto& m : menuComp.menus) {
+                float bw = static_cast<float>(
+                    theme::MeasureUIText(m.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+                x += bw;
+                if (m.label == menuName) {
+                    // Right edge of this menu header must be within viewport
+                    return x <= static_cast<float>(winW) ? "true" : "false";
+                }
+            }
+            return "false"; // Menu not found
+        }
+        
+        // toolbar_fits — check if all toolbar buttons fit within window width
+        if (prop == "toolbar_fits") {
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "false";
+            int winW = pcr->current_resolution.width;
+            // Calculate toolbar width: buttons + separators + formatting bar dropdowns
+            int buttonCount = 9;   // New, Open, Save, Print, Cut, Copy, Paste, Undo, Redo
+            int separatorCount = 3; // Between groups
+            float toolbarWidth = static_cast<float>(
+                buttonCount * theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE + 
+                    theme::layout::TOOLBAR_BUTTON_PADDING * 2) +
+                separatorCount * theme::layout::scaleInt(theme::layout::TOOLBAR_SEPARATOR_WIDTH + 8));
+            return toolbarWidth <= static_cast<float>(winW) ? "true" : "false";
+        }
+        
+        // formatting_bar_fits — check if style/font/size dropdowns fit in window width
+        if (prop == "formatting_bar_fits") {
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "false";
+            int winW = pcr->current_resolution.width;
+            // Approximate: style dropdown (110px) + font dropdown (180px) + size dropdown (50px) + buttons (~200px)
+            float fmtWidth = theme::layout::scale(110.0f + 180.0f + 50.0f + 200.0f);
+            return fmtWidth <= static_cast<float>(winW) ? "true" : "false";
+        }
+        
+        // Editing area height: window height minus chrome (title bar + menu bar + toolbar + formatting bar + status bar)
+        if (prop == "editing_area_height") {
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "0";
+            float chrome = theme::layout::scale(
+                static_cast<float>(theme::layout::TITLE_BAR_HEIGHT +
+                                   theme::layout::MENU_BAR_HEIGHT +
+                                   theme::layout::TOOLBAR_HEIGHT +
+                                   theme::layout::FORMATTING_BAR_HEIGHT +
+                                   theme::layout::STATUS_BAR_HEIGHT));
+            int editHeight = pcr->current_resolution.height - static_cast<int>(chrome);
+            return std::to_string(editHeight < 0 ? 0 : editHeight);
+        }
+        // editing_area_gt_N: returns "true" if editing area height > N pixels
+        if (prop.length() > 16 && prop.substr(0, 16) == "editing_area_gt_") {
+            int threshold = std::stoi(prop.substr(16));
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "false";
+            float chrome = theme::layout::scale(
+                static_cast<float>(theme::layout::TITLE_BAR_HEIGHT +
+                                   theme::layout::MENU_BAR_HEIGHT +
+                                   theme::layout::TOOLBAR_HEIGHT +
+                                   theme::layout::FORMATTING_BAR_HEIGHT +
+                                   theme::layout::STATUS_BAR_HEIGHT));
+            int editHeight = pcr->current_resolution.height - static_cast<int>(chrome);
+            return editHeight > threshold ? "true" : "false";
+        }
+        
+        // Check if dropdown for a given menu would be fully on-screen vertically
+        // menu_dropdown_fits_MENUNAME=true/false
+        if (prop.length() > 20 && prop.substr(0, 20) == "menu_dropdown_fits_") {
+            std::string menuName = prop.substr(20);
+            auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            if (!pcr) return "false";
+            int winH = pcr->current_resolution.height;
+            float menuBarBottom = theme::layout::scale(
+                static_cast<float>(theme::layout::TITLE_BAR_HEIGHT + theme::layout::MENU_BAR_HEIGHT));
+            for (const auto& m : menuComp.menus) {
+                if (m.label == menuName) {
+                    float dropdownHeight = 0;
+                    for (const auto& item : m.items) {
+                        dropdownHeight += item.separator ? theme::layout::scale(8.0f) : theme::layout::scale(20.0f);
+                    }
+                    return (menuBarBottom + dropdownHeight) <= static_cast<float>(winH) ? "true" : "false";
+                }
+            }
+            return "false";
+        }
+        
         return "<unknown>";
     });
     

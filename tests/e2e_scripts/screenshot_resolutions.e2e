@@ -1,0 +1,84 @@
+# Test UI at various resolutions
+# Takes screenshots at each size: idle view + File menu open
+
+# Type some content so we can see text reflow
+type "The quick brown fox jumps over the lazy dog. "
+type "Pack my box with five dozen liquor jugs. "
+type "How vexingly quick daft zebras jump."
+key ENTER
+type "Second paragraph with more text to verify reflow behavior across different window sizes."
+
+# --- 1920x1080 (Full HD - common desktop) ---
+resize 1920 1080
+wait 0.3
+screenshot res_1920x1080_idle
+menu_open "File"
+screenshot res_1920x1080_file
+menu_open "Edit"
+screenshot res_1920x1080_edit
+
+# --- 1280x720 (HD - default/baseline) ---
+resize 1280 720
+wait 0.3
+screenshot res_1280x720_idle
+menu_open "File"
+screenshot res_1280x720_file
+
+# --- 1024x768 (XGA - older monitors) ---
+resize 1024 768
+wait 0.3
+screenshot res_1024x768_idle
+menu_open "Edit"
+screenshot res_1024x768_edit
+
+# --- 800x600 (SVGA - minimum usable) ---
+resize 800 600
+wait 0.3
+screenshot res_800x600_idle
+menu_open "File"
+screenshot res_800x600_file
+menu_open "Format"
+screenshot res_800x600_format
+
+# --- 640x480 (VGA - stress test) ---
+resize 640 480
+wait 0.3
+screenshot res_640x480_idle
+menu_open "Tools"
+screenshot res_640x480_tools
+
+# --- 1440x900 (common laptop) ---
+resize 1440 900
+wait 0.3
+screenshot res_1440x900_idle
+menu_open "View"
+screenshot res_1440x900_view
+
+# --- 2560x1440 (QHD / 1440p) ---
+resize 2560 1440
+wait 0.3
+screenshot res_2560x1440_idle
+menu_open "Insert"
+screenshot res_2560x1440_insert
+
+# --- Ultra-wide 2560x1080 ---
+resize 2560 1080
+wait 0.3
+screenshot res_2560x1080_idle
+
+# --- Narrow/tall (portrait-like) 600x900 ---
+resize 600 900
+wait 0.3
+screenshot res_600x900_idle
+menu_open "File"
+screenshot res_600x900_file
+
+# --- Very small 400x300 (edge case) ---
+resize 400 300
+wait 0.3
+screenshot res_400x300_idle
+
+# Return to default
+resize 1280 720
+wait 0.3
+screenshot res_final_1280x720

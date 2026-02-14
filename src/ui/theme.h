@@ -99,6 +99,13 @@ constexpr int TOOLBAR_BUTTON_SIZE = 24;  // Square icon buttons
 constexpr int TOOLBAR_BUTTON_PADDING = 2;
 constexpr int TOOLBAR_SEPARATOR_WIDTH = 2;
 
+// Minimum window dimensions — ensures all menu headers, toolbar buttons,
+// and formatting bar controls remain accessible (not clipped off-screen).
+// Derived from: 8 menu headers ≈ 360px + padding, toolbar row ≈ 300px.
+constexpr int MIN_WINDOW_WIDTH = 500;
+// Chrome height ≈ 145px at scale 1.0; need at least some editing area.
+constexpr int MIN_WINDOW_HEIGHT = 300;
+
 // Spacing scale (4/8/16-based rhythm for consistent margins/gutters/padding)
 constexpr int SPACING_XS = 4;   // Extra small: tight spacing, icons
 constexpr int SPACING_SM = 8;   // Small: text padding, menu items

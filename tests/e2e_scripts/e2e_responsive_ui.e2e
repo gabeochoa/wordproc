@@ -1,0 +1,162 @@
+# E2E Test: Responsive UI - Accessibility at Different Resolutions
+#
+# Validates that menu headers, toolbar, and formatting bar remain
+# physically on-screen (not clipped by viewport) at various sizes.
+# The app enforces a minimum window size of 500x300 so all chrome
+# remains accessible even when the user tries to make it smaller.
+
+type "The quick brown fox jumps over the lazy dog."
+key ENTER
+type "Second line for reflow testing."
+
+# === 1920x1080 (Full HD) — everything should fit easily ===
+resize 1920 1080
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate formatting_bar_fits=true
+validate editing_area_gt_500=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_1920x1080
+
+# === 1280x720 (HD baseline) ===
+resize 1280 720
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate formatting_bar_fits=true
+validate editing_area_gt_200=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_1280x720
+
+# === 1024x768 (XGA) ===
+resize 1024 768
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate formatting_bar_fits=true
+validate editing_area_gt_200=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_1024x768
+
+# === 800x600 (SVGA) ===
+resize 800 600
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate formatting_bar_fits=true
+validate editing_area_gt_100=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_800x600
+
+# === 640x480 (VGA) ===
+resize 640 480
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate editing_area_gt_50=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_640x480
+
+# === 600x900 (narrow portrait) ===
+resize 600 900
+wait 0.3
+validate editing_area_gt_400=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_600x900
+
+# === 500x400 (at minimum width) ===
+resize 500 400
+wait 0.3
+validate menu_bar_fits=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_500x400
+
+# === 400x300 (below minimum — should be clamped to 500x300) ===
+resize 400 300
+wait 0.3
+# Even when requesting below minimum, all menus should remain on-screen
+# because the app clamps to MIN_WINDOW_WIDTH=500
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Edit=true
+validate menu_header_onscreen_View=true
+validate menu_header_onscreen_Format=true
+validate menu_header_onscreen_Insert=true
+validate menu_header_onscreen_Tools=true
+validate menu_header_onscreen_Table=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_400x300_clamped
+
+# === 300x200 (way below minimum — should be clamped to 500x300) ===
+resize 300 200
+wait 0.3
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Help=true
+screenshot responsive_300x200_clamped
+
+# === 1440x900 (common laptop) ===
+resize 1440 900
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate formatting_bar_fits=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Help=true
+
+# === 2560x1440 (QHD) ===
+resize 2560 1440
+wait 0.3
+validate menu_bar_fits=true
+validate toolbar_fits=true
+validate formatting_bar_fits=true
+validate editing_area_gt_800=true
+validate menu_header_onscreen_File=true
+validate menu_header_onscreen_Help=true
+
+# Return to default
+resize 1280 720
+wait 0.3
+validate menu_bar_fits=true

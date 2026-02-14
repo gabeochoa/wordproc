@@ -226,6 +226,27 @@ static void app_init() {
         // Register pre-layout UI systems (context begin, clear children)
         ui_imm::registerUIPreLayoutSystems(sm);
         
+        // Enforce minimum window size: after CollectCurrentResolution fetches
+        // the real resolution, clamp it so all UI chrome stays on-screen.
+        struct ClampWindowSizeSystem : System<window_manager::ProvidesCurrentResolution> {
+            void for_each_with(Entity&, window_manager::ProvidesCurrentResolution& pcr, float) override {
+                auto& res = pcr.current_resolution;
+                bool clamped = false;
+                if (res.width < theme::layout::MIN_WINDOW_WIDTH) {
+                    res.width = theme::layout::MIN_WINDOW_WIDTH;
+                    clamped = true;
+                }
+                if (res.height < theme::layout::MIN_WINDOW_HEIGHT) {
+                    res.height = theme::layout::MIN_WINDOW_HEIGHT;
+                    clamped = true;
+                }
+                if (clamped) {
+                    window_manager::set_window_size(res.width, res.height);
+                }
+            }
+        };
+        sm.register_update_system(std::make_unique<ClampWindowSizeSystem>());
+        
         // UI-creating systems must run BETWEEN pre-layout and post-layout
         // so their entities are included in BuildUIEntityMapping and RunAutoLayout
         sm.register_update_system(
