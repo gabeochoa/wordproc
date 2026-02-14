@@ -81,63 +81,22 @@ inline void initUIContext(int screenWidth, int screenHeight) {
     }
 }
 
-// Register pre-layout UI systems (context begin, clear children)
-// Call this BEFORE registering systems that create UI elements
+// Register pre-layout UI systems (clear children, context begin)
+// Uses the bridge system pattern from wm_afterhours to ensure correct ordering
+// and proper entity merging between sub-systems.
+// Call this BEFORE registering systems that create UI elements.
 inline void registerUIPreLayoutSystems(afterhours::SystemManager& manager) {
-    using namespace afterhours;
-
-    // Begin context (reads mouse/input state)
-    manager.register_update_system(
-        std::make_unique<ui::BeginUIContextManager<InputAction>>());
-
-    // Clear UI component children for rebuild
-    manager.register_update_system(
-        std::make_unique<ui::ClearUIComponentChildren>());
+    afterhours::ui::register_before_ui_updates<InputAction>(manager);
 }
 
 // Register post-layout UI systems (autolayout, interactions, cleanup)
-// Call this AFTER registering systems that create UI elements
+// Uses the bridge system pattern from wm_afterhours which includes:
+// - Proper ordering of drag group pre/post layout systems
+// - HandleScrollInput for scroll containers
+// - Collection cleanup after all UI updates
+// Call this AFTER registering systems that create UI elements.
 inline void registerUIPostLayoutSystems(afterhours::SystemManager& manager) {
-    using namespace afterhours;
-
-    // Update dropdown options before layout
-    manager.register_update_system(
-        std::make_unique<ui::UpdateDropdownOptions<InputAction>>());
-
-    // Clear visibility flags from previous frame
-    manager.register_update_system(std::make_unique<ui::ClearVisibity>());
-
-    // Build entity mapping (MUST run before RunAutoLayout)
-    manager.register_update_system(std::make_unique<ui::BuildUIEntityMapping>());
-
-    // Run autolayout (must run AFTER all UI elements are created and mapping is built)
-    manager.register_update_system(std::make_unique<ui::RunAutoLayout>());
-
-    // Track visibility
-    manager.register_update_system(
-        std::make_unique<ui::TrackIfComponentWillBeRendered<InputAction>>());
-
-    // Handle interactions
-    manager.register_update_system(
-        std::make_unique<ui::HandleTabbing<InputAction>>());
-    manager.register_update_system(
-        std::make_unique<ui::HandleClicks<InputAction>>());
-    manager.register_update_system(
-        std::make_unique<ui::CloseDropdownOnClickOutside<InputAction>>());
-    manager.register_update_system(
-        std::make_unique<ui::HandleDrags<InputAction>>());
-    manager.register_update_system(
-        std::make_unique<ui::HandleLeftRight<InputAction>>());
-    manager.register_update_system(
-        std::make_unique<ui::HandleSelectOnFocus<InputAction>>());
-
-    // Compute visual focus after input handlers adjusted logical focus
-    manager.register_update_system(
-        std::make_unique<ui::ComputeVisualFocusId<InputAction>>());
-
-    // End context (cleanup)
-    manager.register_update_system(
-        std::make_unique<ui::EndUIContextManager<InputAction>>());
+    afterhours::ui::register_after_ui_updates<InputAction>(manager);
 }
 
 // Register all Afterhours UI update systems with the SystemManager
@@ -150,11 +109,10 @@ inline void registerUIUpdateSystems(afterhours::SystemManager& manager) {
 }
 
 // Register Afterhours UI render systems with the SystemManager
+// Uses the bridge system which also includes debug layout rendering
+// and E2E visible text registry clearing.
 inline void registerUIRenderSystems(afterhours::SystemManager& manager) {
-    using namespace afterhours;
-
-    manager.register_render_system(
-        std::make_unique<ui::RenderImm<InputAction>>());
+    afterhours::ui::register_render_systems<InputAction>(manager);
 }
 
 // Register toast notification systems
