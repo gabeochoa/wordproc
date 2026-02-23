@@ -1,0 +1,33 @@
+# Test: Menu separators render correctly after border-based refactor
+# Validates that menus with separators still open and items are accessible
+
+# Wait for window to render
+wait 5
+
+# Open File menu which has separators between groups
+menu_open File
+wait 2
+
+# Verify File menu is open
+validate menu_open=File
+
+screenshot menu_separators_file
+
+# Verify a menu item exists
+validate menu_item_New=true
+validate menu_item_Save=true
+validate menu_item_Exit=true
+
+# Open Format menu which also has separators
+menu_open Format
+wait 2
+validate menu_open=Format
+
+screenshot menu_separators_format
+
+# Open Insert menu
+menu_open Insert
+wait 2
+validate menu_open=Insert
+
+screenshot menu_separators_insert

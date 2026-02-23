@@ -1,0 +1,16 @@
+# Test: Find/Replace dialog with gap-spaced button row
+# Validates Find dialog opens and renders correctly after gap styling
+
+# Type some text
+type "The quick brown fox jumps over the lazy dog"
+wait 2
+
+# Open Find dialog via Ctrl+F
+key CTRL+F
+wait 2
+
+# Validate dialog is open
+validate dialog_open=Find
+
+# Take screenshot showing Find dialog with gap-spaced buttons
+screenshot dialog_find_gap

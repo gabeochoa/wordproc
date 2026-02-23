@@ -1,0 +1,41 @@
+# Test: Menu hover interaction after cursor/hover styling updates
+# Validates that menus still open, show items, and close correctly
+# after adding with_cursor(Pointer) and with_custom_hover_bg()
+
+# Wait for window to render
+wait 5
+
+# Verify all menu header buttons are visible
+expect_text "File"
+expect_text "Edit"
+expect_text "View"
+expect_text "Format"
+expect_text "Insert"
+expect_text "Tools"
+expect_text "Table"
+expect_text "Help"
+
+# Open File menu using menu_open command
+menu_open File
+wait 2
+
+# Verify File menu is open
+validate menu_open=File
+
+screenshot menu_hover_file_open
+
+# Switch to Edit menu
+menu_open Edit
+wait 2
+
+# Verify Edit menu is open
+validate menu_open=Edit
+
+screenshot menu_hover_edit_open
+
+# Open View menu
+menu_open View
+wait 2
+validate menu_open=View
+
+screenshot menu_hover_view_open

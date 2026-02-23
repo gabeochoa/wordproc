@@ -48,7 +48,13 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
         .with_custom_text_color(textColor)
         .with_alignment(afterhours::ui::TextAlignment::Center)
         .with_justify_content(JustifyContent::Center)
-        .with_align_items(AlignItems::Center);
+        .with_align_items(AlignItems::Center)
+        .with_cursor(afterhours::ui::CursorType::Pointer);
+
+    // Hover bg: subtle highlight so buttons feel interactive even before bevel kicks in
+    if (enabled) {
+        config.with_custom_hover_bg(afterhours::Color{220, 220, 220, 255});
+    }
 
     // Win95 Office-style hover: flat when idle, raised on hover, sunken when pressed
     if (pressed) {
@@ -58,7 +64,7 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
         config.with_bevel(afterhours::ui::BevelStyle::Raised,
                           ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f);
     }
-    // else: flat (no bevel) — Win95 Office toolbar convention
+    // else: flat (no bevel) -- Win95 Office toolbar convention
 
     if (!enabled) {
         config.disabled = true;
@@ -72,21 +78,14 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
 inline void drawEtchedSeparator(afterhours::ui::UIContext<InputAction>& ctx,
                                  afterhours::Entity& uiRoot, int baseId,
                                  float x, float y, float height) {
-    // Dark line (left)
     div(ctx, mk(uiRoot, baseId),
         ComponentConfig{}
-            .with_size(ComponentSize{pixels(1), pixels(height)})
+            .with_size(ComponentSize{pixels(2), pixels(height)})
             .with_absolute_position()
             .with_translate(x, y)
-            .with_custom_background(ui_imm::win95_colors::BORDER_DARK)
-            .with_roundness(0.0f));
-    // Light line (right)
-    div(ctx, mk(uiRoot, baseId + 1),
-        ComponentConfig{}
-            .with_size(ComponentSize{pixels(1), pixels(height)})
-            .with_absolute_position()
-            .with_translate(x + 1, y)
-            .with_custom_background(ui_imm::win95_colors::BORDER_LIGHT)
+            .with_custom_background(afterhours::Color{0, 0, 0, 0})
+            .with_border_left(ui_imm::win95_colors::BORDER_DARK)
+            .with_border_right(ui_imm::win95_colors::BORDER_LIGHT)
             .with_roundness(0.0f));
 }
 
@@ -105,8 +104,10 @@ inline ComponentConfig absDropdownButton(float x, float y, float width, float he
         .with_roundness(0.0f)
         .with_padding(Padding{.top = pixels(2), .right = pixels(4), .bottom = pixels(2), .left = pixels(4)})
         .with_alignment(afterhours::ui::TextAlignment::Left)
+        .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
         .with_justify_content(JustifyContent::Center)
-        .with_align_items(AlignItems::FlexStart);
+        .with_align_items(AlignItems::FlexStart)
+        .with_cursor(afterhours::ui::CursorType::Pointer);
 }
 
 // Toolbar Render System - renders the standard toolbar and formatting toolbar

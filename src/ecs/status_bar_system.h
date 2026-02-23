@@ -106,6 +106,7 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
                 .with_custom_text_color(ui_imm::win95_colors::TEXT)
                 .with_roundness(0.0f)
                 .with_alignment(afterhours::ui::TextAlignment::Left)
+                .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
                 .with_debug_name("status_left"));
 
         // === Right-aligned status text ===
@@ -118,6 +119,7 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
                 .with_custom_text_color(ui_imm::win95_colors::TEXT_DISABLED)
                 .with_roundness(0.0f)
                 .with_alignment(afterhours::ui::TextAlignment::Right)
+                .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
                 .with_debug_name("status_right"));
     }
 };

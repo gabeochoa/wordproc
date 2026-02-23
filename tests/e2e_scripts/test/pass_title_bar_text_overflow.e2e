@@ -1,0 +1,32 @@
+# Test: Title bar text overflow and letter spacing
+# Validates title bar text renders with ellipsis and letter spacing
+
+# Wait for window to render
+wait 5
+
+# Verify title bar shows application name
+expect_text "Wordproc"
+
+# Verify window controls are present
+expect_text "X"
+
+# Take screenshot of default title
+screenshot title_bar_default
+
+# Resize to a narrow width to test text overflow behavior
+resize 600 400
+wait 2
+
+# Title bar should still show some text (may be truncated with ellipsis)
+expect_text "Wordproc"
+
+screenshot title_bar_narrow
+
+# Restore to normal size
+resize 1280 720
+wait 2
+
+# Verify title is fully visible again
+expect_text "Wordproc"
+
+screenshot title_bar_restored

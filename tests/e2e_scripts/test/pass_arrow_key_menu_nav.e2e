@@ -1,0 +1,46 @@
+# Test: WidgetUp/WidgetDown arrow key navigation
+# Validates arrow keys work for document navigation after adding new InputActions
+
+# Type multiple lines
+type "Line one"
+key ENTER
+type "Line two"
+key ENTER
+type "Line three"
+wait 2
+
+# Verify we are at line 3
+validate caret_row=2
+
+# Press Up arrow to go to line 2
+key UP
+wait 1
+validate caret_row=1
+
+# Press Up arrow to go to line 1
+key UP
+wait 1
+validate caret_row=0
+
+# Press Down arrow to go to line 2
+key DOWN
+wait 1
+validate caret_row=1
+
+# Press Down arrow to go to line 3
+key DOWN
+wait 1
+validate caret_row=2
+
+screenshot arrow_key_navigation
+
+# Use Home to go to beginning of line
+key HOME
+wait 1
+validate caret_col=0
+
+# Use End to go to end of line
+key END
+wait 1
+
+screenshot arrow_key_home_end

@@ -196,6 +196,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_roundness(0.0f)
                     .with_bevel(highlighted ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
                                 toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
+                    .with_cursor(afterhours::ui::CursorType::Pointer)
                     .with_render_layer(1));
 
             // Handle header click: toggle this menu, close others
@@ -269,24 +270,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 const auto& item = menuDef.items[itemIdx];
                 
                 if (item.separator) {
-                    // Etched separator: dark line on top, light line below (Win95 style)
                     int sepBaseId = 10000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
                     div(ctx, mk(entity, sepBaseId),
                         ComponentConfig{}
-                            .with_debug_name("separator_dark")
-                            .with_size(ComponentSize{pixels(maxWidth - 8.0f), pixels(1.0f)})
+                            .with_debug_name("separator_etched")
+                            .with_size(ComponentSize{pixels(maxWidth - 8.0f), pixels(2.0f)})
                             .with_absolute_position()
                             .with_translate(dropdownX + 4.0f, itemY + 3.0f)
-                            .with_custom_background(toAhColor(theme::BORDER_DARK))
-                            .with_roundness(0.0f)
-                            .with_render_layer(51));
-                    div(ctx, mk(entity, sepBaseId + 50),
-                        ComponentConfig{}
-                            .with_debug_name("separator_light")
-                            .with_size(ComponentSize{pixels(maxWidth - 8.0f), pixels(1.0f)})
-                            .with_absolute_position()
-                            .with_translate(dropdownX + 4.0f, itemY + 4.0f)
-                            .with_custom_background(toAhColor(theme::BORDER_LIGHT))
+                            .with_custom_background(afterhours::Color{0, 0, 0, 0})
+                            .with_border_top(toAhColor(theme::BORDER_DARK))
+                            .with_border_bottom(toAhColor(theme::BORDER_LIGHT))
                             .with_roundness(0.0f)
                             .with_render_layer(51));
                     itemY += theme::layout::scale(8.0f);
@@ -331,6 +324,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_justify_content(afterhours::ui::JustifyContent::Center)
                             .with_roundness(0.0f)
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_custom_hover_bg(toAhColor(theme::MENU_HOVER))
                             .with_render_layer(51));
                     
                     // Shortcut label: separate div positioned at right edge of item
@@ -344,7 +339,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_size(ComponentSize{pixels(shortcutWidth), pixels(itemHeight)})
                                 .with_absolute_position()
                                 .with_translate(shortcutX, itemY)
-                                .with_color_usage(afterhours::ui::Theme::Usage::None)
+                                .with_background(afterhours::ui::Theme::Usage::None)
                                 .with_custom_text_color(textColor)
                                 .with_alignment(afterhours::ui::TextAlignment::Right)
                                 .with_justify_content(afterhours::ui::JustifyContent::Center)
@@ -537,6 +532,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -545,7 +541,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)
-                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - add comment
                     auto docEntities = afterhours::EntityQuery({.force_merge = true})
@@ -614,6 +610,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -623,7 +620,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)
-                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - load template
                     auto docEntities = afterhours::EntityQuery({.force_merge = true})
@@ -698,6 +695,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -706,7 +704,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)
-                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set tab width
                     auto docEntities = afterhours::EntityQuery({.force_merge = true})
@@ -773,6 +771,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -781,7 +780,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)
-                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set UI scale
                     if (!menu.uiScaleInputStr.empty()) {
@@ -802,7 +801,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     ComponentConfig{}
                         .with_label("Cancel")
                         .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_margin(Margin{.right = DefaultSpacing::small()})
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     menu.uiScaleInputStr.clear();
                     menu.showSettingsDialog = false;
@@ -859,6 +858,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(1.0f), h720(200)})
                             .with_flex_direction(FlexDirection::Column)
+                            .with_overflow(afterhours::ui::Overflow::Auto)
                             .with_render_layer(CONTENT_LAYER));
                     
                     int idx = 0;
@@ -868,6 +868,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_label(bookmark.name)
                                 .with_size(ComponentSize{percent(1.0f), h720(32)})
                                 .with_background(Theme::Usage::Surface)
+                                .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
                                 .with_margin(Margin{.bottom = DefaultSpacing::tiny()})
                                 .with_render_layer(CONTENT_LAYER))) {
                             // Jump to bookmark
@@ -889,6 +891,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -896,6 +899,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     ComponentConfig{}
                         .with_label("Close")
                         .with_size(ComponentSize{h720(80), h720(32)})
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     menu.showBookmarkListDialog = false;
                 }
@@ -925,10 +929,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 auto scrollContainer = div(ctx, mk(result.ent(), 0),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(380)})
+                        .with_overflow(afterhours::ui::Overflow::Auto)
                         .with_padding(Spacing::sm)
                         .with_render_layer(CONTENT_LAYER));
                 if (scrollContainer) {
-                    scrollContainer.ent().addComponent<HasScrollView>();
                     // Header row
                     auto headerRow = div(ctx, mk(scrollContainer.ent(), 0),
                         ComponentConfig{}
@@ -986,6 +990,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -994,6 +999,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         ComponentConfig{}
                             .with_label("OK")
                             .with_size(ComponentSize{h720(100), h720(32)})
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
                         menu.showHelpWindow = false;
                     }
@@ -1053,6 +1059,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(30)})
                         .with_flex_direction(FlexDirection::Row)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -1082,6 +1089,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
                 
@@ -1092,7 +1100,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_label("Find Next")
                             .with_size(ComponentSize{h720(100), h720(32)})
                             .with_background(Theme::Usage::Primary)
-                            .with_margin(Margin{.right = DefaultSpacing::small()})
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
                         // Get document and perform find
                         auto docEntities = afterhours::EntityQuery({.force_merge = true})
@@ -1120,7 +1128,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             ComponentConfig{}
                                 .with_label("Replace")
                                 .with_size(ComponentSize{h720(100), h720(32)})
-                                .with_margin(Margin{.right = DefaultSpacing::small()})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
                                 .with_render_layer(CONTENT_LAYER))) {
                             // Get document and perform replace
                             auto docEntities = afterhours::EntityQuery({.force_merge = true})
@@ -1173,6 +1181,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         ComponentConfig{}
                             .with_label("Close")
                             .with_size(ComponentSize{h720(80), h720(32)})
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
                         menu.findInputStr.clear();
                         menu.replaceInputStr.clear();

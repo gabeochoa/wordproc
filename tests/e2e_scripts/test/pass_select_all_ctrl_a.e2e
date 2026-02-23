@@ -1,0 +1,36 @@
+# Test: TextSelectAll (Ctrl+A) input action
+# Validates the new TextSelectAll mapping works correctly
+
+# Type multiple lines
+type "First line of text"
+key ENTER
+type "Second line of text"
+key ENTER
+type "Third line of text"
+wait 2
+
+# Verify text was typed
+validate line_count=3
+
+# Use Ctrl+A to select all
+key CTRL+A
+wait 1
+
+# Validate selection exists
+validate has_selection=true
+
+# Validate selection length covers all text (3 lines + 2 newlines)
+# "First line of text" (18) + \n + "Second line of text" (19) + \n + "Third line of text" (18) = 57
+validate selection_length=57
+
+screenshot select_all_ctrl_a
+
+# Type to replace all selected text
+type "Replaced"
+wait 1
+
+# Verify replacement worked
+validate text=Replaced
+validate line_count=1
+
+screenshot select_all_replaced

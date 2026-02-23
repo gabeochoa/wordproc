@@ -29,6 +29,7 @@ inline ComponentConfig win95ButtonStyle(bool enabled = true, bool pressed = fals
         .with_roundness(0.0f)
         .with_custom_background(bg)
         .with_custom_text_color(textColor)
+        .with_cursor(CursorType::Pointer)
         .with_padding(Padding{
             .top = pixels(4),
             .right = pixels(8),
@@ -61,6 +62,7 @@ inline ComponentConfig win95ToolbarButtonStyle(float size, bool enabled = true, 
         .with_roundness(0.0f)
         .with_custom_background(bg)
         .with_custom_text_color(textColor)
+        .with_cursor(CursorType::Pointer)
         .with_bevel(pressed ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
                     ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 2.0f)
         .with_margin(Margin{.right = pixels(2)})
@@ -121,6 +123,7 @@ inline ComponentConfig win95DropdownButtonStyle(float width, float height, bool 
         .with_size(ComponentSize{pixels(width), pixels(height)})
         .with_custom_background(bg)
         .with_custom_text_color(ui_imm::win95_colors::TEXT)
+        .with_cursor(CursorType::Pointer)
         .with_bevel(open ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
                     ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
         .with_roundness(0.0f)
@@ -168,6 +171,8 @@ inline ComponentConfig win95DropdownItemStyle(bool selected) {
         .with_size(ComponentSize{percent(1.0f), pixels(itemHeight)})
         .with_custom_background(bg)
         .with_custom_text_color(text)
+        .with_cursor(CursorType::Pointer)
+        .with_custom_hover_bg(ui_imm::win95_colors::HIGHLIGHT)
         .with_roundness(0.0f)
         .with_padding(Padding{.left = pixels(4)})
         .with_alignment(afterhours::ui::TextAlignment::Left);

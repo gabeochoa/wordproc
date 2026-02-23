@@ -1,0 +1,18 @@
+# Test: Word Count dialog with gap-spaced button row
+# Validates the Word Count dialog opens and renders correctly
+
+# Type some text
+type "Hello world this is a test"
+wait 2
+
+# Open Word Count dialog via Tools menu
+menu_open Tools
+wait 2
+menu_select "Word Count..."
+wait 2
+
+# Validate dialog is open
+validate dialog_open=WordCount
+
+# Take screenshot showing dialog with gap-spaced buttons
+screenshot dialog_word_count_gap

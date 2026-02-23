@@ -27,6 +27,18 @@
 // Uses macOS screencapture tool with the window ID to capture Metal content.
 #import <AppKit/AppKit.h>
 
+extern "C" void metal_set_window_size(int width, int height) {
+    @autoreleasepool {
+        NSWindow* window = (__bridge NSWindow*)sapp_macos_get_window();
+        if (window) {
+            NSRect frame = [window frame];
+            NSRect newFrame = NSMakeRect(frame.origin.x, frame.origin.y,
+                                         (CGFloat)width, (CGFloat)height);
+            [window setFrame:newFrame display:YES animate:NO];
+        }
+    }
+}
+
 extern "C" void metal_minimize_window() {
     @autoreleasepool {
         NSWindow* window = (__bridge NSWindow*)sapp_macos_get_window();

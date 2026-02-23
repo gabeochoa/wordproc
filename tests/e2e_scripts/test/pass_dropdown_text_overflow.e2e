@@ -1,0 +1,33 @@
+# Test: Dropdown text overflow with ellipsis
+# Validates that toolbar dropdowns are present and handle text correctly
+
+# Wait for window to render
+wait 5
+
+# Verify initial dropdown labels
+expect_text "Normal"
+expect_text "Times New Roman"
+expect_text "10"
+
+screenshot dropdown_initial
+
+# Resize window narrow to test overflow behavior
+resize 600 400
+wait 2
+
+# Dropdowns should still be present even if truncated
+expect_text "Normal"
+expect_text "10"
+
+screenshot dropdown_narrow_overflow
+
+# Restore
+resize 1280 720
+wait 2
+
+# All dropdowns visible again
+expect_text "Normal"
+expect_text "Times New Roman"
+expect_text "10"
+
+screenshot dropdown_restored

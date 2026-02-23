@@ -1,0 +1,31 @@
+# Test: Toolbar separators render correctly after border-based refactor
+# Validates toolbar buttons and separators are all visible
+
+# Wait for window to render
+wait 5
+
+# Verify standard toolbar buttons are visible across separator groups
+# Group 1: Document operations
+expect_text "B"
+expect_text "I"
+expect_text "U"
+
+# Verify formatting bar dropdowns
+expect_text "Normal"
+expect_text "Times New Roman"
+expect_text "10"
+
+# Verify toolbar is not clipped
+validate toolbar_fits=true
+
+screenshot toolbar_separators_visible
+
+# Verify toolbar at different widths
+resize 800 600
+wait 2
+validate toolbar_fits=true
+
+screenshot toolbar_separators_800
+
+resize 1280 720
+wait 2

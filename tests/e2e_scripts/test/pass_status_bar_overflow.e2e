@@ -1,0 +1,35 @@
+# Test: Status bar text overflow after adding TextOverflow::Ellipsis
+# Validates status bar shows info correctly at various window widths
+
+# Wait for window to render
+wait 5
+
+# Verify status bar text at full width
+expect_text "Page 1"
+expect_text "Ln 1"
+expect_text "Col 1"
+
+screenshot status_bar_full_width
+
+# Type some text to update status bar
+type "Status bar overflow test content here"
+wait 2
+
+# Verify updated column count (37 chars, 0-indexed)
+validate caret_col=37
+
+# Resize narrow to test overflow
+resize 600 400
+wait 2
+
+# Status bar should still be visible
+expect_text "Page 1"
+
+screenshot status_bar_narrow
+
+# Restore
+resize 1280 720
+wait 2
+
+expect_text "Page 1"
+expect_text "Ln 1"

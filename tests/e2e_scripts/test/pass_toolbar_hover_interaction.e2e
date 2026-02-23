@@ -1,0 +1,36 @@
+# Test: Toolbar button hover interaction after cursor/hover styling updates
+# Validates toolbar buttons still function with with_cursor(Pointer) and hover bg
+
+# Wait for window to render
+wait 5
+
+# Verify toolbar formatting buttons are visible
+expect_text "B"
+expect_text "I"
+expect_text "U"
+
+# Verify dropdowns are visible
+expect_text "Normal"
+expect_text "Times New Roman"
+expect_text "10"
+
+# Type some text
+type "Toolbar hover test"
+wait 2
+
+# Select all text
+select_all
+wait 1
+
+# Apply bold via toolbar shortcut
+key CTRL+B
+wait 1
+validate bold=true
+
+# Apply italic
+key CTRL+I
+wait 1
+validate italic=true
+
+# Take screenshot showing active formatting buttons
+screenshot toolbar_hover_active_buttons

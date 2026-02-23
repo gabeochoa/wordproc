@@ -35,7 +35,8 @@ inline ComponentConfig titleBarButton(float x, float y, float w, float h) {
         .with_roundness(0.0f)
         .with_alignment(afterhours::ui::TextAlignment::Center)
         .with_justify_content(afterhours::ui::JustifyContent::Center)
-        .with_align_items(afterhours::ui::AlignItems::Center);
+        .with_align_items(afterhours::ui::AlignItems::Center)
+        .with_cursor(afterhours::ui::CursorType::Pointer);
 }
 
 // Title Bar System - renders the blue title bar using Afterhours UI
@@ -90,6 +91,8 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
                     theme::TITLE_TEXT.b, theme::TITLE_TEXT.a})
                 .with_roundness(0.0f)
                 .with_alignment(afterhours::ui::TextAlignment::Left)
+                .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
+                .with_letter_spacing(0.5f)
                 .with_padding(afterhours::ui::Padding{.left = pixels(4)})
                 .with_debug_name("title_bar"));
 

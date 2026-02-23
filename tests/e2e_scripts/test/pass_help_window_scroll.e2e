@@ -1,0 +1,21 @@
+# Test: Help window with Overflow::Auto (auto-scroll)
+# Validates help window opens via menu and shows content
+
+# Open help window via Help menu
+menu_open Help
+wait 2
+menu_select "Keyboard Shortcuts..."
+wait 3
+
+# Validate help window is visible
+validate help_window_visible=true
+
+# Verify help content is present
+validate help_has_Keyboard Shortcuts=true
+validate help_has_Ctrl+B=true
+validate help_has_Bold=true
+validate help_has_Ctrl+S=true
+validate help_has_Save=true
+
+# Take screenshot of help window with scrollable content
+screenshot help_window_auto_scroll

@@ -6,6 +6,8 @@ enum class InputAction {
     None,
     WidgetRight,
     WidgetLeft,
+    WidgetUp,
+    WidgetDown,
     WidgetNext,
     WidgetPress,
     WidgetMod,
@@ -19,6 +21,7 @@ enum class InputAction {
     TextDelete,
     TextHome,
     TextEnd,
+    TextSelectAll,
 };
 
 inline int to_int(InputAction action) { return static_cast<int>(action); }
@@ -40,6 +43,14 @@ inline auto get_mapping() {
 
     mapping[to_int(InputAction::WidgetRight)] = {
         afterhours::keys::RIGHT,
+    };
+
+    mapping[to_int(InputAction::WidgetUp)] = {
+        afterhours::keys::UP,
+    };
+
+    mapping[to_int(InputAction::WidgetDown)] = {
+        afterhours::keys::DOWN,
     };
 
     mapping[to_int(InputAction::WidgetBack)] = {
@@ -90,6 +101,10 @@ inline auto get_mapping() {
 
     mapping[to_int(InputAction::TextEnd)] = {
         afterhours::keys::END,
+    };
+
+    mapping[to_int(InputAction::TextSelectAll)] = {
+        afterhours::keys::A,
     };
 
     return mapping;
