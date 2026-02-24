@@ -44,22 +44,22 @@ inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
-    : public afterhours::System<DocumentComponent, CaretComponent, MenuComponent, InputComponent> {
+    : public afterhours::System<DocumentComponent, CaretComponent, DialogState, InputComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
-                       CaretComponent& caret, MenuComponent& menu,
+                       CaretComponent& caret, DialogState& dialogs,
                        InputComponent& inputComp, const float) override {
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
         
         // Find/Replace keyboard shortcuts
         if (actionMap_.isActionPressed(Action::Find)) {
-            menu.showFindDialog = true;
-            menu.findReplaceMode = false;
+            dialogs.showFindDialog = true;
+            dialogs.findReplaceMode = false;
         }
         if (actionMap_.isActionPressed(Action::Replace)) {
-            menu.showFindDialog = true;
-            menu.findReplaceMode = true;
+            dialogs.showFindDialog = true;
+            dialogs.findReplaceMode = true;
         }
 
         int codepoint = test_input::get_char_pressed();
@@ -155,12 +155,12 @@ struct TextInputSystem
 // System for handling keyboard shortcuts using remappable ActionMap
 struct KeyboardShortcutSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                LayoutComponent, MenuComponent, InputComponent> {
+                                LayoutComponent, MenuComponent, DialogState, InputComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret,
                        LayoutComponent& layout, MenuComponent& menu,
-                       InputComponent& inputComp, const float) override {
+                       DialogState& dialogs, InputComponent& inputComp, const float) override {
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
 
@@ -215,7 +215,7 @@ struct KeyboardShortcutSystem
 
         // Word Count
         if (actionMap_.isActionPressed(Action::ShowWordCount)) {
-            menu.showWordCountDialog = true;
+            dialogs.showWordCountDialog = true;
         }
 
         // Bold

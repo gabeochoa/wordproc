@@ -12,6 +12,7 @@ struct EditorEntityCache {
     DocumentComponent* doc = nullptr;
     LayoutComponent* layout = nullptr;
     MenuComponent* menu = nullptr;
+    DialogState* dialogs = nullptr;
     ToolbarComponent* toolbar = nullptr;
 
     bool resolved() const { return doc != nullptr; }
@@ -26,6 +27,7 @@ struct EditorEntityCache {
         doc = &e.get<DocumentComponent>();
         layout = &e.get<LayoutComponent>();
         menu = &e.get<MenuComponent>();
+        dialogs = &e.get<DialogState>();
         toolbar = &e.get<ToolbarComponent>();
     }
 };

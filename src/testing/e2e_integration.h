@@ -23,6 +23,7 @@ struct E2EConfig {
   // Component pointers for app-specific commands
   ecs::DocumentComponent *doc_comp = nullptr;
   ecs::MenuComponent *menu_comp = nullptr;
+  ecs::DialogState *dialog_state = nullptr;
 };
 
 /// Register all E2E systems in the correct order
@@ -48,7 +49,7 @@ inline void register_e2e_systems(SystemManager &sm, const E2EConfig &config) {
   ui_commands::register_ui_commands<InputAction>(sm);
 
   // Phase 5: App-specific command handlers
-  e2e_commands::register_app_commands(sm, config.doc_comp, config.menu_comp);
+  e2e_commands::register_app_commands(sm, config.doc_comp, config.menu_comp, config.dialog_state);
 
   // Phase 6: Unknown command handler + Cleanup (must be last)
   register_unknown_handler(sm);

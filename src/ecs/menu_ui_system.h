@@ -51,6 +51,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!cache_.resolved()) return;
 
         MenuComponent& menu = *cache_.menu;
+        DialogState& dialogs = *cache_.dialogs;
         auto& layout = *cache_.layout;
         auto& doc = *cache_.doc;
 
@@ -412,17 +413,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // ============================================================
         
         // About dialog
-        if (menu.showAboutDialog) {
+        if (dialogs.showAboutDialog) {
             constexpr int ABOUT_MODAL_ID = 50000;
             afterhours::modal::info(ctx, mk(entity, ABOUT_MODAL_ID),
-                menu.showAboutDialog,
+                dialogs.showAboutDialog,
                 "About Wordproc",
                 "Wordproc v0.1\n\nA Windows 95 style word processor\nbuilt with Afterhours.",
                 "OK");
         }
         
         // Word Count dialog - uses larger modal to fit 5 lines of stats
-        if (menu.showWordCountDialog) {
+        if (dialogs.showWordCountDialog) {
             {
                 TextStats stats = doc.buffer.stats();
                 std::string msg = std::format(
@@ -433,7 +434,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 constexpr int WORDCOUNT_MODAL_ID = 50001;
                 // Use custom modal with larger height for 5 lines of text
                 auto result = afterhours::modal(ctx, mk(entity, WORDCOUNT_MODAL_ID),
-                    menu.showWordCountDialog,
+                    dialogs.showWordCountDialog,
                     afterhours::ModalConfig{}
                         .with_size(afterhours::ui::h720(350), afterhours::ui::h720(220))
                         .with_title("Word Count")
@@ -463,7 +464,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             ComponentConfig{}
                                 .with_label("OK")
                                 .with_size(ComponentSize{h720(100), h720(32)}))) {
-                            menu.showWordCountDialog = false;
+                            dialogs.showWordCountDialog = false;
                         }
                     }
                 }
@@ -471,10 +472,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
         
         // Comment input dialog
-        if (menu.showCommentDialog) {
+        if (dialogs.showCommentDialog) {
             constexpr int COMMENT_MODAL_ID = 50002;
             auto result = afterhours::modal(ctx, mk(entity, COMMENT_MODAL_ID),
-                menu.showCommentDialog,
+                dialogs.showCommentDialog,
                 afterhours::ModalConfig{}
                     .with_size(afterhours::ui::h720(360), afterhours::ui::h720(180))
                     .with_title("Add Comment"));
@@ -493,7 +494,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    menu.commentInputStr,
+                    dialogs.commentInputStr,
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(32)})
                         .with_background(Theme::Usage::Surface)
@@ -518,18 +519,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - add comment
-                    if (!menu.commentInputStr.empty()) {
+                    if (!dialogs.commentInputStr.empty()) {
                         Comment comment;
-                        comment.startOffset = menu.pendingCommentStart;
-                        comment.endOffset = menu.pendingCommentEnd;
+                        comment.startOffset = dialogs.pendingCommentStart;
+                        comment.endOffset = dialogs.pendingCommentEnd;
                         comment.author = "User";
-                        comment.text = menu.commentInputStr;
+                        comment.text = dialogs.commentInputStr;
                         comment.createdAt = std::time(nullptr);
                         doc.comments.push_back(comment);
                         toast_notify::success("Comment added");
                     }
-                    menu.commentInputStr.clear();
-                    menu.showCommentDialog = false;
+                    dialogs.commentInputStr.clear();
+                    dialogs.showCommentDialog = false;
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
@@ -537,17 +538,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("Cancel")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
-                    menu.commentInputStr.clear();
-                    menu.showCommentDialog = false;
+                    dialogs.commentInputStr.clear();
+                    dialogs.showCommentDialog = false;
                 }
             }
         }
         
         // Template input dialog
-        if (menu.showTemplateDialog) {
+        if (dialogs.showTemplateDialog) {
             constexpr int TEMPLATE_MODAL_ID = 50003;
             auto result = afterhours::modal(ctx, mk(entity, TEMPLATE_MODAL_ID),
-                menu.showTemplateDialog,
+                dialogs.showTemplateDialog,
                 afterhours::ModalConfig{}
                     .with_size(afterhours::ui::h720(380), afterhours::ui::h720(180))
                     .with_title("New from Template"));
@@ -566,7 +567,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    menu.templateInputStr,
+                    dialogs.templateInputStr,
                     ComponentConfig{}
                         .with_debug_name("template_input")
                         .with_size(ComponentSize{percent(1.0f), h720(32)})
@@ -593,8 +594,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - load template
-                    if (!menu.templateInputStr.empty()) {
-                        std::string name = menu.templateInputStr;
+                    if (!dialogs.templateInputStr.empty()) {
+                        std::string name = dialogs.templateInputStr;
                         for (auto& ch : name) ch = static_cast<char>(std::tolower(ch));
                         std::filesystem::path templatePath =
                             std::filesystem::current_path() / "resources/templates" /
@@ -610,8 +611,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             toast_notify::error("Template not found: " + name);
                         }
                     }
-                    menu.templateInputStr.clear();
-                    menu.showTemplateDialog = false;
+                    dialogs.templateInputStr.clear();
+                    dialogs.showTemplateDialog = false;
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
@@ -619,17 +620,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("Cancel")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
-                    menu.templateInputStr.clear();
-                    menu.showTemplateDialog = false;
+                    dialogs.templateInputStr.clear();
+                    dialogs.showTemplateDialog = false;
                 }
             }
         }
         
         // Tab Width input dialog
-        if (menu.showTabWidthDialog) {
+        if (dialogs.showTabWidthDialog) {
             constexpr int TABWIDTH_MODAL_ID = 50004;
             auto result = afterhours::modal(ctx, mk(entity, TABWIDTH_MODAL_ID),
-                menu.showTabWidthDialog,
+                dialogs.showTabWidthDialog,
                 afterhours::ModalConfig{}
                     .with_size(afterhours::ui::h720(320), afterhours::ui::h720(180))
                     .with_title("Tab Width"));
@@ -648,7 +649,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    menu.tabWidthInputStr,
+                    dialogs.tabWidthInputStr,
                     ComponentConfig{}
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Surface)
@@ -673,8 +674,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set tab width
-                    if (!menu.tabWidthInputStr.empty()) {
-                        int width = std::atoi(menu.tabWidthInputStr.c_str());
+                    if (!dialogs.tabWidthInputStr.empty()) {
+                        int width = std::atoi(dialogs.tabWidthInputStr.c_str());
                         if (width >= 1 && width <= 16) {
                             doc.docSettings.tabWidth = width;
                             toast_notify::success("Tab width set to " + std::to_string(width));
@@ -682,8 +683,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             toast_notify::error("Tab width must be 1-16");
                         }
                     }
-                    menu.tabWidthInputStr.clear();
-                    menu.showTabWidthDialog = false;
+                    dialogs.tabWidthInputStr.clear();
+                    dialogs.showTabWidthDialog = false;
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
@@ -691,17 +692,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_label("Cancel")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
-                    menu.tabWidthInputStr.clear();
-                    menu.showTabWidthDialog = false;
+                    dialogs.tabWidthInputStr.clear();
+                    dialogs.showTabWidthDialog = false;
                 }
             }
         }
         
         // UI Settings dialog
-        if (menu.showSettingsDialog) {
+        if (dialogs.showSettingsDialog) {
             constexpr int SETTINGS_MODAL_ID = 50005;
             auto result = afterhours::modal(ctx, mk(entity, SETTINGS_MODAL_ID),
-                menu.showSettingsDialog,
+                dialogs.showSettingsDialog,
                 afterhours::ModalConfig{}
                     .with_size(afterhours::ui::h720(380), afterhours::ui::h720(220))
                     .with_title("UI Settings"));
@@ -720,7 +721,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    menu.uiScaleInputStr,
+                    dialogs.uiScaleInputStr,
                     ComponentConfig{}
                         .with_size(ComponentSize{h720(100), h720(32)})
                         .with_background(Theme::Usage::Surface)
@@ -745,8 +746,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set UI scale
-                    if (!menu.uiScaleInputStr.empty()) {
-                        int percentage = std::atoi(menu.uiScaleInputStr.c_str());
+                    if (!dialogs.uiScaleInputStr.empty()) {
+                        int percentage = std::atoi(dialogs.uiScaleInputStr.c_str());
                         if (percentage >= 50 && percentage <= 200) {
                             float scale = static_cast<float>(percentage) / 100.0f;
                             Settings::get().set_ui_scale(scale);
@@ -755,8 +756,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             toast_notify::error("UI scale must be 50-200%");
                         }
                     }
-                    menu.uiScaleInputStr.clear();
-                    menu.showSettingsDialog = false;
+                    dialogs.uiScaleInputStr.clear();
+                    dialogs.showSettingsDialog = false;
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
@@ -765,8 +766,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
-                    menu.uiScaleInputStr.clear();
-                    menu.showSettingsDialog = false;
+                    dialogs.uiScaleInputStr.clear();
+                    dialogs.showSettingsDialog = false;
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 2),
@@ -775,17 +776,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
                     Settings::get().set_ui_scale(1.0f);
-                    menu.uiScaleInputStr = "100";
+                    dialogs.uiScaleInputStr = "100";
                     toast_notify::success("UI scale reset to 100%");
                 }
             }
         }
         
         // Go To Bookmark dialog
-        if (menu.showBookmarkListDialog) {
+        if (dialogs.showBookmarkListDialog) {
             constexpr int BOOKMARK_LIST_MODAL_ID = 50007;
             auto result = afterhours::modal(ctx, mk(entity, BOOKMARK_LIST_MODAL_ID),
-                menu.showBookmarkListDialog,
+                dialogs.showBookmarkListDialog,
                 afterhours::ModalConfig{}
                     .with_size(afterhours::ui::h720(400), afterhours::ui::h720(300))
                     .with_title("Go To Bookmark"));
@@ -831,7 +832,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             } else {
                                 toast_notify::error("Bookmark not found");
                             }
-                            menu.showBookmarkListDialog = false;
+                            dialogs.showBookmarkListDialog = false;
                         }
                         idx++;
                     }
@@ -854,16 +855,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
-                    menu.showBookmarkListDialog = false;
+                    dialogs.showBookmarkListDialog = false;
                 }
             }
         }
         
         // Help Window (Keyboard Shortcuts)
-        if (menu.showHelpWindow) {
+        if (dialogs.showHelpWindow) {
             constexpr int HELP_MODAL_ID = 50008;
             auto result = afterhours::modal(ctx, mk(entity, HELP_MODAL_ID),
-                menu.showHelpWindow,
+                dialogs.showHelpWindow,
                 afterhours::ModalConfig{}
                     .with_size(afterhours::ui::h720(500), afterhours::ui::h720(500))
                     .with_title("Keyboard Shortcuts")
@@ -954,20 +955,20 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_size(ComponentSize{h720(100), h720(32)})
                             .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
-                        menu.showHelpWindow = false;
+                        dialogs.showHelpWindow = false;
                     }
                 }
             }
         }
         
         // Find/Replace Dialog
-        if (menu.showFindDialog) {
+        if (dialogs.showFindDialog) {
             constexpr int FIND_MODAL_ID = 50009;
-            std::string title = menu.findReplaceMode ? "Find and Replace" : "Find";
+            std::string title = dialogs.findReplaceMode ? "Find and Replace" : "Find";
             auto result = afterhours::modal(ctx, mk(entity, FIND_MODAL_ID),
-                menu.showFindDialog,
+                dialogs.showFindDialog,
                 afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(450), menu.findReplaceMode ? afterhours::ui::h720(280) : afterhours::ui::h720(220))
+                    .with_size(afterhours::ui::h720(450), dialogs.findReplaceMode ? afterhours::ui::h720(280) : afterhours::ui::h720(220))
                     .with_title(title)
                     .with_show_close_button(true));
             
@@ -984,14 +985,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_render_layer(CONTENT_LAYER));
                 
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    menu.findInputStr,
+                    dialogs.findInputStr,
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(32)})
                         .with_background(Theme::Usage::Surface)
                         .with_render_layer(CONTENT_LAYER));
                 
                 // Replace label and input (only in replace mode)
-                if (menu.findReplaceMode) {
+                if (dialogs.findReplaceMode) {
                     div(ctx, mk(result.ent(), 2),
                         ComponentConfig{}
                             .with_label("Replace with:")
@@ -1000,7 +1001,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                     
                     afterhours::text_input::text_input(ctx, mk(result.ent(), 3),
-                        menu.replaceInputStr,
+                        dialogs.replaceInputStr,
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(1.0f), h720(32)})
                             .with_background(Theme::Usage::Surface)
@@ -1019,7 +1020,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 if (optionsRow) {
                     // Case sensitive checkbox
                     checkbox(ctx, mk(optionsRow.ent(), 0),
-                        menu.findOptions.caseSensitive,
+                        dialogs.findOptions.caseSensitive,
                         ComponentConfig{}
                             .with_label("Case sensitive")
                             .with_size(ComponentSize{h720(150), h720(24)})
@@ -1027,7 +1028,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     
                     // Whole word checkbox
                     checkbox(ctx, mk(optionsRow.ent(), 1),
-                        menu.findOptions.wholeWord,
+                        dialogs.findOptions.wholeWord,
                         ComponentConfig{}
                             .with_label("Whole word")
                             .with_size(ComponentSize{h720(120), h720(24)})
@@ -1056,9 +1057,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
                         // Perform find
-                        if (!menu.findInputStr.empty()) {
-                            menu.lastSearchTerm = menu.findInputStr;
-                            FindResult findResult = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
+                        if (!dialogs.findInputStr.empty()) {
+                            dialogs.lastSearchTerm = dialogs.findInputStr;
+                            FindResult findResult = doc.buffer.findNext(dialogs.lastSearchTerm, dialogs.findOptions);
                             if (findResult.found) {
                                 doc.buffer.setCaret(findResult.start);
                                 doc.buffer.setSelectionAnchor(findResult.start);
@@ -1072,7 +1073,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                     
                     // Replace button (only in replace mode)
-                    if (menu.findReplaceMode) {
+                    if (dialogs.findReplaceMode) {
                         if (button(ctx, mk(buttonRow.ent(), 1),
                             ComponentConfig{}
                                 .with_label("Replace")
@@ -1080,18 +1081,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_cursor(afterhours::ui::CursorType::Pointer)
                                 .with_render_layer(CONTENT_LAYER))) {
                             // Perform replace
-                            if (!menu.findInputStr.empty()) {
-                                menu.lastSearchTerm = menu.findInputStr;
-                                menu.replaceTerm = menu.replaceInputStr;
+                            if (!dialogs.findInputStr.empty()) {
+                                dialogs.lastSearchTerm = dialogs.findInputStr;
+                                dialogs.replaceTerm = dialogs.replaceInputStr;
                                 
                                 // Check if current selection matches the search term
                                 if (doc.buffer.hasSelection()) {
                                     std::string selected = doc.buffer.getSelectedText();
-                                    bool matches = menu.findOptions.caseSensitive ? 
-                                        (selected == menu.lastSearchTerm) :
+                                    bool matches = dialogs.findOptions.caseSensitive ? 
+                                        (selected == dialogs.lastSearchTerm) :
                                         ([&]() {
                                             std::string selLower = selected;
-                                            std::string termLower = menu.lastSearchTerm;
+                                            std::string termLower = dialogs.lastSearchTerm;
                                             for (auto& c : selLower) c = static_cast<char>(std::tolower(c));
                                             for (auto& c : termLower) c = static_cast<char>(std::tolower(c));
                                             return selLower == termLower;
@@ -1099,12 +1100,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                     
                                     if (matches) {
                                         doc.buffer.deleteSelection();
-                                        doc.buffer.insertText(menu.replaceTerm);
+                                        doc.buffer.insertText(dialogs.replaceTerm);
                                         doc.isDirty = true;
                                         toast_notify::success("Replaced");
                                         
                                         // Find next occurrence
-                                        FindResult findResult = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
+                                        FindResult findResult = doc.buffer.findNext(dialogs.lastSearchTerm, dialogs.findOptions);
                                         if (findResult.found) {
                                             doc.buffer.setCaret(findResult.start);
                                             doc.buffer.setSelectionAnchor(findResult.start);
@@ -1128,9 +1129,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_size(ComponentSize{h720(80), h720(32)})
                             .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
-                        menu.findInputStr.clear();
-                        menu.replaceInputStr.clear();
-                        menu.showFindDialog = false;
+                        dialogs.findInputStr.clear();
+                        dialogs.replaceInputStr.clear();
+                        dialogs.showFindDialog = false;
                     }
                 }
             }
@@ -1140,14 +1141,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         {
             int menuResult = menu.consumeClickedResult();
             if (menuResult >= 0) {
-                handleMenuActionImpl(menuResult, doc, menu, layout);
+                handleMenuActionImpl(menuResult, doc, menu, dialogs, layout);
             }
         }
 
         // F1 to toggle help window
         if (input::isKeyPressed(afterhours::keys::F1)) {
-            menu.showHelpWindow = !menu.showHelpWindow;
-            menu.helpScrollOffset = 0;
+            dialogs.showHelpWindow = !dialogs.showHelpWindow;
+            dialogs.helpScrollOffset = 0;
         }
 
         // Restore the global theme so subsequent systems (toolbar, etc.) use the correct theme

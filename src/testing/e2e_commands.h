@@ -374,7 +374,7 @@ struct HandleReplaceTextCommand : System<testing::PendingE2ECommand> {
 
 // Handle 'set_find_term text' - sets the search term for Find Next/Previous
 struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
-  ecs::MenuComponent *menu_comp = nullptr;
+  ecs::DialogState *dialog_state = nullptr;
 
   virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
                              float) override {
@@ -384,8 +384,8 @@ struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
       cmd.fail("set_find_term requires search text");
       return;
     }
-    if (!menu_comp) {
-      cmd.fail("menu_comp not set");
+    if (!dialog_state) {
+      cmd.fail("dialog_state not set");
       return;
     }
 
@@ -394,10 +394,10 @@ struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
       term += " " + cmd.args[i];
     term = strip_quotes(term);
 
-    menu_comp->lastSearchTerm = term;
-    menu_comp->findInputStr = term;
-    std::strncpy(menu_comp->findInputBuffer, term.c_str(),
-                 sizeof(menu_comp->findInputBuffer) - 1);
+    dialog_state->lastSearchTerm = term;
+    dialog_state->findInputStr = term;
+    std::strncpy(dialog_state->findInputBuffer, term.c_str(),
+                 sizeof(dialog_state->findInputBuffer) - 1);
     cmd.consume();
   }
 };
@@ -423,7 +423,8 @@ struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
 inline void register_app_commands(
     SystemManager &sm,
     ecs::DocumentComponent *doc_comp,
-    ecs::MenuComponent *menu_comp
+    ecs::MenuComponent *menu_comp,
+    ecs::DialogState *dialog_state
 ) {
   // Menu commands
   auto menu_open = std::make_unique<HandleMenuOpenCommand>();
@@ -467,7 +468,7 @@ inline void register_app_commands(
   sm.register_update_system(std::move(replace_txt));
 
   auto set_find = std::make_unique<HandleSetFindTermCommand>();
-  set_find->menu_comp = menu_comp;
+  set_find->dialog_state = dialog_state;
   sm.register_update_system(std::move(set_find));
 
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();

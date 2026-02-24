@@ -148,78 +148,81 @@ struct StatusComponent : public afterhours::BaseComponent {
     bool isError = false;
 };
 
-// Component for menu state
+// Component for menu bar state (dropdown menus, click dispatch, pending native dialogs)
 struct MenuComponent : public afterhours::BaseComponent {
     std::vector<win95::Menu> menus;
-    int activeMenuIndex = -1;      // Currently active menu (-1 = none)
-    int lastClickedResult = -1;    // Result of last menu click for action handling
-    bool showAboutDialog = false;
-    bool showHelpWindow = false;  // Keybindings help window
-    int helpScrollOffset = 0;     // Scroll position in help window
-    int recentFilesCount = 0;     // Cache count for menu refresh
-    
-    // Consume the clicked result (returns it and clears it)
+    int activeMenuIndex = -1;
+    int lastClickedResult = -1;
+    int recentFilesCount = 0;
+
     int consumeClickedResult() {
         int result = lastClickedResult;
         lastClickedResult = -1;
         return result;
     }
-    
-    // Find/Replace state
-    bool showFindDialog = false;
-    bool findReplaceMode = false;  // false = find only, true = find + replace
-    std::string lastSearchTerm;
-    std::string replaceTerm;
-    FindOptions findOptions;       // Case sensitive, whole word, wrap around
-    char findInputBuffer[256] = {0};
-    char replaceInputBuffer[256] = {0};
-    std::string findInputStr;      // For afterhours text_input
-    std::string replaceInputStr;   // For afterhours text_input
 
-    // Word count dialog
+    enum class PendingDialog { None, Open, SaveAs };
+    PendingDialog pendingDialog = PendingDialog::None;
+};
+
+// Component for all dialog visibility and state (separated from menu bar)
+struct DialogState : public afterhours::BaseComponent {
+    // About / Help
+    bool showAboutDialog = false;
+    bool showHelpWindow = false;
+    int helpScrollOffset = 0;
+
+    // Word Count
     bool showWordCountDialog = false;
 
-    // Comment dialog
+    // Find / Replace
+    bool showFindDialog = false;
+    bool findReplaceMode = false;
+    std::string lastSearchTerm;
+    std::string replaceTerm;
+    FindOptions findOptions;
+    char findInputBuffer[256] = {0};
+    char replaceInputBuffer[256] = {0};
+    std::string findInputStr;
+    std::string replaceInputStr;
+
+    // Comment
     bool showCommentDialog = false;
     std::size_t pendingCommentStart = 0;
     std::size_t pendingCommentEnd = 0;
     char commentInputBuffer[256] = {0};
-    std::string commentInputStr;  // For afterhours text_input
+    std::string commentInputStr;
 
-    // Template selection dialog
+    // Template
     bool showTemplateDialog = false;
     char templateInputBuffer[128] = {0};
-    std::string templateInputStr;  // For afterhours text_input
+    std::string templateInputStr;
 
-    // Tab width dialog
+    // Tab Width
     bool showTabWidthDialog = false;
     char tabWidthInputBuffer[16] = {0};
-    std::string tabWidthInputStr;  // For afterhours text_input
-    
-    // Page Setup dialog state
+    std::string tabWidthInputStr;
+
+    // Page Setup
     bool showPageSetup = false;
     PageSize selectedPageSize = PageSize::Letter;
     PageOrientation selectedOrientation = PageOrientation::Portrait;
-    int marginTopMm = 25;     // Margins in mm for UI
+    int marginTopMm = 25;
     int marginBottomMm = 25;
     int marginLeftMm = 25;
     int marginRightMm = 25;
-    
-    // Save As dialog state
+
+    // Save As
     bool showSaveAsDialog = false;
     char saveAsInputBuffer[256] = {0};
-    std::string saveAsInputStr;  // For afterhours text_input
-    
-    // Pending native dialog action (deferred to top of frame to avoid blocking mid-ECS)
-    enum class PendingDialog { None, Open, SaveAs };
-    PendingDialog pendingDialog = PendingDialog::None;
-    
-    // Go To Bookmark dialog state
+    std::string saveAsInputStr;
+
+    // Bookmark List
     bool showBookmarkListDialog = false;
-    
-    // Settings dialog
+
+    // Settings
     bool showSettingsDialog = false;
-    std::string uiScaleInputStr;  // For text input (percentage value)
+    std::string uiScaleInputStr;
 };
 
 // PageMode is defined in document_settings.h

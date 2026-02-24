@@ -27,6 +27,7 @@ void initializeRunner(
     const std::string& scriptPath,
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
+    ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
@@ -46,6 +47,7 @@ void initializeRunnerBatch(
     const std::string& scriptDir,
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
+    ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir

@@ -212,6 +212,9 @@ static void app_init() {
     testComp.frameLimit = app_state::frameLimit;
     testComp.fpsTestMode = app_state::fpsTestMode;
 
+    // Dialog state (separated from menu bar component)
+    auto& dialogState = editorEntity.addComponent<ecs::DialogState>();
+
     // Shared action map for all input systems
     editorEntity.addComponent<ecs::InputComponent>();
 
@@ -323,10 +326,10 @@ static void app_init() {
     app_state::scriptRunner = &runner;
     if (!app_state::testScriptDir.empty()) {
         // Batch mode: load all scripts from directory
-        e2e::initializeRunnerBatch(runner, app_state::testScriptDir, docComp, menuComp, layoutComp, toolbarComp, app_state::screenshotDir);
+        e2e::initializeRunnerBatch(runner, app_state::testScriptDir, docComp, menuComp, dialogState, layoutComp, toolbarComp, app_state::screenshotDir);
     } else if (!app_state::testScriptPath.empty()) {
         // Single script mode
-        e2e::initializeRunner(runner, app_state::testScriptPath, docComp, menuComp, layoutComp, toolbarComp, app_state::screenshotDir);
+        e2e::initializeRunner(runner, app_state::testScriptPath, docComp, menuComp, dialogState, layoutComp, toolbarComp, app_state::screenshotDir);
     }
     
     // Set E2E timeout (default 30s, can be increased for large document tests)
@@ -337,6 +340,7 @@ static void app_init() {
         e2e::E2EConfig e2eConfig;
         e2eConfig.doc_comp = &docComp;
         e2eConfig.menu_comp = &menuComp;
+        e2eConfig.dialog_state = &dialogState;
         e2eConfig.screenshot_callback = [](const std::string& name) {
             std::filesystem::path dir = std::filesystem::absolute(app_state::screenshotDir);
             std::filesystem::create_directories(dir);

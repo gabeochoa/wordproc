@@ -167,12 +167,13 @@ static void setupCallbacksEx(
     ScriptRunner& runner,
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
+    ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
 ) {
     // Set up property getter for validation (extended version)
-    runner.set_property_getter([&docComp, &menuComp, &layoutComp, &toolbarComp](const std::string& prop) -> std::string {
+    runner.set_property_getter([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp](const std::string& prop) -> std::string {
         (void)toolbarComp; // Available if needed for future property queries
         const auto& buffer = docComp.buffer;
         const auto& style = buffer.textStyle();
@@ -323,18 +324,18 @@ static void setupCallbacksEx(
         
         // Dialog properties
         if (prop == "dialog_open") {
-            if (menuComp.showAboutDialog) return "About";
-            if (menuComp.showFindDialog) return "Find";
-            if (menuComp.showPageSetup) return "PageSetup";
-            if (menuComp.showSettingsDialog) return "Settings";
-            if (menuComp.showWordCountDialog) return "WordCount";
+            if (dialogState.showAboutDialog) return "About";
+            if (dialogState.showFindDialog) return "Find";
+            if (dialogState.showPageSetup) return "PageSetup";
+            if (dialogState.showSettingsDialog) return "Settings";
+            if (dialogState.showWordCountDialog) return "WordCount";
             return "false";
         }
-        if (prop == "help_window_visible") return menuComp.showHelpWindow ? "true" : "false";
+        if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";
         // help_has_TEXT=true/false — check if help window is visible
         // (content check not possible, so we just verify visibility)
         if (prop.length() > 9 && prop.substr(0, 9) == "help_has_") {
-            return menuComp.showHelpWindow ? "true" : "false";
+            return dialogState.showHelpWindow ? "true" : "false";
         }
         
         // Outline properties
@@ -681,7 +682,7 @@ static void setupCallbacksEx(
     // Note: document_dump command is now handled by ECS system in e2e_commands.h
     
     // Set up document clearer (for batch mode)
-    runner.set_reset_callback([&docComp, &menuComp, &layoutComp, &toolbarComp]() {
+    runner.set_reset_callback([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp]() {
         // Reset document state
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
@@ -703,21 +704,21 @@ static void setupCallbacksEx(
         docComp.filePath.clear();
         
         // Reset menu state
-        menuComp.showAboutDialog = false;
-        menuComp.showHelpWindow = false;
-        menuComp.showFindDialog = false;
-        menuComp.findReplaceMode = false;
-        menuComp.lastSearchTerm.clear();
-        menuComp.replaceTerm.clear();
-        std::memset(menuComp.findInputBuffer, 0, sizeof(menuComp.findInputBuffer));
-        std::memset(menuComp.replaceInputBuffer, 0, sizeof(menuComp.replaceInputBuffer));
-        menuComp.showCommentDialog = false;
-        menuComp.commentInputBuffer[0] = '\0';
-        menuComp.showTemplateDialog = false;
-        menuComp.templateInputBuffer[0] = '\0';
-        menuComp.showTabWidthDialog = false;
-        menuComp.tabWidthInputBuffer[0] = '\0';
-        menuComp.showPageSetup = false;
+        dialogState.showAboutDialog = false;
+        dialogState.showHelpWindow = false;
+        dialogState.showFindDialog = false;
+        dialogState.findReplaceMode = false;
+        dialogState.lastSearchTerm.clear();
+        dialogState.replaceTerm.clear();
+        std::memset(dialogState.findInputBuffer, 0, sizeof(dialogState.findInputBuffer));
+        std::memset(dialogState.replaceInputBuffer, 0, sizeof(dialogState.replaceInputBuffer));
+        dialogState.showCommentDialog = false;
+        dialogState.commentInputBuffer[0] = '\0';
+        dialogState.showTemplateDialog = false;
+        dialogState.templateInputBuffer[0] = '\0';
+        dialogState.showTabWidthDialog = false;
+        dialogState.tabWidthInputBuffer[0] = '\0';
+        dialogState.showPageSetup = false;
         
         // Close any open dropdown menus
         menuComp.activeMenuIndex = -1;
@@ -753,6 +754,7 @@ void initializeRunner(
     const std::string& scriptPath,
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
+    ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
@@ -777,7 +779,7 @@ void initializeRunner(
     
     fprintf(stderr, "[E2E DEBUG] Setting up callbacks for script\n");
     fflush(stderr);
-    setupCallbacksEx(runner, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
+    setupCallbacksEx(runner, docComp, menuComp, dialogState, layoutComp, toolbarComp, screenshotDir);
     fprintf(stderr, "[E2E DEBUG] Callbacks setup complete\n");
     fflush(stderr);
 }
@@ -787,6 +789,7 @@ void initializeRunnerBatch(
     const std::string& scriptDir,
     ecs::DocumentComponent& docComp,
     ecs::MenuComponent& menuComp,
+    ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
     const std::string& screenshotDir
@@ -803,7 +806,7 @@ void initializeRunnerBatch(
         return;
     }
     
-    setupCallbacksEx(runner, docComp, menuComp, layoutComp, toolbarComp, screenshotDir);
+    setupCallbacksEx(runner, docComp, menuComp, dialogState, layoutComp, toolbarComp, screenshotDir);
 }
 
 }  // namespace e2e

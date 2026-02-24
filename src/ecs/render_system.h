@@ -506,7 +506,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 struct EditorRenderSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
                                 ScrollComponent,
-                                LayoutComponent, MenuComponent> {
+                                LayoutComponent> {
     void once(const float) const override {
         // Note: begin_drawing() and clear_background() are now called in app_frame()
         // before sm.run(dt), so that all render systems (including RenderImm for UI)
@@ -584,7 +584,7 @@ struct EditorRenderSystem
                        DocumentComponent& doc,
                        CaretComponent& caret,
                        ScrollComponent& scroll,
-                       LayoutComponent& layout, MenuComponent& menu,
+                       LayoutComponent& layout,
                        const float) override {
         // Draw horizontal ruler (after toolbars, before text area)
         if (!layout.focusMode) {

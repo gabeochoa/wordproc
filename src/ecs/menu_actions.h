@@ -21,7 +21,7 @@
 namespace ecs {
 
 inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
-                          MenuComponent& menu,
+                          MenuComponent& menu, DialogState& dialogs,
                           LayoutComponent& layout) {
         int menuIndex = menuResult / 100;
         int itemIndex = menuResult % 100;
@@ -76,7 +76,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     doc.trackChangesBaseline.clear();
                     break;
                 case 1:  // New from Template...
-                    menu.showTemplateDialog = true;
+                    dialogs.showTemplateDialog = true;
                     break;
                 case 2:  // Open
                     menu.pendingDialog = MenuComponent::PendingDialog::Open;
@@ -166,7 +166,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 } break;
                 case 10:  // Page Setup
                 {
-                    menu.showPageSetup = !menu.showPageSetup;
+                    dialogs.showPageSetup = !dialogs.showPageSetup;
                 } break;
                 default:
                     break;
@@ -239,13 +239,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     doc.buffer.selectAll();
                     break;
                 case 13:  // Find...
-                    menu.showFindDialog = true;
-                    menu.findReplaceMode = false;
+                    dialogs.showFindDialog = true;
+                    dialogs.findReplaceMode = false;
                     toast_notify::info("Find: Ctrl+G next, Ctrl+Shift+G prev");
                     break;
                 case 14:  // Find Next
-                    if (!menu.lastSearchTerm.empty()) {
-                        FindResult result = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
+                    if (!dialogs.lastSearchTerm.empty()) {
+                        FindResult result = doc.buffer.findNext(dialogs.lastSearchTerm, dialogs.findOptions);
                         if (result.found) {
                             doc.buffer.setCaret(result.start);
                             doc.buffer.setSelectionAnchor(result.start);
@@ -258,8 +258,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 case 15:  // Find Previous
-                    if (!menu.lastSearchTerm.empty()) {
-                        FindResult result = doc.buffer.findPrevious(menu.lastSearchTerm, menu.findOptions);
+                    if (!dialogs.lastSearchTerm.empty()) {
+                        FindResult result = doc.buffer.findPrevious(dialogs.lastSearchTerm, dialogs.findOptions);
                         if (result.found) {
                             doc.buffer.setCaret(result.start);
                             doc.buffer.setSelectionAnchor(result.start);
@@ -272,12 +272,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 case 16:  // Replace...
-                    menu.showFindDialog = true;
-                    menu.findReplaceMode = true;
+                    dialogs.showFindDialog = true;
+                    dialogs.findReplaceMode = true;
                     toast_notify::info("Replace mode");
                     break;
                 case 18:  // Go To Bookmark...
-                    menu.showBookmarkListDialog = true;
+                    dialogs.showBookmarkListDialog = true;
                     break;
                 default:
                     break;
@@ -571,7 +571,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info(doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
                     break;
                 case 70:  // Tab Width...
-                    menu.showTabWidthDialog = true;
+                    dialogs.showTabWidthDialog = true;
                     break;
                 default:
                     break;
@@ -624,10 +624,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (doc.buffer.hasSelection()) {
                         CaretPosition start = doc.buffer.selectionStart();
                         CaretPosition end = doc.buffer.selectionEnd();
-                        menu.pendingCommentStart =
+                        dialogs.pendingCommentStart =
                             doc.buffer.offsetForPosition(start);
-                        menu.pendingCommentEnd = doc.buffer.offsetForPosition(end);
-                        menu.showCommentDialog = true;
+                        dialogs.pendingCommentEnd = doc.buffer.offsetForPosition(end);
+                        dialogs.showCommentDialog = true;
                     } else {
                         toast_notify::error("Select text to comment");
                     }
@@ -866,20 +866,20 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
         } else if (menuIndex == 7) {  // Help menu
             if (itemIndex == 0) {     // Keyboard Shortcuts
-                menu.showHelpWindow = true;
+                dialogs.showHelpWindow = true;
             } else if (itemIndex == 2) {  // About (after separator)
-                menu.showAboutDialog = true;
+                dialogs.showAboutDialog = true;
             }
         } else if (menuIndex == 5) {  // Tools menu (includes former Settings items)
             switch (itemIndex) {
                 case 0:  // Word Count...
-                    menu.showWordCountDialog = true;
+                    dialogs.showWordCountDialog = true;
                     break;
                 case 2:  // UI Scale... (was Settings item 0)
-                    menu.showSettingsDialog = true;
+                    dialogs.showSettingsDialog = true;
                     {
                         int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
-                        menu.uiScaleInputStr = std::to_string(currentPercentage);
+                        dialogs.uiScaleInputStr = std::to_string(currentPercentage);
                     }
                     break;
                 default:
