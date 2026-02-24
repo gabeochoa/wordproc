@@ -9,6 +9,7 @@
 #include "../ui/ui_context.h"
 #include "../external.h"
 #include "components.h"
+#include "editor_entity_cache.h"
 
 namespace ecs {
 
@@ -27,23 +28,15 @@ using afterhours::ui::Padding;
 
 // Status Bar System - renders Word 6.0-style status bar using Afterhours UI
 struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
+    EditorEntityCache cache_;
 
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
-        // Find layout
-        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
-                                 .whereHasComponent<LayoutComponent>()
-                                 .gen();
-        if (layoutEntities.empty()) return;
-        auto& layout = layoutEntities[0].get().get<LayoutComponent>();
+        cache_.resolve();
+        if (!cache_.resolved()) return;
+        auto& layout = *cache_.layout;
+        auto& doc = *cache_.doc;
 
         if (layout.focusMode) return;
-
-        // Find document
-        auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                              .whereHasComponent<DocumentComponent>()
-                              .gen();
-        if (docEntities.empty()) return;
-        auto& doc = docEntities[0].get().get<DocumentComponent>();
 
         float screenWidth = static_cast<float>(layout.screenWidth);
         float statusBarHeight = theme::layout::scale(theme::layout::STATUS_BAR_HEIGHT);

@@ -10,6 +10,7 @@
 #include "../editor/document_io.h"
 #include "components.h"
 #include "component_helpers.h"
+#include "editor_entity_cache.h"
 #include "../external.h"
 
 namespace ecs {
@@ -113,31 +114,15 @@ inline ComponentConfig absDropdownButton(float x, float y, float width, float he
 // Toolbar Render System - renders the standard toolbar and formatting toolbar
 // Uses absolute positioning for each element (translate doesn't propagate to flex children)
 struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
+    EditorEntityCache cache_;
     
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
-        // Find toolbar entities
-        auto toolbarEntities = afterhours::EntityQuery({.force_merge = true})
-                                  .whereHasComponent<ToolbarComponent>()
-                                  .gen();
-        if (toolbarEntities.empty()) return;
+        cache_.resolve();
+        if (!cache_.resolved()) return;
         
-        auto& toolbar = toolbarEntities[0].get().get<ToolbarComponent>();
-        
-        // Find document entities
-        auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                              .whereHasComponent<DocumentComponent>()
-                              .gen();
-        if (docEntities.empty()) return;
-        
-        auto& doc = docEntities[0].get().get<DocumentComponent>();
-        
-        // Find layout entities
-        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
-                                 .whereHasComponent<LayoutComponent>()
-                                 .gen();
-        if (layoutEntities.empty()) return;
-        
-        auto& layout = layoutEntities[0].get().get<LayoutComponent>();
+        auto& toolbar = *cache_.toolbar;
+        auto& doc = *cache_.doc;
+        auto& layout = *cache_.layout;
         
         // Skip rendering toolbars in focus mode
         if (layout.focusMode) {

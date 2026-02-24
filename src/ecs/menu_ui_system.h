@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "components.h"
+#include "editor_entity_cache.h"
 #include "menu_actions.h"
 #include "../input_mapping.h"  // For InputAction enum
 #include "../ui/input.h"       // For input::isKeyPressed
@@ -43,26 +44,17 @@ inline afterhours::Color toAhColor(const afterhours::Color& color) {
 // Menu UI System - runs during update phase to handle menu interactions
 // Queries only for UIContext singleton, then manually finds MenuComponent entities
 struct MenuUISystem : System<UIContext<InputAction>> {
+    EditorEntityCache cache_;
     
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
-        // Find entities with MenuComponent
-        auto menuEntities = afterhours::EntityQuery({.force_merge = true})
-                               .whereHasComponent<MenuComponent>()
-                               .gen();
-        if (menuEntities.empty()) return;
-        
-        MenuComponent& menu = menuEntities[0].get().get<MenuComponent>();
+        cache_.resolve();
+        if (!cache_.resolved()) return;
 
-        // Skip rendering menus in focus mode
-        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
-                                 .whereHasComponent<LayoutComponent>()
-                                 .gen();
-        if (!layoutEntities.empty()) {
-            auto& layout = layoutEntities[0].get().get<LayoutComponent>();
-            if (layout.focusMode) {
-                return;
-            }
-        }
+        MenuComponent& menu = *cache_.menu;
+        auto& layout = *cache_.layout;
+        auto& doc = *cache_.doc;
+
+        if (layout.focusMode) return;
 
         // Refresh menus if recent file count changed
         const auto& recentFiles = Settings::get().get_recent_files();
@@ -70,16 +62,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             menu.menus = menu_setup::createMenuBar(recentFiles);
             menu.recentFilesCount = static_cast<int>(recentFiles.size());
 
-            auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                   .whereHasComponent<DocumentComponent>()
-                                   .gen();
-            if (!docEntities.empty()) {
-                auto& doc = docEntities[0].get().get<DocumentComponent>();
-                if (doc.trackChangesEnabled &&
-                    menu.menus.size() > 1 &&
-                    menu.menus[1].items.size() > 3) {
-                    menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
-                }
+            if (doc.trackChangesEnabled &&
+                menu.menus.size() > 1 &&
+                menu.menus[1].items.size() > 3) {
+                menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
             }
         }
         
@@ -103,16 +89,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         menuTheme.segments = 0;
         ctx.theme = menuTheme;
 
-        // Get screen width from layout
-        float screenWidth = 800.0f;
-        {
-            auto layEntities = afterhours::EntityQuery({.force_merge = true})
-                                  .whereHasComponent<LayoutComponent>()
-                                  .gen();
-            if (!layEntities.empty()) {
-                screenWidth = static_cast<float>(layEntities[0].get().get<LayoutComponent>().screenWidth);
-            }
-        }
+        float screenWidth = static_cast<float>(layout.screenWidth);
         
         // Create menu bar container (background + raised border via afterhours)
         // Menu bar container (background)
@@ -446,12 +423,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         
         // Word Count dialog - uses larger modal to fit 5 lines of stats
         if (menu.showWordCountDialog) {
-            // Need to get document stats - query for DocumentComponent
-            auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                  .whereHasComponent<DocumentComponent>()
-                                  .gen();
-            if (!docEntities.empty()) {
-                auto& doc = docEntities[0].get().get<DocumentComponent>();
+            {
                 TextStats stats = doc.buffer.stats();
                 std::string msg = std::format(
                     "Words: {}\nCharacters: {}\nLines: {}\nParagraphs: {}\nSentences: {}",
@@ -546,11 +518,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - add comment
-                    auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                          .whereHasComponent<DocumentComponent>()
-                                          .gen();
-                    if (!docEntities.empty() && !menu.commentInputStr.empty()) {
-                        auto& doc = docEntities[0].get().get<DocumentComponent>();
+                    if (!menu.commentInputStr.empty()) {
                         Comment comment;
                         comment.startOffset = menu.pendingCommentStart;
                         comment.endOffset = menu.pendingCommentEnd;
@@ -625,11 +593,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - load template
-                    auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                          .whereHasComponent<DocumentComponent>()
-                                          .gen();
-                    if (!docEntities.empty() && !menu.templateInputStr.empty()) {
-                        auto& doc = docEntities[0].get().get<DocumentComponent>();
+                    if (!menu.templateInputStr.empty()) {
                         std::string name = menu.templateInputStr;
                         for (auto& ch : name) ch = static_cast<char>(std::tolower(ch));
                         std::filesystem::path templatePath =
@@ -709,11 +673,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set tab width
-                    auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                          .whereHasComponent<DocumentComponent>()
-                                          .gen();
-                    if (!docEntities.empty() && !menu.tabWidthInputStr.empty()) {
-                        auto& doc = docEntities[0].get().get<DocumentComponent>();
+                    if (!menu.tabWidthInputStr.empty()) {
                         int width = std::atoi(menu.tabWidthInputStr.c_str());
                         if (width >= 1 && width <= 16) {
                             doc.docSettings.tabWidth = width;
@@ -835,16 +795,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
                 
-                // Query for DocumentComponent
-                auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                       .whereHasComponent<DocumentComponent>()
-                                       .gen();
-                if (docEntities.empty()) {
-                    menu.showBookmarkListDialog = false;
-                    return;
-                }
-                auto& docComp = docEntities[0].get().get<DocumentComponent>();
-                
+                auto& docComp = doc;
                 const auto& bookmarks = docComp.buffer.bookmarks();
                 
                 if (bookmarks.empty()) {
@@ -1104,12 +1055,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_background(Theme::Usage::Primary)
                             .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
-                        // Get document and perform find
-                        auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                              .whereHasComponent<DocumentComponent>()
-                                              .gen();
-                        if (!docEntities.empty() && !menu.findInputStr.empty()) {
-                            auto& doc = docEntities[0].get().get<DocumentComponent>();
+                        // Perform find
+                        if (!menu.findInputStr.empty()) {
                             menu.lastSearchTerm = menu.findInputStr;
                             FindResult findResult = doc.buffer.findNext(menu.lastSearchTerm, menu.findOptions);
                             if (findResult.found) {
@@ -1132,12 +1079,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_size(ComponentSize{h720(100), h720(32)})
                                 .with_cursor(afterhours::ui::CursorType::Pointer)
                                 .with_render_layer(CONTENT_LAYER))) {
-                            // Get document and perform replace
-                            auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                                                  .whereHasComponent<DocumentComponent>()
-                                                  .gen();
-                            if (!docEntities.empty() && !menu.findInputStr.empty()) {
-                                auto& doc = docEntities[0].get().get<DocumentComponent>();
+                            // Perform replace
+                            if (!menu.findInputStr.empty()) {
                                 menu.lastSearchTerm = menu.findInputStr;
                                 menu.replaceTerm = menu.replaceInputStr;
                                 
@@ -1197,17 +1140,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         {
             int menuResult = menu.consumeClickedResult();
             if (menuResult >= 0) {
-                auto docEntities2 = afterhours::EntityQuery({.force_merge = true})
-                                       .whereHasComponent<DocumentComponent>()
-                                       .gen();
-                auto layEntities2 = afterhours::EntityQuery({.force_merge = true})
-                                       .whereHasComponent<LayoutComponent>()
-                                       .gen();
-                if (!docEntities2.empty() && !layEntities2.empty()) {
-                    auto& doc = docEntities2[0].get().get<DocumentComponent>();
-                    auto& layout = layEntities2[0].get().get<LayoutComponent>();
-                    handleMenuActionImpl(menuResult, doc, menu, layout);
-                }
+                handleMenuActionImpl(menuResult, doc, menu, layout);
             }
         }
 

@@ -9,6 +9,7 @@
 #include "../ui/ui_context.h"
 #include "../external.h"
 #include "components.h"
+#include "editor_entity_cache.h"
 
 namespace ecs {
 
@@ -41,21 +42,13 @@ inline ComponentConfig titleBarButton(float x, float y, float w, float h) {
 
 // Title Bar System - renders the blue title bar using Afterhours UI
 struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
+    EditorEntityCache cache_;
 
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
-        // Find layout
-        auto layoutEntities = afterhours::EntityQuery({.force_merge = true})
-                                 .whereHasComponent<LayoutComponent>()
-                                 .gen();
-        if (layoutEntities.empty()) return;
-        auto& layout = layoutEntities[0].get().get<LayoutComponent>();
-
-        // Find document
-        auto docEntities = afterhours::EntityQuery({.force_merge = true})
-                              .whereHasComponent<DocumentComponent>()
-                              .gen();
-        if (docEntities.empty()) return;
-        auto& doc = docEntities[0].get().get<DocumentComponent>();
+        cache_.resolve();
+        if (!cache_.resolved()) return;
+        auto& layout = *cache_.layout;
+        auto& doc = *cache_.doc;
 
         float screenWidth = static_cast<float>(layout.screenWidth);
         float titleBarHeight = layout.titleBarHeight;
