@@ -44,12 +44,13 @@ inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
-    : public afterhours::System<DocumentComponent, CaretComponent, MenuComponent> {
-    input::ActionMap actionMap_ = input::createDefaultActionMap();
+    : public afterhours::System<DocumentComponent, CaretComponent, MenuComponent, InputComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
-                       CaretComponent& caret, MenuComponent& menu, const float) override {
+                       CaretComponent& caret, MenuComponent& menu,
+                       InputComponent& inputComp, const float) override {
         using input::Action;
+        auto& actionMap_ = inputComp.actionMap;
         
         // Find/Replace keyboard shortcuts
         if (actionMap_.isActionPressed(Action::Find)) {
@@ -154,14 +155,14 @@ struct TextInputSystem
 // System for handling keyboard shortcuts using remappable ActionMap
 struct KeyboardShortcutSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                LayoutComponent> {
-    input::ActionMap actionMap_ = input::createDefaultActionMap();
-    MenuComponent* menuComp_ = nullptr;
+                                LayoutComponent, MenuComponent, InputComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret,
-                       LayoutComponent& layout, const float) override {
+                       LayoutComponent& layout, MenuComponent& menu,
+                       InputComponent& inputComp, const float) override {
         using input::Action;
+        auto& actionMap_ = inputComp.actionMap;
 
         // New document
         if (actionMap_.isActionPressed(Action::New)) {
@@ -203,18 +204,18 @@ struct KeyboardShortcutSystem
         }
 
         // Save As - defer to top of next frame to avoid blocking mid-ECS
-        if (actionMap_.isActionPressed(Action::SaveAs) && menuComp_) {
-            menuComp_->pendingDialog = MenuComponent::PendingDialog::SaveAs;
+        if (actionMap_.isActionPressed(Action::SaveAs)) {
+            menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
         }
 
         // Open - defer to top of next frame to avoid blocking mid-ECS
-        if (actionMap_.isActionPressed(Action::Open) && menuComp_) {
-            menuComp_->pendingDialog = MenuComponent::PendingDialog::Open;
+        if (actionMap_.isActionPressed(Action::Open)) {
+            menu.pendingDialog = MenuComponent::PendingDialog::Open;
         }
 
         // Word Count
-        if (actionMap_.isActionPressed(Action::ShowWordCount) && menuComp_) {
-            menuComp_->showWordCountDialog = true;
+        if (actionMap_.isActionPressed(Action::ShowWordCount)) {
+            menu.showWordCountDialog = true;
         }
 
         // Bold
@@ -468,13 +469,14 @@ struct KeyboardShortcutSystem
 // System for handling navigation keys using remappable ActionMap
 struct NavigationSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                ScrollComponent, LayoutComponent> {
-    input::ActionMap actionMap_ = input::createDefaultActionMap();
+                                ScrollComponent, LayoutComponent, InputComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, ScrollComponent& scroll,
-                       LayoutComponent& layout, const float) override {
+                       LayoutComponent& layout, InputComponent& inputComp,
+                       const float) override {
         using input::Action;
+        auto& actionMap_ = inputComp.actionMap;
 
         auto isKeyDownOrSynthetic = [](int key) {
             // Use test_input which handles both real and synthetic keys

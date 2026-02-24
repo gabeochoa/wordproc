@@ -212,6 +212,9 @@ static void app_init() {
     testComp.frameLimit = app_state::frameLimit;
     testComp.fpsTestMode = app_state::fpsTestMode;
 
+    // Shared action map for all input systems
+    editorEntity.addComponent<ecs::InputComponent>();
+
     // Add toolbar component
     auto& toolbarComp = editorEntity.addComponent<ecs::ToolbarComponent>();
     app_state::toolbarComp = &toolbarComp;
@@ -269,11 +272,8 @@ static void app_init() {
             std::make_unique<ecs::LayoutUpdateSystem>());
         sm.register_update_system(
             std::make_unique<ecs::TextInputSystem>());
-        {
-            auto kss = std::make_unique<ecs::KeyboardShortcutSystem>();
-            kss->menuComp_ = &menuComp;
-            sm.register_update_system(std::move(kss));
-        }
+        sm.register_update_system(
+            std::make_unique<ecs::KeyboardShortcutSystem>());
         sm.register_update_system(
             std::make_unique<ecs::AutoSaveSystem>());
         sm.register_update_system(
