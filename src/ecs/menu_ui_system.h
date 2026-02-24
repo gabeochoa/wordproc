@@ -12,7 +12,9 @@
 #include <sstream>
 
 #include "components.h"
+#include "menu_actions.h"
 #include "../input_mapping.h"  // For InputAction enum
+#include "../ui/input.h"       // For input::isKeyPressed
 // test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"  // For ui_imm::getUIRootEntity()
@@ -1191,6 +1193,30 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Dispatch menu actions: consume click result set earlier and run handler
+        {
+            int menuResult = menu.consumeClickedResult();
+            if (menuResult >= 0) {
+                auto docEntities2 = afterhours::EntityQuery({.force_merge = true})
+                                       .whereHasComponent<DocumentComponent>()
+                                       .gen();
+                auto layEntities2 = afterhours::EntityQuery({.force_merge = true})
+                                       .whereHasComponent<LayoutComponent>()
+                                       .gen();
+                if (!docEntities2.empty() && !layEntities2.empty()) {
+                    auto& doc = docEntities2[0].get().get<DocumentComponent>();
+                    auto& layout = layEntities2[0].get().get<LayoutComponent>();
+                    handleMenuActionImpl(menuResult, doc, menu, layout);
+                }
+            }
+        }
+
+        // F1 to toggle help window
+        if (input::isKeyPressed(afterhours::keys::F1)) {
+            menu.showHelpWindow = !menu.showHelpWindow;
+            menu.helpScrollOffset = 0;
+        }
+
         // Restore the global theme so subsequent systems (toolbar, etc.) use the correct theme
         ctx.theme = savedTheme;
     }

@@ -296,8 +296,6 @@ static void app_init() {
             std::make_unique<ecs::ToolbarOverlayRenderSystem>());
         // Modal backdrop rendering (draws dimmed overlay behind modals)
         ui_imm::registerModalRenderSystems(sm);
-        // MenuSystem draws dialogs and help windows (legacy Win95 widgets)
-        sm.register_render_system(std::make_unique<ecs::MenuSystem>());
 
         // Validation systems (log warnings for layout/accessibility violations)
         // Only register in non-test mode to avoid slowing E2E tests
