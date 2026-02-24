@@ -50,6 +50,20 @@ enum class BorderStyle {
     Dotted
 };
 
+// Returns line thickness for a border style (0 means don't draw)
+inline float borderStyleThickness(BorderStyle style) {
+    switch (style) {
+        case BorderStyle::Thin:   return 1.0f;
+        case BorderStyle::Medium: return 2.0f;
+        case BorderStyle::Thick:  return 3.0f;
+        case BorderStyle::None:
+        case BorderStyle::Double:
+        case BorderStyle::Dashed:
+        case BorderStyle::Dotted:
+        default:                  return 0.0f;
+    }
+}
+
 // Cell borders (each side can have different style)
 struct CellBorders {
     BorderStyle top = BorderStyle::Thin;

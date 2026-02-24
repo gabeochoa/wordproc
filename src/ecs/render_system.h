@@ -112,6 +112,19 @@ inline void drawPageBackground(const LayoutComponent& layout) {
         marginColor);
 }
 
+// Draw a single border edge between two points using the given style
+inline void drawBorderEdge(float x1, float y1, float x2, float y2,
+                           BorderStyle style, afterhours::Color color) {
+    float thickness = borderStyleThickness(style);
+    if (thickness <= 0.0f) return;
+    if (thickness <= 1.0f) {
+        afterhours::draw_line(static_cast<int>(x1), static_cast<int>(y1),
+                              static_cast<int>(x2), static_cast<int>(y2), color);
+    } else {
+        afterhours::draw_line_ex({x1, y1}, {x2, y2}, thickness, color);
+    }
+}
+
 // Render a table at a specific position
 inline void renderTable(const Table& table, float tableX, float tableY, 
                         CellPosition currentCell, bool isEditing) {
@@ -137,80 +150,12 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                                      cell.backgroundColor.b, cell.backgroundColor.a};
             afterhours::draw_rectangle(Rectangle{cellX, cellY, cellW, cellH}, bgColor);
             
-            // Draw cell border
+            // Draw cell borders
             afterhours::Color borderColor = afterhours::Color{0, 0, 0, 255};
-            switch (cell.borders.top) {
-                case BorderStyle::Thin:
-                    afterhours::draw_line(static_cast<int>(cellX), static_cast<int>(cellY),
-                                    static_cast<int>(cellX + cellW), static_cast<int>(cellY), borderColor);
-                    break;
-                case BorderStyle::Medium:
-                    afterhours::draw_line_ex({cellX, cellY}, {cellX + cellW, cellY}, 2.0f, borderColor);
-                    break;
-                case BorderStyle::Thick:
-                    afterhours::draw_line_ex({cellX, cellY}, {cellX + cellW, cellY}, 3.0f, borderColor);
-                    break;
-                case BorderStyle::None:
-                case BorderStyle::Double:
-                case BorderStyle::Dashed:
-                case BorderStyle::Dotted:
-                default:
-                    break;
-            }
-            switch (cell.borders.bottom) {
-                case BorderStyle::Thin:
-                    afterhours::draw_line(static_cast<int>(cellX), static_cast<int>(cellY + cellH),
-                                    static_cast<int>(cellX + cellW), static_cast<int>(cellY + cellH), borderColor);
-                    break;
-                case BorderStyle::Medium:
-                    afterhours::draw_line_ex({cellX, cellY + cellH}, {cellX + cellW, cellY + cellH}, 2.0f, borderColor);
-                    break;
-                case BorderStyle::Thick:
-                    afterhours::draw_line_ex({cellX, cellY + cellH}, {cellX + cellW, cellY + cellH}, 3.0f, borderColor);
-                    break;
-                case BorderStyle::None:
-                case BorderStyle::Double:
-                case BorderStyle::Dashed:
-                case BorderStyle::Dotted:
-                default:
-                    break;
-            }
-            switch (cell.borders.left) {
-                case BorderStyle::Thin:
-                    afterhours::draw_line(static_cast<int>(cellX), static_cast<int>(cellY),
-                                    static_cast<int>(cellX), static_cast<int>(cellY + cellH), borderColor);
-                    break;
-                case BorderStyle::Medium:
-                    afterhours::draw_line_ex({cellX, cellY}, {cellX, cellY + cellH}, 2.0f, borderColor);
-                    break;
-                case BorderStyle::Thick:
-                    afterhours::draw_line_ex({cellX, cellY}, {cellX, cellY + cellH}, 3.0f, borderColor);
-                    break;
-                case BorderStyle::None:
-                case BorderStyle::Double:
-                case BorderStyle::Dashed:
-                case BorderStyle::Dotted:
-                default:
-                    break;
-            }
-            switch (cell.borders.right) {
-                case BorderStyle::Thin:
-                    afterhours::draw_line(static_cast<int>(cellX + cellW), static_cast<int>(cellY),
-                                    static_cast<int>(cellX + cellW), static_cast<int>(cellY + cellH), borderColor);
-                    break;
-                case BorderStyle::Medium:
-                    afterhours::draw_line_ex({cellX + cellW, cellY}, {cellX + cellW, cellY + cellH}, 2.0f, borderColor);
-                    break;
-                case BorderStyle::Thick:
-                    afterhours::draw_line_ex({cellX + cellW, cellY}, {cellX + cellW, cellY + cellH}, 3.0f, borderColor);
-                    break;
-                case BorderStyle::None:
-                case BorderStyle::Double:
-                case BorderStyle::Dashed:
-                case BorderStyle::Dotted:
-                default:
-                    break;
-            }
+            drawBorderEdge(cellX, cellY, cellX + cellW, cellY, cell.borders.top, borderColor);
+            drawBorderEdge(cellX, cellY + cellH, cellX + cellW, cellY + cellH, cell.borders.bottom, borderColor);
+            drawBorderEdge(cellX, cellY, cellX, cellY + cellH, cell.borders.left, borderColor);
+            drawBorderEdge(cellX + cellW, cellY, cellX + cellW, cellY + cellH, cell.borders.right, borderColor);
             
             // Draw cell content
             if (!cell.content.empty()) {
