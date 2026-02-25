@@ -6,41 +6,19 @@
 #include <filesystem>
 
 #include "../../vendor/afterhours/src/core/system.h"
-#include "../util/clipboard.h"
-#include "../editor/document_io.h"
 #include "../input/action_map.h"
 #include "../rl.h"
-#include "../settings.h"
 // test_input:: available via rl.h -> external.h
-#include "../ui/input.h"     // Centralized input wrappers (input::isKeyPressed etc.)
+#include "../ui/input.h"
 #include "../ui/theme.h"
-#include "../ui/ui_context.h"  // for toast_notify
+#include "../ui/ui_context.h"
 #include "component_helpers.h"
-#include "components.h"
+#include "document_commands.h"
 
 namespace ecs {
 
-inline void recordInsertRevision(DocumentComponent& doc, std::size_t offset,
-                                 const std::string& text) {
-    if (!doc.trackChangesEnabled || text.empty()) return;
-    Revision rev;
-    rev.type = RevisionType::Insert;
-    rev.startOffset = offset;
-    rev.text = text;
-    rev.timestamp = std::time(nullptr);
-    doc.revisions.push_back(rev);
-}
-
-inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
-                                 const std::string& text) {
-    if (!doc.trackChangesEnabled || text.empty()) return;
-    Revision rev;
-    rev.type = RevisionType::Delete;
-    rev.startOffset = offset;
-    rev.text = text;
-    rev.timestamp = std::time(nullptr);
-    doc.revisions.push_back(rev);
-}
+using cmd::recordInsertRevision;
+using cmd::recordDeleteRevision;
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
@@ -166,41 +144,13 @@ struct KeyboardShortcutSystem
 
         // New document
         if (actionMap_.isActionPressed(Action::New)) {
-            doc.buffer.setText("");
-            doc.filePath.clear();
-            doc.isDirty = false;
-            doc.comments.clear();
-            doc.revisions.clear();
-            doc.trackChangesBaseline.clear();
+            cmd::newDocument(doc);
             toast_notify::info("New document");
         }
 
         // Save
         if (actionMap_.isActionPressed(Action::Save)) {
-            std::string savePath =
-                doc.filePath.empty() ? doc.defaultPath : doc.filePath;
-            // Sync layout settings to document settings before save
-            doc.docSettings.textStyle = doc.buffer.textStyle();
-            doc.docSettings.pageSettings.mode = layout.pageMode;
-            doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
-            doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
-            doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
-            doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
-            // Save document with all settings
-            auto result = saveDocumentEx(doc.buffer, doc.docSettings, savePath);
-            if (result.success) {
-                doc.isDirty = false;
-                doc.filePath = savePath;
-                if (!doc.autoSavePath.empty()) {
-                    std::filesystem::remove(doc.autoSavePath);
-                }
-                Settings::get().add_recent_file(savePath);
-                toast_notify::success(
-                    "Saved: " +
-                        std::filesystem::path(savePath).filename().string());
-            } else {
-                toast_notify::error("Save failed: " + result.error);
-            }
+            cmd::saveDocument(doc, layout, menu);
         }
 
         // Save As - defer to top of next frame to avoid blocking mid-ECS
@@ -218,53 +168,13 @@ struct KeyboardShortcutSystem
             dialogs.showWordCountDialog = true;
         }
 
-        // Bold
-        if (actionMap_.isActionPressed(Action::ToggleBold)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.bold = !style.bold;
-            doc.buffer.setTextStyle(style);
-        }
-
-        // Italic
-        if (actionMap_.isActionPressed(Action::ToggleItalic)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.italic = !style.italic;
-            doc.buffer.setTextStyle(style);
-        }
-
-        // Underline
-        if (actionMap_.isActionPressed(Action::ToggleUnderline)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.underline = !style.underline;
-            doc.buffer.setTextStyle(style);
-        }
-
-        // Strikethrough
-        if (actionMap_.isActionPressed(Action::ToggleStrikethrough)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.strikethrough = !style.strikethrough;
-            doc.buffer.setTextStyle(style);
-        }
-
-        // Superscript
-        if (actionMap_.isActionPressed(Action::ToggleSuperscript)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.superscript = !style.superscript;
-            if (style.superscript) {
-                style.subscript = false;
-            }
-            doc.buffer.setTextStyle(style);
-        }
-
-        // Subscript
-        if (actionMap_.isActionPressed(Action::ToggleSubscript)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.subscript = !style.subscript;
-            if (style.subscript) {
-                style.superscript = false;
-            }
-            doc.buffer.setTextStyle(style);
-        }
+        // Text formatting
+        if (actionMap_.isActionPressed(Action::ToggleBold)) cmd::toggleBold(doc);
+        if (actionMap_.isActionPressed(Action::ToggleItalic)) cmd::toggleItalic(doc);
+        if (actionMap_.isActionPressed(Action::ToggleUnderline)) cmd::toggleUnderline(doc);
+        if (actionMap_.isActionPressed(Action::ToggleStrikethrough)) cmd::toggleStrikethrough(doc);
+        if (actionMap_.isActionPressed(Action::ToggleSuperscript)) cmd::toggleSuperscript(doc);
+        if (actionMap_.isActionPressed(Action::ToggleSubscript)) cmd::toggleSubscript(doc);
 
         // Font selection
         if (actionMap_.isActionPressed(Action::FontGaegu)) {
@@ -410,58 +320,18 @@ struct KeyboardShortcutSystem
             doc.isDirty = true;
         }
 
-        // Copy
-        if (actionMap_.isActionPressed(Action::Copy)) {
-            if (doc.buffer.hasSelection()) {
-                std::string selected = doc.buffer.getSelectedText();
-                if (!selected.empty()) {
-                    app::clipboard::set_text(selected);
-                }
-            }
-        }
-        // Cut
-        if (actionMap_.isActionPressed(Action::Cut)) {
-            if (doc.buffer.hasSelection()) {
-                std::string selected = doc.buffer.getSelectedText();
-                if (!selected.empty()) {
-                    CaretPosition start = doc.buffer.selectionStart();
-                    recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
-                    app::clipboard::set_text(selected);
-                    doc.buffer.deleteSelection();
-                    doc.isDirty = true;
-                }
-            }
-        }
-        // Paste
-        if (actionMap_.isActionPressed(Action::Paste)) {
-            if (app::clipboard::has_text()) {
-                std::string clipText = app::clipboard::get_text();
-                std::size_t offset = doc.buffer.caretOffset();
-                recordInsertRevision(doc, offset, clipText);
-                doc.buffer.insertText(clipText);
-                doc.isDirty = true;
-            }
-        }
-        // Select All
-        if (actionMap_.isActionPressed(Action::SelectAll)) {
-            doc.buffer.selectAll();
-        }
+        // Clipboard
+        if (actionMap_.isActionPressed(Action::Copy)) cmd::copy(doc);
+        if (actionMap_.isActionPressed(Action::Cut)) cmd::cut(doc);
+        if (actionMap_.isActionPressed(Action::Paste)) cmd::paste(doc);
+        if (actionMap_.isActionPressed(Action::SelectAll)) cmd::selectAll(doc);
 
-        // Undo
+        // Undo/Redo
         if (actionMap_.isActionPressed(Action::Undo)) {
-            if (doc.buffer.canUndo()) {
-                doc.buffer.undo();
-                doc.isDirty = true;
-                caret::resetBlink(caret);
-            }
+            if (cmd::undo(doc)) caret::resetBlink(caret);
         }
-        // Redo
         if (actionMap_.isActionPressed(Action::Redo)) {
-            if (doc.buffer.canRedo()) {
-                doc.buffer.redo();
-                doc.isDirty = true;
-                caret::resetBlink(caret);
-            }
+            if (cmd::redo(doc)) caret::resetBlink(caret);
         }
     }
 };
@@ -605,14 +475,7 @@ struct AutoSaveSystem
         std::filesystem::create_directories(
             std::filesystem::path(doc.autoSavePath).parent_path());
 
-        // Sync layout settings to document settings before save
-        doc.docSettings.textStyle = doc.buffer.textStyle();
-        doc.docSettings.pageSettings.mode = layout.pageMode;
-        doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
-        doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
-        doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
-        doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
-
+        cmd::syncLayoutToSettings(doc, layout);
         auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.autoSavePath);
         if (result.success) {
             doc.lastAutoSaveTime = now;

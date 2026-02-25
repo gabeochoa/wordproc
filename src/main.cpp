@@ -414,27 +414,7 @@ static void app_frame() {
             std::string openPath = file_dialog::open_file(
                 {".wpdoc", ".txt", ".md"});
             if (!openPath.empty()) {
-                auto result = loadDocumentEx(doc.buffer, doc.docSettings, openPath);
-                if (result.success) {
-                    doc.filePath = openPath;
-                    doc.isDirty = false;
-                    doc.comments.clear();
-                    doc.revisions.clear();
-                    layout.pageMode = doc.docSettings.pageSettings.mode;
-                    layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
-                    layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
-                    layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
-                    layout.lineWidthLimit = doc.docSettings.pageSettings.lineWidthLimit;
-                    Settings::get().add_recent_file(openPath);
-                    menu.menus = menu_setup::createMenuBar(
-                        Settings::get().get_recent_files());
-                    menu.recentFilesCount = static_cast<int>(
-                        Settings::get().get_recent_files().size());
-                    toast_notify::success(
-                        "Opened: " + std::filesystem::path(openPath).filename().string());
-                } else {
-                    toast_notify::error("Open failed: " + result.error);
-                }
+                ecs::cmd::openDocument(doc, layout, menu, openPath);
             }
         } else if (menu.pendingDialog == ecs::MenuComponent::PendingDialog::SaveAs) {
             menu.pendingDialog = ecs::MenuComponent::PendingDialog::None;
@@ -444,29 +424,7 @@ static void app_frame() {
             std::string savePath = file_dialog::save_file(
                 suggested, {".wpdoc", ".txt"});
             if (!savePath.empty()) {
-                doc.docSettings.textStyle = doc.buffer.textStyle();
-                doc.docSettings.pageSettings.mode = layout.pageMode;
-                doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
-                doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
-                doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
-                doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
-                auto result = saveDocumentEx(doc.buffer, doc.docSettings, savePath);
-                if (result.success) {
-                    doc.isDirty = false;
-                    doc.filePath = savePath;
-                    if (!doc.autoSavePath.empty()) {
-                        std::filesystem::remove(doc.autoSavePath);
-                    }
-                    Settings::get().add_recent_file(savePath);
-                    menu.menus = menu_setup::createMenuBar(
-                        Settings::get().get_recent_files());
-                    menu.recentFilesCount = static_cast<int>(
-                        Settings::get().get_recent_files().size());
-                    toast_notify::success(
-                        "Saved as: " + std::filesystem::path(savePath).filename().string());
-                } else {
-                    toast_notify::error("Save failed: " + result.error);
-                }
+                ecs::cmd::saveDocumentAs(doc, layout, menu, savePath);
             }
         }
     }

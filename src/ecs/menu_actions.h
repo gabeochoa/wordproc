@@ -17,6 +17,7 @@
 #include "../ui/ui_context.h"
 #include "../ui/menu_setup.h"
 #include "components.h"
+#include "document_commands.h"
 
 namespace ecs {
 
@@ -32,34 +33,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 const std::string& label = menu.menus[0].items[itemIndex].label;
                 if (label.rfind("Recent: ", 0) == 0) {
                     std::string path = label.substr(std::string("Recent: ").size());
-                    auto result = loadDocumentEx(doc.buffer, doc.docSettings, path);
-                    if (result.success) {
-                        doc.filePath = path;
-                        doc.isDirty = false;
-                        doc.comments.clear();
-                        doc.revisions.clear();
-                        layout.pageMode = doc.docSettings.pageSettings.mode;
-                        layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
-                        layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
-                        layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
-                        layout.lineWidthLimit =
-                            doc.docSettings.pageSettings.lineWidthLimit;
-                        Settings::get().add_recent_file(path);
-                        menu.menus = menu_setup::createMenuBar(
-                            Settings::get().get_recent_files());
-                        menu.recentFilesCount = static_cast<int>(
-                            Settings::get().get_recent_files().size());
-                        if (doc.trackChangesEnabled &&
-                            menu.menus.size() > 1 &&
-                            menu.menus[1].items.size() > 3) {
-                            menu.menus[1].items[3].mark =
-                                win95::MenuMark::Checkmark;
-                        }
-                        toast_notify::success(
-                            "Opened: " + std::filesystem::path(path).filename().string());
-                    } else {
-                        toast_notify::error("Open failed: " + result.error);
-                    }
+                    cmd::openDocument(doc, layout, menu, path);
                     return;
                 }
                 if (label == "Exit") {
@@ -68,12 +42,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
             switch (itemIndex) {
                 case 0:  // New
-                    doc.buffer.setText("");
-                    doc.filePath.clear();
-                    doc.isDirty = false;
-                    doc.comments.clear();
-                    doc.revisions.clear();
-                    doc.trackChangesBaseline.clear();
+                    cmd::newDocument(doc);
                     break;
                 case 1:  // New from Template...
                     dialogs.showTemplateDialog = true;
@@ -82,43 +51,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     menu.pendingDialog = MenuComponent::PendingDialog::Open;
                     break;
                 case 3:  // Save
-                {
-                    std::string savePath =
-                        doc.filePath.empty() ? doc.defaultPath : doc.filePath;
-                    doc.docSettings.textStyle = doc.buffer.textStyle();
-                    doc.docSettings.pageSettings.mode = layout.pageMode;
-                    doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
-                    doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
-                    doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
-                    doc.docSettings.pageSettings.lineWidthLimit =
-                        layout.lineWidthLimit;
-                    auto result =
-                        saveDocumentEx(doc.buffer, doc.docSettings, savePath);
-                    if (result.success) {
-                        doc.isDirty = false;
-                        doc.filePath = savePath;
-                        if (!doc.autoSavePath.empty()) {
-                            std::filesystem::remove(doc.autoSavePath);
-                        }
-                        Settings::get().add_recent_file(savePath);
-                        menu.menus = menu_setup::createMenuBar(
-                            Settings::get().get_recent_files());
-                        menu.recentFilesCount = static_cast<int>(
-                            Settings::get().get_recent_files().size());
-                        if (doc.trackChangesEnabled &&
-                            menu.menus.size() > 1 &&
-                            menu.menus[1].items.size() > 3) {
-                            menu.menus[1].items[3].mark =
-                                win95::MenuMark::Checkmark;
-                        }
-                        toast_notify::success(
-                            "Saved: " + std::filesystem::path(savePath)
-                                                    .filename()
-                                                    .string());
-                    } else {
-                        toast_notify::error("Save failed: " + result.error);
-                    }
-                } break;
+                    cmd::saveDocument(doc, layout, menu);
+                    break;
                 case 4:  // Save As...
                     menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
                     break;
@@ -174,16 +108,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
         } else if (menuIndex == 1) {  // Edit menu
             switch (itemIndex) {
                 case 0:  // Undo
-                    if (doc.buffer.canUndo()) {
-                        doc.buffer.undo();
-                        doc.isDirty = true;
-                    }
+                    cmd::undo(doc);
                     break;
                 case 1:  // Redo
-                    if (doc.buffer.canRedo()) {
-                        doc.buffer.redo();
-                        doc.isDirty = true;
-                    }
+                    cmd::redo(doc);
                     break;
                 case 3:  // Track Changes
                     doc.trackChangesEnabled = !doc.trackChangesEnabled;
@@ -210,33 +138,16 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::success("All changes rejected");
                     break;
                 case 7:  // Cut
-                    if (doc.buffer.hasSelection()) {
-                        std::string selected = doc.buffer.getSelectedText();
-                        if (!selected.empty()) {
-                            app::clipboard::set_text(selected);
-                            doc.buffer.deleteSelection();
-                            doc.isDirty = true;
-                        }
-                    }
+                    cmd::cut(doc);
                     break;
                 case 8:  // Copy
-                    if (doc.buffer.hasSelection()) {
-                        std::string selected = doc.buffer.getSelectedText();
-                        if (!selected.empty()) {
-                            app::clipboard::set_text(selected);
-                        }
-                    }
+                    cmd::copy(doc);
                     break;
                 case 9:  // Paste
-                {
-                    if (app::clipboard::has_text()) {
-                        std::string clipText = app::clipboard::get_text();
-                        doc.buffer.insertText(clipText);
-                        doc.isDirty = true;
-                    }
-                } break;
+                    cmd::paste(doc);
+                    break;
                 case 11:  // Select All
-                    doc.buffer.selectAll();
+                    cmd::selectAll(doc);
                     break;
                 case 13:  // Find...
                     dialogs.showFindDialog = true;
@@ -385,30 +296,22 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Style: Heading 6");
                     break;
                 case 10:  // Bold
-                    style.bold = !style.bold;
-                    doc.buffer.setTextStyle(style);
+                    cmd::toggleBold(doc);
                     break;
                 case 11:  // Italic
-                    style.italic = !style.italic;
-                    doc.buffer.setTextStyle(style);
+                    cmd::toggleItalic(doc);
                     break;
                 case 12:  // Underline
-                    style.underline = !style.underline;
-                    doc.buffer.setTextStyle(style);
+                    cmd::toggleUnderline(doc);
                     break;
                 case 13:  // Strikethrough
-                    style.strikethrough = !style.strikethrough;
-                    doc.buffer.setTextStyle(style);
+                    cmd::toggleStrikethrough(doc);
                     break;
                 case 14:  // Superscript
-                    style.superscript = !style.superscript;
-                    if (style.superscript) style.subscript = false;
-                    doc.buffer.setTextStyle(style);
+                    cmd::toggleSuperscript(doc);
                     break;
                 case 15:  // Subscript
-                    style.subscript = !style.subscript;
-                    if (style.subscript) style.superscript = false;
-                    doc.buffer.setTextStyle(style);
+                    cmd::toggleSubscript(doc);
                     break;
                 case 20:  // Align Left
                     doc.buffer.setCurrentAlignment(TextAlignment::Left);

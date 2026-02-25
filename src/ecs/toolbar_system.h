@@ -7,10 +7,10 @@
 #include "../ui/ah_modal_input.h"
 #include "../ui/input.h"
 #include "../ui/ui_context.h"
-#include "../editor/document_io.h"
 #include "components.h"
 #include "component_helpers.h"
 #include "editor_entity_cache.h"
+#include "document_commands.h"
 #include "../external.h"
 
 namespace ecs {
@@ -193,9 +193,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         int newBtnId = btnId++;
         if (button(ctx, mk(uiRoot, newBtnId),
             absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_new"))) {
-            doc.buffer.setText("");
-            doc.filePath.clear();
-            doc.isDirty = false;
+            cmd::newDocument(doc);
         }
         trackIcon(curX, btnY, ToolbarIcon::New);
         trackTooltip(curX, btnY, "New (Ctrl+N)");
@@ -213,12 +211,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         int saveBtnId = btnId++;
         if (button(ctx, mk(uiRoot, saveBtnId),
             absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_save"))) {
-            if (!doc.filePath.empty()) {
-                auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.filePath);
-                if (result.success) {
-                    doc.isDirty = false;
-                }
-            }
+            cmd::saveDocument(doc, layout, *cache_.menu);
         }
         trackIcon(curX, btnY, ToolbarIcon::Save);
         trackTooltip(curX, btnY, "Save (Ctrl+S)");
@@ -286,10 +279,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         int undoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, undoBtnId),
             absToolbarButton(curX, btnY, buttonSize, canUndo, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_undo"))) {
-            if (canUndo) {
-                doc.buffer.undo();
-                doc.isDirty = true;
-            }
+            cmd::undo(doc);
         }
         trackIcon(curX, btnY, ToolbarIcon::Undo, canUndo);
         trackTooltip(curX, btnY, "Undo (Ctrl+Z)");
@@ -299,10 +289,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         int redoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, redoBtnId),
             absToolbarButton(curX, btnY, buttonSize, canRedo, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_redo"))) {
-            if (canRedo) {
-                doc.buffer.redo();
-                doc.isDirty = true;
-            }
+            cmd::redo(doc);
         }
         trackIcon(curX, btnY, ToolbarIcon::Redo, canRedo);
         trackTooltip(curX, btnY, "Redo (Ctrl+Y)");
@@ -504,10 +491,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.boldActive, isMouseOver(fmtX, fmtBtnY))
                 .with_label("B")
                 .with_debug_name("btn_bold"))) {
-            TextStyle style = doc.buffer.textStyle();
-            style.bold = !style.bold;
-            doc.buffer.setTextStyle(style);
-            doc.isDirty = true;
+            cmd::toggleBold(doc);
         }
         trackTooltip(fmtX, fmtBtnY, "Bold (Ctrl+B)");
         fmtX += buttonSize + buttonPadding;
@@ -517,10 +501,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.italicActive, isMouseOver(fmtX, fmtBtnY))
                 .with_label("I")
                 .with_debug_name("btn_italic"))) {
-            TextStyle style = doc.buffer.textStyle();
-            style.italic = !style.italic;
-            doc.buffer.setTextStyle(style);
-            doc.isDirty = true;
+            cmd::toggleItalic(doc);
         }
         trackTooltip(fmtX, fmtBtnY, "Italic (Ctrl+I)");
         fmtX += buttonSize + buttonPadding;
@@ -530,10 +511,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.underlineActive, isMouseOver(fmtX, fmtBtnY))
                 .with_label("U")
                 .with_debug_name("btn_underline"))) {
-            TextStyle style = doc.buffer.textStyle();
-            style.underline = !style.underline;
-            doc.buffer.setTextStyle(style);
-            doc.isDirty = true;
+            cmd::toggleUnderline(doc);
         }
         trackTooltip(fmtX, fmtBtnY, "Underline (Ctrl+U)");
         fmtX += buttonSize + buttonPadding;
