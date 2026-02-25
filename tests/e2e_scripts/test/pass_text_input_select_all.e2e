@@ -1,0 +1,37 @@
+# Test: Text input Select All in Find dialog
+# Validates TextSelectAll selects all text in the text_input widget
+
+# Type document text
+type "Hello"
+wait 2
+
+# Open Find dialog
+key CTRL+F
+wait 3
+
+# Focus and type into find input
+focus_ui find_input
+wait 2
+type "select everything"
+wait 2
+expect_input_text find_input "select everything"
+
+# Select all
+action TextSelectAll
+wait 2
+
+# Verify full selection (0 to 17 bytes)
+expect_input_selection find_input 0 17
+screenshot text_input_select_all_01_all_selected
+
+# Type to replace selection
+type "replaced"
+wait 2
+
+# Old text should be completely replaced
+expect_input_text find_input "replaced"
+screenshot text_input_select_all_02_replaced
+
+# Close dialog
+escape
+wait 2

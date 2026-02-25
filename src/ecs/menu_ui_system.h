@@ -496,6 +496,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     dialogs.commentInputStr,
                     ComponentConfig{}
+                        .with_debug_name("comment_input")
                         .with_size(ComponentSize{percent(1.0f), h720(32)})
                         .with_background(Theme::Usage::Surface)
                         .with_render_layer(CONTENT_LAYER));
@@ -987,6 +988,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     dialogs.findInputStr,
                     ComponentConfig{}
+                        .with_debug_name("find_input")
                         .with_size(ComponentSize{percent(1.0f), h720(32)})
                         .with_background(Theme::Usage::Surface)
                         .with_render_layer(CONTENT_LAYER));
@@ -1003,6 +1005,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     afterhours::text_input::text_input(ctx, mk(result.ent(), 3),
                         dialogs.replaceInputStr,
                         ComponentConfig{}
+                            .with_debug_name("replace_input")
                             .with_size(ComponentSize{percent(1.0f), h720(32)})
                             .with_background(Theme::Usage::Surface)
                             .with_render_layer(CONTENT_LAYER));

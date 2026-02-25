@@ -1,0 +1,49 @@
+# Test: Document-level Shift+Arrow text selection
+# Regression test to ensure document text selection with Shift+Arrow
+# still works correctly after adding TextSelectLeft/Right input actions
+
+# Type text
+type "Hello World"
+wait 2
+
+# Verify no selection initially
+validate has_selection=false
+
+# Move caret to start
+key HOME
+wait 1
+
+# Shift+Right to select "H"
+key SHIFT+RIGHT
+wait 2
+
+validate has_selection=true
+validate selected_text=H
+screenshot shift_arrow_select_01_one_char
+
+# Continue Shift+Right to extend selection
+key SHIFT+RIGHT
+wait 1
+key SHIFT+RIGHT
+wait 1
+key SHIFT+RIGHT
+wait 1
+key SHIFT+RIGHT
+wait 1
+
+validate selected_text=Hello
+screenshot shift_arrow_select_02_hello
+
+# Shift+Left to shrink selection by one character
+key SHIFT+LEFT
+wait 2
+
+validate selected_text=Hell
+screenshot shift_arrow_select_03_shrunk
+
+# Press Right (no shift) to collapse selection
+key RIGHT
+wait 2
+
+validate has_selection=false
+screenshot shift_arrow_select_04_collapsed

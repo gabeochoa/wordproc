@@ -22,6 +22,11 @@ enum class InputAction {
     TextHome,
     TextEnd,
     TextSelectAll,
+    TextSelectLeft,
+    TextSelectRight,
+    TextCopy,
+    TextCut,
+    TextPaste,
 };
 
 inline int to_int(InputAction action) { return static_cast<int>(action); }
@@ -103,8 +108,30 @@ inline auto get_mapping() {
         afterhours::keys::END,
     };
 
+    using KC = afterhours::input::KeyChord;
+
     mapping[to_int(InputAction::TextSelectAll)] = {
-        afterhours::keys::A,
+        KC(afterhours::keys::A, KC::MOD_CTRL),
+    };
+
+    mapping[to_int(InputAction::TextSelectLeft)] = {
+        KC(afterhours::keys::LEFT, KC::MOD_SHIFT),
+    };
+
+    mapping[to_int(InputAction::TextSelectRight)] = {
+        KC(afterhours::keys::RIGHT, KC::MOD_SHIFT),
+    };
+
+    mapping[to_int(InputAction::TextCopy)] = {
+        KC(afterhours::keys::C, KC::MOD_CTRL),
+    };
+
+    mapping[to_int(InputAction::TextCut)] = {
+        KC(afterhours::keys::X, KC::MOD_CTRL),
+    };
+
+    mapping[to_int(InputAction::TextPaste)] = {
+        KC(afterhours::keys::V, KC::MOD_CTRL),
     };
 
     return mapping;

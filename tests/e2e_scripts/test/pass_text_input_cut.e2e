@@ -1,0 +1,41 @@
+# Test: Text input Cut in Find dialog
+# Validates cut removes selected text and places it on clipboard
+
+# Type document text
+type "Some document content"
+wait 2
+
+# Open Find dialog
+key CTRL+F
+wait 3
+
+# Focus and type into find input
+focus_ui find_input
+wait 2
+type "cut me out"
+wait 2
+expect_input_text find_input "cut me out"
+
+# Select all
+action TextSelectAll
+wait 2
+
+# Cut
+action TextCut
+wait 2
+
+# Text should be empty after cut
+expect_input_text find_input ""
+screenshot text_input_cut_01_empty_after_cut
+
+# Paste back
+action TextPaste
+wait 2
+
+# Should have the text back from clipboard
+expect_input_text find_input "cut me out"
+screenshot text_input_cut_02_paste_after_cut
+
+# Close dialog
+escape
+wait 2

@@ -712,13 +712,25 @@ static void setupCallbacksEx(
         dialogState.replaceTerm.clear();
         std::memset(dialogState.findInputBuffer, 0, sizeof(dialogState.findInputBuffer));
         std::memset(dialogState.replaceInputBuffer, 0, sizeof(dialogState.replaceInputBuffer));
+        dialogState.findInputStr.clear();
+        dialogState.replaceInputStr.clear();
         dialogState.showCommentDialog = false;
         dialogState.commentInputBuffer[0] = '\0';
+        dialogState.commentInputStr.clear();
         dialogState.showTemplateDialog = false;
         dialogState.templateInputBuffer[0] = '\0';
+        dialogState.templateInputStr.clear();
         dialogState.showTabWidthDialog = false;
         dialogState.tabWidthInputBuffer[0] = '\0';
+        dialogState.tabWidthInputStr.clear();
         dialogState.showPageSetup = false;
+        dialogState.showSaveAsDialog = false;
+        std::memset(dialogState.saveAsInputBuffer, 0, sizeof(dialogState.saveAsInputBuffer));
+        dialogState.saveAsInputStr.clear();
+        dialogState.showBookmarkListDialog = false;
+        dialogState.showSettingsDialog = false;
+        dialogState.uiScaleInputStr.clear();
+        dialogState.showWordCountDialog = false;
         
         // Close any open dropdown menus
         menuComp.activeMenuIndex = -1;

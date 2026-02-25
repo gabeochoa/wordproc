@@ -1,0 +1,45 @@
+# Test: Text input Backspace and Delete keys in Find dialog
+# Validates character deletion at cursor in text_input widgets
+
+# Type document text
+type "dummy"
+wait 2
+
+# Open Find dialog
+key CTRL+F
+wait 3
+
+# Focus and type into find input
+focus_ui find_input
+wait 2
+type "abcdef"
+wait 2
+expect_input_text find_input "abcdef"
+
+# Backspace removes last character
+action TextBackspace
+wait 2
+expect_input_text find_input "abcde"
+
+action TextBackspace
+wait 2
+expect_input_text find_input "abcd"
+screenshot text_input_backspace_01
+
+# Move to start with Home
+action TextHome
+wait 2
+
+# Delete key removes character at cursor (forward delete)
+action TextDelete
+wait 2
+expect_input_text find_input "bcd"
+
+action TextDelete
+wait 2
+expect_input_text find_input "cd"
+screenshot text_input_delete_02
+
+# Close dialog
+escape
+wait 2

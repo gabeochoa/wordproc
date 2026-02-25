@@ -1,0 +1,51 @@
+# Test: Text input Shift+Arrow selection in Find dialog
+# Validates that the afterhours text_input widget supports
+# Shift+Left/Right text selection via TextSelectLeft/Right actions
+
+# Type some text into the document first
+type "Hello World"
+wait 2
+
+# Open Find dialog via Ctrl+F
+key CTRL+F
+wait 3
+
+# Focus the find input and type text
+focus_ui find_input
+wait 2
+type "search me"
+wait 2
+
+# Verify text was typed
+expect_input_text find_input "search me"
+screenshot text_input_shift_select_01_typed
+
+# Move cursor left 3 times to position before " me"
+action WidgetLeft
+wait 1
+action WidgetLeft
+wait 1
+action WidgetLeft
+wait 1
+
+# Now TextSelectLeft to select one character backward
+action TextSelectLeft
+wait 2
+
+# Verify selection exists (1 character selected)
+expect_input_selection find_input 5 6
+screenshot text_input_shift_select_02_one_char
+
+# Extend selection left 2 more chars
+action TextSelectLeft
+wait 1
+action TextSelectLeft
+wait 1
+
+# Now 3 characters should be selected: positions 3..6
+expect_input_selection find_input 3 6
+screenshot text_input_shift_select_03_extended
+
+# Close dialog
+escape
+wait 2
