@@ -2,17 +2,17 @@
 # Validates that underline formatting can be toggled
 
 type "Underline Text Test"
-wait 2
+wait_frames 12
 
 select_all
-wait 2
+wait_frames 12
 key CTRL+U
-wait 2
+wait_frames 12
 
 validate underline=true
 
 key CTRL+U
-wait 2
+wait_frames 12
 validate underline=false
 
 screenshot 04_underline_formatting

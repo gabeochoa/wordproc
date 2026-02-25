@@ -2,7 +2,7 @@
 # Validates that clicking the Font Size dropdown shows size options
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify the current font size is visible
 expect_text "10"
@@ -11,7 +11,7 @@ expect_text "10"
 click_text "10"
 
 # Wait for dropdown to open
-wait 3
+wait_frames 18
 
 # Take screenshot to verify dropdown is open and visible
 screenshot toolbar_fontsize_dropdown
@@ -24,4 +24,4 @@ expect_text "24"
 
 # Click elsewhere to close the dropdown
 click 500 300
-wait 2
+wait_frames 12

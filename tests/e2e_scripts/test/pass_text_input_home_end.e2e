@@ -1,41 +1,32 @@
 # Test: Text input Home/End keys in Find dialog
-# Validates Home jumps to start and End jumps to end of text
 
-# Type document text
 type "test text"
-wait 2
+wait_frames 6
 
-# Open Find dialog
 key CTRL+F
-wait 3
+wait_frames 30
 
-# Focus and type into find input
 focus_ui find_input
-wait 2
+wait_frames 12
 type "beginning and end"
-wait 2
+wait_frames 12
 expect_input_text find_input "beginning and end"
 
-# Press Home to go to start
 action TextHome
-wait 2
+wait_frames 6
 
-# Type at start
 type "AT_START_"
-wait 2
+wait_frames 12
 expect_input_text find_input "AT_START_beginning and end"
 screenshot text_input_home_end_01_insert_at_home
 
-# Press End to go to end
 action TextEnd
-wait 2
+wait_frames 6
 
-# Type at end
 type "_AT_END"
-wait 2
+wait_frames 12
 expect_input_text find_input "AT_START_beginning and end_AT_END"
 screenshot text_input_home_end_02_insert_at_end
 
-# Close dialog
 escape
-wait 2
+wait_frames 6

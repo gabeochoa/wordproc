@@ -3,7 +3,7 @@
 # Expected: FAIL (left alignment is default, but validation expects center)
 
 type "Left aligned text"
-wait 2
+wait_frames 12
 
 # Don't change alignment (defaults to left)
 

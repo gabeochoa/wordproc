@@ -3,29 +3,29 @@
 
 # Type text with emoji
 type "hello 👍 world 😀 test"
-wait 2
+wait_frames 12
 
 # Move to end
 key END
-wait 1
+wait_frames 6
 
 # Navigate left word-by-word (should handle emoji correctly)
 key CTRL+LEFT
-wait 1
+wait_frames 6
 key CTRL+LEFT
-wait 1
+wait_frames 6
 key CTRL+LEFT
-wait 1
+wait_frames 6
 
 # Type CJK text
 type " 你好 世界"
-wait 2
+wait_frames 12
 
 # Navigate through CJK text
 key CTRL+LEFT
-wait 1
+wait_frames 6
 key CTRL+LEFT
-wait 1
+wait_frames 6
 
 screenshot e2e_word_navigation_utf8
 

@@ -7,16 +7,16 @@ key ENTER
 type "Chapter Two"
 key ENTER
 type "Chapter Three"
-wait 2
+wait_frames 12
 
 # Go to line 1 and create a bookmark
 key CTRL+HOME
-wait 1
+wait_frames 6
 
 menu_open Insert
-wait 2
+wait_frames 12
 menu_select "Bookmark..."
-wait 2
+wait_frames 12
 
 validate has_bookmark=true
 validate bookmark_count=1
@@ -25,7 +25,7 @@ screenshot bookmark_list_created
 
 # Verify Edit menu has Go To Bookmark
 menu_open Edit
-wait 2
+wait_frames 12
 validate menu_open=Edit
 
 screenshot bookmark_list_menu

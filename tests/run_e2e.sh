@@ -22,7 +22,7 @@ NC='\033[0m' # No Color
 # Default values
 RECURSIVE=false
 TEST_PATH=""
-TIMEOUT=60
+TIMEOUT=300
 SPEED=5
 
 # Parse arguments

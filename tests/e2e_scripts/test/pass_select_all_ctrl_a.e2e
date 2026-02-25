@@ -7,14 +7,14 @@ key ENTER
 type "Second line of text"
 key ENTER
 type "Third line of text"
-wait 2
+wait_frames 12
 
 # Verify text was typed
 validate line_count=3
 
 # Use Ctrl+A to select all
 key CTRL+A
-wait 1
+wait_frames 6
 
 # Validate selection exists
 validate has_selection=true
@@ -27,7 +27,7 @@ screenshot select_all_ctrl_a
 
 # Type to replace all selected text
 type "Replaced"
-wait 1
+wait_frames 6
 
 # Verify replacement worked
 validate text=Replaced

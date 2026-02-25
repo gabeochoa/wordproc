@@ -2,7 +2,7 @@
 # Validates that toolbar dropdowns are present and handle text correctly
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify initial dropdown labels
 expect_text "Normal"
@@ -13,7 +13,7 @@ screenshot dropdown_initial
 
 # Resize window narrow to test overflow behavior
 resize 600 400
-wait 2
+wait_frames 12
 
 # Dropdowns should still be present even if truncated
 expect_text "Normal"
@@ -23,7 +23,7 @@ screenshot dropdown_narrow_overflow
 
 # Restore
 resize 1280 720
-wait 2
+wait_frames 12
 
 # All dropdowns visible again
 expect_text "Normal"

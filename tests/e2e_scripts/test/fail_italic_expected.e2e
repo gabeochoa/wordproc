@@ -3,11 +3,11 @@
 # Expected: FAIL (italic never applied, but validation expects it)
 
 type "Test text"
-wait 2
+wait_frames 12
 
 # Select all but DON'T apply italic
 select_all
-wait 1
+wait_frames 6
 
 # This validation should fail - we didn't apply italic
 validate italic=true

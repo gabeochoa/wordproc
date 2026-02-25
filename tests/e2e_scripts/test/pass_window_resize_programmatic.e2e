@@ -2,7 +2,7 @@
 # Validates resize command works after implementing the backend function
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify initial state
 validate menu_bar_fits=true
@@ -12,7 +12,7 @@ validate toolbar_fits=true
 
 # Large window
 resize 1920 1080
-wait 2
+wait_frames 12
 validate menu_bar_fits=true
 validate toolbar_fits=true
 validate formatting_bar_fits=true
@@ -21,7 +21,7 @@ screenshot resize_1920x1080
 
 # Medium window
 resize 1024 768
-wait 2
+wait_frames 12
 validate menu_bar_fits=true
 validate toolbar_fits=true
 validate menu_header_onscreen_File=true
@@ -30,19 +30,19 @@ screenshot resize_1024x768
 
 # Small window
 resize 640 480
-wait 2
+wait_frames 12
 validate menu_header_onscreen_File=true
 validate menu_header_onscreen_Help=true
 screenshot resize_640x480
 
 # Very narrow
 resize 500 400
-wait 2
+wait_frames 12
 validate menu_header_onscreen_File=true
 screenshot resize_500x400
 
 # Restore to default
 resize 1280 720
-wait 2
+wait_frames 12
 validate menu_bar_fits=true
 validate toolbar_fits=true

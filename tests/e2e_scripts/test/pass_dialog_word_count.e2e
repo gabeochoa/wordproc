@@ -3,13 +3,13 @@
 
 # Type some text
 type "Hello world this is a test"
-wait 2
+wait_frames 12
 
 # Open Word Count dialog via Tools menu
 menu_open Tools
-wait 2
+wait_frames 12
 menu_select "Word Count..."
-wait 2
+wait_frames 12
 
 # Validate dialog is open
 validate dialog_open=WordCount

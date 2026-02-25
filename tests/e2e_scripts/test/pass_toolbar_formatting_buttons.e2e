@@ -2,7 +2,7 @@
 # These buttons appear on the formatting bar below the main toolbar
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify Bold, Italic, Underline buttons are visible
 expect_text "B"

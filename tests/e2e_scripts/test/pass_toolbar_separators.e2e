@@ -2,7 +2,7 @@
 # Validates toolbar buttons and separators are all visible
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify standard toolbar buttons are visible across separator groups
 # Group 1: Document operations
@@ -22,10 +22,10 @@ screenshot toolbar_separators_visible
 
 # Verify toolbar at different widths
 resize 800 600
-wait 2
+wait_frames 12
 validate toolbar_fits=true
 
 screenshot toolbar_separators_800
 
 resize 1280 720
-wait 2
+wait_frames 12

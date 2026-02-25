@@ -2,7 +2,7 @@
 # Clicks the View button and validates dropdown content
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify View button is visible
 expect_text "View"
@@ -11,7 +11,7 @@ expect_text "View"
 click_text "View"
 
 # Wait for menu to open
-wait 2
+wait_frames 12
 
 # Take screenshot
 screenshot view_menu_dropdown
@@ -24,4 +24,4 @@ expect_text "Dark Mode"
 
 # Close menu
 click 500 300
-wait 2
+wait_frames 12

@@ -2,7 +2,7 @@
 # This test clicks the File button and validates the dropdown content
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify File button is visible first
 expect_text "File"
@@ -11,7 +11,7 @@ expect_text "File"
 click_text "File"
 
 # Wait for click to be processed and menu to open
-wait 2
+wait_frames 12
 
 # Take screenshot to verify dropdown is open
 screenshot file_menu_dropdown

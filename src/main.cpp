@@ -507,7 +507,7 @@ static void app_frame() {
     // Execute E2E script AFTER systems run (visible text is now registered for validation)
     auto* runner = app_state::scriptRunner;
     if (runner->hasCommands() && !runner->isFinished()) {
-        runner->tick();
+        runner->tick(std::min(dt, 1.0f / 30.0f));
         
         // If script finished, print results and exit
         if (runner->isFinished()) {

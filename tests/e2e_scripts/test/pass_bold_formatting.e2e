@@ -3,20 +3,20 @@
 
 # Type some text
 type "Bold Text Test"
-wait 2
+wait_frames 12
 
 # Select all and apply bold
 select_all
-wait 2
+wait_frames 12
 key CTRL+B
-wait 2
+wait_frames 12
 
 # Validate bold is enabled
 validate bold=true
 
 # Toggle bold off
 key CTRL+B
-wait 2
+wait_frames 12
 validate bold=false
 
 screenshot 02_bold_formatting

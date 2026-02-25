@@ -2,7 +2,7 @@
 # This test validates that the expect_text command works for UI elements
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Check that menu bar labels are visible
 expect_text "File"

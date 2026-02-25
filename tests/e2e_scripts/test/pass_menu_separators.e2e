@@ -2,11 +2,11 @@
 # Validates that menus with separators still open and items are accessible
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Open File menu which has separators between groups
 menu_open File
-wait 2
+wait_frames 12
 
 # Verify File menu is open
 validate menu_open=File
@@ -20,14 +20,14 @@ validate menu_item_Exit=true
 
 # Open Format menu which also has separators
 menu_open Format
-wait 2
+wait_frames 12
 validate menu_open=Format
 
 screenshot menu_separators_format
 
 # Open Insert menu
 menu_open Insert
-wait 2
+wait_frames 12
 validate menu_open=Insert
 
 screenshot menu_separators_insert

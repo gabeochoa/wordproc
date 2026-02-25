@@ -2,24 +2,24 @@
 # Validates paragraph alignment controls
 
 type "Alignment Test"
-wait 2
+wait_frames 12
 
 # Default should be left
 validate alignment=left
 
 # Center alignment
 key CTRL+E
-wait 2
+wait_frames 12
 validate alignment=center
 
 # Right alignment
 key CTRL+R
-wait 2
+wait_frames 12
 validate alignment=right
 
 # Back to left
 key CTRL+L
-wait 2
+wait_frames 12
 validate alignment=left
 
 screenshot 05_text_alignment

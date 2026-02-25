@@ -2,7 +2,7 @@
 # Validates status bar shows info correctly at various window widths
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify status bar text at full width
 expect_text "Page 1"
@@ -13,14 +13,14 @@ screenshot status_bar_full_width
 
 # Type some text to update status bar
 type "Status bar overflow test content here"
-wait 2
+wait_frames 12
 
 # Verify updated column count (37 chars, 0-indexed)
 validate caret_col=37
 
 # Resize narrow to test overflow
 resize 600 400
-wait 2
+wait_frames 12
 
 # Status bar should still be visible
 expect_text "Page 1"
@@ -29,7 +29,7 @@ screenshot status_bar_narrow
 
 # Restore
 resize 1280 720
-wait 2
+wait_frames 12
 
 expect_text "Page 1"
 expect_text "Ln 1"

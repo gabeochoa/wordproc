@@ -1,54 +1,42 @@
-# Test: Text input clipboard operations (Ctrl+C/V) in Find dialog
-# Validates copy and paste work in afterhours text_input widgets
+# Test: Text input clipboard operations (Copy/Paste) in Find dialog
 
-# Type some text into the document
 type "Document text here"
-wait 2
+wait_frames 6
 
-# Open Find dialog
 key CTRL+F
-wait 3
+wait_frames 30
 
-# Focus the find input and type text
 focus_ui find_input
-wait 2
+wait_frames 12
 type "copy this"
-wait 2
+wait_frames 12
 
-# Verify text
 expect_input_text find_input "copy this"
 screenshot text_input_clipboard_01_typed
 
-# Select all text
 action TextSelectAll
-wait 2
+wait_frames 6
 
 screenshot text_input_clipboard_02_selected
 
-# Copy
 action TextCopy
-wait 2
+wait_frames 6
 
-# Move to end (deselect by pressing Right)
 action WidgetRight
-wait 2
+wait_frames 6
 
-# Add more text
 type " extra"
-wait 2
+wait_frames 12
 expect_input_text find_input "copy this extra"
 screenshot text_input_clipboard_03_appended
 
-# Select all and paste (replaces with clipboard content)
 action TextSelectAll
-wait 2
+wait_frames 6
 action TextPaste
-wait 2
+wait_frames 6
 
-# Should be back to just "copy this" (from clipboard)
 expect_input_text find_input "copy this"
 screenshot text_input_clipboard_04_paste_replaced
 
-# Close dialog
 escape
-wait 2
+wait_frames 6

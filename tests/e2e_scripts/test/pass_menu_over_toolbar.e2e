@@ -4,11 +4,11 @@
 # correctly hides icons when menus are open.
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Open the File menu
 click_text "File"
-wait 3
+wait_frames 18
 
 # Take screenshot - menu should be visible above toolbar
 screenshot menu_over_toolbar
@@ -20,11 +20,11 @@ expect_text "Export PDF..."
 
 # Close menu by clicking elsewhere
 click 500 300
-wait 2
+wait_frames 12
 
 # Open the Edit menu
 click_text "Edit"
-wait 3
+wait_frames 18
 
 # Take screenshot
 screenshot edit_menu_over_toolbar
@@ -36,4 +36,4 @@ expect_text "Paste"
 
 # Close menu
 click 500 300
-wait 2
+wait_frames 12

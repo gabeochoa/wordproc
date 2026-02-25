@@ -3,7 +3,7 @@
 
 # Type some text
 type "Hello World"
-wait 3
+wait_frames 18
 
 # Verify the text appears on screen
 expect_text "Hello World"
@@ -11,7 +11,7 @@ expect_text "Hello World"
 # Type more text on a new line
 key ENTER
 type "This is a test"
-wait 3
+wait_frames 18
 
 # Both lines should be visible
 expect_text "Hello World"

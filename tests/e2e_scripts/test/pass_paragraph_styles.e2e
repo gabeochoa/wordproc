@@ -2,24 +2,24 @@
 # Validates heading and title styles
 
 type "Heading Test"
-wait 2
+wait_frames 12
 
 # Default should be Normal
 validate paragraph_style=normal
 
 # Apply Heading 1 (Ctrl+Alt+1)
 key CTRL+ALT+1
-wait 2
+wait_frames 12
 validate paragraph_style=heading 1
 
 # Apply Heading 2 (Ctrl+Alt+2)
 key CTRL+ALT+2
-wait 2
+wait_frames 12
 validate paragraph_style=heading 2
 
 # Apply Normal (Ctrl+Alt+0)
 key CTRL+ALT+0
-wait 2
+wait_frames 12
 validate paragraph_style=heading 2
 
 screenshot 06_paragraph_styles

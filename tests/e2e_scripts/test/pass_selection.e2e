@@ -2,14 +2,14 @@
 # Validates select all functionality
 
 type "Select Me"
-wait 2
+wait_frames 12
 
 # No selection initially
 validate has_selection=false
 
 # Select all
 select_all
-wait 2
+wait_frames 12
 
 # Should have selection
 validate has_selection=true

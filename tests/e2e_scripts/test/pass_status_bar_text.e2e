@@ -2,7 +2,7 @@
 # The status bar should show page/section/line/column info and mode indicators
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify status bar left section has page/line info
 expect_text "Page 1"

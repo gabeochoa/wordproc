@@ -2,7 +2,7 @@
 # The title bar should show "Wordproc - Untitled" for a new document
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify title bar text
 expect_text "Wordproc"

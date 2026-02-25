@@ -2,7 +2,7 @@
 # Validates that clicking the Font dropdown shows all font options
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify the current font label is visible
 expect_text "Times New Roman"
@@ -11,7 +11,7 @@ expect_text "Times New Roman"
 click_text "Times New Roman"
 
 # Wait for dropdown to open
-wait 3
+wait_frames 18
 
 # Take screenshot to verify dropdown is open and visible
 screenshot toolbar_font_dropdown
@@ -22,4 +22,4 @@ expect_text "Courier New"
 
 # Click elsewhere to close the dropdown
 click 500 300
-wait 2
+wait_frames 12

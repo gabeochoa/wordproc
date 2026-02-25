@@ -2,24 +2,24 @@
 # Validates list toggling
 
 type "List Item Test"
-wait 2
+wait_frames 12
 
 # Default should be no list
 validate list_type=none
 
 # Toggle bulleted list
 key CTRL+SHIFT+8
-wait 2
+wait_frames 12
 validate list_type=bulleted
 
 # Toggle off
 key CTRL+SHIFT+8
-wait 2
+wait_frames 12
 validate list_type=none
 
 # Toggle numbered list
 key CTRL+SHIFT+7
-wait 2
+wait_frames 12
 validate list_type=numbered
 
 screenshot 08_lists

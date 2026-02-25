@@ -3,11 +3,11 @@
 # Expected: FAIL (test should fail because "boldd" is not a valid property)
 
 type "Hello"
-wait 2
+wait_frames 12
 
 # Apply bold
 key CTRL+B
-wait 1
+wait_frames 6
 
 # This validation should fail - typo in property name (boldd instead of bold)
 validate boldd=true

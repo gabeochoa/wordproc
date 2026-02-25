@@ -3,14 +3,14 @@
 
 # Type some text first
 type "Drag to select me"
-wait 2
+wait_frames 12
 
 # Validate text was typed
 validate text=Drag to select me
 
 # Mouse move to document area 
 mouse_move 100 100
-wait 2
+wait_frames 12
 
 # Take screenshot showing mouse position
 screenshot 14_mouse_drag

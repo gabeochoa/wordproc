@@ -2,11 +2,11 @@
 # Validates that menus can be opened and closed independently
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Open File menu
 click_text "File"
-wait 2
+wait_frames 12
 
 # Verify File menu is open
 expect_text "New"
@@ -17,11 +17,11 @@ screenshot menu_switch_file_open
 
 # Close File menu by clicking elsewhere
 click 500 300
-wait 2
+wait_frames 12
 
 # Open Edit menu
 click_text "Edit"
-wait 2
+wait_frames 12
 
 # Verify Edit menu items are visible (not File menu items)
 expect_text "Undo"
@@ -33,7 +33,7 @@ screenshot menu_switch_edit_open
 
 # Close Edit menu
 click 500 300
-wait 2
+wait_frames 12
 
 # Verify all menus are closed - toolbar text should be visible
 expect_text "Normal"

@@ -2,7 +2,7 @@
 # Validates toolbar buttons still function with with_cursor(Pointer) and hover bg
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify toolbar formatting buttons are visible
 expect_text "B"
@@ -16,20 +16,20 @@ expect_text "10"
 
 # Type some text
 type "Toolbar hover test"
-wait 2
+wait_frames 12
 
 # Select all text
 select_all
-wait 1
+wait_frames 6
 
 # Apply bold via toolbar shortcut
 key CTRL+B
-wait 1
+wait_frames 6
 validate bold=true
 
 # Apply italic
 key CTRL+I
-wait 1
+wait_frames 6
 validate italic=true
 
 # Take screenshot showing active formatting buttons

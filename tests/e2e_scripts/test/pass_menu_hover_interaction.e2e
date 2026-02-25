@@ -3,7 +3,7 @@
 # after adding with_cursor(Pointer) and with_custom_hover_bg()
 
 # Wait for window to render
-wait 5
+wait_frames 30
 
 # Verify all menu header buttons are visible
 expect_text "File"
@@ -17,7 +17,7 @@ expect_text "Help"
 
 # Open File menu using menu_open command
 menu_open File
-wait 2
+wait_frames 12
 
 # Verify File menu is open
 validate menu_open=File
@@ -26,7 +26,7 @@ screenshot menu_hover_file_open
 
 # Switch to Edit menu
 menu_open Edit
-wait 2
+wait_frames 12
 
 # Verify Edit menu is open
 validate menu_open=Edit
@@ -35,7 +35,7 @@ screenshot menu_hover_edit_open
 
 # Open View menu
 menu_open View
-wait 2
+wait_frames 12
 validate menu_open=View
 
 screenshot menu_hover_view_open

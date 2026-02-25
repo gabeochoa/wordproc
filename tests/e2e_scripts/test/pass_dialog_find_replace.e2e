@@ -3,11 +3,11 @@
 
 # Type some text
 type "The quick brown fox jumps over the lazy dog"
-wait 2
+wait_frames 12
 
 # Open Find dialog via Ctrl+F
 key CTRL+F
-wait 2
+wait_frames 12
 
 # Validate dialog is open
 validate dialog_open=Find
