@@ -1,0 +1,20 @@
+# Test: Context menu Select All selects all document text
+
+type "Select all of this"
+wait_frames 12
+
+validate has_selection=false
+
+# Right-click to open context menu
+right_click 50% 50%
+wait_frames 12
+
+# Click Select All
+click_text "Select All"
+wait_frames 12
+
+# All text should be selected
+validate has_selection=true
+validate selected_text=Select all of this
+
+screenshot context_menu_select_all

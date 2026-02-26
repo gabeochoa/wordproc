@@ -1,0 +1,30 @@
+# Test: Context menu Cut removes selected text
+
+type "Cut this text"
+wait_frames 12
+
+# Select all text
+key CTRL+A
+wait_frames 6
+validate has_selection=true
+
+# Right-click to open context menu
+right_click 50% 50%
+wait_frames 12
+
+# Click Cut
+click_text "Cut"
+wait_frames 12
+
+# Text should be gone
+validate text=
+validate has_selection=false
+
+screenshot context_menu_cut
+
+# Paste it back to verify it went to clipboard
+key CTRL+V
+wait_frames 6
+validate text=Cut this text
+
+screenshot context_menu_cut_paste_back

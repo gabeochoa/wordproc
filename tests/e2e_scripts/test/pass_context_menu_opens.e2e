@@ -1,0 +1,22 @@
+# Test: Right-click opens context menu with expected items
+
+type "Hello World"
+wait_frames 12
+
+# Right-click in the document area
+right_click 50% 50%
+wait_frames 18
+
+screenshot context_menu_opens
+
+# Verify we can interact with context menu items (proves they exist)
+# click_text finds UI components by label and clicks them
+# If any item doesn't exist, click_text will fail with "No UI with text"
+click_text "Select All"
+wait_frames 6
+
+validate has_selection=true
+
+# Dismiss any remaining menu state
+escape
+wait_frames 6

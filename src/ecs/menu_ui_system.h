@@ -1140,6 +1140,119 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Right-click detection for context menu (real input, not E2E)
+        if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
+            !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
+            !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
+            !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&
+            !dialogs.showSettingsDialog && !dialogs.showBookmarkListDialog &&
+            !dialogs.showSaveAsDialog && !dialogs.showPageSetup) {
+            if (input::isMouseButtonPressed(1)) {
+                auto mousePos = input::getMousePosition();
+                dialogs.showContextMenu = true;
+                dialogs.contextMenuX = mousePos.x;
+                dialogs.contextMenuY = mousePos.y;
+            }
+        }
+
+        // Context menu (right-click)
+        if (dialogs.showContextMenu) {
+            using namespace afterhours::ui;
+
+            constexpr int CTX_BASE_ID = 50020;
+            constexpr int CTX_LAYER = 1100;
+            constexpr float ITEM_HEIGHT = 22.0f;
+            constexpr float MENU_WIDTH = 180.0f;
+
+            auto *res = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::window_manager::ProvidesCurrentResolution>();
+            float sw = res ? static_cast<float>(res->current_resolution.width) : 1280.0f;
+            float sh = res ? static_cast<float>(res->current_resolution.height) : 720.0f;
+
+            float menuH = ITEM_HEIGHT * 5 + 12.0f;
+            float posX = dialogs.contextMenuX;
+            float posY = dialogs.contextMenuY;
+            if (posX + MENU_WIDTH > sw) posX = sw - MENU_WIDTH;
+            if (posY + menuH > sh) posY = sh - menuH;
+            if (posX < 0) posX = 0;
+            if (posY < 0) posY = 0;
+
+            auto container = div(ctx, mk(entity, CTX_BASE_ID),
+                ComponentConfig{}
+                    .with_size(ComponentSize{pixels(MENU_WIDTH), pixels(menuH)})
+                    .with_absolute_position()
+                    .with_translate(pixels(posX), pixels(posY))
+                    .with_flex_direction(FlexDirection::Column)
+                    .with_background(Theme::Usage::Secondary)
+                    .with_render_layer(CTX_LAYER)
+                    .with_debug_name("context_menu"));
+
+            auto menuItem = [&](int id, const std::string& label, const std::string& shortcut) -> bool {
+                bool isHovered = false;
+                auto itemBtn = button(ctx, mk(container.ent(), id),
+                    ComponentConfig{}
+                        .with_label(label)
+                        .with_size(ComponentSize{percent(1.0f), pixels(ITEM_HEIGHT)})
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_padding(Padding{.left = DefaultSpacing::small()})
+                        .with_render_layer(CTX_LAYER));
+
+                if (itemBtn.ent().template has<UIComponent>()) {
+                    isHovered = ctx.is_hot(itemBtn.ent().id);
+                }
+
+                if (!shortcut.empty()) {
+                    div(ctx, mk(container.ent(), id + 100),
+                        ComponentConfig{}
+                            .with_label(shortcut)
+                            .with_size(ComponentSize{percent(1.0f), pixels(ITEM_HEIGHT)})
+                            .with_alignment(afterhours::ui::TextAlignment::Right)
+                            .with_padding(Padding{.right = DefaultSpacing::small()})
+                            .with_absolute_position()
+                            .with_skip_tabbing(true)
+                            .with_render_layer(CTX_LAYER));
+                }
+
+                return static_cast<bool>(itemBtn);
+            };
+
+            if (menuItem(1, "Cut", "Ctrl+X")) {
+                cmd::cut(doc);
+                dialogs.showContextMenu = false;
+            }
+            if (menuItem(2, "Copy", "Ctrl+C")) {
+                cmd::copy(doc);
+                dialogs.showContextMenu = false;
+            }
+            if (menuItem(3, "Paste", "Ctrl+V")) {
+                cmd::paste(doc);
+                dialogs.showContextMenu = false;
+            }
+
+            imm::separator(ctx, mk(container.ent(), 4));
+
+            if (menuItem(5, "Select All", "Ctrl+A")) {
+                cmd::selectAll(doc);
+                dialogs.showContextMenu = false;
+            }
+
+            // Dismiss on click outside or escape
+            if (input::isMouseButtonPressed(0) && !ctx.is_hot(container.ent().id)) {
+                bool clickedInside = false;
+                auto mousePos = input::getMousePosition();
+                if (mousePos.x >= posX && mousePos.x <= posX + MENU_WIDTH &&
+                    mousePos.y >= posY && mousePos.y <= posY + menuH) {
+                    clickedInside = true;
+                }
+                if (!clickedInside) {
+                    dialogs.showContextMenu = false;
+                }
+            }
+            if (input::isKeyPressed(afterhours::keys::ESCAPE)) {
+                dialogs.showContextMenu = false;
+            }
+        }
+
         // Dispatch menu actions: consume click result set earlier and run handler
         {
             int menuResult = menu.consumeClickedResult();

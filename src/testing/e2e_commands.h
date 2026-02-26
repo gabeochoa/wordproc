@@ -425,6 +425,37 @@ struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'right_click x y' - opens context menu at coordinates
+// Workaround: bypasses input simulation (afterhours doesn't support right-click
+// in test mode yet) and directly sets context menu state.
+// TODO: Upstream right-click support to afterhours (see afterhours-feature-requests.md #14)
+struct HandleRightClickCommand : System<testing::PendingE2ECommand> {
+  ecs::DialogState *dialog_state = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("right_click"))
+      return;
+    if (!cmd.has_args(2)) {
+      cmd.fail("right_click requires x y arguments");
+      return;
+    }
+    if (!dialog_state) {
+      cmd.fail("dialog_state not set");
+      return;
+    }
+
+    auto [sw, sh] = testing::e2e_screen_size();
+    float x = cmd.coord_arg(0, sw);
+    float y = cmd.coord_arg(1, sh);
+
+    dialog_state->showContextMenu = true;
+    dialog_state->contextMenuX = x;
+    dialog_state->contextMenuY = y;
+    cmd.consume();
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -496,6 +527,10 @@ inline void register_app_commands(
 
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
   sm.register_update_system(std::move(file_dialog_set));
+
+  auto right_click = std::make_unique<HandleRightClickCommand>();
+  right_click->dialog_state = dialog_state;
+  sm.register_update_system(std::move(right_click));
 }
 
 } // namespace e2e_commands

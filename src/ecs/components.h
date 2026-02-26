@@ -223,6 +223,11 @@ struct DialogState : public afterhours::BaseComponent {
     // Settings
     bool showSettingsDialog = false;
     std::string uiScaleInputStr;
+
+    // Context Menu (right-click)
+    bool showContextMenu = false;
+    float contextMenuX = 0;
+    float contextMenuY = 0;
 };
 
 // PageMode is defined in document_settings.h

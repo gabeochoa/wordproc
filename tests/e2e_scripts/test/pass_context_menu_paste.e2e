@@ -1,0 +1,28 @@
+# Test: Context menu Paste inserts clipboard content
+
+type "Paste source"
+wait_frames 12
+
+# Copy the text via keyboard shortcut
+key CTRL+A
+wait_frames 6
+key CTRL+C
+wait_frames 6
+
+# Move to end and add a space
+key END
+wait_frames 6
+type " "
+wait_frames 6
+
+# Right-click to open context menu
+right_click 50% 50%
+wait_frames 12
+
+# Click Paste
+click_text "Paste"
+wait_frames 12
+
+validate text=Paste source Paste source
+
+screenshot context_menu_paste

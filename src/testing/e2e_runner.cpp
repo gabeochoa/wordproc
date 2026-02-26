@@ -733,6 +733,9 @@ static void setupCallbacksEx(
         dialogState.showSettingsDialog = false;
         dialogState.uiScaleInputStr.clear();
         dialogState.showWordCountDialog = false;
+        dialogState.showContextMenu = false;
+        dialogState.contextMenuX = 0;
+        dialogState.contextMenuY = 0;
         
         // Close any open dropdown menus
         menuComp.activeMenuIndex = -1;

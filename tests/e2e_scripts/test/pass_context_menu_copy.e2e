@@ -1,0 +1,31 @@
+# Test: Context menu Copy copies selected text without removing it
+
+type "Copy this text"
+wait_frames 12
+
+# Select all text
+key CTRL+A
+wait_frames 6
+validate has_selection=true
+
+# Right-click to open context menu
+right_click 50% 50%
+wait_frames 12
+
+# Click Copy
+click_text "Copy"
+wait_frames 12
+
+# Original text should still be there
+validate text=Copy this text
+
+# Move to end and paste
+key END
+wait_frames 6
+type " "
+key CTRL+V
+wait_frames 6
+
+validate text=Copy this text Copy this text
+
+screenshot context_menu_copy
