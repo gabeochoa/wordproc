@@ -360,6 +360,65 @@ for (int r = 0; r < 3; r++) {
 
 ---
 
+## 14. Right-Click / Multi-Button Mouse Support in E2E Testing
+
+**Need:** Simulate right-click (and potentially middle-click) in E2E tests, and expose right-click state through `is_mouse_button_pressed(1)` in test mode.
+
+**Context:** Context menus are triggered by right-click. The E2E testing framework's `MouseState` only tracks left-click (`left_down`, `just_pressed`, `just_released`). In test mode, `is_mouse_button_pressed(button, ...)` returns `false` for any button != 0. There's no `simulate_right_click()` and no `right_click` E2E command.
+
+**Current limitation:** `MouseState` in `input_injector.h` has a single set of press/release fields (implicitly left-button only). The `HandleClickCommand` calls `simulate_click()` which calls `simulate_mouse_press()` which sets `left_down`. No equivalent for button 1 (right) or button 2 (middle).
+
+**What's needed:**
+1. Extend `MouseState` to track per-button state (at least buttons 0-2):
+   ```cpp
+   struct MouseState {
+     Position pos{};
+     bool active = false;
+     // Per-button state (0=left, 1=right, 2=middle)
+     std::array<bool, 3> button_down{};
+     std::array<bool, 3> button_just_pressed{};
+     std::array<bool, 3> button_just_released{};
+     std::array<int, 3> button_press_frames{};
+     std::array<bool, 3> button_auto_release{};
+   };
+   ```
+2. Add `simulate_right_click(x, y)` and `simulate_mouse_press(int button)` to `test_input.h`.
+3. Update `is_mouse_button_pressed(button, ...)`, `is_mouse_button_down(button, ...)`, and `is_mouse_button_released(button, ...)` in `test_input.h` to return per-button state in test mode.
+4. Update `reset_frame()` to clear per-button per-frame state.
+5. Add `right_click` to `coord_commands` in `runner.h`.
+6. Add `HandleRightClickCommand` in `command_handlers.h` (calls `simulate_right_click`).
+
+**Workaround:** wordproc registers a custom E2E command handler for `right_click` that bypasses input simulation and directly sets app-level context menu state. Real (non-test) right-click detection uses `is_mouse_button_pressed(1)` from the backend, which works fine.
+
+---
+
+## 15. Context Menu UI Primitive
+
+**Need:** A reusable `context_menu()` immediate-mode component that opens a popup menu at arbitrary screen coordinates.
+
+**Context:** Context menus (right-click menus) are a common UI pattern. They're visually identical to dropdown menus but triggered by right-click and positioned at the cursor. Currently no built-in support.
+
+**Desired API:**
+```cpp
+struct ContextMenuItem {
+    std::string label;
+    std::string shortcut;  // display-only hint
+    bool enabled = true;
+    bool separator = false;
+};
+
+// Returns index of clicked item, or -1 if none.
+// Sets open = false when an item is clicked or dismissed.
+int context_menu(ctx, ep, bool &open, float x, float y,
+                 std::span<const ContextMenuItem> items);
+```
+
+**Implementation notes:** A modal with `ClosedBy::Any`, no backdrop dim, no title bar, absolute position at `(x, y)` clamped to screen bounds. Inside: a `tray()` with one `button()` per item and `separator()` for dividers. Clicking any enabled item returns its index and closes.
+
+**Workaround:** wordproc builds the context menu manually using existing `modal` + `tray` + `button` primitives. Works but requires ~50 lines of boilerplate that every app would duplicate.
+
+---
+
 ## Priority
 
 | # | Feature | Impact | Effort | Notes |
@@ -369,6 +428,8 @@ for (int r = 0; r < 3; r++) {
 | 2 | Access key underlines | Critical — accessibility | Medium | |
 | 3 | Hover state | Major — all 4 audits | Low | |
 | 5 | Focus indicators | Major — accessibility/WCAG | Medium | |
+| 14 | Right-click mouse support | Major — enables context menus | Low | Workaround in wordproc |
+| 15 | Context menu primitive | Major — common UI pattern | Low | Workaround in wordproc |
 | 10 | Drop shadows | Major — visual depth | Low | |
 | 4 | Dropdown triangle | Major — visual polish | Low | |
 | 8 | Tooltip component | Major — usability | Low | |
