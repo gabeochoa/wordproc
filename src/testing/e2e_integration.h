@@ -34,6 +34,13 @@ struct E2EConfig {
 ///   3. Your render systems
 ///   4. runner.tick() - advances script
 inline void register_e2e_systems(SystemManager &sm, const E2EConfig &config) {
+  // Phase 0: Document text registration (must run before expect_text checks)
+  {
+    auto reg = std::make_unique<e2e_commands::DocumentTextRegistration>();
+    reg->doc_comp = config.doc_comp;
+    sm.register_update_system(std::move(reg));
+  }
+
   // Phase 1: Built-in command handlers
   register_builtin_handlers(sm);
 

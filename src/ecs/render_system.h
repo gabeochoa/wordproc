@@ -411,9 +411,6 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
         // Draw text with paragraph style applied
         if (!displayLine.empty()) {
-            // Register document text for E2E tests
-            test_input::register_visible_text(displayLine);
-            
             // Get global text style for underline/strikethrough/colors
             TextStyle globalStyle = buffer.textStyle();
             

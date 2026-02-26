@@ -23,6 +23,29 @@ static inline std::string strip_quotes(const std::string &s) {
     return s;
 }
 
+// Registers document text into the visible text registry every frame.
+// Must run in the same TU as HandleExpectTextCommand to ensure they
+// share the same VisibleTextRegistry singleton instance.
+struct DocumentTextRegistration : System<> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  bool should_iterate() const override { return false; }
+
+  void once(float) override {
+    if (!doc_comp || !testing::test_input::detail::test_mode)
+      return;
+    auto &reg = testing::VisibleTextRegistry::instance();
+    auto &buffer = doc_comp->buffer;
+    int lineCount = static_cast<int>(buffer.lineCount());
+    for (int i = 0; i < lineCount; i++) {
+      std::string line = buffer.lineString(static_cast<std::size_t>(i));
+      if (!line.empty()) {
+        reg.register_text(line);
+      }
+    }
+  }
+};
+
 // Handle 'menu_open Menu' - opens a menu by name
 struct HandleMenuOpenCommand : System<testing::PendingE2ECommand> {
   ecs::MenuComponent *menu_comp = nullptr;

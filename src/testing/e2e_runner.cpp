@@ -3,7 +3,9 @@
 
 #include "e2e_runner.h"
 #include "../editor/document_settings.h"
+#include "../input_mapping.h"
 #include "../rl.h"
+#include "../../vendor/afterhours/src/plugins/modal.h"
 #include "../settings.h"
 #include "../ui/theme.h"
 #include "../util/logging.h"
@@ -752,6 +754,23 @@ static void setupCallbacksEx(
         
         // Reset theme
         theme::applyDarkMode(false);
+        
+        // Reset afterhours UI context (focus, active element, etc.)
+        auto* uiCtx = afterhours::EntityHelper::get_singleton_cmp<
+            afterhours::ui::UIContext<InputAction>>();
+        if (uiCtx) {
+            uiCtx->reset();
+            uiCtx->last_action = InputAction::None;
+            uiCtx->last_action_modifiers = 0;
+            uiCtx->all_actions.reset();
+        }
+        
+        // Clear modal stack so stale modals don't block input in subsequent tests
+        auto* modalRoot = afterhours::EntityHelper::get_singleton_cmp<
+            afterhours::modal::ModalRoot>();
+        if (modalRoot) {
+            modalRoot->modal_stack.clear();
+        }
         
         // Reset settings to defaults
         Settings::get().reset();
