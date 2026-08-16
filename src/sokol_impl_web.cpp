@@ -23,6 +23,13 @@
 #define SOKOL_FONTSTASH_IMPL
 #include <sokol/sokol_fontstash.h>
 
+// Image decoding: image_decode.h defines STB_IMAGE_IMPLEMENTATION off SOKOL_IMPL,
+// so stb rides along with this TU, and it emits the impl-TU sentinel that
+// afterhours::graphics::run() references. The native TU (sokol_impl.mm) does the
+// same; without it the web build fails at link exactly as the native one did.
+// No capture_impl.h here: that is Metal-only.
+#include <afterhours/src/backends/sokol/image_decode.h>
+
 // Stubs for platform-specific functions called by backend.h
 // These are not meaningful on the web platform.
 

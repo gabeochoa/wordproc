@@ -1,5 +1,11 @@
 #pragma once
 
+// Must precede any afterhours header: it selects the graphics backend, and the
+// backend decides the layout of TextureType et al. A translation unit that
+// reaches afterhours first gets the "none" backend's types and then fails to
+// compile against the sokol drawing helpers.
+#include "external.h"
+
 #include <afterhours/src/library.h>
 #include <afterhours/src/plugins/window_manager.h>
 #include <afterhours/src/singleton.h>

@@ -3,12 +3,14 @@
 // Use wordproc's logging instead of afterhours' default
 #include "log.h"
 
+// Must be first among the afterhours headers - defines backend selection, which
+// decides the layout of TextureType and friends.
+#include "external.h"
+
 #include <afterhours/src/library.h>
 #include <afterhours/src/singleton.h>
 
 #include <memory>
-
-#include "external.h"  // Must be first - defines backend selection
 
 SINGLETON_FWD(Preload)
 struct Preload {
