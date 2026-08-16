@@ -147,7 +147,11 @@ inline ComponentConfig win95DropdownListStyle(float width, int itemCount = 0) {
             .bottom = pixels(2),
             .left = pixels(2)
         })
-        .with_absolute_position();
+        .with_absolute_position()
+        // Win95 floats a menu above the content with a hard 2px shadow.
+        .with_hard_shadow(ui_imm::WIN95_POPUP_SHADOW_OFFSET,
+                          ui_imm::WIN95_POPUP_SHADOW_OFFSET,
+                          ui_imm::WIN95_POPUP_SHADOW_COLOR);
 
     if (itemCount > 0) {
         float itemHeight = theme::layout::scale(20);

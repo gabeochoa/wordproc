@@ -32,6 +32,12 @@ constexpr float WIN95_FOCUS_RING_THICKNESS = 1.0f;
 constexpr float WIN95_FOCUS_RING_OFFSET = 2.0f;
 constexpr afterhours::Color WIN95_FOCUS_RING_COLOR = win95_colors::TEXT;
 
+// Popup drop shadow (feature request #10). Win95 casts a hard 2px shadow on the
+// right and bottom edges of menus and dropdowns -- no blur, which is what
+// ShadowStyle::Hard means.
+constexpr float WIN95_POPUP_SHADOW_OFFSET = 2.0f;
+constexpr afterhours::Color WIN95_POPUP_SHADOW_COLOR = {0, 0, 0, 96};
+
 // Create Win95 theme for Afterhours UI
 inline afterhours::ui::Theme createWin95Theme() {
     afterhours::ui::Theme theme;

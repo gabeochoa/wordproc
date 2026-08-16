@@ -49,3 +49,11 @@ TEST_CASE("Win95 theme has a visible keyboard focus ring", "[ui][theme][focus]")
     REQUIRE_FALSE(same(theme.focus, theme.font));
     REQUIRE_FALSE(same(theme.focus, theme.background));
 }
+
+// Feature request #10: popups cast a hard 2px shadow (afterhours ShadowStyle::
+// Hard). Menus and dropdown lists read these; a zero offset or a transparent
+// colour would silently turn the shadow off.
+TEST_CASE("Win95 popup shadow is visible and hard-edged", "[ui][theme][shadow]") {
+    REQUIRE(ui_imm::WIN95_POPUP_SHADOW_OFFSET > 0.0f);
+    REQUIRE(ui_imm::WIN95_POPUP_SHADOW_COLOR.a > 0);
+}

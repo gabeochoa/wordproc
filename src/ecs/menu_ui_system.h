@@ -235,6 +235,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 ComponentConfig{}
                     .with_debug_name("dropdown_" + menuDef.label)
                     .with_size(ComponentSize{pixels(maxWidth), pixels(dropdownHeight + 4.0f)})
+                    .with_hard_shadow(ui_imm::WIN95_POPUP_SHADOW_OFFSET,
+                                      ui_imm::WIN95_POPUP_SHADOW_OFFSET,
+                                      ui_imm::WIN95_POPUP_SHADOW_COLOR)
                     .with_absolute_position()
                     .with_translate(dropdownX, dropdownY)
                     .with_custom_background(toAhColor(theme::MENU_BG))
