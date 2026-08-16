@@ -119,7 +119,15 @@ inline ComponentConfig absDropdownButton(float x, float y, float width, float he
         .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
         .with_justify_content(JustifyContent::Center)
         .with_align_items(AlignItems::FlexStart)
-        .with_cursor(afterhours::ui::CursorType::Pointer);
+        .with_cursor(afterhours::ui::CursorType::Pointer)
+        // The ▼ is drawn rather than typed: the UI font has no U+25BC glyph, and
+        // the " v" suffix it used to wear was a placeholder. on_draw_fg puts it in
+        // the render pass, so it no longer needs the overlay's popup-overlap dance
+        // (feature request #4).
+        .with_on_draw_fg([](RectangleType r) {
+            drawDropdownTriangle(r.x + r.width - theme::layout::scale(10),
+                                 r.y + r.height / 2.0f, theme::BUTTON_TEXT);
+        });
 }
 
 // Toolbar Render System - renders the standard toolbar and formatting toolbar
@@ -156,9 +164,6 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float buttonPadding = theme::layout::scale(theme::layout::TOOLBAR_BUTTON_PADDING);
         float sepWidth = theme::layout::scale(theme::layout::TOOLBAR_SEPARATOR_WIDTH);
         float sepPadding = theme::layout::scale(4); // padding around separators
-        
-        // Clear overlay data for this frame
-        toolbar.dropdownTriangles.clear();
         
         // === Standard Toolbar Background ===
         div(ctx, mk(uiRoot, 1000),
@@ -323,8 +328,6 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             toolbar.fontDropdownOpen = false;
             toolbar.fontSizeDropdownOpen = false;
         }
-        // Track dropdown triangle position (right edge of button, vertically centered)
-        toolbar.dropdownTriangles.push_back({fmtX + styleDropdownWidth - theme::layout::scale(10), fmtBtnY + dropdownHeight / 2.0f});
         
         // Style dropdown list
         if (toolbar.styleDropdownOpen && !toolbar.styles.empty()) {
@@ -374,7 +377,6 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             toolbar.styleDropdownOpen = false;
             toolbar.fontSizeDropdownOpen = false;
         }
-        toolbar.dropdownTriangles.push_back({fmtX + fontDropdownWidth - theme::layout::scale(10), fmtBtnY + dropdownHeight / 2.0f});
         
         // Font dropdown list
         if (toolbar.fontDropdownOpen && !toolbar.fonts.empty()) {
@@ -427,7 +429,6 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             toolbar.styleDropdownOpen = false;
             toolbar.fontDropdownOpen = false;
         }
-        toolbar.dropdownTriangles.push_back({fmtX + fontSizeDropdownWidth - theme::layout::scale(10), fmtBtnY + dropdownHeight / 2.0f});
         
         // Font size dropdown list
         if (toolbar.fontSizeDropdownOpen && !toolbar.fontSizes.empty()) {

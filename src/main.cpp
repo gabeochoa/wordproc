@@ -12,7 +12,6 @@
 #include "ecs/render_system.h"
 #include "ecs/test_systems.h"
 #include "ecs/toolbar_system.h"
-#include "ecs/toolbar_overlay_render.h"
 #include "ecs/status_bar_system.h"
 #include "ecs/title_bar_system.h"
 #include "editor/document_io.h"
@@ -294,9 +293,6 @@ static void app_init() {
             std::make_unique<ecs::EditorRenderSystem>());
         // Afterhours UI render systems (renders buttons, divs, etc.)
         ui_imm::registerUIRenderSystems(sm);
-        // Toolbar icon overlays and dropdown triangles (drawn AFTER afterhours UI)
-        sm.register_render_system(
-            std::make_unique<ecs::ToolbarOverlayRenderSystem>());
         // Modal backdrop rendering (draws dimmed overlay behind modals)
         ui_imm::registerModalRenderSystems(sm);
 
