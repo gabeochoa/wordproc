@@ -1155,7 +1155,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Context menu (right-click)
+        // Context menu (right-click). afterhours::ui::imm::context_menu owns the
+        // panel, the shortcut gutter, the separator band, screen-edge clamping
+        // and dismiss-on-click-outside; we own the items and what they do.
         if (dialogs.showContextMenu) {
             using namespace afterhours::ui;
 
@@ -1164,90 +1166,42 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             constexpr float ITEM_HEIGHT = 22.0f;
             constexpr float MENU_WIDTH = 180.0f;
 
-            auto *res = afterhours::EntityHelper::get_singleton_cmp<
-                afterhours::window_manager::ProvidesCurrentResolution>();
-            float sw = res ? static_cast<float>(res->current_resolution.width) : 1280.0f;
-            float sh = res ? static_cast<float>(res->current_resolution.height) : 720.0f;
+            // Indices are positional and separators occupy one, so this enum has
+            // to stay in lockstep with the item list below.
+            enum ContextItem : int {
+                CtxCut = 0,
+                CtxCopy,
+                CtxPaste,
+                CtxSeparator,
+                CtxSelectAll,
+            };
 
-            float menuH = ITEM_HEIGHT * 5 + 12.0f;
-            float posX = dialogs.contextMenuX;
-            float posY = dialogs.contextMenuY;
-            if (posX + MENU_WIDTH > sw) posX = sw - MENU_WIDTH;
-            if (posY + menuH > sh) posY = sh - menuH;
-            if (posX < 0) posX = 0;
-            if (posY < 0) posY = 0;
+            const std::array<imm::MenuItem, 5> items{
+                imm::MenuItem{.label = "Cut", .shortcut = "Ctrl+X"},
+                imm::MenuItem{.label = "Copy", .shortcut = "Ctrl+C"},
+                imm::MenuItem{.label = "Paste", .shortcut = "Ctrl+V"},
+                imm::MenuItem::sep(),
+                imm::MenuItem{.label = "Select All", .shortcut = "Ctrl+A"},
+            };
 
-            auto container = div(ctx, mk(entity, CTX_BASE_ID),
+            const int chosen = imm::context_menu(
+                ctx, mk(entity, CTX_BASE_ID), items,
+                Vector2Type{dialogs.contextMenuX, dialogs.contextMenuY},
+                dialogs.showContextMenu,
                 ComponentConfig{}
-                    .with_size(ComponentSize{pixels(MENU_WIDTH), pixels(menuH)})
-                    .with_absolute_position()
-                    .with_translate(pixels(posX), pixels(posY))
-                    .with_flex_direction(FlexDirection::Column)
-                    .with_background(Theme::Usage::Secondary)
+                    .with_size(ComponentSize{pixels(MENU_WIDTH), pixels(ITEM_HEIGHT)})
                     .with_render_layer(CTX_LAYER)
                     .with_debug_name("context_menu"));
 
-            auto menuItem = [&](int id, const std::string& label, const std::string& shortcut) -> bool {
-                bool isHovered = false;
-                auto itemBtn = button(ctx, mk(container.ent(), id),
-                    ComponentConfig{}
-                        .with_label(label)
-                        .with_size(ComponentSize{percent(1.0f), pixels(ITEM_HEIGHT)})
-                        .with_alignment(afterhours::ui::TextAlignment::Left)
-                        .with_padding(Padding{.left = DefaultSpacing::small()})
-                        .with_render_layer(CTX_LAYER));
-
-                if (itemBtn.ent().template has<UIComponent>()) {
-                    isHovered = ctx.is_hot(itemBtn.ent().id);
-                }
-
-                if (!shortcut.empty()) {
-                    div(ctx, mk(container.ent(), id + 100),
-                        ComponentConfig{}
-                            .with_label(shortcut)
-                            .with_size(ComponentSize{percent(1.0f), pixels(ITEM_HEIGHT)})
-                            .with_alignment(afterhours::ui::TextAlignment::Right)
-                            .with_padding(Padding{.right = DefaultSpacing::small()})
-                            .with_absolute_position()
-                            .with_skip_tabbing(true)
-                            .with_render_layer(CTX_LAYER));
-                }
-
-                return static_cast<bool>(itemBtn);
-            };
-
-            if (menuItem(1, "Cut", "Ctrl+X")) {
-                cmd::cut(doc);
-                dialogs.showContextMenu = false;
-            }
-            if (menuItem(2, "Copy", "Ctrl+C")) {
-                cmd::copy(doc);
-                dialogs.showContextMenu = false;
-            }
-            if (menuItem(3, "Paste", "Ctrl+V")) {
-                cmd::paste(doc);
-                dialogs.showContextMenu = false;
+            switch (chosen) {
+                case CtxCut: cmd::cut(doc); break;
+                case CtxCopy: cmd::copy(doc); break;
+                case CtxPaste: cmd::paste(doc); break;
+                case CtxSelectAll: cmd::selectAll(doc); break;
+                default: break;
             }
 
-            imm::separator(ctx, mk(container.ent(), 4));
-
-            if (menuItem(5, "Select All", "Ctrl+A")) {
-                cmd::selectAll(doc);
-                dialogs.showContextMenu = false;
-            }
-
-            // Dismiss on click outside or escape
-            if (input::isMouseButtonPressed(0) && !ctx.is_hot(container.ent().id)) {
-                bool clickedInside = false;
-                auto mousePos = input::getMousePosition();
-                if (mousePos.x >= posX && mousePos.x <= posX + MENU_WIDTH &&
-                    mousePos.y >= posY && mousePos.y <= posY + menuH) {
-                    clickedInside = true;
-                }
-                if (!clickedInside) {
-                    dialogs.showContextMenu = false;
-                }
-            }
+            // Escape is ours: the menu only closes itself on focus loss.
             if (input::isKeyPressed(afterhours::keys::ESCAPE)) {
                 dialogs.showContextMenu = false;
             }
