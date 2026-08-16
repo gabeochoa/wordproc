@@ -23,6 +23,18 @@
 #define SOKOL_FONTSTASH_IMPL
 #include <sokol/sokol_fontstash.h>
 
+// ── afterhours sokol backend impl ──
+// Image decoding: stb_image rides along with this SOKOL_IMPL TU (the header
+// defines STB_IMAGE_IMPLEMENTATION itself when SOKOL_IMPL is set). Including it
+// here also emits the impl-TU sentinel that afterhours::graphics::run()
+// references.
+#include <afterhours/src/backends/sokol/image_decode.h>
+
+// Metal device creation + render-texture readback/PNG export, called by
+// afterhours' metal backend (metal_create_system_device, metal_capture_render_texture).
+#define AFTER_HOURS_USE_METAL
+#include <afterhours/src/backends/sokol/capture_impl.h>
+
 // ── Screenshot support ──
 // Uses macOS screencapture tool with the window ID to capture Metal content.
 #import <AppKit/AppKit.h>
