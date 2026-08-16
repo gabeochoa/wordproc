@@ -2,7 +2,9 @@
 
 Collected from the design audit (2026-02-08), UI migration work, and submodule upgrade planning.
 
-**Current afterhours**: `6b7ac9b` (wordproc) → `cca68c4` (latest, ~10 commits behind)
+**Current afterhours**: `17b982c` (bumped 2026-08-16 from `51ad3d9`, 235 commits).
+Status of every request below re-checked against that tree; see
+`docs/plans/2026-08-16-afterhours-upgrade.md` for the upgrade itself.
 
 ---
 
@@ -81,6 +83,11 @@ These items cannot be implemented locally without changes to the afterhours libr
 
 ## 1. Toolbar Icons / Bitmap Rendering
 
+**RESOLVED (2026-08-16)** — two ways: `ComponentConfig::with_icon(texture, source_rect)`
++ `with_icon_position()` for real textures, and `with_on_draw_bg/fg` for drawn icons.
+wordproc took the second: each toolbar button carries its pixel-art icon as an
+`on_draw_fg` callback, so the post-render overlay and its z-order workaround are gone.
+
 **Need:** Render 16x16 pixel-art icons inside toolbar buttons instead of text labels.
 
 **Context:** All four design audits (Win95, Apple HIG, Sun JLF, Material Design 3) flagged single-letter toolbar labels (N, O, S, P, X, C, V, <, >) as a critical issue. Win95 requires recognizable graphic images (page=New, folder=Open, floppy=Save, etc.).
@@ -101,6 +108,11 @@ button(ctx, mk(uiRoot, id),
 ---
 
 ## 2. Per-Character Text Decoration (Access Keys / Mnemonics)
+
+**STILL OPEN** — there is no mnemonic or per-character underline API. `TextSpan`
+(`with_styled_label`) carries per-span colour and `FontWeight`, and nothing else:
+no underline, no italic. Note the old "workaround" line below was never true —
+wordproc draws no access-key underlines at all today.
 
 **Need:** Render a single underlined character within a label (e.g., "**F**ile" with F underlined).
 
@@ -124,6 +136,10 @@ button(ctx, mk(uiRoot, id),
 
 ## 3. Hover State / Mouse-Over Callback
 
+**STILL OPEN as config** — no `with_hover_background` / `with_hover_bevel` on
+`ComponentConfig`. wordproc keeps passing `was_hot`/`is_mouse_inside` into its own
+button styling (`with_custom_hover_bg` covers the fill case only).
+
 **Need:** Change button appearance on mouse hover (before click).
 
 **Context:** Win95 and JLF both specify hover effects on toolbar buttons. Win95 shows raised border on hover; JLF shows border only on hover (flat otherwise). Material Design 3 requires 7 distinct interactive states including hover.
@@ -141,6 +157,10 @@ button(ctx, mk(uiRoot, id),
 ---
 
 ## 4. Dropdown Triangle Glyph (▼)
+
+**RESOLVED as drawable (2026-08-16)** — still no built-in dropdown arrow, but
+`with_on_draw_fg` lets the trigger draw its own triangle inside the render pass.
+wordproc does that now; `imm::dropdown_menu` remains an option for the widget itself.
 
 **Need:** Dropdown buttons should render a proper ▼ triangle instead of appending " v" to the label text.
 
@@ -165,6 +185,12 @@ dropdown(ctx, mk(uiRoot, id),
 ---
 
 ## 5. Focus Indicators / Keyboard Focus Ring
+
+**RESOLVED (2026-08-16)** — `RenderImm` draws a ring for `visual_focus_id`, themed by
+`theme.focus` (`Theme::Usage::Focus`), `theme.focus_ring_thickness` and
+`theme.focus_ring_offset` (0 thickness disables it; positive offset insets it).
+wordproc sets 1px at 2px offset in black — see `src/ui/win95_theme.h`.
+Dotted rings are still not a thing; the ring is solid.
 
 **Need:** Visible keyboard focus rectangles on interactive elements.
 
@@ -191,6 +217,11 @@ theme.set_focus_ring(FocusRingStyle::Dotted, color, width);
 ---
 
 ## 6. Animation / Motion Transitions
+
+**AVAILABLE, NOT ADOPTED** — `src/plugins/ui/animation_config.h` brings
+`AnimationDef`, `AnimTrigger`, `AnimProperty`, `AnimCurve` and `HasAnimationState`.
+Not wired into wordproc yet: menu/toast motion changes E2E frame timing, and the
+E2E suite cannot be run on a locked machine, so it needs a session with a display.
 
 **Need:** Subtle open/close animations on menus, toast slide-in/fade-out, button press feedback.
 
@@ -220,6 +251,9 @@ afterhours::transition::animate(entityId, "opacity", 0.0f, 1.0f, 200ms);
 
 ## 8. Tooltip Component
 
+**STILL OPEN** — no `with_tooltip` anywhere in the tree. wordproc keeps its manual
+hover-check + absolutely-positioned div.
+
 **Need:** Built-in tooltip support with delay, positioning, and auto-dismiss.
 
 **Context:** Win95 requires tooltips on every toolbar button. Currently implemented as a manual hover-check + div rendering, but it doesn't support hover delay, proper z-ordering, or edge-of-screen repositioning.
@@ -235,6 +269,11 @@ afterhours::transition::animate(entityId, "opacity", 0.0f, 1.0f, 200ms);
 ---
 
 ## 9. Custom Render Callback
+
+**RESOLVED (2026-08-16)** — `with_on_draw_bg(fn)` / `with_on_draw_fg(fn)`, where
+`fn` is `std::function<void(RectangleType)>` receiving the widget's final rect and
+running inside the render pass, so it obeys render layers. This is what killed
+`ToolbarOverlayRenderSystem`.
 
 **Need:** Draw arbitrary content (geometric primitives, charts, custom graphics) inside a UI component's bounds.
 
@@ -260,6 +299,14 @@ button(ctx, mk(uiRoot, id),
 
 ## 10. Drop Shadows on Popup Elements
 
+**RESOLVED (2026-08-16)** — `with_shadow(Shadow{...})`, `with_hard_shadow(ox, oy, color)`
+and `ShadowStyle::Hard|Soft`. wordproc puts a hard 2px shadow on the menu-bar
+dropdowns and the formatting-bar lists.
+
+**New gap:** `imm::context_menu` / `menu_list` build their panel with
+`ComponentConfig::inherit_from`, which copies only inheritable fields and drops
+`shadow_config`, so a caller cannot shadow the built-in menu.
+
 **Need:** Menu dropdowns and popup panels should cast a drop shadow to visually float above the content beneath them.
 
 **Context:** Win95 menus have a 2px shadow on the right and bottom edges. Material Design 3 uses elevation shadows extensively. Currently, menus appear flat against the toolbar/content with no visual separation.
@@ -280,6 +327,10 @@ button(ctx, mk(uiRoot, id),
 ---
 
 ## 11. Scrollbar Visual Customization
+
+**STILL OPEN** — no scrollbar fields on `Theme` and no `with_scrollbar`. Scroll views
+did gain smooth (eased) scrolling and off-screen culling, but appearance is still
+internal.
 
 **Need:** Style the scrollbar thumb/track to match the Win95 theme (raised 3D thumb in a sunken track).
 
@@ -307,6 +358,12 @@ theme.scrollbar_arrow_buttons = true;
 
 ## 12. Rich Text / Per-Span Styled Text
 
+**PARTIAL** — `with_styled_label(std::vector<TextSpan>)` renders per-span colour and
+`FontWeight` on one line, plus wrap-aware measurement (`measure_text_wrapped`) and
+multi-line text that measures the same on every backend. No italic, underline,
+strikethrough, super/subscript or per-span size — so the document canvas stays
+custom, as predicted.
+
 **Need:** Render text with different styles (bold, italic, color, size) within a single text element.
 
 **Context:** The document canvas renders text with per-line paragraph styles (headings, titles), bold/italic simulation, underline, strikethrough, superscript/subscript, drop caps, text colors, and highlight backgrounds. This is the core of a word processor. afterhours' `text_area.h` handles plain text input but not styled/rich text rendering.
@@ -332,6 +389,9 @@ theme.scrollbar_arrow_buttons = true;
 ---
 
 ## 13. Table / Grid Layout Component
+
+**STILL OPEN** — `grid` in the tree is autolayout's grid *snap*, not a row/column
+layout with cell borders.
 
 **Need:** Render a grid of cells with configurable borders (none/thin/medium/thick), per-cell backgrounds, and text content.
 
@@ -361,6 +421,12 @@ for (int r = 0; r < 3; r++) {
 ---
 
 ## 14. Right-Click / Multi-Button Mouse Support in E2E Testing
+
+**PARTIAL** — `input_injector::MouseState` now has `right_down` and
+`input_system.h` reads it, but nothing sets it: there is no `simulate_right_click`,
+no `right_click` in `runner.h`'s `coord_commands`, and `test_input::
+is_mouse_button_pressed(button)` still returns false for any button != 0 in test
+mode. wordproc's custom `right_click` handler stays.
 
 **Need:** Simulate right-click (and potentially middle-click) in E2E tests, and expose right-click state through `is_mouse_button_pressed(1)` in test mode.
 
@@ -394,6 +460,12 @@ for (int r = 0; r < 3; r++) {
 
 ## 15. Context Menu UI Primitive
 
+**RESOLVED (2026-08-16)** — `imm::context_menu(ctx, ep, items, at, open, config)` over
+`imm::menu_list`, with `MenuItem{label, shortcut, separator, disabled}`,
+`MenuItem::sep()`, a shortcut gutter, edge-flipping placement (`overlay::place`) and
+dismiss-on-focus-loss. Also `dropdown_menu` and `popover`. Adopted in
+`menu_ui_system.h`; the app still owns Escape, which the primitive does not handle.
+
 **Need:** A reusable `context_menu()` immediate-mode component that opens a popup menu at arbitrary screen coordinates.
 
 **Context:** Context menus (right-click menus) are a common UI pattern. They're visually identical to dropdown menus but triggered by right-click and positioned at the cursor. Currently no built-in support.
@@ -420,6 +492,10 @@ int context_menu(ctx, ep, bool &open, float x, float y,
 ---
 
 ## Priority
+
+Updated after the 2026-08-16 bump: 1, 4, 5, 9, 10 and 15 are done; 6 is available but
+not adopted; 12 and 14 are partial; 2, 3, 8, 11 and 13 are untouched upstream.
+
 
 | # | Feature | Impact | Effort | Notes |
 |---|---------|--------|--------|-------|

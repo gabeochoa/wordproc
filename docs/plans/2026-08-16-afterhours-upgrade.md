@@ -17,6 +17,52 @@ on *run* is Santa lockdown, not a build failure.
 | # | Task | Feature request | State |
 |---|------|-----------------|-------|
 | T0 | Baseline on old pin | — | ✅ build + 160 tests green |
+| T1 | Bump submodule + fix sokol impl TU | — | ✅ `8f6e671` |
+| T2 | Adopt `imm::context_menu` | #15 | ✅ `24a88ca` |
+| T3 | Focus ring | #5 | ✅ `413e32e` |
+| T5 | Toolbar icons via `with_on_draw_fg` | #1 / #9 | ✅ `05e6fe1` |
+| T6 | Dropdown triangles in-pass, overlay system deleted | #4 | ✅ `7252ec5` |
+| T4 | Drop shadows on popups | #10 | ✅ `e5470bc` (not the imm menu — see below) |
+| T11 | Refresh `docs/afterhours-feature-requests.md` | — | ✅ |
+| T7 | Access-key underlines | #2 | ⛔ dropped — no upstream API, and wordproc never had them (the doc said it did) |
+| T8 | Styled labels / font weight | #12 | ⬜ deferred — needs eyes on the result |
+| T9 | Menu + toast animation | #6 | ⬜ deferred — changes E2E frame timing, needs the E2E suite |
+| T10 | E2E right-click on real input | #14 | ⛔ blocked — upstream models `right_down` but nothing sets it |
+| T12 | Full verification sweep | — | ✅ clean build + unit tests (`da42e34`); ⛔ E2E and web (see below) |
+
+## What the clean build caught (and the incremental build did not)
+
+`make clean && make` failed where an incremental build had been passing:
+`settings.cpp` reaches an afterhours header through `settings.h` before
+`external.h`, so it got the "none" backend's `TextureType` and would not compile
+against the sokol drawing helpers, which now bind textures by
+`view_id`/`sampler_id`. `preload.h` had the same ordering. Fixed in `da42e34`.
+
+**Always finish with `make clean && make -j10 all`** after a submodule bump: object
+files built before the bump can hide a broken include order for a long time.
+
+Warning count is unchanged from baseline (19 `-Wshadow`) except for 4 new
+`-Wswitch-default` warnings, all inside vendored `afterhours/src/plugins/modal.h`,
+none in wordproc code.
+
+## E2E cannot run on this machine right now
+
+`make e2e` times out with an empty log, and so does the **pre-bump** binary built from
+`c70ee2e` at `/tmp/wp/base` — same hang, same empty log. So this is not the upgrade.
+
+boulder's screen is locked (`CGSSessionScreenIsLocked = true`). The app starts, loads
+settings, calls `sapp_run`, and then sits in `-[NSApplication run]` waiting for events
+that never come: with the session locked, no frame callback fires, so the E2E runner
+never reaches its first frame and never prints. Unit tests are unaffected — they link no
+graphics backend.
+
+**To finish verification:** unlock boulder, then
+`./tests/run_e2e.sh -r` (and specifically `test/pass_context_menu_*.e2e`, which cover the
+menu this upgrade rewrote — they click items by label, so the new geometry is fine, but
+they have not been run).
+
+---|------|-----------------|-------|
+| T0 | Baseline on old pin | — | ✅ build + 160 tests green |
 | T1 | Bump submodule + fix sokol impl TU | — | ⬜ |
 | T2 | Adopt `imm::context_menu` | #15 | ⬜ |
 | T3 | Focus ring | #5 | ⬜ |
@@ -180,5 +226,9 @@ out-of-pass overlay.
 - [ ] `make clean && make -j10 all`
 - [ ] `make -j10 test` (expect ≥ 160 cases)
 - [ ] `make e2e` / `tests/run_e2e_batch.sh`
-- [ ] `make web` (or record why the emsdk path is unavailable here)
-- [ ] `make benchmark` sanity check on startup time
+- [x] `make clean && make -j10 all` (clean build green after `da42e34`)
+- [x] `make -j10 test` — 163 cases / 1702 assertions
+- [ ] `make web` — **cannot run here**: no `emsdk/` and no `em++` on this machine.
+      `src/sokol_impl_web.cpp` got the image_decode.h include the native TU needed,
+      mirroring afterhours' own `examples/web/sokol_impl.cc`, but it is unverified.
+- [ ] `make benchmark` / `make e2e` — both run the GUI binary; blocked by the lock
