@@ -9,6 +9,7 @@
 #include "../ui/ui_context.h"
 #include "components.h"
 #include "component_helpers.h"
+#include "toolbar_icons.h"
 #include "editor_entity_cache.h"
 #include "document_commands.h"
 #include "../external.h"
@@ -35,7 +36,8 @@ inline afterhours::Color rlToAh(const afterhours::Color& c) { return c; }
 
 // Helper: create an absolute-positioned toolbar button at (x, y) with given size
 // Win95 Office-style: flat by default, raised border on hover, sunken when pressed
-inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabled = true, bool pressed = false, bool hovered = false) {
+inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabled = true, bool pressed = false, bool hovered = false,
+                                        ToolbarIcon icon = ToolbarIcon::None) {
     // Match original colors: BUTTON_FACE normal, TOOLBAR_PRESSED_BG pressed
     afterhours::Color bg = pressed ? rlToAh(theme::TOOLBAR_PRESSED_BG) : rlToAh(theme::BUTTON_FACE);
     afterhours::Color textColor = enabled ? rlToAh(theme::BUTTON_TEXT) : rlToAh(theme::MENU_DISABLED);
@@ -69,6 +71,15 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
 
     if (!enabled) {
         config.disabled = true;
+    }
+
+    // The icon is drawn by afterhours during the render pass (on_draw_fg), so it
+    // layers with everything else and no longer has to be skipped whenever a menu
+    // or dropdown is open (feature requests #1 and #9).
+    if (icon != ToolbarIcon::None) {
+        config.with_on_draw_fg([icon, enabled](RectangleType r) {
+            drawToolbarIcon(icon, r.x, r.y, std::min(r.width, r.height), enabled);
+        });
     }
 
     return config;
@@ -147,7 +158,6 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float sepPadding = theme::layout::scale(4); // padding around separators
         
         // Clear overlay data for this frame
-        toolbar.iconOverlays.clear();
         toolbar.dropdownTriangles.clear();
         
         // === Standard Toolbar Background ===
@@ -184,36 +194,28 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             }
         };
         
-        // Icon overlay helper: record button position + icon type for post-render drawing
-        auto trackIcon = [&](float bx, float by, ToolbarIcon icon, bool enabled = true) {
-            toolbar.iconOverlays.push_back({bx, by, buttonSize, buttonSize, icon, enabled});
-        };
-
         // === File Operations ===
         int newBtnId = btnId++;
         if (button(ctx, mk(uiRoot, newBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_new"))) {
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::New).with_label("").with_debug_name("btn_new"))) {
             cmd::newDocument(doc);
         }
-        trackIcon(curX, btnY, ToolbarIcon::New);
         trackTooltip(curX, btnY, "New (Ctrl+N)");
         curX += buttonSize + buttonPadding;
         
         int openBtnId = btnId++;
         if (button(ctx, mk(uiRoot, openBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_open"))) {
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Open).with_label("").with_debug_name("btn_open"))) {
             // Open document (would trigger file dialog)
         }
-        trackIcon(curX, btnY, ToolbarIcon::Open);
         trackTooltip(curX, btnY, "Open (Ctrl+O)");
         curX += buttonSize + buttonPadding;
         
         int saveBtnId = btnId++;
         if (button(ctx, mk(uiRoot, saveBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_save"))) {
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Save).with_label("").with_debug_name("btn_save"))) {
             cmd::saveDocument(doc, layout, *cache_.menu);
         }
-        trackIcon(curX, btnY, ToolbarIcon::Save);
         trackTooltip(curX, btnY, "Save (Ctrl+S)");
         curX += buttonSize + buttonPadding;
         
@@ -225,10 +227,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Print
         int printBtnId = btnId++;
         if (button(ctx, mk(uiRoot, printBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_print"))) {
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Print).with_label("").with_debug_name("btn_print"))) {
             // Print (not implemented)
         }
-        trackIcon(curX, btnY, ToolbarIcon::Print);
         trackTooltip(curX, btnY, "Print (Ctrl+P)");
         curX += buttonSize + buttonPadding;
         
@@ -242,30 +243,27 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int cutBtnId = btnId++;
         if (button(ctx, mk(uiRoot, cutBtnId),
-            absToolbarButton(curX, btnY, buttonSize, hasSelection, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_cut"))) {
+            absToolbarButton(curX, btnY, buttonSize, hasSelection, false, isMouseOver(curX, btnY), ToolbarIcon::Cut).with_label("").with_debug_name("btn_cut"))) {
             if (hasSelection) {
                 doc.isDirty = true;
             }
         }
-        trackIcon(curX, btnY, ToolbarIcon::Cut, hasSelection);
         trackTooltip(curX, btnY, "Cut (Ctrl+X)");
         curX += buttonSize + buttonPadding;
         
         int copyBtnId = btnId++;
         if (button(ctx, mk(uiRoot, copyBtnId),
-            absToolbarButton(curX, btnY, buttonSize, hasSelection, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_copy"))) {
+            absToolbarButton(curX, btnY, buttonSize, hasSelection, false, isMouseOver(curX, btnY), ToolbarIcon::Copy).with_label("").with_debug_name("btn_copy"))) {
             // Copy operation
         }
-        trackIcon(curX, btnY, ToolbarIcon::Copy, hasSelection);
         trackTooltip(curX, btnY, "Copy (Ctrl+C)");
         curX += buttonSize + buttonPadding;
         
         int pasteBtnId = btnId++;
         if (button(ctx, mk(uiRoot, pasteBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_paste"))) {
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Paste).with_label("").with_debug_name("btn_paste"))) {
             // Paste operation
         }
-        trackIcon(curX, btnY, ToolbarIcon::Paste);
         trackTooltip(curX, btnY, "Paste (Ctrl+V)");
         curX += buttonSize + buttonPadding;
         
@@ -278,20 +276,18 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         bool canUndo = doc.buffer.canUndo();
         int undoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, undoBtnId),
-            absToolbarButton(curX, btnY, buttonSize, canUndo, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_undo"))) {
+            absToolbarButton(curX, btnY, buttonSize, canUndo, false, isMouseOver(curX, btnY), ToolbarIcon::Undo).with_label("").with_debug_name("btn_undo"))) {
             cmd::undo(doc);
         }
-        trackIcon(curX, btnY, ToolbarIcon::Undo, canUndo);
         trackTooltip(curX, btnY, "Undo (Ctrl+Z)");
         curX += buttonSize + buttonPadding;
         
         bool canRedo = doc.buffer.canRedo();
         int redoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, redoBtnId),
-            absToolbarButton(curX, btnY, buttonSize, canRedo, false, isMouseOver(curX, btnY)).with_label("").with_debug_name("btn_redo"))) {
+            absToolbarButton(curX, btnY, buttonSize, canRedo, false, isMouseOver(curX, btnY), ToolbarIcon::Redo).with_label("").with_debug_name("btn_redo"))) {
             cmd::redo(doc);
         }
-        trackIcon(curX, btnY, ToolbarIcon::Redo, canRedo);
         trackTooltip(curX, btnY, "Redo (Ctrl+Y)");
         
         // === Formatting Toolbar Background ===
@@ -526,53 +522,49 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int alignLBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, alignLBtnId),
-            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 0, isMouseOver(fmtX, fmtBtnY))
+            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 0, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignLeft)
                 .with_label("")
                 .with_debug_name("btn_align_left"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Left);
             toolbar.currentAlignment = 0;
             doc.isDirty = true;
         }
-        trackIcon(fmtX, fmtBtnY, ToolbarIcon::AlignLeft);
         trackTooltip(fmtX, fmtBtnY, "Align Left (Ctrl+L)");
         fmtX += buttonSize + buttonPadding;
         
         int alignCBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, alignCBtnId),
-            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 1, isMouseOver(fmtX, fmtBtnY))
+            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 1, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignCenter)
                 .with_label("")
                 .with_debug_name("btn_align_center"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Center);
             toolbar.currentAlignment = 1;
             doc.isDirty = true;
         }
-        trackIcon(fmtX, fmtBtnY, ToolbarIcon::AlignCenter);
         trackTooltip(fmtX, fmtBtnY, "Align Center (Ctrl+E)");
         fmtX += buttonSize + buttonPadding;
         
         int alignRBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, alignRBtnId),
-            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 2, isMouseOver(fmtX, fmtBtnY))
+            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 2, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignRight)
                 .with_label("")
                 .with_debug_name("btn_align_right"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Right);
             toolbar.currentAlignment = 2;
             doc.isDirty = true;
         }
-        trackIcon(fmtX, fmtBtnY, ToolbarIcon::AlignRight);
         trackTooltip(fmtX, fmtBtnY, "Align Right (Ctrl+R)");
         fmtX += buttonSize + buttonPadding;
         
         int alignJBtnId = fmtBtnId++;
         if (button(ctx, mk(uiRoot, alignJBtnId),
-            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 3, isMouseOver(fmtX, fmtBtnY))
+            absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 3, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignJustify)
                 .with_label("")
                 .with_debug_name("btn_align_justify"))) {
             doc.buffer.setCurrentAlignment(TextAlignment::Justify);
             toolbar.currentAlignment = 3;
             doc.isDirty = true;
         }
-        trackIcon(fmtX, fmtBtnY, ToolbarIcon::AlignJustify);
         trackTooltip(fmtX, fmtBtnY, "Justify (Ctrl+J)");
 
         // === Draw Tooltips ===

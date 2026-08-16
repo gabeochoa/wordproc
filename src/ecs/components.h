@@ -325,13 +325,7 @@ enum class ToolbarIcon {
     AlignLeft, AlignCenter, AlignRight, AlignJustify
 };
 
-// Data for post-render overlays (icons, triangles drawn after afterhours UI)
-struct ToolbarOverlayItem {
-    float x, y, w, h;
-    ToolbarIcon icon = ToolbarIcon::None;
-    bool enabled = true;
-};
-
+// Data for post-render overlays (triangles drawn after afterhours UI)
 struct DropdownTriangle {
     float x, y;  // position of the triangle center
 };
@@ -361,7 +355,6 @@ struct ToolbarComponent : public afterhours::BaseComponent {
     bool fontSizeDropdownOpen = false;
     
     // Overlay data: written during update, read during render
-    std::vector<ToolbarOverlayItem> iconOverlays;
     std::vector<DropdownTriangle> dropdownTriangles;
 };
 
