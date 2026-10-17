@@ -192,3 +192,10 @@ Memory: Single contiguous allocation + two small arrays
 - [Gap Buffer](https://en.wikipedia.org/wiki/Gap_buffer)
 - [Piece Table](https://www.cs.unm.edu/~crowley/papers/sds.pdf)
 - [Xi Editor Rope Science](https://xi-editor.io/docs/rope_science_00.html)
+
+## Direction (Gabe, 2026-10-16)
+
+Rebuilding Word 95 using the afterhours library. Speed and performance is the name of the game:
+instant-start editor, fast text layout and editing at large document sizes, Word 95-style UI chrome.
+Every perf change reports before/after numbers from the benchmark suite (typing latency,
+scroll at 100K words, open time). No perf claim without a measured number.
