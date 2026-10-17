@@ -1,8 +1,12 @@
+#include <algorithm>
+#include <array>
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <random>
 
+#include "../src/editor/document_io.h"
 #include "../src/editor/text_buffer.h"
 #include "../src/editor/text_layout.h"
 #include "catch2/catch.hpp"
@@ -69,6 +73,56 @@ struct BenchmarkResult {
 void printResult(const BenchmarkResult& r) {
     std::printf("  %-30s: %8.3f ms total, %8.3f us/op (%zu ops)\n",
                 r.name.c_str(), r.total_time_ms, r.per_op_us, r.iterations);
+}
+
+// Median of 3 runs: each run is one timed execution of `fn` (setup must
+// live outside the timed region, inside `fn` before it starts its Timer,
+// or outside `fn` entirely for state reused across runs). Returns the
+// median plus the three raw runs so noise is visible.
+struct MedianResult {
+    double median_ms = 0.0;
+    std::array<double, 3> runs_ms{};
+};
+
+template <typename F>
+MedianResult medianOf3Runs(F&& fn) {
+    MedianResult out;
+    for (std::size_t i = 0; i < out.runs_ms.size(); ++i) {
+        out.runs_ms[i] = fn();
+    }
+    std::array<double, 3> sorted = out.runs_ms;
+    std::sort(sorted.begin(), sorted.end());
+    out.median_ms = sorted[1];
+    return out;
+}
+
+void printMedianRuns(const char* label, const MedianResult& m) {
+    std::printf("  %s: median %.3f ms (runs %.3f, %.3f, %.3f ms)\n", label,
+                m.median_ms, m.runs_ms[0], m.runs_ms[1], m.runs_ms[2]);
+}
+
+// Deterministic 100,000-word document: 16-word vocabulary cycled in order,
+// 20 words per line (~110 chars/line, so lines wrap at width 80), no
+// trailing newline. Exactly 100,000 words, 5,000 lines. No RNG — the
+// same bytes every run, so results are comparable.
+std::string generateWordDocument() {
+    static constexpr const char* kWords[] = {
+        "the", "quick", "brown", "fox", "jumps", "over",
+        "lazy", "dog", "and", "runs", "through", "green",
+        "fields", "under", "bright", "sky",
+    };
+    constexpr std::size_t kWordCount = 100000;
+    constexpr std::size_t kWordsPerLine = 20;
+
+    std::string result;
+    result.reserve(600000);
+    for (std::size_t w = 0; w < kWordCount; ++w) {
+        if (w != 0) {
+            result.push_back((w % kWordsPerLine == 0) ? '\n' : ' ');
+        }
+        result.append(kWords[w % 16]);
+    }
+    return result;
 }
 
 }  // namespace bench
@@ -358,4 +412,217 @@ TEST_CASE("Benchmark: SoA line access vs string copy", "[benchmark][soa]") {
     REQUIRE(total_length == total_length2);
     // SoA should generally be faster; allow 20% tolerance for system noise
     REQUIRE(spanElapsed < stringElapsed * 1.2);
+}
+
+// ============================================================================
+// 100K-WORD DOCUMENT BENCHMARKS (unit-level; no GUI, no rendering)
+// ============================================================================
+
+TEST_CASE("Benchmark: 100K-word document load", "[benchmark][large-doc]") {
+    const std::string text = bench::generateWordDocument();
+
+    // Sanity: generator contract — exactly 100,000 words, 5,000 lines.
+    {
+        TextBuffer probe;
+        probe.setText(text);
+        REQUIRE(probe.stats().words == 100000);
+        REQUIRE(probe.lineCount() == 5000);
+        // NOTE: deliberately not REQUIRE(getText() == text) — under
+        // `make bench-unit` (--success) Catch2 would print the whole
+        // 543 KB string. Size + word/line counts pin the content here;
+        // full equality is covered by small-doc tests elsewhere.
+        REQUIRE(probe.textSize() == text.size());
+    }
+
+    // (a1) In-memory load: setText only.
+    std::size_t loadedLines = 0;
+    auto setTextMedian = bench::medianOf3Runs([&] {
+        TextBuffer buffer;
+        bench::Timer timer;
+        buffer.setText(text);
+        double elapsed = timer.elapsedMs();
+        loadedLines = buffer.lineCount();
+        return elapsed;
+    });
+
+    // (a2) File load path: write once (untimed), then time the real
+    // loadTextFileEx path (file I/O + setText) on the .txt plain-text
+    // branch, matching what Open does for a .txt file.
+    const auto tmpPath =
+        std::filesystem::temp_directory_path() / "wordproc_100k_bench.txt";
+    {
+        std::ofstream ofs(tmpPath, std::ios::binary);
+        REQUIRE(ofs.good());
+        ofs << text;
+    }
+    std::size_t fileLoadedLines = 0;
+    auto fileMedian = bench::medianOf3Runs([&] {
+        TextBuffer buffer;
+        bench::Timer timer;
+        auto result = loadTextFileEx(buffer, tmpPath.string());
+        double elapsed = timer.elapsedMs();
+        REQUIRE(result.success);
+        fileLoadedLines = buffer.lineCount();
+        return elapsed;
+    });
+    std::filesystem::remove(tmpPath);
+
+    std::printf("\n=== 100K-Word Load Benchmark ===\n");
+    std::printf("  Document: %zu chars, 5,000 lines, 100,000 words\n",
+                text.size());
+    std::printf("  setText: %.3f ms (%.2f MB/s)\n", setTextMedian.median_ms,
+                (text.size() / 1e6) / (setTextMedian.median_ms / 1000.0));
+    bench::printMedianRuns("setText runs", setTextMedian);
+    std::printf("  loadTextFileEx (.txt): %.3f ms (%.2f MB/s)\n",
+                fileMedian.median_ms,
+                (text.size() / 1e6) / (fileMedian.median_ms / 1000.0));
+    bench::printMedianRuns("file-load runs", fileMedian);
+
+    REQUIRE(loadedLines == 5000);
+    REQUIRE(fileLoadedLines == 5000);
+    REQUIRE(setTextMedian.median_ms < 100.0);
+    REQUIRE(fileMedian.median_ms < 200.0);
+}
+
+TEST_CASE("Benchmark: 100K-word full layout/wrap",
+            "[benchmark][large-doc]") {
+    const std::size_t WRAP_WIDTH = 80;
+    const std::string text = bench::generateWordDocument();
+    TextBuffer buffer;
+    buffer.setText(text);
+
+    // SoA is the layout used at scale; AoS is the comparison (it copies
+    // every line's string). Both are timed as median of 3.
+    std::size_t wrappedCount = 0;
+    auto soaMedian = bench::medianOf3Runs([&] {
+        bench::Timer timer;
+        auto wrapped = layoutWrappedLinesSoA(buffer, WRAP_WIDTH);
+        double elapsed = timer.elapsedMs();
+        wrappedCount = wrapped.size();
+        return elapsed;
+    });
+    std::size_t aosWrappedCount = 0;
+    auto aosMedian = bench::medianOf3Runs([&] {
+        bench::Timer timer;
+        auto wrapped = layoutWrappedLines(buffer, WRAP_WIDTH);
+        double elapsed = timer.elapsedMs();
+        aosWrappedCount = wrapped.size();
+        return elapsed;
+    });
+
+    std::printf("\n=== 100K-Word Full Layout Benchmark ===\n");
+    std::printf("  Document: %zu chars, %zu lines, wrap width %zu\n",
+                text.size(), buffer.lineCount(), WRAP_WIDTH);
+    std::printf("  Wrapped lines: %zu\n", wrappedCount);
+    bench::printMedianRuns("SoA layout", soaMedian);
+    bench::printMedianRuns("AoS layout", aosMedian);
+
+    REQUIRE(wrappedCount == aosWrappedCount);
+    REQUIRE(wrappedCount > buffer.lineCount());
+    REQUIRE(soaMedian.median_ms < 100.0);
+}
+
+TEST_CASE("Benchmark: 100K-word mid-document edit latency",
+            "[benchmark][large-doc]") {
+    const std::string text = bench::generateWordDocument();
+
+    // One insert + one backspace at the middle of the doc, on a fresh
+    // buffer per run: setText leaves the gap at the end, so the insert
+    // pays the full gap move to the middle — the cost of a keystroke
+    // after jumping to the middle — and the backspace deletes it, so
+    // the doc is unchanged afterwards. Setup (setText + setCaret) is
+    // outside the timed region.
+    auto editMedian = bench::medianOf3Runs([&] {
+        TextBuffer buffer;
+        buffer.setText(text);
+        const std::size_t midRow = buffer.lineCount() / 2;
+        const std::size_t midCol =
+            buffer.lineSpan(midRow).length / 2;
+        buffer.setCaret({midRow, midCol});
+
+        bench::Timer timer;
+        buffer.insertChar('X');
+        buffer.backspace();
+        double elapsed = timer.elapsedMs();
+
+        // Same no-huge-expansion rule as above: size + line count.
+        REQUIRE(buffer.textSize() == text.size());
+        REQUIRE(buffer.lineCount() == 5000);
+        return elapsed;
+    });
+
+    std::printf("\n=== 100K-Word Mid-Document Edit Benchmark ===\n");
+    std::printf("  Operation: insertChar + backspace at line %zu (middle)\n",
+                5000 / 2);
+    std::printf("  Median: %.3f us/pair (runs %.3f, %.3f, %.3f us)\n",
+                editMedian.median_ms * 1000.0,
+                editMedian.runs_ms[0] * 1000.0,
+                editMedian.runs_ms[1] * 1000.0,
+                editMedian.runs_ms[2] * 1000.0);
+
+    // A keystroke must stay far under the 16 ms frame budget.
+    REQUIRE(editMedian.median_ms < 10.0);
+}
+
+TEST_CASE("Benchmark: 100K-word viewport-window scroll proxy",
+            "[benchmark][large-doc]") {
+    // PROXY, named honestly: there is no unit-level scrolling to measure.
+    // RenderCache::rebuild always starts at row 0 (scrolling is a TODO),
+    // and layoutWrappedLinesSoA takes no range, so no API lays out one
+    // viewport. This proxy walks successive 50-source-line windows over
+    // the whole doc and applies the same per-line wrap arithmetic the
+    // SoA layout uses (ceil(len / width), 1 for an empty line), without
+    // allocating a LayoutResult. It estimates what windowed layout
+    // would cost if layout were windowed; it is NOT a measured scroll.
+    // A real scroll benchmark still needs the GUI binary.
+    const std::size_t WRAP_WIDTH = 80;
+    const std::size_t WINDOW_LINES = 50;
+    const std::string text = bench::generateWordDocument();
+    TextBuffer buffer;
+    buffer.setText(text);
+    const LayoutResult full = layoutWrappedLinesSoA(buffer, WRAP_WIDTH);
+    const std::size_t numWindows =
+        (buffer.lineCount() + WINDOW_LINES - 1) / WINDOW_LINES;
+
+    std::size_t proxyWrapped = 0;
+    auto proxyMedian = bench::medianOf3Runs([&] {
+        bench::Timer timer;
+        std::size_t totalWrapped = 0;
+        std::size_t totalChars = 0;  // Sink: keeps the loop from being
+                                     // optimized away; verified below.
+        for (std::size_t win = 0; win < numWindows; ++win) {
+            const std::size_t first = win * WINDOW_LINES;
+            const std::size_t last =
+                std::min(first + WINDOW_LINES, buffer.lineCount());
+            for (std::size_t row = first; row < last; ++row) {
+                const LineSpan span = buffer.lineSpan(row);
+                totalWrapped += span.length == 0
+                                    ? 1
+                                    : (span.length + WRAP_WIDTH - 1) /
+                                          WRAP_WIDTH;
+                totalChars += span.length;
+            }
+        }
+        double elapsed = timer.elapsedMs();
+        proxyWrapped = totalWrapped;
+        REQUIRE(totalChars == text.size() - (buffer.lineCount() - 1));
+        return elapsed;
+    });
+
+    std::printf("\n=== 100K-Word Viewport-Window Scroll PROXY ===\n");
+    std::printf("  PROXY: windowed wrap-count, NOT real scrolling\n");
+    std::printf("  Windows: %zu x %zu source lines, wrap width %zu\n",
+                numWindows, WINDOW_LINES, WRAP_WIDTH);
+    std::printf("  Wrapped lines (proxy): %zu (full layout: %zu)\n",
+                proxyWrapped, full.size());
+    bench::printMedianRuns("proxy total", proxyMedian);
+    std::printf("  Per-window: %.3f us (proxy total / %zu windows)\n",
+                (proxyMedian.median_ms * 1000.0) /
+                    static_cast<double>(numWindows),
+                numWindows);
+
+    // The proxy must agree with the full layout — otherwise it is not
+    // measuring the same wrapping.
+    REQUIRE(proxyWrapped == full.size());
+    REQUIRE(proxyMedian.median_ms < 100.0);
 }

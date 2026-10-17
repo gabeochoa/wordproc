@@ -59,6 +59,51 @@ binary (`tests/run_fps_scroll_test.sh`, `tests/run_benchmark.sh`), which cannot
 run while the screen is locked, and the text-buffer benchmark does not cover
 them. No numbers are claimed for those until they are measured.
 
+## 100K-Word Baseline — 2026-10-17
+
+Measured with four new `[large-doc]` cases in `tests/benchmark_text_buffer.cpp`
+via `make bench-unit`, same machine as above (Apple M1 Pro, 32 GB, macOS 27.0.1).
+The document is deterministic: a 16-word vocabulary cycled in order, 20 words
+per line, no trailing newline — exactly 100,000 words, 5,000 lines, 543,749
+chars, verified by `stats().words`. Each case takes the median of 3 runs
+inside the bench; the table reports the median of 3 bench invocations.
+Unit-level only: in-memory `TextBuffer` operations, no rendering, layout
+beyond the wrap functions, or event loop.
+
+| Benchmark | Workload | Median | Notes |
+|---|---|---|---|
+| Load: `setText` | 543,749 chars → 5,000 lines | 0.085 ms (~6,400 MB/s) | In-memory load only |
+| Load: file load | Same doc as `.txt` via `loadTextFileEx` (file I/O + `setText`) | 0.288 ms (~1,890 MB/s) | First run in each process was 3.5–16.9 ms (cold); median unaffected |
+| Full layout, SoA | 5,000 lines → 10,000 wrapped at width 80 | 0.063 ms | `layoutWrappedLinesSoA` |
+| Full layout, AoS (comparison) | Same | 0.420 ms | Legacy string-copying path, ~6.7× slower than SoA |
+| Mid-document edit | `insertChar` + `backspace` at line 2500, fresh buffer per run | 9.1 µs/pair | Includes the full gap move from end-of-doc to the middle; ~0.06% of the 16 ms frame budget |
+| Scroll proxy (PROXY) | 100 successive windows × 50 source lines, windowed wrap-count | 0.008 ms total, 0.075 µs/window | **Not real scrolling** — see below |
+
+Reading: nothing here is embarrassingly slow, so **no optimization was done
+in this round** (per the rule: one optimization only for an embarrassingly
+slow number). The slowest absolute figures are one-time or legacy costs —
+file load 0.288 ms (once per open) and AoS layout 0.420 ms (legacy path, not
+the one used at scale) — and every figure is under 0.5 ms, over 30× inside
+the 16 ms frame budget. The per-keystroke figure that matters, mid-doc
+edit at 9.1 µs, is three orders of magnitude under the budget.
+
+Scroll proxy, honestly: there is no unit-level scrolling to measure.
+`RenderCache::rebuild` always starts at row 0 (scrolling is a TODO) and
+`layoutWrappedLinesSoA` takes no range, so no API lays out one viewport.
+The proxy walks successive 50-line windows and applies the same per-line
+wrap arithmetic (`ceil(len / 80)`, 1 for empty) without allocating a
+`LayoutResult`. It is cross-checked — proxy wrapped count (10,000) equals
+the full-layout wrapped count — but it estimates what windowed layout
+*would* cost, not what scrolling *does* cost. A real scroll number still
+needs the GUI binary.
+
+What's next: (1) real scroll-at-100K-words and cold-start/open numbers from
+the GUI binary once the screen is unlocked; (2) investigate the first-run
+file-load spike (3.5–16.9 ms on the first `loadTextFileEx` call in a
+process) before it matters for open-time claims; (3) if a future edit
+workload (e.g. repeated edits with line-offset shifting) ever approaches
+the frame budget, that — not these numbers — is the optimization target.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
