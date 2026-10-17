@@ -2,9 +2,16 @@
 
 Collected from the design audit (2026-02-08), UI migration work, and submodule upgrade planning.
 
-**Current afterhours**: `17b982c` (bumped 2026-08-16 from `51ad3d9`, 235 commits).
+**Current afterhours**: `d1d7f0e` (bumped 2026-10-17 from `17b982c`, 348 commits).
 Status of every request below re-checked against that tree; see
-`docs/plans/2026-08-16-afterhours-upgrade.md` for the upgrade itself.
+`docs/plans/2026-08-16-afterhours-upgrade.md` for the August upgrade itself.
+The October bump caused one breakage in `src/`: upstream's new
+`src/crash_handler.h` calls `log_error()` on both sides of an `if`/`else`, and
+wordproc's `log_*` were bare-`if` macros, so the trailing `else` had no
+matching `if`. Fixed on the wordproc side — `src/log/log_macros.h` now expands
+to a single `do { ... } while (0)` statement (with a regression test in
+`tests/test_log_macros.cpp`). `AFTER_HOURS_REPLACE_LOGGING` documents `log_*`
+as functions; the macros now at least behave like one statement.
 
 ---
 
@@ -109,10 +116,11 @@ button(ctx, mk(uiRoot, id),
 
 ## 2. Per-Character Text Decoration (Access Keys / Mnemonics)
 
-**STILL OPEN** — there is no mnemonic or per-character underline API. `TextSpan`
-(`with_styled_label`) carries per-span colour and `FontWeight`, and nothing else:
-no underline, no italic. Note the old "workaround" line below was never true —
-wordproc draws no access-key underlines at all today.
+**STILL OPEN** — re-checked at `d1d7f0e`: there is no mnemonic or per-character
+underline API. `TextSpan` (`with_styled_label`) carries per-span colour and
+`FontWeight`, and nothing else: no underline, no italic. Note the old
+"workaround" line below was never true — wordproc draws no access-key
+underlines at all today.
 
 **Need:** Render a single underlined character within a label (e.g., "**F**ile" with F underlined).
 
@@ -136,9 +144,10 @@ wordproc draws no access-key underlines at all today.
 
 ## 3. Hover State / Mouse-Over Callback
 
-**STILL OPEN as config** — no `with_hover_background` / `with_hover_bevel` on
-`ComponentConfig`. wordproc keeps passing `was_hot`/`is_mouse_inside` into its own
-button styling (`with_custom_hover_bg` covers the fill case only).
+**STILL OPEN as config** — re-checked at `d1d7f0e`: no `with_hover_background` /
+`with_hover_bevel` on `ComponentConfig`. wordproc keeps passing
+`was_hot`/`is_mouse_inside` into its own button styling (`with_custom_hover_bg`
+covers the fill case only).
 
 **Need:** Change button appearance on mouse hover (before click).
 
@@ -218,10 +227,15 @@ theme.set_focus_ring(FocusRingStyle::Dotted, color, width);
 
 ## 6. Animation / Motion Transitions
 
-**AVAILABLE, NOT ADOPTED** — `src/plugins/ui/animation_config.h` brings
-`AnimationDef`, `AnimTrigger`, `AnimProperty`, `AnimCurve` and `HasAnimationState`.
-Not wired into wordproc yet: menu/toast motion changes E2E frame timing, and the
-E2E suite cannot be run on a locked machine, so it needs a session with a display.
+**AVAILABLE, NOT ADOPTED — API REPLACED at `d1d7f0e`** — the old
+`AnimationDef` / `AnimTrigger` / `AnimProperty` / `AnimCurve` /
+`HasAnimationState` API is gone (upstream removed it); the replacement is
+`src/plugins/animation/`: `Track<T>` over `Spring` / `Timeline` modes, keyed
+`anim()` tracks stored on the entity, named spring presets, easing curves,
+effect presets (`fade_up`, `pop_in`, `hover_lift`, …), `with_unit_motion`,
+shader scopes and a pooled particle emitter. Still not wired into wordproc:
+menu/toast motion changes E2E frame timing, and the E2E suite cannot be run on
+a locked machine, so it needs a session with a display.
 
 **Need:** Subtle open/close animations on menus, toast slide-in/fade-out, button press feedback.
 
@@ -251,8 +265,19 @@ afterhours::transition::animate(entityId, "opacity", 0.0f, 1.0f, 200ms);
 
 ## 8. Tooltip Component
 
-**STILL OPEN** — no `with_tooltip` anywhere in the tree. wordproc keeps its manual
-hover-check + absolutely-positioned div.
+**RESOLVED UPSTREAM, NOT ADOPTED** — `d1d7f0e` brings `with_tooltip(text, delay)`
+plus `with_tooltip_font_size` / `with_tooltip_padding` / `with_tooltip_gap`,
+`UpdateTooltips` + `RenderTooltip` systems (already registered through
+wordproc's existing `registerUIPostLayoutSystems` / `registerUIRenderSystems`
+calls), hover delay, and edge-flipping placement via `overlay::place`.
+Adoption deferred: it needs eyes on the result. The upstream tooltip renders
+the theme's `raised_surface()` (near-white on the Win95 theme) with the
+theme's `corner_radius` (default 8px → rounded), and has no background /
+corner / border config, while wordproc's manual tooltip is pale yellow
+(`255, 255, 225`), square, black-bordered, and instant. Adopting it as-is
+would trade the Win95 look for the delay + edge-flipping behaviour.
+
+**New gap:** tooltip has no background / foreground / corner / border config.
 
 **Need:** Built-in tooltip support with delay, positioning, and auto-dismiss.
 
@@ -303,9 +328,11 @@ button(ctx, mk(uiRoot, id),
 and `ShadowStyle::Hard|Soft`. wordproc puts a hard 2px shadow on the menu-bar
 dropdowns and the formatting-bar lists.
 
-**New gap:** `imm::context_menu` / `menu_list` build their panel with
-`ComponentConfig::inherit_from`, which copies only inheritable fields and drops
-`shadow_config`, so a caller cannot shadow the built-in menu.
+**New gap (confirmed still open at `d1d7f0e`):** `imm::context_menu` /
+`menu_list` build their panel with `ComponentConfig::inherit_from`, which
+copies only inheritable fields and drops `shadow_config`, so a caller cannot
+shadow the built-in menu. `apply_inheritable_from` still has no
+`shadow_config` line in this pin.
 
 **Need:** Menu dropdowns and popup panels should cast a drop shadow to visually float above the content beneath them.
 
@@ -328,9 +355,9 @@ dropdowns and the formatting-bar lists.
 
 ## 11. Scrollbar Visual Customization
 
-**STILL OPEN** — no scrollbar fields on `Theme` and no `with_scrollbar`. Scroll views
-did gain smooth (eased) scrolling and off-screen culling, but appearance is still
-internal.
+**STILL OPEN** — re-checked at `d1d7f0e`: no scrollbar fields on `Theme` and no
+`with_scrollbar`. Scroll views did gain smooth (eased) scrolling and off-screen
+culling, but appearance is still internal.
 
 **Need:** Style the scrollbar thumb/track to match the Win95 theme (raised 3D thumb in a sunken track).
 
@@ -358,11 +385,11 @@ theme.scrollbar_arrow_buttons = true;
 
 ## 12. Rich Text / Per-Span Styled Text
 
-**PARTIAL** — `with_styled_label(std::vector<TextSpan>)` renders per-span colour and
-`FontWeight` on one line, plus wrap-aware measurement (`measure_text_wrapped`) and
-multi-line text that measures the same on every backend. No italic, underline,
-strikethrough, super/subscript or per-span size — so the document canvas stays
-custom, as predicted.
+**PARTIAL** — re-checked at `d1d7f0e`: `with_styled_label(std::vector<TextSpan>)`
+renders per-span colour and `FontWeight` on one line, plus wrap-aware
+measurement (`measure_text_wrapped`) and multi-line text that measures the same
+on every backend. No italic, underline, strikethrough, super/subscript or
+per-span size — so the document canvas stays custom, as predicted.
 
 **Need:** Render text with different styles (bold, italic, color, size) within a single text element.
 
@@ -390,8 +417,14 @@ custom, as predicted.
 
 ## 13. Table / Grid Layout Component
 
-**STILL OPEN** — `grid` in the tree is autolayout's grid *snap*, not a row/column
-layout with cell borders.
+**PARTIAL at `d1d7f0e`** — upstream now has a real UI-layout grid:
+`imm::grid(ctx, ep, GridConfig{}.with_rows(3).with_cols(4)
+.with_cell_border(BorderWeight::Thin, color))` + `grid_cell(ctx, grid_elem, r, c, config)`
+(+ `grid_row` / `grid_track`, col spans, per-column widths). But it lays out
+*UI widgets* in `hstack` rows with a fixed `row_height` — it does not render
+document tables. wordproc's document tables stay custom (`renderTable()` in
+`render_system.h`): canvas text runs, borders, cell backgrounds and editing
+highlights are not something a widget grid can express.
 
 **Need:** Render a grid of cells with configurable borders (none/thin/medium/thick), per-cell backgrounds, and text content.
 
@@ -422,11 +455,21 @@ for (int r = 0; r < 3; r++) {
 
 ## 14. Right-Click / Multi-Button Mouse Support in E2E Testing
 
-**PARTIAL** — `input_injector::MouseState` now has `right_down` and
-`input_system.h` reads it, but nothing sets it: there is no `simulate_right_click`,
-no `right_click` in `runner.h`'s `coord_commands`, and `test_input::
-is_mouse_button_pressed(button)` still returns false for any button != 0 in test
-mode. wordproc's custom `right_click` handler stays.
+**RESOLVED (2026-10-17, at `d1d7f0e`)** — upstream now has the whole surface:
+`test_input::simulate_right_click(x, y)` / `simulate_middle_click(x, y)`,
+per-button `just_pressed` / `just_released` edges in `MouseState`
+(`right_just_pressed`, `middle_just_pressed`, …) with multi-reader accessors,
+`is_mouse_button_pressed(button)` returning per-button state in test mode, and
+`right_click` / `middle_click` / `middle_down` / `middle_up` /
+`right_click_ui` / `right_click_text` commands (the parser's fallthrough
+splits `right_click x y` into two args even though bare `right_click` is not
+in `coord_commands`). wordproc deleted its `HandleRightClickCommand` shim
+(`src/testing/e2e_commands.h`): the builtin handler consumes `right_click`
+first, and the menu system already polls `input::isMouseButtonPressed(1)`,
+so a scripted right-click now opens the menu through the same path as a
+physical one. Caveat: E2E cannot run on a locked machine, so the
+`pass_context_menu_*.e2e` scripts exercising the real path are unverified
+this session — run them on an unlocked machine.
 
 **Need:** Simulate right-click (and potentially middle-click) in E2E tests, and expose right-click state through `is_mouse_button_pressed(1)` in test mode.
 
@@ -454,7 +497,9 @@ mode. wordproc's custom `right_click` handler stays.
 5. Add `right_click` to `coord_commands` in `runner.h`.
 6. Add `HandleRightClickCommand` in `command_handlers.h` (calls `simulate_right_click`).
 
-**Workaround:** wordproc registers a custom E2E command handler for `right_click` that bypasses input simulation and directly sets app-level context menu state. Real (non-test) right-click detection uses `is_mouse_button_pressed(1)` from the backend, which works fine.
+**Former workaround (deleted 2026-10-17):** wordproc registered a custom E2E
+command handler for `right_click` that bypassed input simulation and directly
+set app-level context menu state. No longer needed — see RESOLVED above.
 
 ---
 
@@ -491,10 +536,26 @@ int context_menu(ctx, ep, bool &open, float x, float y,
 
 ---
 
+## 16. Crash handler vs an asserting `log_error`
+
+**STILL OPEN (new in this bump)** — upstream added `src/crash_handler.h`:
+`report()` logs through `log_error`, including the running-system line and a
+backtrace. That assumes `log_error` returns. wordproc's `log_error` asserts
+(`assert(false)` after logging), and upstream's own validation docs say
+"Strict mode: use log_error which will assert" — so a consumer with an
+asserting `log_error` that installs the handler gets `report()` aborting on
+its first line and re-entering the handler via `SIGABRT`. Upstream's own
+`crash_handler_test.cpp` uses the stock non-asserting logger, so it cannot
+catch this. wordproc does not install the handler, so no workaround is
+needed — just do not call `afterhours::crash::install_handler()` until
+upstream reports through a non-aborting path (e.g. the `log_sink_fn`).
+
 ## Priority
 
-Updated after the 2026-08-16 bump: 1, 4, 5, 9, 10 and 15 are done; 6 is available but
-not adopted; 12 and 14 are partial; 2, 3, 8, 11 and 13 are untouched upstream.
+Updated after the 2026-10-17 bump: 1, 4, 5, 9, 10, 14 and 15 are done; 6 is
+available (under a replaced API) but not adopted; 8 is resolved upstream but
+not adopted (needs eyes — see its new-gap note); 12 and 13 are partial; 2, 3,
+11 and 16 are untouched upstream.
 
 
 | # | Feature | Impact | Effort | Notes |
@@ -504,13 +565,14 @@ not adopted; 12 and 14 are partial; 2, 3, 8, 11 and 13 are untouched upstream.
 | 2 | Access key underlines | Critical — accessibility | Medium | |
 | 3 | Hover state | Major — all 4 audits | Low | |
 | 5 | Focus indicators | Major — accessibility/WCAG | Medium | |
-| 14 | Right-click mouse support | Major — enables context menus | Low | Workaround in wordproc |
+| 14 | Right-click mouse support | Major — enables context menus | Low | Resolved at `d1d7f0e`; shim deleted |
 | 15 | Context menu primitive | Major — common UI pattern | Low | Workaround in wordproc |
 | 10 | Drop shadows | Major — visual depth | Low | |
 | 4 | Dropdown triangle | Major — visual polish | Low | |
-| 8 | Tooltip component | Major — usability | Low | |
+| 8 | Tooltip component | Major — usability | Low | Upstream `with_tooltip` exists; adoption needs eyes |
 | 11 | Scrollbar customization | Major — theme consistency | Medium | |
 | 12 | Rich text / per-span styling | Minor — domain-specific | High | May stay as custom code |
-| 13 | Table / grid layout | Minor — domain-specific | High | May stay as custom code |
+| 13 | Table / grid layout | Minor — domain-specific | High | UI grid exists; doc tables stay custom |
 | 7 | ~~Sans-serif font~~ | ~~Resolved~~ | — | Done |
-| 6 | Animation/motion | Minor — polish | High | |
+| 6 | Animation/motion | Minor — polish | High | Old API replaced by Track/Timeline at `d1d7f0e` |
+| 16 | Crash handler vs asserting log_error | Minor — latent | Low | Do not install handler until upstream fixes |
