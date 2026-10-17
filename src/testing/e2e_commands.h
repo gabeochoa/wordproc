@@ -14,14 +14,10 @@ namespace e2e_commands {
 
 using namespace afterhours;
 
-// Strip surrounding double-quotes from a string (the default E2E parser
-// doesn't recognise menu_open / menu_select as quoted-arg commands, so
-// the quotes end up in the argument list).
-static inline std::string strip_quotes(const std::string &s) {
-    if (s.size() >= 2 && s.front() == '"' && s.back() == '"')
-        return s.substr(1, s.size() - 2);
-    return s;
-}
+// NOTE: no strip_quotes helper here. The app used to strip surrounding
+// quotes itself because the E2E parser left them in; upstream now strips
+// quotes consistently in ScriptArguments::next()/rest(), so the args these
+// handlers see are already unquoted.
 
 // Registers document text into the visible text registry every frame.
 // Must run in the same TU as HandleExpectTextCommand to ensure they
@@ -63,7 +59,7 @@ struct HandleMenuOpenCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    const std::string menu_name = strip_quotes(cmd.arg(0));
+    const std::string menu_name = cmd.arg(0);
     
     // Close any currently open menus first
     for (auto &menu : menu_comp->menus) {
@@ -100,12 +96,12 @@ struct HandleMenuSelectCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    // Join all arguments to support multi-word menu items, stripping quotes
+    // Join all arguments to support multi-word menu items (the E2E
+    // parser already stripped quotes, so the joined name is unquoted).
     std::string item_name = cmd.args[0];
     for (size_t i = 1; i < cmd.args.size(); ++i) {
       item_name += " " + cmd.args[i];
     }
-    item_name = strip_quotes(item_name);
     
     // Debug: Check if any menu is open
     bool anyOpen = false;
@@ -272,7 +268,7 @@ struct HandleLoadTemplateCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    std::string name = strip_quotes(cmd.arg(0));
+    std::string name = cmd.arg(0);
     for (auto &ch : name) ch = static_cast<char>(std::tolower(ch));
     std::filesystem::path templatePath =
         std::filesystem::current_path() / "resources/templates" / (name + ".txt");
@@ -306,11 +302,10 @@ struct HandleAddCommentCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    // Join all args and strip quotes
+    // Join all args (already unquoted by the parser)
     std::string text = cmd.args[0];
     for (size_t i = 1; i < cmd.args.size(); ++i)
       text += " " + cmd.args[i];
-    text = strip_quotes(text);
 
     Comment comment;
     comment.text = text;
@@ -371,16 +366,14 @@ struct HandleReplaceTextCommand : System<testing::PendingE2ECommand> {
       return;
     }
 
-    // The E2E parser splits on whitespace, so multi-word quoted strings
-    // arrive as separate args. We need to reconstruct them.
+    // Quoted spans arrive as single args (the parser keeps them together);
+    // joining the tail also covers an unquoted multi-word replacement.
     // Format: replace_text FIND_TEXT "replacement text here"
-    // args might be: [FIND_TEXT, "replacement, text, here"]
     // We take arg(0) as the find string, and join the rest as the replacement.
-    std::string findStr = strip_quotes(cmd.arg(0));
+    std::string findStr = cmd.arg(0);
     std::string replaceStr = cmd.args[1];
     for (size_t i = 2; i < cmd.args.size(); ++i)
       replaceStr += " " + cmd.args[i];
-    replaceStr = strip_quotes(replaceStr);
 
     std::string text = doc_comp->buffer.getText();
     auto pos = text.find(findStr);
@@ -415,7 +408,6 @@ struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
     std::string term = cmd.args[0];
     for (size_t i = 1; i < cmd.args.size(); ++i)
       term += " " + cmd.args[i];
-    term = strip_quotes(term);
 
     dialog_state->lastSearchTerm = term;
     dialog_state->findInputStr = term;
@@ -425,36 +417,15 @@ struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
   }
 };
 
-// Handle 'right_click x y' - opens context menu at coordinates
-// Workaround: bypasses input simulation (afterhours doesn't support right-click
-// in test mode yet) and directly sets context menu state.
-// TODO: Upstream right-click support to afterhours (see afterhours-feature-requests.md #14)
-struct HandleRightClickCommand : System<testing::PendingE2ECommand> {
-  ecs::DialogState *dialog_state = nullptr;
-
-  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
-                             float) override {
-    if (cmd.is_consumed() || !cmd.is("right_click"))
-      return;
-    if (!cmd.has_args(2)) {
-      cmd.fail("right_click requires x y arguments");
-      return;
-    }
-    if (!dialog_state) {
-      cmd.fail("dialog_state not set");
-      return;
-    }
-
-    auto [sw, sh] = testing::e2e_screen_size();
-    float x = cmd.coord_arg(0, sw);
-    float y = cmd.coord_arg(1, sh);
-
-    dialog_state->showContextMenu = true;
-    dialog_state->contextMenuX = x;
-    dialog_state->contextMenuY = y;
-    cmd.consume();
-  }
-};
+// NOTE: no HandleRightClickCommand here. The app used to bypass input
+// simulation and poke dialog_state->showContextMenu directly because
+// afterhours had no right-click in test mode. Upstream now owns it:
+// register_builtin_handlers registers its HandleRightClickCommand, which
+// drives test_input::simulate_right_click, and the menu system already
+// polls input::isMouseButtonPressed(1) for real input -- so a scripted
+// right_click opens the menu through the same path as a physical one.
+// (An app handler registered after the builtins would never see the
+// command anyway: the builtin consumes it first.)
 
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
@@ -528,9 +499,6 @@ inline void register_app_commands(
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
   sm.register_update_system(std::move(file_dialog_set));
 
-  auto right_click = std::make_unique<HandleRightClickCommand>();
-  right_click->dialog_state = dialog_state;
-  sm.register_update_system(std::move(right_click));
 }
 
 } // namespace e2e_commands

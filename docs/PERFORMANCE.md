@@ -29,6 +29,36 @@ Measured on Apple M1:
 - Typing latency: < 1ms per character
 - File load (1KB): < 10ms
 
+## Baseline — 2026-10-17 (afterhours `d1d7f0e`)
+
+Measured with the existing text-buffer benchmark, `tests/benchmark_text_buffer.cpp`
+via `make bench-unit` (Catch2 `[benchmark]` tag, `-O2` test binary), on an
+Apple M1 Pro, 10 cores, 32 GB, macOS 27.0.1. Each case ran 3 times; the table
+reports the median. These are in-memory `TextBuffer` operations (gap buffer),
+not end-to-end keystroke-to-pixels latency — no rendering, layout, or event
+loop is involved.
+
+| Benchmark | Workload | Median | Notes |
+|---|---|---|---|
+| Sequential insert | 10,000 chars at caret | 0.155 µs/char (1.55 ms total) | 0 gap moves, 2 reallocations |
+| Random-position insert | 1,000 inserts into 10,000-char doc | 0.284 µs/insert (0.28 ms total) | 1,000 gap moves |
+| Sequential backspace | 10,000 deletes | 0.263 µs/delete (2.63 ms total) | |
+| Typing burst (typing latency) | 500 keystrokes into 5,000-char doc | 0.148 µs/keystroke (0.074 ms total) | ~6.7M chars/sec capability |
+| Line wrap layout | 50,000 chars, 710 lines → 987 wrapped at width 80 | AoS 0.084 ms (0.118 µs/line); SoA 0.010 ms (0.014 µs/line) | SoA ~8× faster |
+| `setText` large doc | 100,000 chars → 1,415 lines | 0.037 ms (~2,700 MB/s) | |
+| `getText` large doc | 100,000 chars | 0.003 ms (runs ranged 0.003–0.014 ms) | Near timer granularity — treat as "≤ 0.014 ms", not a precise figure |
+| SoA line access | 10,000 random accesses, 50,000-char doc | `lineSpan` 0.019 µs/access; `lineString` 0.067 µs/access | SoA ~3.4× faster than copying |
+
+Reading: every typing/latency figure is three orders of magnitude under the
+16 ms frame budget. The numbers to beat for any buffer change are the typing
+burst (0.148 µs/keystroke) and random-position insert (0.284 µs/insert) —
+sequential insert is the easy case (no gap moves).
+
+Not baselined here: scroll at 100K words and cold-start/open time need the GUI
+binary (`tests/run_fps_scroll_test.sh`, `tests/run_benchmark.sh`), which cannot
+run while the screen is locked, and the text-buffer benchmark does not cover
+them. No numbers are claimed for those until they are measured.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
