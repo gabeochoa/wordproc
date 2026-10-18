@@ -58,6 +58,17 @@ inline bool hasMessage(const StatusComponent& status, double currentTime) {
     return !status.text.empty() && currentTime < status.expiresAt;
 }
 
+// Transient status-bar message: replaces the status bar's left
+// text until `now + duration` (STATUS_MESSAGE_DURATION, 3s), then
+// the bar reverts to the caret/stats line. This is the Word 95
+// channel for mode switches — no floating toast.
+inline void flash(StatusComponent& status, const std::string& msg,
+                  double now, double duration = 3.0) {
+    status.text = msg;
+    status.isError = false;
+    status.expiresAt = now + duration;
+}
+
 }  // namespace status
 
 namespace layout {

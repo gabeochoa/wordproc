@@ -14,6 +14,7 @@ struct EditorEntityCache {
     MenuComponent* menu = nullptr;
     DialogState* dialogs = nullptr;
     ToolbarComponent* toolbar = nullptr;
+    StatusComponent* status = nullptr;
 
     bool resolved() const { return doc != nullptr; }
 
@@ -29,6 +30,7 @@ struct EditorEntityCache {
         menu = &e.get<MenuComponent>();
         dialogs = &e.get<DialogState>();
         toolbar = &e.get<ToolbarComponent>();
+        if (e.has<StatusComponent>()) status = &e.get<StatusComponent>();
     }
 };
 

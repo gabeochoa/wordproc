@@ -24,7 +24,8 @@ namespace ecs {
 
 inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                           MenuComponent& menu, DialogState& dialogs,
-                          LayoutComponent& layout) {
+                          LayoutComponent& layout,
+                          StatusComponent* statusComp = nullptr) {
         int menuIndex = menuResult / 100;
         int itemIndex = menuResult % 100;
 
@@ -201,13 +202,21 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     layout.pageMode = PageMode::Pageless;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    toast_notify::info("Switched to Pageless mode");
+                    // No floating toast for a mode switch (modern,
+                    // not Word 95): transient status-bar text instead.
+                    if (statusComp)
+                        status::flash(*statusComp, "Pageless mode",
+                                      afterhours::graphics::get_time());
                     break;
                 case 1:  // Paged Mode
                     layout.pageMode = PageMode::Paged;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    toast_notify::info("Switched to Paged mode");
+                    // No floating toast for a mode switch (modern,
+                    // not Word 95): transient status-bar text instead.
+                    if (statusComp)
+                        status::flash(*statusComp, "Paged mode",
+                                      afterhours::graphics::get_time());
                     break;
                 case 3:  // Ruler
                     ruler::toggleRuler(layout);

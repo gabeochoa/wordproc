@@ -477,6 +477,18 @@ static void setupCallbacksEx(
         }
         
         // Status bar properties (always visible)
+        if (prop == "status_text") {
+            auto entities =
+                afterhours::EntityQuery({.force_merge = true})
+                    .whereHasComponent<ecs::StatusComponent>()
+                    .gen();
+            if (entities.empty()) return "";
+            auto& status = entities[0].get().get<ecs::StatusComponent>();
+            if (!ecs::status::hasMessage(
+                    status, afterhours::graphics::get_time()))
+                return "";
+            return status.text;
+        }
         if (prop == "status_bar_visible") return "true";
         if (prop == "status_shows_line") return std::to_string(buffer.caret().row + 1);
         if (prop == "status_shows_column") return std::to_string(buffer.caret().column + 1);
@@ -875,6 +887,21 @@ static void setupCallbacksEx(
         scrollComp.scrollbarDragging = false;
         scrollComp.scrollbarRepeatDir = 0;
         
+        // Clear any transient status-bar message so it cannot leak
+        // into the next test (e.g. a "Paged mode" flash).
+        {
+            auto entities =
+                afterhours::EntityQuery({.force_merge = true})
+                    .whereHasComponent<ecs::StatusComponent>()
+                    .gen();
+            for (auto& ref : entities) {
+                auto& status = ref.get().get<ecs::StatusComponent>();
+                status.text.clear();
+                status.expiresAt = 0.0;
+                status.isError = false;
+            }
+        }
+
         // Reset theme
         theme::applyDarkMode(false);
         

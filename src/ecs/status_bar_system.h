@@ -8,6 +8,7 @@
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
 #include "../external.h"
+#include "component_helpers.h"
 #include "components.h"
 #include "editor_entity_cache.h"
 
@@ -54,6 +55,16 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
             caretPos.row + 1, stats.lines,
             inchPos,
             caretPos.row + 1, caretPos.column + 1);
+
+        // Transient status message (e.g. "Paged mode" after a View >
+        // Paged Mode switch) replaces the stats line until it expires.
+        // This is the StatusComponent channel, rendered here — it was
+        // previously created but never read.
+        if (cache_.status &&
+            status::hasMessage(*cache_.status,
+                               afterhours::graphics::get_time())) {
+            leftText = cache_.status->text;
+        }
 
         // Build the right-side status string
         std::time_t now = std::time(nullptr);

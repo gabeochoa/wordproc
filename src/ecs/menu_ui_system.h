@@ -1992,7 +1992,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         {
             int menuResult = menu.consumeClickedResult();
             if (menuResult >= 0) {
-                handleMenuActionImpl(menuResult, doc, menu, dialogs, layout);
+                handleMenuActionImpl(menuResult, doc, menu, dialogs, layout,
+                                     cache_.status);
             }
         }
 

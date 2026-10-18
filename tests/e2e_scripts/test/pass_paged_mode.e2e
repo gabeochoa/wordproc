@@ -17,9 +17,12 @@ validate page_mode=paged
 validate ruler_ppi=42
 validate page_display_width=361
 validate page_width_inches_x10=85
+# Mode switch is transient status-bar text, not a floating toast.
+validate status_text=Paged mode
 screenshot paged_mode
 
 menu_open View
 menu_select "Pageless Mode"
 wait_frames 12
 validate page_mode=pageless
+validate status_text=Pageless mode
