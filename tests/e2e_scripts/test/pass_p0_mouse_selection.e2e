@@ -1,8 +1,9 @@
 # P0-4: mouse selection — click places caret, shift-click extends,
 # double-click selects word, triple-click selects paragraph, drag selects,
 # typing replaces the selection, drag past the bottom edge auto-scrolls.
-# Text starts at x=11,y=136 (8px padding); row 0 center y=146.
-# Calibrated: x=12 -> col 0, x=60 -> col 8 (in "world"), x=100 -> col 15.
+# Text starts at x=11.6,y=161.6 (8px padding); row 0 center y=172.
+# (Scaled chrome at ui_scale 1.2: text area y=153.6.)
+# Calibrated: x=12 -> col 0, x=60 -> col 8 (in "world"), x=104 -> col 15 (past end).
 
 type "hello world foo"
 wait_frames 12
@@ -11,7 +12,7 @@ validate has_selection=false
 # Plain click places the caret, no selection.
 # mouse_down/mouse_up (not click_text: document text is raw-drawn, not a
 # UI component, so it has no clickable label).
-mouse_down 12 146
+mouse_down 12 172
 wait_frames 2
 mouse_up
 wait_frames 6
@@ -21,7 +22,7 @@ validate has_selection=false
 # Shift-click extends to end of line.
 hold_key SHIFT
 wait_frames 3
-mouse_down 100 146
+mouse_down 104 172
 wait_frames 2
 mouse_up
 wait_frames 6
@@ -40,20 +41,20 @@ key CTRL+A
 wait_frames 6
 type "hello world foo"
 wait_frames 6
-double_click 60 146
+double_click 60 172
 wait_frames 12
 validate has_selection=true
 validate selected_text=world
 
 # Triple-click selects the paragraph (whole line).
 # ("Hello" — AutoCorrect capitalizes the sentence start.)
-triple_click 60 146
+triple_click 60 172
 wait_frames 12
 validate has_selection=true
 validate selected_text=Hello world foo
 
 # Drag from line start to line end selects the line.
-drag_to 12 146 100 146
+drag_to 12 172 104 172
 wait_frames 6
 validate has_selection=true
 validate selected_text=Hello world foo

@@ -1,0 +1,19 @@
+# Test: Paged Mode framing
+# Validates View > Paged Mode switches the page mode (white Letter
+# page centered on the gray workspace, text inside the margins —
+# verified visually in the headless screenshot) and back.
+
+type "Paged mode check."
+wait_frames 12
+validate page_mode=pageless
+
+menu_open View
+menu_select "Paged Mode"
+wait_frames 12
+validate page_mode=paged
+screenshot paged_mode
+
+menu_open View
+menu_select "Pageless Mode"
+wait_frames 12
+validate page_mode=pageless

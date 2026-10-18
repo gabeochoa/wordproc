@@ -52,7 +52,10 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         auto& doc = *cache_.doc;
 
         float screenWidth = static_cast<float>(layout.screenWidth);
-        float titleBarHeight = layout.titleBarHeight;
+        // Scaled like every other chrome div (updateLayout scales the
+        // layout flow the same way); unscaled here left a gap under
+        // the title bar that the menu div starts below.
+        float titleBarHeight = theme::layout::scale(layout.titleBarHeight);
 
         // Build title string
         std::string title = "Wordproc";

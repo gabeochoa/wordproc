@@ -1,50 +1,51 @@
 # P0-3: Win95 scrollbar — arrows step one line, track click pages, thumb
-# drag scrolls proportionally. Coords are the 1280x720 layout: text area
-# y=125..697, scrollbar x=1261..1277, arrows 16px at each end, track in
-# between. Doc has 66033 lines, 27 visible, maxScroll 66006.
+# drag scrolls proportionally. Coords are the 1280x720 layout at
+# ui_scale 1.2: text area y=153.6..692.4 (height 538.8), scrollbar
+# x=1260..1276, up arrow 153.6..169.6, track 169.6..672.8, down arrow
+# 672.8..688.8. Doc has 66033 lines, 26 visible, maxScroll 66007.
 
 open_file test_files/public_domain/war_and_peace.txt
 # Long settle: in windowed batch mode the offset is transiently off by
 # one for ~30 frames after a large file loads; 90 frames clears it.
 wait_frames 90
-validate scroll_offset=66006
+validate scroll_offset=66007
 
 # Up arrow: one line up.
-mouse_down 1269 133
+mouse_down 1269 162
 wait_frames 6
 mouse_up
 wait_frames 6
-validate scroll_offset=66005
+validate scroll_offset=66006
 
-# Track above the thumb: page up (27 lines).
+# Track above the thumb: page up (26 lines).
 mouse_down 1269 400
 wait_frames 6
 mouse_up
 wait_frames 6
-validate scroll_offset=65978
+validate scroll_offset=65980
 
 # Drag the thumb to the top of the track: offset 0.
-drag_to 1269 671 1269 151
+drag_to 1269 666 1269 170
 wait_frames 12
 validate scroll_offset=0
 
 # Down arrow: one line down.
-mouse_down 1269 689
+mouse_down 1269 681
 wait_frames 6
 mouse_up
 wait_frames 6
 validate scroll_offset=1
 
-# Track below the thumb: page down (27 lines).
+# Track below the thumb: page down (26 lines).
 mouse_down 1269 400
 wait_frames 6
 mouse_up
 wait_frames 6
-validate scroll_offset=28
+validate scroll_offset=27
 
 # Drag the thumb to the bottom of the track: maxScroll.
-drag_to 1269 151 1269 671
+drag_to 1269 170 1269 660
 wait_frames 12
-validate scroll_offset=66006
+validate scroll_offset=66007
 
 screenshot p0_scrollbar

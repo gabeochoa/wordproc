@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../editor/ruler_math.h"
+#include "../ui/theme.h"
 #include "components.h"
 
 // Pure helper functions for ECS components
@@ -65,29 +66,40 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
     layout.screenWidth = w;
     layout.screenHeight = h;
 
-    float menuHeight = layout.focusMode ? 0.0f : layout.menuBarHeight;
-    float toolbarHeight = layout.focusMode ? 0.0f : layout.toolbarHeight;
-    float formattingBarHeight = layout.focusMode ? 0.0f : layout.formattingBarHeight;
-    float rulerHeight =
-        (layout.focusMode || !layout.showRuler) ? 0.0f : layout.rulerHeight;
-    float statusHeight = layout.focusMode ? 0.0f : layout.statusBarHeight;
+    // Layout fields are BASE sizes ("will be scaled in updateLayout"):
+    // the afterhours UI divs (title/menu/toolbars/status) are drawn
+    // with theme::layout::scale(), so the flow must scale the same
+    // way or the divs paint over layout-flow elements — the ruler
+    // (108..128) sat 18px under the scaled formatting bar (92..126)
+    // and only its bottom 2px of ticks showed.
+    float titleHeight =
+        layout.focusMode ? 0.0f : theme::layout::scale(layout.titleBarHeight);
+    float menuHeight =
+        layout.focusMode ? 0.0f : theme::layout::scale(layout.menuBarHeight);
+    float toolbarHeight =
+        layout.focusMode ? 0.0f : theme::layout::scale(layout.toolbarHeight);
+    float formattingBarHeight = layout.focusMode
+                                    ? 0.0f
+                                    : theme::layout::scale(layout.formattingBarHeight);
+    float rulerHeight = (layout.focusMode || !layout.showRuler)
+                            ? 0.0f
+                            : theme::layout::scale(layout.rulerHeight);
+    float statusHeight =
+        layout.focusMode ? 0.0f : theme::layout::scale(layout.statusBarHeight);
+    float borderWidth = theme::layout::scale(layout.borderWidth);
 
-    layout.titleBar = {0, 0, static_cast<float>(w), layout.titleBarHeight};
-    layout.menuBar = {0, layout.titleBarHeight, static_cast<float>(w),
-                      menuHeight};
+    layout.titleBar = {0, 0, static_cast<float>(w), titleHeight};
+    layout.menuBar = {0, titleHeight, static_cast<float>(w), menuHeight};
     layout.statusBar = {0, static_cast<float>(h - statusHeight),
                         static_cast<float>(w), statusHeight};
 
-    float textTop =
-        layout.titleBarHeight + menuHeight + toolbarHeight + formattingBarHeight + 
-        rulerHeight + layout.borderWidth;
-    float textHeight = static_cast<float>(h) - layout.titleBarHeight -
-                       menuHeight - toolbarHeight - formattingBarHeight - 
-                       rulerHeight - statusHeight -
-                       2 * layout.borderWidth;
-    layout.textArea = {layout.borderWidth, textTop,
-                       static_cast<float>(w) - 2 * layout.borderWidth,
-                       textHeight};
+    float textTop = titleHeight + menuHeight + toolbarHeight +
+                    formattingBarHeight + rulerHeight + borderWidth;
+    float textHeight = static_cast<float>(h) - titleHeight - menuHeight -
+                       toolbarHeight - formattingBarHeight - rulerHeight -
+                       statusHeight - 2 * borderWidth;
+    layout.textArea = {borderWidth, textTop,
+                       static_cast<float>(w) - 2 * borderWidth, textHeight};
 
     // Calculate page display dimensions for paged mode
     if (layout.pageMode == PageMode::Paged) {
@@ -149,8 +161,9 @@ inline LayoutComponent::Rect rect(const LayoutComponent& layout) {
     if (!visible(layout)) {
         return {0.0f, layout.textArea.y, layout.textArea.width, 0.0f};
     }
-    return {0.0f, layout.textArea.y - layout.rulerHeight,
-            static_cast<float>(layout.screenWidth), layout.rulerHeight};
+    float rulerHeight = theme::layout::scale(layout.rulerHeight);
+    return {0.0f, layout.textArea.y - rulerHeight,
+            static_cast<float>(layout.screenWidth), rulerHeight};
 }
 
 // Shared marker geometry for the render pass and the drag system,
@@ -158,7 +171,8 @@ inline LayoutComponent::Rect rect(const LayoutComponent& layout) {
 inline ruler_math::Geometry geometry(const LayoutComponent& layout) {
     LayoutComponent::Rect effective = layout::effectiveTextArea(layout);
     float gutter = layout.showLineNumbers ? layout.lineNumberGutterWidth : 0.0f;
-    return ruler_math::geometry(layout.textArea.y, layout.rulerHeight,
+    return ruler_math::geometry(layout.textArea.y,
+                                theme::layout::scale(layout.rulerHeight),
                                 effective.x, effective.width, gutter);
 }
 

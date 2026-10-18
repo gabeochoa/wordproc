@@ -4,17 +4,19 @@
 # Type some text
 type "Document with shapes:"
 key ENTER
-wait 2
+wait_frames 12
 
 # Insert rectangle shape via Insert menu
 menu_open Insert
-wait 2
+wait_frames 12
 menu_select "Shape: Rectangle"
-wait 2
+wait_frames 12
 
-# Draw the shape (click and drag)
-drag 100 150 200 200
-wait 2
+# Draw the shape (click and drag). Coords are the 1280x720 layout at
+# ui_scale 1.2: text area starts at y=153.6, so the drag stays below
+# the ruler band (129..153).
+drag 100 190 200 240
+wait_frames 12
 
 # Validate shape was inserted
 validate has_drawing=true
@@ -22,11 +24,11 @@ validate drawing_count=1
 
 # Insert another shape (circle)
 menu_open Insert
-wait 2
+wait_frames 12
 menu_select "Shape: Circle"
-wait 2
-drag 250 150 350 200
-wait 2
+wait_frames 12
+drag 250 190 350 240
+wait_frames 12
 
 validate drawing_count=2
 
