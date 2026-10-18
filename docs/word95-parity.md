@@ -35,12 +35,12 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
 | Normal view | Missing | P1 | only pageless/paged |
-| Page Layout view | Have | P0 | Paged Mode; framing verified headless screenshot 2026-10-18 (white Letter page, gray workspace, text inside 1in margins) |
+| Page Layout view | Have | P0 | Paged Mode; framing verified headless screenshot 2026-10-18 (white Letter page, gray workspace, text inside 1in margins). ONE scale (Batch 2 fix round): page width = 8.5 × ruler ppi, ppi = 72 × (fit × zoom), margins/page/ruler/indents all derive from it; mode switch flashes transient status-bar text, not a toast |
 | Outline view | Partial | P1 | Show Outline pane exists; not a Word outline view |
 | Zoom (in/out/reset, %) | Have | P0 | Ctrl+Alt +/-/0 |
-| Ruler (indents/tabs draggable) | Have | P0 | Word 95 ruler: gray outside margins, white between, inch ticks, indent triangles; left/first-line/right markers drag to set indents (one undo step per drag); View > Ruler toggles; tab-stop marks at default stops (not draggable) |
+| Ruler (indents/tabs draggable) | Have | P0 | Word 95 ruler: gray outside margins, white between (pageless too — 1in margins inset the effective area), inch ticks at the ONE display ppi, indent markers beveled (pale face, dark edges, hourglass pair + rectangle base + right triangle, apexes toward centre) at the same scale as text indents; left/first-line/right markers drag to set indents (one undo step per drag); View > Ruler toggles; tab-stop marks at default stops (not draggable) |
 | Toolbars show/hide | Missing | P2 | Standard+Formatting always on |
-| Status bar | Partial | P0 | Word 6-style; page/sec/Ln/Col present, verify accuracy |
+| Status bar | Partial | P0 | Word 6-style; page/sec/Ln/Col present, verify accuracy. Transient StatusComponent messages (e.g. "Paged mode" / "Pageless mode" after a View mode switch) replace the stats line for 3s — no floating toast for mode switches |
 | Header/Footer view | Partial | P1 | Insert Header/Footer entries exist |
 
 ## Insert
@@ -94,7 +94,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Window
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Window menu (multi-document) | Have | P1 | single-document app: Window menu between Table and Help with Split + "1 <current file>" checked/disabled |
+| Window menu (multi-document) | Have | P1 | Window menu between Table and Help, Word 95 order: New Window (launches a second instance of our executable onto the same file via std::system; no file = plain new instance), Arrange All disabled (single-window app), Split, "1 <current file>" ENABLED and CHECKED; clicking the current-doc item is a no-op |
 | Split pane | Have | P1 | View > Split View + Window > Split, both toggle splitViewEnabled |
 
 ## Help
