@@ -31,7 +31,8 @@ struct ScrollbarSystem : public afterhours::System<DocumentComponent, ScrollComp
         return dialogs.showContextMenu || dialogs.showFindDialog ||
                dialogs.showAboutDialog || dialogs.showHelpWindow ||
                dialogs.showCommentDialog || dialogs.showTemplateDialog ||
-               dialogs.showSpellingDialog || dialogs.showAutoCorrectDialog ||
+               dialogs.showSpellingDialog || dialogs.showGrammarDialog ||
+               dialogs.showAutoCorrectDialog ||
                dialogs.showWordCountDialog || dialogs.showTabWidthDialog ||
                dialogs.showSettingsDialog || dialogs.showBookmarkListDialog ||
                dialogs.showSaveAsDialog || dialogs.showPageSetup;

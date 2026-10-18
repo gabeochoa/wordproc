@@ -212,9 +212,10 @@ struct DialogState : public afterhours::BaseComponent {
     bool showWordCountDialog = false;
 
     // Grammar dialog (Tools > Grammar...): read-only list of
-    // GrammarChecker issues for the document. Rendered in the Grammar
-    // item; the cached issues are refreshed there.
+    // GrammarChecker issues for the document, refreshed on open by
+    // cmd::openGrammarDialog.
     bool showGrammarDialog = false;
+    std::vector<GrammarError> grammarErrors;
 
     // Spelling dialog (Tools > Spelling..., F7)
     bool showSpellingDialog = false;

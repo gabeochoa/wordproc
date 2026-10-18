@@ -352,6 +352,7 @@ static void setupCallbacksEx(
         if (prop == "preview_page_count") return std::to_string(layoutComp.previewPageCount);
         if (prop == "print_requested") return dialogState.printRequested ? "true" : "false";
         if (prop == "print_pdf_exists") return dialogState.printPdfExists ? "true" : "false";
+        if (prop == "grammar_error_count") return std::to_string(dialogState.grammarErrors.size());
 
         // Dialog properties
         if (prop == "dialog_open") {
@@ -362,6 +363,7 @@ static void setupCallbacksEx(
             if (dialogState.showSettingsDialog) return "Settings";
             if (dialogState.showWordCountDialog) return "WordCount";
             if (dialogState.showSpellingDialog) return "Spelling";
+            if (dialogState.showGrammarDialog) return "Grammar";
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
             return "false";
         }
@@ -907,6 +909,8 @@ static void setupCallbacksEx(
         dialogState.showSettingsDialog = false;
         dialogState.uiScaleInputStr.clear();
         dialogState.showWordCountDialog = false;
+        dialogState.showGrammarDialog = false;
+        dialogState.grammarErrors.clear();
         dialogState.showSpellingDialog = false;
         dialogState.spellSearchOffset = 0;
         dialogState.spellCurrentOffset = 0;

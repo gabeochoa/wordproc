@@ -1,0 +1,23 @@
+# Test: Tools > Grammar... dialog lists GrammarChecker issues
+# read-only: "The the cat sat." yields exactly one REPEATED_WORD
+# issue (pinned by unit test), and closing leaves the text unchanged.
+
+type "The the cat sat."
+wait_frames 12
+
+menu_open Tools
+wait_frames 12
+menu_select "Grammar..."
+wait_frames 12
+
+validate dialog_open=Grammar
+validate grammar_error_count=1
+expect_text "Repeated word"
+
+screenshot grammar_dialog
+
+# Read-only: closing the dialog leaves the document untouched.
+click_ui grammar_close
+wait_frames 12
+validate dialog_open=false
+validate text=The the cat sat.

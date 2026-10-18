@@ -939,6 +939,107 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Grammar dialog (Tools > Grammar...) - Win95 shell: a sunken
+        // scrollable list of GrammarChecker issues (rule + excerpt +
+        // message + suggestion) and a Close button. Read-only: no
+        // auto-fix, no edits; the list is refreshed on open.
+        if (dialogs.showGrammarDialog) {
+            constexpr int GRAMMAR_MODAL_ID = 50012;
+            auto result = afterhours::modal(ctx, mk(entity, GRAMMAR_MODAL_ID),
+                dialogs.showGrammarDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(430), afterhours::ui::h720(300),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Grammar", CONTENT_LAYER);
+
+                if (dialogs.grammarErrors.empty()) {
+                    div(ctx, mk(result.ent(), 901),
+                        ComponentConfig{}
+                            .with_label("No grammar issues found.")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_render_layer(CONTENT_LAYER));
+                } else {
+                    div(ctx, mk(result.ent(), 902),
+                        ComponentConfig{}
+                            .with_label("Grammar issues:")
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+
+                    auto issueList = div(ctx, mk(result.ent(), 903),
+                        ah_win95::win95SunkenStyle()
+                            .with_size(ComponentSize{percent(1.0f), h720(180)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_overflow(afterhours::ui::Overflow::Auto)
+                            .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                            .with_render_layer(CONTENT_LAYER));
+                    if (issueList) {
+                        for (std::size_t i = 0; i < dialogs.grammarErrors.size(); ++i) {
+                            const GrammarError& err = dialogs.grammarErrors[i];
+                            // A double-space excerpt is invisible on
+                            // its own; show it as "(spaces)".
+                            std::string excerpt = err.text;
+                            if (!excerpt.empty() &&
+                                excerpt.find_first_not_of(" \t") == std::string::npos) {
+                                excerpt = "(spaces)";
+                            }
+                            std::string row = err.ruleId + " - \"" + excerpt + "\" - " +
+                                err.message;
+                            if (!err.suggestion.empty()) {
+                                row += " (suggest: \"" + err.suggestion + "\")";
+                            }
+                            test_input::register_visible_text(err.message);
+                            div(ctx, mk(issueList.ent(), 100 + static_cast<int>(i)),
+                                ComponentConfig{}
+                                    .with_label(row)
+                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(
+                                        ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        }
+                    }
+                }
+
+                auto closeRow = div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (closeRow) {
+                    if (button(ctx, mk(closeRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("grammar_close")
+                            .with_label("Close")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showGrammarDialog = false;
+                    }
+                }
+            }
+        }
+
         // AutoCorrect dialog (Tools > AutoCorrect...) - genuine
         // Word 95 layout: 3 option checkboxes, a scrollable sunken
         // Replace/With list, editable Replace:/With: fields with
@@ -1940,7 +2041,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
-            !dialogs.showSpellingDialog && !dialogs.showAutoCorrectDialog &&
+            !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&
+            !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&
             !dialogs.showSettingsDialog && !dialogs.showBookmarkListDialog &&
             !dialogs.showSaveAsDialog && !dialogs.showPageSetup) {

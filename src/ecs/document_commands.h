@@ -260,6 +260,15 @@ inline void requestPrint(DocumentComponent& doc, DialogState& dialogs) {
     std::system(cmd.c_str());
 }
 
+// --- Grammar dialog commands (Tools > Grammar...) ---
+// Read-only: refresh the cached issues from the current document
+// text on every open. No auto-fix, no edits.
+inline void openGrammarDialog(DocumentComponent& doc, DialogState& dialogs) {
+    dialogs.showGrammarDialog = true;
+    GrammarChecker checker;
+    dialogs.grammarErrors = checker.checkText(doc.buffer.getText());
+}
+
 // --- Spelling dialog commands (Tools > Spelling..., F7) ---
 // The dialog shows one error at a time; each action advances
 // spellSearchOffset and refreshes the current error from the buffer.

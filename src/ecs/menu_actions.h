@@ -846,8 +846,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     dialogs.autoCorrectReplaceStr.clear();
                     dialogs.autoCorrectWithStr.clear();
                     break;
-                case 4:  // Grammar... (dialog renders in the Grammar item)
-                    dialogs.showGrammarDialog = true;
+                case 4:  // Grammar...
+                    cmd::openGrammarDialog(doc, dialogs);
                     break;
                 default:
                     break;
