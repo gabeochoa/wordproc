@@ -1504,9 +1504,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Mail Merge Helper (Tools > Mail Merge...) - parity stub in
-        // a Win95 shell: Create / Get Data are disabled, and the text
-        // says a data source is required. No merge engine exists.
+        // Mail Merge Helper (Tools > Mail Merge...) - UNREACHABLE
+        // while the menu item is disabled (enabled=false, no dispatch
+        // in menu_actions.h): kept, not deleted, so re-enabling it
+        // later is a menu/dispatch change, not a dialog rewrite.
+        // Was a parity stub in a Win95 shell; no merge engine exists.
         if (dialogs.showMailMergeDialog) {
             constexpr int MAILMERGE_MODAL_ID = 50014;
             auto result = afterhours::modal(ctx, mk(entity, MAILMERGE_MODAL_ID),

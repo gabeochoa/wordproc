@@ -244,6 +244,18 @@ static void setupCallbacksEx(
             }
             return "false";
         }
+        // menu_item_enabled_ITEMNAME=true/false — enabled flag of a
+        // menu item (checked before menu_item_, whose prefix also matches).
+        if (prop.length() > 18 && prop.substr(0, 18) == "menu_item_enabled_") {
+            std::string itemName = prop.substr(18);
+            for (const auto& menu : menuComp.menus) {
+                for (const auto& item : menu.items) {
+                    if (item.label == itemName)
+                        return item.enabled ? "true" : "false";
+                }
+            }
+            return "false";
+        }
         // menu_item_ITEMNAME=true/false — check if any menu contains an item
         if (prop.length() > 10 && prop.substr(0, 10) == "menu_item_") {
             std::string itemName = prop.substr(10);

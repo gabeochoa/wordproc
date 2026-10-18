@@ -861,8 +861,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 }
-                case 7:  // Mail Merge...: parity stub dialog.
-                    dialogs.showMailMergeDialog = true;
+                case 7:  // Mail Merge... — DISABLED: never dispatched
+                         // (menu item is enabled=false; the dialog code
+                         // stays unreachable while disabled).
                     break;
                 case 9:  // Options...
                     dialogs.showOptionsDialog = true;

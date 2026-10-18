@@ -254,7 +254,7 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Grammar...", "", true, false, nullptr},                // 4
         {"AutoFormat...", "", true, false, nullptr},            // 5
         {"", "", false, true, nullptr},                          // 6 Separator
-        {"Mail Merge...", "", true, false, nullptr},            // 7
+        {"Mail Merge...", "", false, false, nullptr},           // 7 DISABLED: no merge engine / data source, grayed like Word shows unavailable commands
         {"", "", false, true, nullptr},                          // 8 Separator
         {"Options...", "", true, false, nullptr}                // 9
     };

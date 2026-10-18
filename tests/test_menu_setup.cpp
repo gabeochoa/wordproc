@@ -123,6 +123,13 @@ TEST_CASE("Menu items have correct properties", "[menu]") {
                     REQUIRE(item.enabled == false);
                     continue;
                 }
+                // Except Tools > Mail Merge...: disabled by design
+                // (no merge engine / data source; grayed like Word).
+                if (menu.label == "Tools" &&
+                    item.label == "Mail Merge...") {
+                    REQUIRE(item.enabled == false);
+                    continue;
+                }
                 REQUIRE(item.enabled == true);
             }
         }
@@ -204,6 +211,7 @@ TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
     REQUIRE(tools->items[5].label == "AutoFormat...");
     REQUIRE(tools->items[6].isSeparator);
     REQUIRE(tools->items[7].label == "Mail Merge...");
+    REQUIRE(tools->items[7].enabled == false);
     REQUIRE(tools->items[8].isSeparator);
     REQUIRE(tools->items[9].label == "Options...");
     for (const auto& item : tools->items) {

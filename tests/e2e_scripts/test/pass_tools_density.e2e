@@ -3,8 +3,8 @@
 #   over the whole document, one undo step.
 # - Options... toggles "Show text boundaries" live (flips the
 #   text_boundaries state), and the other two checkboxes are present.
-# - Mail Merge... opens the "Mail Merge Helper" stub (disabled
-#   Create/Get Data + data-source-required text) and closes cleanly.
+# - Mail Merge... is DISABLED (grayed, no merge engine): it must
+#   not open its (unreachable) dialog, and the document is untouched.
 
 # AutoFormat: "teh" -> "The" (sentence start), "hello" -> "Hello".
 # Seed via replace_text (setText): typing would autocorrect
@@ -45,17 +45,12 @@ click_ui options_ok
 wait_frames 12
 validate dialog_open=false
 
-# Mail Merge: stub dialog, Close leaves the document untouched.
+# Mail Merge: disabled item — no dialog opens, document untouched.
+# (Regression: on pre-fix bytes this validate fails, enabled=true,
+# and menu_select would have opened the stub dialog.)
 menu_open Tools
 wait_frames 12
-menu_select "Mail Merge..."
-wait_frames 12
-validate dialog_open=MailMerge
-expect_text "Mail Merge Helper"
-expect_text "A data source is required"
-
-click_ui mail_merge_close
-wait_frames 12
+validate menu_item_enabled_Mail Merge...=false
 validate dialog_open=false
 validate text=The cat sat. Hello world.
 

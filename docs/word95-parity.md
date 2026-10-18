@@ -81,7 +81,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | AutoCorrect engine | Have | P0 | Batch 1 |
 | AutoFormat... | Have | P2 | Fix round: Tools > AutoFormat... runs the AutoCorrect replacements as a batch pass over the whole document through the command layer, one undo step (unit + E2E) |
 | Thesaurus | Missing | P2 | |
-| Mail Merge... | Partial | P2 | Fix round: Tools > Mail Merge... opens a Win95 "Mail Merge Helper" stub dialog (disabled Create / Get Data buttons + "A data source is required" text); no merge engine — parity stub OK'd by owner |
+| Mail Merge... | Partial | P2 | Fix round 2: DISABLED (grayed, enabled=false) — no merge engine / data source, so Word-style unavailable, not a stub promising behavior. Dispatch removed; the old Helper dialog code stays unreachable while disabled |
 | Options/Preferences | Have | P2 | Fix round: Tools > Options... is a real Win95 dialog with live checkboxes: "Show text boundaries" (docSettings.showTextBoundaries), "Spell check as you type" (new toggle gating squiggle render/cache; Spelling dialog unaffected), "AutoCorrect as you type" (existing AutoCorrect flag). Options flags persist with the document |
 
 ## Table
