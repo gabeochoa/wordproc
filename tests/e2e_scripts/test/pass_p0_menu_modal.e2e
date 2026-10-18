@@ -1,0 +1,38 @@
+# P0-9: open menus are modal. While a dropdown is open, clicks on
+# controls outside it only close the menu (the control must not
+# trigger), clicking another menu-bar title switches menus, and Esc
+# closes. The File dropdown covers the left toolbar buttons, so the
+# outside-click target is Undo (right of the dropdown, x~257); a click
+# at the Save position would land on File > New, the item beneath.
+type "unsaved work"
+wait_frames 12
+validate is_dirty=true
+
+# Open File, click toolbar Undo (outside the dropdown): menu closes,
+# Undo does NOT run.
+menu_open File
+wait_frames 6
+validate menu_open=File
+click_ui btn_undo
+wait_frames 12
+validate menu_open=false
+validate text=Unsaved work
+
+# Open File, click the Edit title: File closes, Edit opens.
+menu_open File
+wait_frames 6
+click_text "Edit"
+wait_frames 12
+validate menu_open=Edit
+
+# Esc closes.
+escape
+wait_frames 6
+validate menu_open=false
+
+# Hovering the toolbar while a menu is open shows no tooltip.
+menu_open File
+wait_frames 6
+mouse_move 79 76
+wait_frames 900
+screenshot p0_menu_modal_no_tooltip

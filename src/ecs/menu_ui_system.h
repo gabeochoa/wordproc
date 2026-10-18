@@ -216,7 +216,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
             
             // Handle hover-to-switch: when any menu is open and we hover a different header
-            if (anyMenuOpen && !isOpen && mouseOverHeader) {
+            // with the mouse UP. While the button is down, the click handler
+            // owns switching: without this, hover-switch opens the menu on
+            // the press frame and the click toggle closes it again on the
+            // release frame (button() reports the held-down state), so
+            // clicking another menu title ended with all menus closed.
+            if (anyMenuOpen && !isOpen && mouseOverHeader && !ctx.mouse.left_down) {
                 for (size_t j = 0; j < menu.menus.size(); ++j) {
                     menu.menus[j].open = (j == menuIdx);
                 }
@@ -388,6 +393,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Esc closes an open menu (modal-menu rule (c)).
+        if (anyMenuOpen && input::isKeyPressed(afterhours::keys::ESCAPE)) {
+            for (auto& m : menu.menus) { m.open = false; }
+            menu.activeMenuIndex = -1;
+        }
+
         // Close menus on click outside and consume stray clicks.
         // Use direct mouse position checks against known rects instead of was_hot(),
         // because was_hot() compares entity IDs but we only have MK IDs here.

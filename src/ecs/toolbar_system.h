@@ -55,8 +55,11 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
         .with_align_items(AlignItems::Center)
         .with_cursor(afterhours::ui::CursorType::Pointer);
 
-    // Hover bg: subtle highlight so buttons feel interactive even before bevel kicks in
-    if (enabled) {
+    // Hover bg, only when the caller says hovered (the caller derives
+    // `hovered` from the same rect the framework uses, and forces it
+    // false while a menu is open — so a modal menu owns all hover and
+    // the framework never paints a toolbar hover bg under it).
+    if (enabled && hovered) {
         config.with_custom_hover_bg(afterhours::Color{220, 220, 220, 255});
     }
 
@@ -194,9 +197,21 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         struct TooltipInfo { float x; float y; std::string text; };
         std::vector<TooltipInfo> tooltips;
         
+        // A menu is open: the menu is modal. No toolbar hover, bevel, or
+        // tooltip until it closes (clicks are already gated by the
+        // menu_dropdown input gate on render_layer).
+        bool menuOpen = false;
+        if (cache_.menu) {
+            for (const auto& m : cache_.menu->menus) {
+                if (m.open) { menuOpen = true; break; }
+            }
+            if (cache_.menu->activeMenuIndex >= 0) menuOpen = true;
+        }
+
         // Mouse hover helper: use direct position check instead of ctx.is_hot/was_hot
         // (those compare entity IDs, but we only have MK IDs here)
         auto isMouseOver = [&](float bx, float by) -> bool {
+            if (menuOpen) return false;
             return afterhours::ui::is_mouse_inside(
                 ctx.mouse.pos, {bx, by, buttonSize, buttonSize});
         };
