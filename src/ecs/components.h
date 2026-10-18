@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "../editor/document_settings.h"
+#include "../editor/spell_squiggles.h"
+#include "../editor/spellcheck.h"
 #include "../editor/drawing.h"
 #include "../editor/equation.h"
 #include "../editor/image.h"
@@ -107,6 +109,12 @@ struct DocumentComponent : public afterhours::BaseComponent {
         images.removeImage(id);
     }
     
+    // Spell-check-as-you-type state (session-wide, not saved with the doc).
+    // The checker holds the user dictionary + ignore list; the cache holds
+    // the visible-lines-only squiggles, rebuilt when the buffer changes.
+    SpellChecker spellChecker;
+    SpellSquiggleCache spellSquiggles;
+
     // Drawings/shapes embedded in the document
     DrawingCollection drawings;
     

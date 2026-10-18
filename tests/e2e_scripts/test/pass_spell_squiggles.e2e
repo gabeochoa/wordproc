@@ -1,0 +1,10 @@
+# Test: Spell check as you type (red squiggles)
+# A document with a typo is flagged: the squiggle cache sees 1 error.
+# The screenshot captures the red wavy underline under "wrold".
+
+type "Hello wrold"
+wait_frames 12
+
+validate spell_error_count=1
+
+screenshot spell_squiggles

@@ -1,8 +1,9 @@
-# Test: Word Count dialog with gap-spaced button row
-# Validates the Word Count dialog opens and renders correctly
+# Test: Word Count dialog shows correct counts for a known document
+# "One two three." = 3 words, 14 chars (excludes newline), 1 paragraph,
+# 1 sentence. The dialog renders the same TextStats these validates read,
+# so opening it on this document proves the counts it displays.
 
-# Type some text
-type "Hello world this is a test"
+type "One two three."
 wait_frames 12
 
 # Open Word Count dialog via Tools menu
@@ -11,8 +12,12 @@ wait_frames 12
 menu_select "Word Count..."
 wait_frames 12
 
-# Validate dialog is open
+# Validate dialog is open and the counts it shows are correct
 validate dialog_open=WordCount
+validate word_count=3
+validate char_count=14
+validate paragraph_count=1
+validate sentence_count=1
 
-# Take screenshot showing dialog with gap-spaced buttons
-screenshot dialog_word_count_gap
+# Take screenshot showing the dialog
+screenshot dialog_word_count_counts

@@ -108,7 +108,9 @@ static void setupCallbacks(
         docComp.comments.clear();
         docComp.isDirty = false;
         docComp.filePath.clear();
-        
+        docComp.spellChecker.clearIgnoreList();
+        docComp.spellChecker.clearUserDictionary();
+
         // Reset settings
         Settings::get().reset();
     });
@@ -324,6 +326,20 @@ static void setupCallbacksEx(
             return "";
         }
         
+        // Spell-check properties (misspelled-word count, no suggestions:
+        // this mirrors what the squiggle cache flags, without the
+        // dictionary-scan cost of full suggestions).
+        if (prop == "spell_error_count") {
+            const auto& checker = docComp.spellChecker;
+            std::size_t count = 0;
+            for (const auto& [offset, word] :
+                 SpellChecker::extractWords(buffer.getText())) {
+                (void)offset;
+                if (!checker.isCorrect(word)) ++count;
+            }
+            return std::to_string(count);
+        }
+
         // Dialog properties
         if (prop == "dialog_open") {
             if (dialogState.showAboutDialog) return "About";
@@ -704,7 +720,13 @@ static void setupCallbacksEx(
         docComp.equations.clear();
         docComp.isDirty = false;
         docComp.filePath.clear();
-        
+
+        // Reset spell-check session state (ignore list / user dictionary
+        // must not leak between tests; the squiggle cache rechecks on
+        // the next version change).
+        docComp.spellChecker.clearIgnoreList();
+        docComp.spellChecker.clearUserDictionary();
+
         // Reset menu state
         dialogState.showAboutDialog = false;
         dialogState.showHelpWindow = false;

@@ -194,12 +194,31 @@ inline void renderDocumentTables(const std::vector<std::pair<std::size_t, Table>
 // Render the text buffer with caret and selection
 // Now supports per-line paragraph styles (H1-H6, Title, Subtitle)
 // showLineNumbers: if true, draws line numbers in a gutter on the left
+// Draw a red wavy underline from x1 to x2 at the given y (Word 95 squiggle).
+inline void drawSpellSquiggle(float x1, float x2, float waveY) {
+    const afterhours::Color red{255, 0, 0, 255};
+    for (float px = x1; px < x2; px += 4.0f) {
+        float midX = std::min(px + 2.0f, x2);
+        float endX = std::min(px + 4.0f, x2);
+        afterhours::draw_line(static_cast<int>(px), static_cast<int>(waveY),
+                              static_cast<int>(midX), static_cast<int>(waveY - 2.0f),
+                              red);
+        afterhours::draw_line(static_cast<int>(midX), static_cast<int>(waveY - 2.0f),
+                              static_cast<int>(endX), static_cast<int>(waveY), red);
+    }
+}
+
 inline void renderTextBuffer(const TextBuffer& buffer,
                              const LayoutComponent::Rect& textArea,
                              bool caretVisible, int baseFontSize, int baseLineHeight,
                              int scrollOffset, bool showLineNumbers = false,
                              float lineNumberGutterWidth = 50.0f,
-                             int tabWidth = 4, float zoomLevel = 1.0f) {
+                             int tabWidth = 4, float zoomLevel = 1.0f,
+                             const SpellSquiggleCache* spellCache = nullptr) {
+    // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
+    std::size_t squiggleIdx = 0;
+    const std::vector<SpellSquiggle>* squiggles =
+        spellCache ? &spellCache->squiggles : nullptr;
     std::size_t lineCount = buffer.lineCount();
     CaretPosition caret = buffer.caret();
     bool hasSelection = buffer.hasSelection();
@@ -478,6 +497,36 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
 
+        // Draw red squiggles under misspelled words (spell check as you type).
+        // Squiggle columns are raw-line coords; map through tab expansion to
+        // display columns. Drop-cap lines are skipped: the drop cap shifts
+        // `x` and strips the first char, so per-word x math would be wrong.
+        if (squiggles && !span.hasDropCap) {
+            while (squiggleIdx < squiggles->size() &&
+                   (*squiggles)[squiggleIdx].row < row) {
+                ++squiggleIdx;
+            }
+            float waveY = static_cast<float>(y + lineFontSize + 2);
+            while (squiggleIdx < squiggles->size() &&
+                   (*squiggles)[squiggleIdx].row == row) {
+                const SpellSquiggle& sq = (*squiggles)[squiggleIdx];
+                std::size_t dispStart = rawColumnToDisplayColumn(
+                    lineData, lineLen, sq.startCol, tabWidth);
+                std::size_t dispEnd = rawColumnToDisplayColumn(
+                    lineData, lineLen, sq.endCol, tabWidth);
+                dispStart = std::min(dispStart, displayLine.size());
+                dispEnd = std::min(std::max(dispEnd, dispStart), displayLine.size());
+                float x1 = static_cast<float>(x) +
+                           static_cast<float>(afterhours::graphics::measure_text(
+                               displayLine.substr(0, dispStart).c_str(), lineFontSize));
+                float x2 = static_cast<float>(x) +
+                           static_cast<float>(afterhours::graphics::measure_text(
+                               displayLine.substr(0, dispEnd).c_str(), lineFontSize));
+                if (x2 > x1) drawSpellSquiggle(x1, x2, waveY);
+                ++squiggleIdx;
+            }
+        }
+
         // Draw caret
         if (caretVisible && row == caret.row) {
             std::string beforeCaret =
@@ -662,6 +711,27 @@ struct EditorRenderSystem
         int lineHeight = fontSize + 4;
         LayoutComponent::Rect effectiveArea = layout::effectiveTextArea(layout);
 
+        // Refresh the spell-squiggle cache for the visible rows (union of
+        // both panes in split view). No-op when the buffer version and the
+        // visible range are unchanged, so this costs nothing per frame.
+        {
+            int visible = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
+            std::size_t firstRow = scroll.offset > 0
+                                       ? static_cast<std::size_t>(scroll.offset)
+                                       : 0;
+            std::size_t lastRow = firstRow + static_cast<std::size_t>(visible) + 1;
+            if (layout.splitViewEnabled) {
+                std::size_t secondFirst = scroll.secondaryOffset > 0
+                                              ? static_cast<std::size_t>(
+                                                    scroll.secondaryOffset)
+                                              : 0;
+                firstRow = std::min(firstRow, secondFirst);
+                lastRow = std::max(lastRow,
+                                   secondFirst + static_cast<std::size_t>(visible) + 1);
+            }
+            doc.spellSquiggles.update(doc.buffer, doc.spellChecker, firstRow, lastRow);
+        }
+
         if (layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
             LayoutComponent::Rect topArea = {effectiveArea.x, effectiveArea.y,
@@ -671,11 +741,11 @@ struct EditorRenderSystem
             renderTextBuffer(doc.buffer, topArea, caret.visible, fontSize,
                              lineHeight, scroll.offset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel);
+                             layout.zoomLevel, &doc.spellSquiggles);
             renderTextBuffer(doc.buffer, bottomArea, caret.visible, fontSize,
                              lineHeight, scroll.secondaryOffset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel);
+                             layout.zoomLevel, &doc.spellSquiggles);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -687,7 +757,7 @@ struct EditorRenderSystem
             renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
                              lineHeight, scroll.offset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel);
+                             layout.zoomLevel, &doc.spellSquiggles);
         }
 
         // === Draw Vertical Scroll Bar ===
