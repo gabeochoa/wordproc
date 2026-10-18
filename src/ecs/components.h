@@ -395,7 +395,7 @@ struct InputComponent : public afterhours::BaseComponent {
 // Component for toolbar state
 // Toolbar icon types for overlay rendering
 enum class ToolbarIcon {
-    None, New, Open, Save, Print,
+    None, New, Open, Save, Print, PrintPreview, Spelling,
     Cut, Copy, Paste, Undo, Redo,
     AlignLeft, AlignCenter, AlignRight, AlignJustify
 };

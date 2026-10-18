@@ -363,7 +363,26 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         trackTooltip(curX, btnY, "Print (Ctrl+P)");
         curX += buttonSize + buttonPadding;
-        
+
+        // Print Preview (File > Print Preview) — Word 95 Standard order:
+        // Print, Print Preview, Spelling, then Cut/Copy/Paste.
+        int previewBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, previewBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::PrintPreview).with_label("").with_debug_name("btn_print_preview"))) {
+            cmd::openPrintPreview(doc, layout);
+        }
+        trackTooltip(curX, btnY, "Print Preview");
+        curX += buttonSize + buttonPadding;
+
+        // Spelling (Tools > Spelling..., F7)
+        int spellingBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, spellingBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Spelling).with_label("").with_debug_name("btn_spelling"))) {
+            if (cache_.dialogs) cmd::openSpellingDialog(doc, *cache_.dialogs);
+        }
+        trackTooltip(curX, btnY, "Spelling (F7)");
+        curX += buttonSize + buttonPadding;
+
         // Separator (etched)
         drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
         btnId += 2;

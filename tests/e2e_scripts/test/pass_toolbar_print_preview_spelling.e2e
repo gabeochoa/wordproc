@@ -1,0 +1,21 @@
+# Test: Standard toolbar Print Preview + Spelling buttons (Word 95
+# Standard order) are wired: Print Preview opens preview mode,
+# Spelling opens the Spelling dialog.
+
+# Toolbar Print Preview button opens preview mode.
+click_ui btn_print_preview
+wait_frames 12
+validate preview_mode=true
+
+# Close from the preview toolbar, back to pageless.
+click_ui btn_preview_close
+wait_frames 12
+validate preview_mode=false
+
+# Toolbar Spelling button opens the Spelling dialog (F7 equivalent).
+click_ui btn_spelling
+wait_frames 12
+validate dialog_open=Spelling
+
+click_ui spell_close
+wait_frames 12

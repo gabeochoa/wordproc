@@ -766,7 +766,7 @@ static void setupCallbacksEx(
             if (!pcr) return "false";
             int winW = pcr->current_resolution.width;
             // Calculate toolbar width: buttons + separators + formatting bar dropdowns
-            int buttonCount = 9;   // New, Open, Save, Print, Cut, Copy, Paste, Undo, Redo
+            int buttonCount = 11;  // New, Open, Save, Print, Print Preview, Spelling, Cut, Copy, Paste, Undo, Redo
             int separatorCount = 3; // Between groups
             float toolbarWidth = static_cast<float>(
                 buttonCount * theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE + 
