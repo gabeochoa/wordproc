@@ -1,0 +1,15 @@
+# P0-11: title-bar X on a dirty document shows the save-changes
+# prompt; Cancel returns to the document, still dirty.
+# RUN INDIVIDUALLY, not in a batch: sibling quit scripts exit the process.
+type "draft"
+wait_frames 12
+validate is_dirty=true
+click_ui btn_close
+wait_frames 12
+validate dialog_open=QuitPrompt
+validate is_dirty=true
+click_ui quit_prompt_cancel
+wait_frames 12
+validate dialog_open=false
+validate text=draft
+screenshot p0_quit_prompt_cancel

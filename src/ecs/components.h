@@ -190,6 +190,13 @@ struct MenuComponent : public afterhours::BaseComponent {
 
 // Component for all dialog visibility and state (separated from menu bar)
 struct DialogState : public afterhours::BaseComponent {
+    // Quit flow: save-changes prompt (Yes/No/Cancel) and the terminal
+    // quit flag the main loop turns into request_quit.
+    bool showQuitPrompt = false;
+    bool quitRequested = false;
+    // Yes on the prompt with no file path opens Save As; quit once it saves.
+    bool quitAfterSave = false;
+
     // About / Help
     bool showAboutDialog = false;
     bool showHelpWindow = false;

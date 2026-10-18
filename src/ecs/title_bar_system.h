@@ -5,6 +5,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../ui/ah_win95_widgets.h"
+#include "document_commands.h"
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
 #include "../external.h"
@@ -98,14 +99,16 @@ struct TitleBarSystem : afterhours::System<UIContext<InputAction>> {
         // Register control button labels for E2E testing
         test_input::register_visible_text("X");
 
-        // Close button (rightmost)
+        // Close button (rightmost): quit via the shared quit flow —
+        // save-changes prompt when dirty, immediate quit when clean.
         float closeX = screenWidth - btnW - btnPad;
         if (button(ctx, mk(uiRoot, 9010),
             titleBarButton(closeX, btnY, btnW, btnH)
                 .with_label("X")
                 .with_debug_name("btn_close"))) {
-            // Request window close
-            // Set a flag that the main loop checks to close the window
+            if (cache_.dialogs) {
+                cmd::requestQuit(doc, *cache_.dialogs);
+            }
         }
 
         // Maximize button

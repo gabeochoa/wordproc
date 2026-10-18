@@ -1,0 +1,12 @@
+# P0-11: title-bar X on a dirty document, prompt, No discards and quits.
+# RUN INDIVIDUALLY, not in a batch: a quit ends the process.
+# The trailing validate must NEVER execute: if No works, the process
+# exits first (exit 0). If it is broken, the validate runs and fails.
+type "draft"
+wait_frames 12
+click_ui btn_close
+wait_frames 12
+validate dialog_open=QuitPrompt
+click_ui quit_prompt_no
+wait_frames 12
+validate quit_requested=false

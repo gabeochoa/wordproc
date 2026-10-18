@@ -37,6 +37,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     return;
                 }
                 if (label == "Exit") {
+                    cmd::requestQuit(doc, dialogs);
                     return;
                 }
             }

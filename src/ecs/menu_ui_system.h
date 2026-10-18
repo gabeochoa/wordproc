@@ -494,6 +494,74 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 "Wordproc v0.1\n\nA Windows 95 style word processor\nbuilt with Afterhours.",
                 "OK");
         }
+
+        // Save-changes prompt on quit (Win95: Yes / No / Cancel).
+        if (dialogs.showQuitPrompt) {
+            constexpr int QUIT_MODAL_ID = 50002;
+            auto quitResult = afterhours::modal(ctx, mk(entity, QUIT_MODAL_ID),
+                dialogs.showQuitPrompt,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(340), afterhours::ui::h720(150),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (quitResult) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(quitResult.ent(), 900),
+                                              "Wordproc", CONTENT_LAYER);
+
+                std::string docName = doc.filePath.empty()
+                    ? "Untitled"
+                    : doc.filePath.substr(doc.filePath.find_last_of("/\\") + 1);
+                div(ctx, mk(quitResult.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Save changes to " + docName + "?")
+                        .with_size(ComponentSize{percent(1.0f), h720(40)})
+                        .with_alignment(afterhours::ui::TextAlignment::Center)
+                        .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto quitButtonRow = div(ctx, mk(quitResult.ent(), 902),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+
+                if (quitButtonRow) {
+                    auto quitBtn = [&](int id, const char* label, const char* debug) {
+                        return button(ctx, mk(quitButtonRow.ent(), id),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name(debug)
+                                .with_label(label)
+                                .with_render_layer(CONTENT_LAYER));
+                    };
+                    if (quitBtn(0, "Yes", "quit_prompt_yes")) {
+                        dialogs.showQuitPrompt = false;
+                        if (doc.filePath.empty()) {
+                            // No path yet: Save As first, quit once it saves.
+                            menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
+                            dialogs.quitAfterSave = true;
+                        } else if (cmd::saveDocument(doc, layout, menu)) {
+                            dialogs.quitRequested = true;
+                        }
+                    }
+                    if (quitBtn(1, "No", "quit_prompt_no")) {
+                        dialogs.showQuitPrompt = false;
+                        dialogs.quitRequested = true;
+                    }
+                    if (quitBtn(2, "Cancel", "quit_prompt_cancel")) {
+                        dialogs.showQuitPrompt = false;
+                    }
+                }
+            }
+        }
         
         // Word Count dialog - Win95 shell: rows of label + right-aligned value
         if (dialogs.showWordCountDialog) {

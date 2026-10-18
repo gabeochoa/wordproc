@@ -83,6 +83,7 @@ ecs::DocumentComponent* docComp = nullptr;
 ecs::MenuComponent* menuComp = nullptr;
 ecs::LayoutComponent* layoutComp = nullptr;
 ecs::ToolbarComponent* toolbarComp = nullptr;
+ecs::DialogState* dialogState = nullptr;
 ecs::TestConfigComponent* testComp = nullptr;
 ecs::ScrollComponent* scrollComp = nullptr;
 e2e::ScriptRunner* scriptRunner = nullptr;
@@ -217,6 +218,7 @@ static void app_init() {
 
     // Dialog state (separated from menu bar component)
     auto& dialogState = editorEntity.addComponent<ecs::DialogState>();
+    app_state::dialogState = &dialogState;
 
     // Shared action map for all input systems
     editorEntity.addComponent<ecs::InputComponent>();
@@ -394,6 +396,21 @@ static void app_init() {
 static void app_frame() {
     if (app_state::earlyExit) return;
 
+    // Quit requested (title-bar X / File > Exit, incl. after the save
+    // prompt). Checked before systems run so a quit pre-empts any
+    // further script step: quit is terminal and observable via the
+    // process exit / returnCode, not via another E2E command.
+    if (app_state::dialogState && app_state::dialogState->quitRequested) {
+        auto* runner = app_state::scriptRunner;
+        app_state::returnCode = (runner && runner->hasFailed()) ? 1 : 0;
+        static bool quitSent = false;
+        if (!quitSent) {
+            quitSent = true;
+            afterhours::graphics::request_quit();
+        }
+        return;
+    }
+
     // Guard against re-entrant frame calls.  On macOS, blocking calls like
     // [NSOpenPanel runModal] spin a nested run-loop that can fire the display
     // link, which calls app_frame() again while an ECS system is still
@@ -429,6 +446,13 @@ static void app_frame() {
                 suggested, {".wpdoc", ".txt"});
             if (!savePath.empty()) {
                 ecs::cmd::saveDocumentAs(doc, layout, menu, savePath);
+                // Yes on the quit prompt with no path: quit once it saves.
+                if (app_state::dialogState && app_state::dialogState->quitAfterSave) {
+                    app_state::dialogState->quitRequested = true;
+                }
+            }
+            if (app_state::dialogState) {
+                app_state::dialogState->quitAfterSave = false;
             }
         }
     }
@@ -726,6 +750,10 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < maxFrames; i++) {
             app_frame();
             if (app_state::scriptRunner && app_state::scriptRunner->isFinished())
+                break;
+            // Quit requested (title-bar X / File > Exit): app_frame
+            // already called request_quit; stop the manual loop.
+            if (app_state::dialogState && app_state::dialogState->quitRequested)
                 break;
         }
         app_cleanup();

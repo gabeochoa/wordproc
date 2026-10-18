@@ -1,0 +1,11 @@
+# P0-11: title-bar X on a clean document quits immediately.
+# RUN INDIVIDUALLY, not in a batch: a quit ends the process.
+# The trailing validate must NEVER execute: if quit works, the process
+# exits first (exit 0). If quit is broken, the validate runs and fails
+# (quit_requested is true).
+# Leading wait: a click as the very first command is lost (runner
+# first-frame quirk); every other script starts with a wait/type too.
+wait_frames 6
+click_ui btn_close
+wait_frames 12
+validate quit_requested=false

@@ -210,6 +210,7 @@ static void setupCallbacksEx(
         if (prop == "superscript") return style.superscript ? "true" : "false";
         if (prop == "subscript") return style.subscript ? "true" : "false";
         if (prop == "scroll_offset") return std::to_string(scrollComp.offset);
+        if (prop == "quit_requested") return dialogState.quitRequested ? "true" : "false";
 
         // Text statistics
         if (prop == "word_count") {
@@ -346,6 +347,7 @@ static void setupCallbacksEx(
 
         // Dialog properties
         if (prop == "dialog_open") {
+            if (dialogState.showQuitPrompt) return "QuitPrompt";
             if (dialogState.showAboutDialog) return "About";
             if (dialogState.showFindDialog) return "Find";
             if (dialogState.showPageSetup) return "PageSetup";
@@ -734,6 +736,9 @@ static void setupCallbacksEx(
         docComp.spellChecker.clearUserDictionary();
 
         // Reset menu state
+        dialogState.showQuitPrompt = false;
+        dialogState.quitRequested = false;
+        dialogState.quitAfterSave = false;
         dialogState.showAboutDialog = false;
         dialogState.showHelpWindow = false;
         dialogState.showFindDialog = false;

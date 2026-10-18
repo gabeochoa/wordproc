@@ -14,6 +14,17 @@
 namespace ecs {
 namespace cmd {
 
+// Begin the quit flow (title-bar X, File > Exit): prompt when the
+// document is dirty, quit immediately when clean. The main loop turns
+// DialogState::quitRequested into request_quit.
+inline void requestQuit(DocumentComponent& doc, DialogState& dialogs) {
+    if (doc.isDirty) {
+        dialogs.showQuitPrompt = true;
+    } else {
+        dialogs.quitRequested = true;
+    }
+}
+
 // --- Revision tracking helpers (moved here as single source of truth) ---
 
 inline void recordInsertRevision(DocumentComponent& doc, std::size_t offset,

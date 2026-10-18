@@ -1,0 +1,18 @@
+# P0-11: title-bar X on a dirty document, prompt, Yes saves via the
+# existing save flow and quits. The document is /tmp/quit_yes_test.txt
+# (pre-seeded by the operator; the save must append " added" to it).
+# RUN INDIVIDUALLY, not in a batch: a quit ends the process.
+# The trailing validate must NEVER execute: if Yes works, the process
+# exits first (exit 0). If it is broken, the validate runs and fails.
+open_file /tmp/quit_yes_test.txt
+wait_frames 12
+validate file_path=/tmp/quit_yes_test.txt
+type " added"
+wait_frames 12
+validate is_dirty=true
+click_ui btn_close
+wait_frames 12
+validate dialog_open=QuitPrompt
+click_ui quit_prompt_yes
+wait_frames 12
+validate quit_requested=false
