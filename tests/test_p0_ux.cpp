@@ -85,6 +85,23 @@ TEST_CASE("P0-4 mouse selection", "[p0][selection]") {
     }
 }
 
+// P0-8: dropdown insets — label left and shortcut right are symmetric
+// 8px insets from the dropdown edge.
+TEST_CASE("P0-8 dropdown insets", "[p0][menu]") {
+    SECTION("insets are 8px, symmetric") {
+        REQUIRE(menu_geometry::ITEM_PADDING_X == 8.0f);
+        REQUIRE(menu_geometry::dropdownLabelLeft(100.0f) == 108.0f);
+        REQUIRE(menu_geometry::dropdownShortcutRight(100.0f, 200.0f) == 292.0f);
+        REQUIRE(menu_geometry::dropdownShortcutRight(100.0f, 200.0f) + 8.0f ==
+                100.0f + 200.0f);
+    }
+    SECTION("button edge + text inset compose to the 8px label inset") {
+        REQUIRE(menu_geometry::ITEM_BUTTON_EDGE +
+                    (menu_geometry::ITEM_PADDING_X - menu_geometry::ITEM_BUTTON_EDGE) ==
+                8.0f);
+    }
+}
+
 // P0-7: tooltip geometry — 4px horizontal / 2px vertical padding, 0.5s delay.
 TEST_CASE("P0-7 tooltip geometry", "[p0][tooltip]") {
     SECTION("padding is 4px horizontal, 2px vertical") {

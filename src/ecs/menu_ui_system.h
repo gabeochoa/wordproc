@@ -323,7 +323,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     auto textColor = !item.enabled ? toAhColor(theme::MENU_DISABLED) :
                                      hovered ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT);
                     
-                    // Button with left-aligned label
+                    // Button with left-aligned label. The button sits
+                    // ITEM_BUTTON_EDGE inside the dropdown; text_inset
+                    // makes up the rest so the label starts exactly
+                    // ITEM_PADDING_X (8px) from the dropdown edge.
                     auto itemResult = button(ctx, mk(entity, itemId),
                         ComponentConfig{}
                             .with_debug_name("item_" + item.label)
@@ -335,16 +338,23 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_custom_text_color(textColor)
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_justify_content(afterhours::ui::JustifyContent::Center)
+                            .with_text_inset(menu_geometry::ITEM_PADDING_X -
+                                                 menu_geometry::ITEM_BUTTON_EDGE,
+                                             0.0f)
                             .with_roundness(0.0f)
                             .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_custom_hover_bg(toAhColor(theme::MENU_HOVER))
                             .with_render_layer(51));
-                    
-                    // Shortcut label: separate div positioned at right edge of item
+
+                    // Shortcut label: right-aligned, right edge exactly
+                    // ITEM_PADDING_X (8px) from the dropdown edge —
+                    // symmetric with the label's left inset.
                     if (!item.shortcut.empty()) {
                         float shortcutWidth = static_cast<float>(
-                            theme::MeasureUIText(item.shortcut.c_str(), 14) + 8);
-                        float shortcutX = dropdownX + 2.0f + (maxWidth - 4.0f) - shortcutWidth;
+                            theme::MeasureUIText(item.shortcut.c_str(), 14) + 2);
+                        float shortcutX = menu_geometry::dropdownShortcutRight(
+                                              dropdownX, maxWidth) -
+                                          shortcutWidth;
                         div(ctx, mk(entity, 30000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx)),
                             ComponentConfig{}
                                 .with_label(item.shortcut)

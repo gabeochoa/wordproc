@@ -21,6 +21,19 @@ inline float headerWidth(float textWidth, float scaledPaddingX) {
 // gutter mirrors it so label and shortcut insets are symmetric.
 inline constexpr float ITEM_PADDING_X = 8.0f;
 
+// Dropdown item buttons sit 2px inside the dropdown edge so the hover
+// background never paints over the container's 1px bevel border.
+inline constexpr float ITEM_BUTTON_EDGE = 2.0f;
+
+// Label left edge / shortcut right edge inside a dropdown: symmetric
+// ~8px insets from the dropdown edge.
+inline float dropdownLabelLeft(float dropdownX) {
+    return dropdownX + ITEM_PADDING_X;
+}
+inline float dropdownShortcutRight(float dropdownX, float maxWidth) {
+    return dropdownX + maxWidth - ITEM_PADDING_X;
+}
+
 // Dropdown width: label + shortcut + insets, capped (see File menu cap).
 inline float dropdownWidth(float labelWidth, float shortcutWidth,
                            float scaledPaddingX, float maxWidth) {
