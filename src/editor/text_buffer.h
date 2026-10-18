@@ -182,6 +182,12 @@ class TextBuffer {
     void updateSelectionToCaret();
     void selectAll();
 
+    // Select the word containing pos (double-click). If pos is on
+    // whitespace/punctuation, just places the caret and clears selection.
+    void selectWordAt(CaretPosition pos);
+    // Select the whole line containing pos (triple-click).
+    void selectParagraphAt(CaretPosition pos);
+
     void insertChar(char ch);
     void insertText(const std::string& text);
     void setText(const std::string& text);

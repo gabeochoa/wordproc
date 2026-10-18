@@ -427,6 +427,57 @@ struct HandleSetFindTermCommand : System<testing::PendingE2ECommand> {
 // (An app handler registered after the builtins would never see the
 // command anyway: the builtin consumes it first.)
 
+// Handle 'hold_key SHIFT|CTRL|ALT|SUPER' - holds a modifier key down until
+// 'release_key'. Unlike the builtin 'hold' (UI action names), this sets
+// synthetic key state, so systems polling is_key_down (e.g. shift-click
+// selection) see it.
+struct HandleHoldKeyCommand : System<testing::PendingE2ECommand> {
+  static bool parseModifier(const std::string& name, int& key) {
+    if (name == "SHIFT" || name == "LEFT_SHIFT") { key = keys::LEFT_SHIFT; return true; }
+    if (name == "RIGHT_SHIFT") { key = keys::RIGHT_SHIFT; return true; }
+    if (name == "CTRL" || name == "LEFT_CONTROL") { key = keys::LEFT_CONTROL; return true; }
+    if (name == "ALT" || name == "LEFT_ALT") { key = keys::LEFT_ALT; return true; }
+    if (name == "SUPER" || name == "LEFT_SUPER") { key = keys::LEFT_SUPER; return true; }
+    return false;
+  }
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("hold_key"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("hold_key requires a modifier name");
+      return;
+    }
+    int key = 0;
+    if (!parseModifier(cmd.arg(0), key)) {
+      cmd.fail("hold_key unknown modifier: " + cmd.arg(0));
+      return;
+    }
+    testing::input_injector::set_key_held(key);
+    cmd.consume();
+  }
+};
+
+struct HandleReleaseKeyCommand : System<testing::PendingE2ECommand> {
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("release_key"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("release_key requires a modifier name");
+      return;
+    }
+    int key = 0;
+    if (!HandleHoldKeyCommand::parseModifier(cmd.arg(0), key)) {
+      cmd.fail("release_key unknown modifier: " + cmd.arg(0));
+      return;
+    }
+    testing::input_injector::set_key_up(key);
+    cmd.consume();
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -475,6 +526,9 @@ inline void register_app_commands(
 
   auto mouse_up = std::make_unique<HandleMouseUpCommand>();
   sm.register_update_system(std::move(mouse_up));
+
+  sm.register_update_system(std::make_unique<HandleHoldKeyCommand>());
+  sm.register_update_system(std::make_unique<HandleReleaseKeyCommand>());
 
   auto load_tmpl = std::make_unique<HandleLoadTemplateCommand>();
   load_tmpl->doc_comp = doc_comp;

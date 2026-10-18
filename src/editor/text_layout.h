@@ -2,11 +2,28 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "text_buffer.h"
+
+// Hit testing: caret column for a pixel X inside a line. `measure` maps a
+// line prefix to its pixel width (callers pass the real font measure;
+// tests pass a fixed-width stand-in). The caret snaps to the nearest
+// character boundary, rounding up on an exact tie. Click-only cost.
+inline std::size_t hitTestColumn(const std::string& line, float xWithinText,
+                                 const std::function<float(const std::string&)>& measure) {
+    if (xWithinText <= 0.0f || line.empty()) return 0;
+    float prevW = 0.0f;
+    for (std::size_t col = 1; col <= line.size(); ++col) {
+        float w = measure(line.substr(0, col));
+        if (xWithinText < (prevW + w) / 2.0f) return col - 1;
+        prevW = w;
+    }
+    return line.size();
+}
 
 // SoA layout: WrappedLine stores spans (offsets) rather than copied strings
 // This avoids string allocations during layout computation

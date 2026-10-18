@@ -1,0 +1,79 @@
+# P0-4: mouse selection — click places caret, shift-click extends,
+# double-click selects word, triple-click selects paragraph, drag selects,
+# typing replaces the selection, drag past the bottom edge auto-scrolls.
+# Text starts at x=11,y=136 (8px padding); row 0 center y=146.
+# Calibrated: x=12 -> col 0, x=60 -> col 8 (in "world"), x=100 -> col 15.
+
+type "hello world foo"
+wait_frames 12
+validate has_selection=false
+
+# Plain click places the caret, no selection.
+# mouse_down/mouse_up (not click_text: document text is raw-drawn, not a
+# UI component, so it has no clickable label).
+mouse_down 12 146
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_col=0
+validate has_selection=false
+
+# Shift-click extends to end of line.
+hold_key SHIFT
+wait_frames 3
+mouse_down 100 146
+wait_frames 2
+mouse_up
+wait_frames 6
+release_key SHIFT
+wait_frames 6
+validate has_selection=true
+validate selected_text=Hello world foo
+
+# Typing replaces the selection.
+type "X"
+wait_frames 6
+validate text=X
+
+# Reset to a full line, then double-click the word "world".
+key CTRL+A
+wait_frames 6
+type "hello world foo"
+wait_frames 6
+double_click 60 146
+wait_frames 12
+validate has_selection=true
+validate selected_text=world
+
+# Triple-click selects the paragraph (whole line).
+# ("Hello" — AutoCorrect capitalizes the sentence start.)
+triple_click 60 146
+wait_frames 12
+validate has_selection=true
+validate selected_text=Hello world foo
+
+# Drag from line start to line end selects the line.
+drag_to 12 146 100 146
+wait_frames 6
+validate has_selection=true
+validate selected_text=Hello world foo
+
+# Typing replaces the drag selection.
+type "Y"
+wait_frames 6
+validate text=Y
+
+# Drag past the bottom edge auto-scrolls.
+# Final offset 3 = 1 line from the drag auto-scroll plus 2 from the
+# caret-visibility snap (drag ends with the caret on row 29).
+open_file test_files/public_domain/war_and_peace.txt
+wait_frames 30
+key CTRL+UP
+wait_frames 12
+validate scroll_offset=0
+drag_to 100 200 100 800
+wait_frames 6
+validate scroll_offset=3
+validate has_selection=true
+
+screenshot p0_mouse_selection

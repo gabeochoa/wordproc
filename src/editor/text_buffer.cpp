@@ -135,6 +135,45 @@ void TextBuffer::selectAll() {
     caret_ = selection_end_;
 }
 
+void TextBuffer::selectWordAt(CaretPosition pos) {
+    if (pos.row >= line_spans_.size()) return;
+    std::string line = lineString(pos.row);
+    auto isWordChar = [](char ch) {
+        return std::isalpha(static_cast<unsigned char>(ch)) || ch == '\'';
+    };
+    // Clicking past end-of-line is not on a word: caret only.
+    if (line.empty() || pos.column > line.size()) {
+        setCaret(pos);
+        clearSelection();
+        return;
+    }
+    std::size_t col = std::min(pos.column, line.size());
+    // Caret at end of line: the char before it is the candidate.
+    std::size_t at = col < line.size() ? col : (line.empty() ? 0 : line.size() - 1);
+    if (!isWordChar(line[at])) {
+        setCaret(pos);
+        clearSelection();
+        return;
+    }
+    std::size_t start = at;
+    while (start > 0 && isWordChar(line[start - 1])) --start;
+    std::size_t end = at;
+    while (end < line.size() && isWordChar(line[end])) ++end;
+    has_selection_ = true;
+    selection_anchor_ = {pos.row, start};
+    selection_end_ = {pos.row, end};
+    caret_ = selection_end_;
+}
+
+void TextBuffer::selectParagraphAt(CaretPosition pos) {
+    if (pos.row >= line_spans_.size()) return;
+    std::size_t len = line_spans_[pos.row].length;
+    has_selection_ = true;
+    selection_anchor_ = {pos.row, 0};
+    selection_end_ = {pos.row, len};
+    caret_ = selection_end_;
+}
+
 std::string TextBuffer::getSelectedText() const {
     if (!has_selection_) {
         return "";
