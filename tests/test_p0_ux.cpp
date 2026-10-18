@@ -13,7 +13,7 @@
 // dropping padding) breaks headerWidth's contract here.
 TEST_CASE("P0-2 menu-bar header padding", "[p0][menu]") {
     SECTION("padding is 7px per side") {
-        REQUIRE(menu_geometry::HEADER_PADDING_X == 7.0f);
+        REQUIRE(menu_geometry::HEADER_PADDING_X == 6.0f);  // 6-8px Win95 range (was 7, tightened 2026-10-18)
     }
     SECTION("header width is label plus both paddings") {
         REQUIRE(menu_geometry::headerWidth(100.0f, 7.0f) == 114.0f);

@@ -77,3 +77,15 @@ tooltip 9/10, shortcut inset 8.5/10, File-menu width/ellipsis 8/10.
 menu-bar File lacks the Word app icon/padding and labels sit in boxed
 separators; MRU entries read "Recent: <unix path>" instead of Word 95's
 numbered filenames — queued with the chrome batch.
+
+## 2026-10-18 — Batch 2 (ruler, paged page, Window menu) + menu-bar inset
+
+Round 1 scores: menubar inset 6/10 (symmetric but overspaced, open state
+wrong), ruler 5/10 (scale mismatch, black markers), paged page 5/10 (scale,
+toast), Window menu 4/10 (disabled doc entry).
+Fix round (87094e3 one scale source, 547f056 beveled markers, 2f78765
+status-bar mode flash, 168ab11 Window menu, 570b714 visible √ checkmark —
+Roboto has no U+2713 glyph): menubar 8.5 READS, ruler 8 READS (page
+358px = 8.5in × 42ppi, counted), Window 8.5 READS; paged page 6/10 —
+text not scaled with page zoom + margin boundary guides shown by
+default. Round 2 dispatched for those two.
