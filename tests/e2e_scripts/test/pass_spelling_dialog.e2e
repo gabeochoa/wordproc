@@ -1,7 +1,8 @@
 # Test: Tools > Spelling... dialog, Change to first suggestion
-# "wrold" is misspelled; the engine's first suggestion for it is "hold"
-# (edit-distance ranking, pinned by unit test). Clicking that suggestion
-# then Change replaces the typo: "The wrold fox" -> "The hold fox".
+# "wrold" is misspelled; the engine's first suggestion for it is "world"
+# (Damerau ranking: one adjacent transposition, pinned by unit test).
+# Clicking that suggestion then Change replaces the typo:
+# "The wrold fox" -> "The world fox".
 
 type "The wrold fox"
 wait_frames 12
@@ -13,13 +14,13 @@ wait_frames 12
 
 validate dialog_open=Spelling
 
-# Click the first suggestion ("hold"), then Change
-click_ui spell_suggestion_hold
+# Click the first suggestion ("world"), then Change
+click_ui spell_suggestion_world
 wait_frames 12
 click_ui spell_change
 wait_frames 12
 
-validate text=The hold fox
+validate text=The world fox
 
 click_ui spell_close
 wait_frames 12

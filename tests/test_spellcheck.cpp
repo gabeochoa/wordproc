@@ -17,6 +17,16 @@ TEST_CASE("SpellChecker - Basic word checking", "[spellcheck]") {
         REQUIRE(checker.isCorrect("file"));
     }
 
+    SECTION("Added common words are correct (Batch 1 Round 2)") {
+        REQUIRE(checker.isCorrect("test"));
+        REQUIRE(checker.isCorrect("example"));
+        REQUIRE(checker.isCorrect("paper"));
+        REQUIRE(checker.isCorrect("group"));
+        REQUIRE(checker.isCorrect("oil"));
+        REQUIRE(checker.isCorrect("church"));
+        REQUIRE(checker.isCorrect("family"));
+    }
+
     SECTION("Case insensitive checking") {
         REQUIRE(checker.isCorrect("The"));
         REQUIRE(checker.isCorrect("THE"));
@@ -67,11 +77,11 @@ TEST_CASE("SpellChecker - Suggestions", "[spellcheck]") {
 
     SECTION("Suggestions for transposition errors") {
         auto suggestions = checker.getSuggestions("wrold");
-        // wrold -> world is edit distance 2 (swap r and o)
-        // Should have some suggestions
+        // wrold -> world is Damerau distance 1 (one adjacent transposition),
+        // so "world" must rank first; plain Levenshtein charged 2 and
+        // ranked "hold" first instead.
         REQUIRE_FALSE(suggestions.empty());
-        // Verify edit distance between wrold and world is reasonable
-        // The exact suggestion depends on dictionary contents
+        REQUIRE(suggestions[0] == "world");
     }
 
     SECTION("Suggestions for missing letter") {

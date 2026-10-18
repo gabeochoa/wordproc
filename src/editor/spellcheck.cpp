@@ -116,10 +116,28 @@ bool SpellChecker::isCorrect(const std::string& word) const {
 
 std::size_t SpellChecker::editDistance(const std::string& a,
                                        const std::string& b) {
-    const std::size_t m = a.size();
-    const std::size_t n = b.size();
+    // Damerau-Levenshtein, optimal string alignment variant: an adjacent
+    // transposition costs 1 edit, so "wrold" -> "world" is distance 1
+    // (plain Levenshtein charges 2) and ranks first among suggestions.
+    // Case-insensitive: compare lowercased copies.
+    std::string lowerA;
+    lowerA.reserve(a.size());
+    for (char ch : a) {
+        lowerA += static_cast<char>(
+            std::tolower(static_cast<unsigned char>(ch)));
+    }
+    std::string lowerB;
+    lowerB.reserve(b.size());
+    for (char ch : b) {
+        lowerB += static_cast<char>(
+            std::tolower(static_cast<unsigned char>(ch)));
+    }
 
-    // Use two rows instead of full matrix for space efficiency
+    const std::size_t m = lowerA.size();
+    const std::size_t n = lowerB.size();
+
+    // Three rows: the transposition case reads d[i-2][j-2].
+    std::vector<std::size_t> prev2(n + 1, 0);
     std::vector<std::size_t> prev(n + 1);
     std::vector<std::size_t> curr(n + 1);
 
@@ -131,8 +149,7 @@ std::size_t SpellChecker::editDistance(const std::string& a,
     for (std::size_t i = 1; i <= m; ++i) {
         curr[0] = i;
         for (std::size_t j = 1; j <= n; ++j) {
-            if (std::tolower(static_cast<unsigned char>(a[i - 1])) ==
-                std::tolower(static_cast<unsigned char>(b[j - 1]))) {
+            if (lowerA[i - 1] == lowerB[j - 1]) {
                 curr[j] = prev[j - 1];
             } else {
                 curr[j] = 1 + std::min({prev[j - 1],  // substitution
@@ -140,7 +157,12 @@ std::size_t SpellChecker::editDistance(const std::string& a,
                                         curr[j - 1]   // insertion
                                        });
             }
+            if (i > 1 && j > 1 && lowerA[i - 1] == lowerB[j - 2] &&
+                lowerA[i - 2] == lowerB[j - 1]) {
+                curr[j] = std::min(curr[j], prev2[j - 2] + 1);
+            }
         }
+        std::swap(prev2, prev);
         std::swap(prev, curr);
     }
 

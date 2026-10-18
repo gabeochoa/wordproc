@@ -53,13 +53,14 @@ TEST_CASE("findNextSpellingError - Finds errors from an offset",
         }
     }
 
-    SECTION("First suggestion for 'wrold' is 'hold' (pinned: E2E relies on it)") {
-        // Edit-distance ranking puts "hold" first; the Spelling dialog
-        // E2E clicks the first suggestion, so this pins that coupling.
+    SECTION("First suggestion for 'wrold' is 'world' (pinned: E2E relies on it)") {
+        // Damerau ranking puts "world" first (one adjacent transposition);
+        // the Spelling dialog E2E clicks the first suggestion, so this
+        // pins that coupling.
         auto error = findNextSpellingError(checker, "hello wrold", 0);
         REQUIRE(error.has_value());
         REQUIRE_FALSE(error->suggestions.empty());
-        REQUIRE(error->suggestions[0] == "hold");
+        REQUIRE(error->suggestions[0] == "world");
     }
 }
 

@@ -77,7 +77,8 @@ class SpellChecker {
     static std::string normalizeWord(const std::string& word);
 
    private:
-    // Calculate Levenshtein edit distance between two words
+    // Calculate Damerau-Levenshtein edit distance between two words
+    // (optimal string alignment: an adjacent transposition costs 1)
     static std::size_t editDistance(const std::string& a, const std::string& b);
 
     // Initialize the built-in dictionary

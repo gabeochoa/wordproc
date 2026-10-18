@@ -1,5 +1,5 @@
 # Test: Spelling dialog Change All replaces every instance
-# First suggestion for "wrold" is "hold"; Change All replaces both
+# First suggestion for "wrold" is "world"; Change All replaces both
 # instances in one undo step.
 
 type "The wrold wrold fox"
@@ -12,12 +12,12 @@ wait_frames 12
 
 validate dialog_open=Spelling
 
-click_ui spell_suggestion_hold
+click_ui spell_suggestion_world
 wait_frames 12
 click_ui spell_change_all
 wait_frames 12
 
-validate text=The hold hold fox
+validate text=The world world fox
 
 click_ui spell_close
 wait_frames 12
