@@ -11,6 +11,8 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "text_buffer.h"
 
@@ -46,6 +48,10 @@ class AutoCorrect {
                                 std::size_t wordStart);
 
     static const std::unordered_map<std::string, std::string>& table();
+
+    // The replacement table as (Replace, With) pairs sorted by the
+    // Replace key, for the AutoCorrect dialog's read-only list.
+    static std::vector<std::pair<std::string, std::string>> entries();
 
    private:
     static constexpr std::size_t kMaxLookback = 4096;

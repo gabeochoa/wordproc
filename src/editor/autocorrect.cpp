@@ -1,5 +1,6 @@
 #include "autocorrect.h"
 
+#include <algorithm>
 #include <cctype>
 
 namespace {
@@ -43,6 +44,14 @@ const std::unordered_map<std::string, std::string>& AutoCorrect::table() {
         {"isnt", "isn't"},    {"i", "I"},
     };
     return kTable;
+}
+
+std::vector<std::pair<std::string, std::string>> AutoCorrect::entries() {
+    std::vector<std::pair<std::string, std::string>> result(table().begin(),
+                                                             table().end());
+    std::sort(result.begin(), result.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+    return result;
 }
 
 std::optional<std::string> AutoCorrect::lookup(const std::string& word) const {

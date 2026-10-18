@@ -5,7 +5,9 @@
 // Used as drop-in replacements for win95_widgets.h functions
 // This is the CANONICAL source for all Win95 widget configs.
 
+#include <afterhours/src/plugins/modal.h>
 #include <afterhours/src/plugins/ui.h>
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -29,6 +31,8 @@ inline ComponentConfig win95ButtonStyle(bool enabled = true, bool pressed = fals
         .with_roundness(0.0f)
         .with_custom_background(bg)
         .with_custom_text_color(textColor)
+        .with_bevel(afterhours::ui::BevelStyle::Raised,
+                    ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 2.0f)
         .with_cursor(CursorType::Pointer)
         .with_padding(Padding{
             .top = pixels(4),
@@ -200,6 +204,86 @@ inline bool toolbarButton(
         .with_debug_name("ah_toolbar_btn_" + label);
 
     return button(ctx, mk(parent, id), config) && enabled;
+}
+
+// ============================================================
+// Win95 dialog shell (Word 95 dialogs: Spelling, AutoCorrect,
+// Word Count). Square BUTTON_FACE panel, raised bevel, no
+// backdrop dimming. The modal title stays empty so the library
+// does not emit its own rounded header; each dialog draws its
+// own navy title bar as the first content row via
+// win95DialogTitleBar().
+// ============================================================
+inline afterhours::ModalConfig win95DialogConfig(
+    afterhours::ui::Size width, afterhours::ui::Size height,
+    float screenWidth, float screenHeight) {
+    // Resolve the panel size the same way modal_impl does: a
+    // ScreenPercent size (h720/w1280) scales with screen height.
+    auto resolve = [](afterhours::ui::Size size, float screenWidth,
+                      float screenHeight) {
+        switch (size.dim) {
+            case afterhours::ui::Dim::Pixels: return size.value;
+            case afterhours::ui::Dim::ScreenPercent:
+                return size.value * screenHeight;
+            case afterhours::ui::Dim::Percent: return size.value * screenWidth;
+            default: return size.value;
+        }
+    };
+    float widthPx = resolve(width, screenWidth, screenHeight);
+    float heightPx = resolve(height, screenWidth, screenHeight);
+    float x = std::max(0.0f, (screenWidth - widthPx) / 2.0f);
+    float y = std::max(0.0f, (screenHeight - heightPx) / 2.0f);
+    return afterhours::ModalConfig{}
+        .with_size(width, height)
+        .with_backdrop_color(afterhours::Color{0, 0, 0, 0})
+        .with_title("")
+        .with_show_close_button(false)
+        .with_panel(ComponentConfig{}
+                        .with_size(ComponentSize{pixels(widthPx), pixels(heightPx)})
+                        .with_absolute_position(x, y)
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_no_wrap()
+                        .with_roundness(0.0f)
+                        .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                        .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                    ui_imm::win95_colors::BORDER_LIGHT,
+                                    ui_imm::win95_colors::BORDER_DARK, 2.0f)
+                        .with_padding(Padding::all(pixels(4)))
+                        .with_debug_name("win95_dialog_panel"));
+}
+
+// Navy caption bar for a Win95 dialog: white bold small title on
+// TITLE_BAR blue. `epPair` is the dialog's content parent, e.g.
+// mk(result.ent(), <unique id>).
+template<typename UIContextT>
+inline auto win95DialogTitleBar(UIContextT& ctx,
+                                afterhours::ui::imm::EntityParent epPair,
+                                const std::string& title, int renderLayer) {
+    return div(ctx, epPair,
+               ComponentConfig{}
+                   .with_label(title)
+                   .with_size(ComponentSize{percent(1.0f), afterhours::ui::h720(20)})
+                   .with_custom_background(ui_imm::win95_colors::TITLE_BAR)
+                   .with_custom_text_color(ui_imm::win95_colors::TEXT_WHITE)
+                   .with_font_weight(afterhours::colors::FontWeight::Bold)
+                   .with_font_size(afterhours::ui::h720(14))
+                   .with_roundness(0.0f)
+                   .with_alignment(afterhours::ui::TextAlignment::Left)
+                   .with_padding(Padding{.left = pixels(4)})
+                   .with_render_layer(renderLayer)
+                   .with_debug_name("win95_dialog_title"));
+}
+
+// Sunken white field / list box (Not-in-dictionary field,
+// Suggestions list, AutoCorrect Replace list).
+inline ComponentConfig win95SunkenStyle() {
+    return ComponentConfig{}
+        .with_roundness(0.0f)
+        .with_custom_background(ui_imm::win95_colors::TEXT_AREA)
+        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+        .with_bevel(afterhours::ui::BevelStyle::Sunken,
+                    ui_imm::win95_colors::BORDER_LIGHT,
+                    ui_imm::win95_colors::BORDER_DARK, 1.0f);
 }
 
 // ============================================================

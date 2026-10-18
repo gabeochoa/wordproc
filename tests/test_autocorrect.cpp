@@ -53,6 +53,24 @@ TEST_CASE("AutoCorrect - Replacement table", "[autocorrect]") {
     }
 }
 
+TEST_CASE("AutoCorrect::entries - Sorted Replace/With pairs",
+          "[autocorrect]") {
+    auto entries = AutoCorrect::entries();
+    REQUIRE(entries.size() == AutoCorrect::table().size());
+    REQUIRE_FALSE(entries.empty());
+    for (std::size_t i = 1; i < entries.size(); ++i) {
+        REQUIRE(entries[i - 1].first < entries[i].first);
+    }
+    bool foundTeh = false;
+    for (const auto& [from, to] : entries) {
+        if (from == "teh") {
+            REQUIRE(to == "the");
+            foundTeh = true;
+        }
+    }
+    REQUIRE(foundTeh);
+}
+
 TEST_CASE("AutoCorrect - Case preservation", "[autocorrect]") {
     AutoCorrect ac;
 
