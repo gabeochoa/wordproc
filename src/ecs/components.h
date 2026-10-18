@@ -180,6 +180,9 @@ struct MenuComponent : public afterhours::BaseComponent {
     // Label of the Window menu's current-document item ("1 <name>"),
     // tracked so MenuUISystem rebuilds the bar when the file changes.
     std::string windowDocLabel;
+    // argv[0] for this process (Window > New Window launches a second
+    // instance of our own executable onto the same file).
+    std::string exePath;
 
     int consumeClickedResult() {
         int result = lastClickedResult;

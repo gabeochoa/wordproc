@@ -460,6 +460,52 @@ static void setupCallbacksEx(
             }
             return "<none>";
         }
+        // Window menu: item labels (separators skipped), per-item
+        // enabled, and the current-doc item's enabled + checkmark.
+        // The doc item is the last item; New Window / Arrange All /
+        // Split precede it.
+        if (prop == "window_menu_items") {
+            for (const auto& m : menuComp.menus) {
+                if (m.label != "Window") continue;
+                std::string out;
+                for (const auto& item : m.items) {
+                    if (item.separator) continue;
+                    if (!out.empty()) out += ",";
+                    out += item.label;
+                }
+                return out;
+            }
+            return "<none>";
+        }
+        if (prop == "window_doc_enabled" ||
+            prop == "window_doc_checked") {
+            for (const auto& m : menuComp.menus) {
+                if (m.label == "Window" && !m.items.empty()) {
+                    const auto& item = m.items.back();
+                    if (prop == "window_doc_enabled")
+                        return item.enabled ? "true" : "false";
+                    return item.mark == win95::MenuMark::Checkmark ? "true"
+                                                                    : "false";
+                }
+            }
+            return "false";
+        }
+        auto windowItemEnabled = [&](const std::string& label) {
+            for (const auto& m : menuComp.menus) {
+                if (m.label != "Window") continue;
+                for (const auto& item : m.items) {
+                    if (item.label == label)
+                        return item.enabled ? "true" : "false";
+                }
+            }
+            return "false";
+        };
+        if (prop == "window_new_window_enabled")
+            return windowItemEnabled("New Window");
+        if (prop == "window_arrange_all_enabled")
+            return windowItemEnabled("Arrange All");
+        if (prop == "window_split_enabled")
+            return windowItemEnabled("Split");
         if (prop == "dark_mode") return theme::DARK_MODE_ENABLED ? "true" : "false";
 
         if (prop == "export_pdf_exists" || prop == "export_html_exists" ||

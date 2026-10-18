@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <filesystem>
 #include <format>
 
@@ -13,6 +14,7 @@
 #include "../editor/image.h"
 #include "../editor/table.h"
 #include "../settings.h"
+#include "../ui/new_window.h"
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
 #include "../ui/menu_setup.h"
@@ -787,11 +789,24 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
         } else if (menuIndex == 7) {  // Window menu
             switch (itemIndex) {
-                case 0:  // Split (same as View > Split View)
+                case 0: {  // New Window: second instance of our own
+                           // executable onto the same file (no file:
+                           // plain new instance). std::system with the
+                           // exe path from argv[0] (MenuComponent::
+                           // exePath); the command detaches, so this
+                           // instance is not blocked.
+                    std::string cmd = window_menu::newWindowCommand(
+                        menu.exePath, doc.filePath);
+                    if (!cmd.empty()) std::system(cmd.c_str());
+                    break;
+                }
+                case 2:  // Split (same as View > Split View)
                     layout.splitViewEnabled = !layout.splitViewEnabled;
                     toast_notify::info(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
                     break;
-                case 2:  // "1 <current document>" — checked, disabled: no-op
+                case 1:  // Arrange All — disabled: never dispatched
+                case 4:  // "1 <current document>" — checked, enabled:
+                         // clicking it is a no-op (stays on this doc)
                 default:
                     break;
             }

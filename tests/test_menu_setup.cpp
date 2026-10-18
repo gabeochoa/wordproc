@@ -116,10 +116,10 @@ TEST_CASE("Menu items have correct properties", "[menu]") {
         for (const auto& menu : menus) {
             for (const auto& item : menu.items) {
                 if (item.isSeparator) continue;
-                // Except the Window menu's current-document item:
-                // checked + disabled by design (it is the active window).
+                // Except Window > Arrange All: disabled by design
+                // (a single-window app cannot arrange windows).
                 if (menu.label == "Window" &&
-                    item.label.rfind("1 ", 0) == 0) {
+                    item.label == "Arrange All") {
                     REQUIRE(item.enabled == false);
                     continue;
                 }
@@ -175,10 +175,16 @@ TEST_CASE("Window menu sits between Table and Help", "[menu]") {
     REQUIRE(helpIdx == windowIdx + 1);
 
     const auto& window = menus[windowIdx];
-    REQUIRE(window.items.size() == 3);
-    REQUIRE(window.items[0].label == "Split");
+    REQUIRE(window.items.size() == 5);
+    REQUIRE(window.items[0].label == "New Window");
     REQUIRE(window.items[0].enabled == true);
-    REQUIRE(window.items[1].isSeparator);
-    REQUIRE(window.items[2].label == "1 Untitled");
-    REQUIRE(window.items[2].enabled == false);
+    REQUIRE(window.items[1].label == "Arrange All");
+    REQUIRE(window.items[1].enabled == false);
+    REQUIRE(window.items[2].label == "Split");
+    REQUIRE(window.items[2].enabled == true);
+    REQUIRE(window.items[3].isSeparator);
+    REQUIRE(window.items[4].label == "1 Untitled");
+    // Current-document item: ENABLED and CHECKED (was disabled).
+    REQUIRE(window.items[4].enabled == true);
+    REQUIRE(window.items[4].checked == true);
 }

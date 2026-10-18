@@ -73,6 +73,8 @@ bool e2eDebugOverlay = false;
 bool fpsTestMode = false;
 bool benchmarkMode = false;
 std::string loadFile;
+// argv[0]: Window > New Window launches this executable again.
+std::string exePath;
 
 // Background document preload (launched before sapp_run, collected in app_init)
 std::future<PreloadedDocument> preloadFuture;
@@ -199,6 +201,7 @@ static void app_init() {
     }
     menuComp.recentFilesCount =
         static_cast<int>(Settings::get().get_recent_files().size());
+    menuComp.exePath = app_state::exePath;
 
     // Auto-save recovery (only when no file is explicitly opened, skip in test mode)
     // Note: Toast notification is deferred until after systems are registered
@@ -604,6 +607,7 @@ static void app_cleanup() {
 }
 
 int main(int argc, char* argv[]) {
+    if (argc > 0 && argv[0] != nullptr) app_state::exePath = argv[0];
     argh::parser cmdl(argc, argv);
 
     // Test mode configuration

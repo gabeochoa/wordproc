@@ -1,10 +1,19 @@
 # Test: Window menu (Word 95 order)
 # Validates the menu bar order File Edit View Insert Format Tools
-# Table Window Help, the Window menu's checked/disabled-active
-# current-document item, and Window > Split toggling split view.
+# Table Window Help, the Window menu contents (New Window, disabled
+# Arrange All, Split, current document), the current-document item
+# being ENABLED and CHECKED, clicking it being a no-op (stays on
+# this document), and Window > Split toggling split view.
+# New Window itself is NOT clicked here: it launches a second
+# instance of the executable (unit-tested in test_new_window.cpp).
 
 validate menu_labels=File,Edit,View,Insert,Format,Tools,Table,Window,Help
+validate window_menu_items=New Window,Arrange All,Split,1 Untitled
+validate window_new_window_enabled=true
+validate window_arrange_all_enabled=false
 validate window_doc_label=1 Untitled
+validate window_doc_enabled=true
+validate window_doc_checked=true
 validate split_view=false
 
 menu_open Window
@@ -18,7 +27,19 @@ menu_select "Split"
 wait_frames 6
 validate split_view=false
 
+# Clicking the current-document item is a no-op: the menu closes,
+# the app stays on this document, split view unchanged.
+menu_open Window
+menu_select "1 Untitled"
+wait_frames 6
+validate window_doc_label=1 Untitled
+validate window_doc_enabled=true
+validate window_doc_checked=true
+validate split_view=false
+
 # Opening a file retitles the Window doc item to that file.
 open_file test_files/e2e/hello.txt
 wait_frames 12
 validate window_doc_label=1 hello.txt
+validate window_doc_enabled=true
+validate window_doc_checked=true

@@ -10,6 +10,9 @@ struct MenuItemData {
     std::string shortcut;
     bool enabled = true;
     bool isSeparator = false;
+    // Checked mark (win95::MenuItem::mark == Checkmark in the real bar;
+    // MenuUISystem renders it as the "✓ " prefix).
+    bool checked = false;
 };
 
 // Menu structure for testing
@@ -223,9 +226,11 @@ inline std::vector<MenuData> createMenuBarData() {
     // Window menu (between Table and Help, as in menu_setup)
     MenuData windowMenu;
     windowMenu.label = "Window";
-    windowMenu.items = {{"Split", "", true, false},
-                        {"", "", false, true},  // Separator
-                        {"1 Untitled", "", false, false}};
+    windowMenu.items = {{"New Window", "", true, false, false},
+                        {"Arrange All", "", false, false, false},
+                        {"Split", "", true, false, false},
+                        {"", "", false, true, false},  // Separator
+                        {"1 Untitled", "", true, false, true}};
     menus.push_back(windowMenu);
 
     // Help menu

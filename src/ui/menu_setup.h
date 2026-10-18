@@ -270,16 +270,22 @@ inline std::vector<win95::Menu> createMenuBar(
     menus.push_back(tableMenu);    // Index 6: Table
 
     // Window menu (Word 95 order: between Table and Help).
-    // Single-document app, so the document list is just the current
-    // document, checked and disabled (it is the active window).
+    // Word 95 order: New Window, Arrange All, Split, then the open
+    // documents. Arrange All is disabled: a single-window app cannot
+    // arrange windows, and grayed is the honest Word behavior. The
+    // current-document item is ENABLED and CHECKED (mark renders as
+    // the checkmark in MenuUISystem; clicking it is a no-op — the
+    // app stays on this document).
     win95::Menu windowMenu;
     windowMenu.label = "Window";
-    win95::MenuItem docItem{windowDocLabel(currentFilePath), "", false,
+    win95::MenuItem docItem{windowDocLabel(currentFilePath), "", true,
                             false, nullptr};
     docItem.mark = win95::MenuMark::Checkmark;
-    windowMenu.items = {{"Split", "", true, false, nullptr},  // 0
-                        {"", "", false, true, nullptr},        // 1 Separator
-                        std::move(docItem)};                   // 2 "1 <name>"
+    windowMenu.items = {{"New Window", "", true, false, nullptr},  // 0
+                        {"Arrange All", "", false, false, nullptr},  // 1
+                        {"Split", "", true, false, nullptr},          // 2
+                        {"", "", false, true, nullptr},  // 3 Separator
+                        std::move(docItem)};  // 4 "1 <name>"
     menus.push_back(windowMenu);   // Index 7: Window
 
     // Help menu (always last per Win95 guidelines)
