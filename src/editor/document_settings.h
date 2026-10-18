@@ -640,6 +640,11 @@ struct DocumentSettings {
     bool smartQuotesEnabled = true;
     int tabWidth = 4;
 
+    // Word 95 Tools > Options > View "Text boundaries": faint gray
+    // lines marking the text area on the page. Off by default —
+    // Word shows them only when this option is enabled.
+    bool showTextBoundaries = false;
+
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed
     std::vector<FontRequirement> fontRequirements;

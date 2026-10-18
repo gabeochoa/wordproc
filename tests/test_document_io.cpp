@@ -254,3 +254,16 @@ TEST_CASE("DocumentSettings separation from app settings", "[document_io]") {
     REQUIRE(loadedSettings2.pageSettings.mode == PageMode::Pageless);
     REQUIRE(loadedSettings2.textStyle.fontSize == 18);
 }
+
+TEST_CASE("Text boundaries are off by default", "[document_io]") {
+    // Word 95 shows margin boundary guides only with Tools >
+    // Options > View "Text boundaries" enabled. There is no
+    // settings UI for it this round; the flag exists to gate
+    // drawPageBackground's boundary lines.
+    DocumentSettings settings;
+    REQUIRE_FALSE(settings.showTextBoundaries);
+    settings.showTextBoundaries = true;
+    REQUIRE(settings.showTextBoundaries);
+    DocumentSettings fresh;
+    REQUIRE_FALSE(fresh.showTextBoundaries);
+}

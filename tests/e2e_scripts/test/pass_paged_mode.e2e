@@ -22,6 +22,10 @@ validate page_width_inches_x10=85
 # overflowing the 6.5" text width). Pre-fix these props are unknown.
 validate text_font_size=9
 validate text_line_height=13
+# Text boundaries are off by default (Word 95 Tools > Options >
+# View): no margin guides on the page. Pre-fix the guides were
+# always drawn and this prop was unknown.
+validate text_boundaries=false
 # Click hit-testing uses the same scaled font: x=550 is 40px into
 # "Paged mode check." at 9px, landing on col 9 (at the old 16px
 # font the same click landed near col 5).

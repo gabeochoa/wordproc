@@ -49,8 +49,11 @@ inline void drawTextExWithRegistry(afterhours::Font font, const char* text,
     test_input::register_visible_text(text);
 }
 
-// Draw a page background with shadow (for paged mode)
-inline void drawPageBackground(const LayoutComponent& layout) {
+// Draw a page background with shadow (for paged mode).
+// showTextBoundaries gates the faint margin guides: Word 95 shows
+// them only with Tools > Options > View "Text boundaries" enabled.
+inline void drawPageBackground(const LayoutComponent& layout,
+                               bool showTextBoundaries = false) {
     if (layout.pageMode != PageMode::Paged) return;
 
     float pageY = layout.textArea.y + 10.0f;  // 10px margin from top
@@ -70,9 +73,12 @@ inline void drawPageBackground(const LayoutComponent& layout) {
     // Draw page border
     afterhours::draw_rectangle_outline(pageRect, {80, 80, 80, 255}, 1.0f);
 
-    // Draw margin guidelines (dotted or light lines). Margin from the
-    // ONE scale source: pageMargin(points) * displayScale, so the
+    // Margin boundary guides (Word 95 "Text boundaries"): faint
+    // lines at the text-area edges. Drawn only when the option is
+    // on — by default the page is plain white. Margin from the ONE
+    // scale source: pageMargin(points) * displayScale, so the
     // margin lines sit exactly on the ruler's 1" marks.
+    if (!showTextBoundaries) return;
     float marginScaled = layout.pageMargin * layout::displayScale(layout);
     afterhours::Color marginColor = afterhours::Color{200, 200, 200, 100};
 
@@ -894,8 +900,9 @@ struct EditorRenderSystem
                                      afterhours::Color{128, 128, 128, 255});
             util::drawSunkenBorder(textAreaRect);
 
-            // Draw the page with shadow and margins
-            drawPageBackground(layout);
+            // Draw the page with shadow; margin boundary guides
+            // only when the Text boundaries option is enabled.
+            drawPageBackground(layout, doc.docSettings.showTextBoundaries);
         } else {
             afterhours::draw_rectangle(textAreaRect, theme::TEXT_AREA_BG);
             util::drawSunkenBorder(textAreaRect);

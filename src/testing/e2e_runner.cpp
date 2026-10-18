@@ -417,6 +417,9 @@ static void setupCallbacksEx(
         if (prop == "text_line_height")
             return std::to_string(ruler_math::scaledLineHeight(
                 style.fontSize, ecs::layout::displayScale(layoutComp)));
+        if (prop == "text_boundaries")
+            return docComp.docSettings.showTextBoundaries ? "true"
+                                                          : "false";
         if (prop == "page_display_width")
             return std::to_string(static_cast<int>(
                 std::lround(layoutComp.pageDisplayWidth)));
