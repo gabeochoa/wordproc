@@ -87,6 +87,34 @@ struct TextReplacement {
     std::string newText;
 };
 
+// One undo step for a paragraph-indent change (ruler drag, or any
+// future indent dialog). Stores the whole indent triple so undo
+// restores all three markers at once.
+struct ParagraphIndents {
+    int left = 0;
+    int firstLine = 0;
+    int right = 0;
+    bool operator==(const ParagraphIndents& other) const {
+        return left == other.left && firstLine == other.firstLine &&
+               right == other.right;
+    }
+};
+
+class SetParagraphIndentsCommand : public afterhours::Command<TextBuffer> {
+   public:
+    SetParagraphIndentsCommand(std::size_t row, ParagraphIndents oldIndents,
+                               ParagraphIndents newIndents)
+        : row_(row), old_(oldIndents), new_(newIndents) {}
+    void execute(TextBuffer& buffer) override;
+    void undo(TextBuffer& buffer) override;
+    std::string description() const override { return "Set paragraph indents"; }
+
+   private:
+    std::size_t row_;
+    ParagraphIndents old_;
+    ParagraphIndents new_;
+};
+
 class ReplaceRangesCommand : public afterhours::Command<TextBuffer> {
    public:
     explicit ReplaceRangesCommand(std::vector<TextReplacement> replacements)
@@ -115,6 +143,7 @@ struct LineSpan {
     // Indentation (in pixels or character widths)
     int leftIndent = 0;       // Left margin indent for entire paragraph
     int firstLineIndent = 0;  // Additional indent for first line only (can be negative for hanging)
+    int rightIndent = 0;      // Right margin indent for entire paragraph
     
     // Spacing
     float lineSpacing = 1.0f;   // Line height multiplier (1.0 = single, 1.5 = 1.5x, 2.0 = double)
@@ -223,14 +252,26 @@ class TextBuffer {
     // Indentation for current line (where caret is)
     int currentLeftIndent() const;
     int currentFirstLineIndent() const;
+    int currentRightIndent() const;
     void setCurrentLeftIndent(int pixels);
     void setCurrentFirstLineIndent(int pixels);
+    void setCurrentRightIndent(int pixels);
     void increaseIndent(int amount = 20);  // Default 20px (approx 2 chars at 10px/char)
     void decreaseIndent(int amount = 20);
-    
+
     // Get indentation for a specific line
     int lineLeftIndent(std::size_t row) const;
     int lineFirstLineIndent(std::size_t row) const;
+    int lineRightIndent(std::size_t row) const;
+
+    // Whole-triple indent access. setLineIndents applies directly
+    // (no history); commitParagraphIndents records one undo step for
+    // a change already applied — the ruler drag applies live on every
+    // move frame and commits once on release.
+    ParagraphIndents lineIndents(std::size_t row) const;
+    void setLineIndents(std::size_t row, ParagraphIndents indents);
+    void commitParagraphIndents(std::size_t row, ParagraphIndents oldIndents,
+                                ParagraphIndents newIndents);
     
     // Spacing for current line (where caret is)
     float currentLineSpacing() const;

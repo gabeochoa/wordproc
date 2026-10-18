@@ -397,6 +397,31 @@ static void setupCallbacksEx(
         }
         if (prop == "focus_mode") return layoutComp.focusMode ? "true" : "false";
         if (prop == "split_view") return layoutComp.splitViewEnabled ? "true" : "false";
+        if (prop == "page_mode")
+            return layoutComp.pageMode == PageMode::Paged ? "paged" : "pageless";
+        if (prop == "ruler_visible")
+            return (!layoutComp.focusMode && layoutComp.showRuler) ? "true" : "false";
+        if (prop == "text_area_y")
+            return std::to_string(static_cast<int>(layoutComp.textArea.y));
+        if (prop == "first_line_indent")
+            return std::to_string(buffer.currentFirstLineIndent());
+        if (prop == "right_indent")
+            return std::to_string(buffer.currentRightIndent());
+        if (prop == "menu_labels") {
+            std::string labels;
+            for (const auto& m : menuComp.menus) {
+                if (!labels.empty()) labels += ",";
+                labels += m.label;
+            }
+            return labels;
+        }
+        if (prop == "window_doc_label") {
+            for (const auto& m : menuComp.menus) {
+                if (m.label == "Window" && !m.items.empty())
+                    return m.items.back().label;
+            }
+            return "<none>";
+        }
         if (prop == "dark_mode") return theme::DARK_MODE_ENABLED ? "true" : "false";
 
         if (prop == "export_pdf_exists" || prop == "export_html_exists" ||
@@ -790,8 +815,15 @@ static void setupCallbacksEx(
         // Reset layout state
         layoutComp.zoomLevel = 1.0f;
         layoutComp.focusMode = false;
+        layoutComp.showRuler = true;
+        layoutComp.pageMode = PageMode::Pageless;
+        layoutComp.showLineNumbers = false;
+        layoutComp.showOutline = false;
         layoutComp.splitViewEnabled = false;
         layoutComp.splitViewHorizontal = true;
+        // Window menu doc label rebuilds from the cleared filePath on
+        // the next MenuUISystem frame.
+        menuComp.windowDocLabel.clear();
         
         // Reset toolbar dropdown state
         toolbarComp.styleDropdownOpen = false;

@@ -73,20 +73,22 @@ inline std::vector<win95::Menu> createMenuBar(
     viewMenu.items = {{"Pageless Mode", "", true, false, nullptr},       // 0
                       {"Paged Mode", "", true, false, nullptr},          // 1
                       {"", "", false, true, nullptr},                    // 2 Separator
-                      {"Zoom In", "Ctrl+Alt+=", true, false, nullptr},   // 3
-                      {"Zoom Out", "Ctrl+Alt+-", true, false, nullptr},  // 4
-                      {"Zoom Reset", "Ctrl+Alt+0", true, false, nullptr},// 5
-                      {"", "", false, true, nullptr},                    // 6 Separator
-                      {"Focus Mode", "F11", true, false, nullptr},       // 7
-                      {"Split View", "Ctrl+Alt+V", true, false, nullptr}, // 8
-                      {"Dark Mode", "Ctrl+Alt+D", true, false, nullptr}, // 9
-                      {"", "", false, true, nullptr},                    // 10 Separator
-                      {"Line Width: Normal", "", true, false, nullptr},  // 11
-                      {"Line Width: Narrow", "", true, false, nullptr},  // 12
-                      {"Line Width: Wide", "", true, false, nullptr},    // 13
-                      {"", "", false, true, nullptr},                    // 14 Separator
-                      {"Show Line Numbers", "", true, false, nullptr},   // 15
-                      {"Show Outline", "", true, false, nullptr}};       // 16
+                      {"Ruler", "", true, false, nullptr},               // 3 (checkmark = shown)
+                      {"", "", false, true, nullptr},                    // 4 Separator
+                      {"Zoom In", "Ctrl+Alt+=", true, false, nullptr},   // 5
+                      {"Zoom Out", "Ctrl+Alt+-", true, false, nullptr},  // 6
+                      {"Zoom Reset", "Ctrl+Alt+0", true, false, nullptr},// 7
+                      {"", "", false, true, nullptr},                    // 8 Separator
+                      {"Focus Mode", "F11", true, false, nullptr},       // 9
+                      {"Split View", "Ctrl+Alt+V", true, false, nullptr}, // 10
+                      {"Dark Mode", "Ctrl+Alt+D", true, false, nullptr}, // 11
+                      {"", "", false, true, nullptr},                    // 12 Separator
+                      {"Line Width: Normal", "", true, false, nullptr},  // 13
+                      {"Line Width: Narrow", "", true, false, nullptr},  // 14
+                      {"Line Width: Wide", "", true, false, nullptr},    // 15
+                      {"", "", false, true, nullptr},                    // 16 Separator
+                      {"Show Line Numbers", "", true, false, nullptr},   // 17
+                      {"Show Outline", "", true, false, nullptr}};       // 18
     menus.push_back(viewMenu);
 
     // Format menu

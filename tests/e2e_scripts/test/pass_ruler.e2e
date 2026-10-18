@@ -1,0 +1,50 @@
+# Test: Ruler (Word 95 style)
+# Validates ruler visibility, marker drag -> paragraph indents
+# (one undo step per drag), and View > Ruler toggling reclaims space.
+# Coordinates are the 1280x720 layout: ruler band y=108..128
+# (text area y=128: 26 title + 23 menu + 28 toolbar + 28 formatting
+# + 20 ruler + 3 border), origin x=11 (text area x=3 + 8px padding),
+# right marker x=1269.
+
+type "Ruler drag test"
+wait_frames 12
+
+validate ruler_visible=true
+validate text_area_y=128
+validate left_indent=0
+
+# Drag the left-indent marker (bottom half of ruler) +72px right.
+drag_to 11 123 83 123
+wait_frames 6
+validate left_indent=72
+
+# The whole drag is one undo step.
+key CTRL+Z
+wait_frames 6
+validate left_indent=0
+
+# Drag the first-line marker (top half of ruler) +36px right.
+drag_to 11 113 47 113
+wait_frames 6
+validate first_line_indent=36
+
+# Drag the right-indent marker (bottom half) 72px left.
+drag_to 1269 123 1197 123
+wait_frames 6
+validate right_indent=72
+
+# View > Ruler off: the text area reclaims the 20px band.
+menu_open View
+menu_select "Ruler"
+wait_frames 6
+validate ruler_visible=false
+validate text_area_y=108
+
+# View > Ruler on: the band comes back.
+menu_open View
+menu_select "Ruler"
+wait_frames 6
+validate ruler_visible=true
+validate text_area_y=128
+
+screenshot ruler

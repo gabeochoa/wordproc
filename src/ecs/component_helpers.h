@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../editor/ruler_math.h"
 #include "components.h"
 
 // Pure helper functions for ECS components
@@ -67,7 +68,8 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
     float menuHeight = layout.focusMode ? 0.0f : layout.menuBarHeight;
     float toolbarHeight = layout.focusMode ? 0.0f : layout.toolbarHeight;
     float formattingBarHeight = layout.focusMode ? 0.0f : layout.formattingBarHeight;
-    float rulerHeight = layout.focusMode ? 0.0f : layout.rulerHeight;
+    float rulerHeight =
+        (layout.focusMode || !layout.showRuler) ? 0.0f : layout.rulerHeight;
     float statusHeight = layout.focusMode ? 0.0f : layout.statusBarHeight;
 
     layout.titleBar = {0, 0, static_cast<float>(w), layout.titleBarHeight};
@@ -130,6 +132,44 @@ inline LayoutComponent::Rect effectiveTextArea(const LayoutComponent& layout) {
             layout.pageDisplayWidth - 2.0f * marginScaled,
             layout.pageDisplayHeight - 2.0f * marginScaled};
 }
+
+}  // namespace layout
+
+namespace ruler {
+
+// The ruler is visible only outside focus mode and when not toggled
+// off (View > Ruler). When hidden, updateLayout reclaims its height.
+inline bool visible(const LayoutComponent& layout) {
+    return !layout.focusMode && layout.showRuler;
+}
+
+// Screen rect of the ruler band: immediately above the text area,
+// below the Formatting toolbar (textArea.y already reserves it).
+inline LayoutComponent::Rect rect(const LayoutComponent& layout) {
+    if (!visible(layout)) {
+        return {0.0f, layout.textArea.y, layout.textArea.width, 0.0f};
+    }
+    return {0.0f, layout.textArea.y - layout.rulerHeight,
+            static_cast<float>(layout.screenWidth), layout.rulerHeight};
+}
+
+// Shared marker geometry for the render pass and the drag system,
+// from the same effective text area the text renderer uses.
+inline ruler_math::Geometry geometry(const LayoutComponent& layout) {
+    LayoutComponent::Rect effective = layout::effectiveTextArea(layout);
+    float gutter = layout.showLineNumbers ? layout.lineNumberGutterWidth : 0.0f;
+    return ruler_math::geometry(layout.textArea.y, layout.rulerHeight,
+                                effective.x, effective.width, gutter);
+}
+
+inline void toggleRuler(LayoutComponent& layout) {
+    layout.showRuler = !layout.showRuler;
+    layout::updateLayout(layout, layout.screenWidth, layout.screenHeight);
+}
+
+}  // namespace ruler
+
+namespace layout {
 
 inline void togglePageMode(LayoutComponent& layout) {
     layout.pageMode = (layout.pageMode == PageMode::Pageless)

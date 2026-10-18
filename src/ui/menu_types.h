@@ -71,6 +71,8 @@ inline std::vector<MenuData> createMenuBarData() {
     viewMenu.items = {{"Pageless Mode", "", true, false},
                       {"Paged Mode", "", true, false},
                       {"", "", false, true},  // Separator
+                      {"Ruler", "", true, false},
+                      {"", "", false, true},  // Separator
                       {"Zoom In", "Ctrl+Alt+=", true, false},
                       {"Zoom Out", "Ctrl+Alt+-", true, false},
                       {"Zoom Reset", "Ctrl+Alt+0", true, false},

@@ -405,6 +405,7 @@ void TextBuffer::insertChar(char ch) {
         newSpan.alignment = oldSpan.alignment;   // Inherit alignment
         newSpan.leftIndent = oldSpan.leftIndent; // Inherit indentation
         newSpan.firstLineIndent = oldSpan.firstLineIndent;
+        newSpan.rightIndent = oldSpan.rightIndent;
         newSpan.lineSpacing = oldSpan.lineSpacing;
         newSpan.listType = oldSpan.listType;     // Inherit list properties
         newSpan.listLevel = oldSpan.listLevel;
@@ -634,6 +635,20 @@ void TextBuffer::setCurrentFirstLineIndent(int pixels) {
     }
 }
 
+int TextBuffer::currentRightIndent() const {
+    if (caret_.row < line_spans_.size()) {
+        return line_spans_[caret_.row].rightIndent;
+    }
+    return 0;
+}
+
+void TextBuffer::setCurrentRightIndent(int pixels) {
+    if (caret_.row < line_spans_.size()) {
+        line_spans_[caret_.row].rightIndent = std::max(0, pixels);
+        version_++;
+    }
+}
+
 void TextBuffer::increaseIndent(int amount) {
     if (caret_.row < line_spans_.size()) {
         line_spans_[caret_.row].leftIndent += amount;
@@ -661,6 +676,39 @@ int TextBuffer::lineFirstLineIndent(std::size_t row) const {
         return line_spans_[row].firstLineIndent;
     }
     return 0;
+}
+
+int TextBuffer::lineRightIndent(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        return line_spans_[row].rightIndent;
+    }
+    return 0;
+}
+
+ParagraphIndents TextBuffer::lineIndents(std::size_t row) const {
+    if (row < line_spans_.size()) {
+        const LineSpan& span = line_spans_[row];
+        return {span.leftIndent, span.firstLineIndent, span.rightIndent};
+    }
+    return {};
+}
+
+void TextBuffer::setLineIndents(std::size_t row, ParagraphIndents indents) {
+    if (row >= line_spans_.size()) return;
+    LineSpan& span = line_spans_[row];
+    span.leftIndent = std::max(0, indents.left);
+    span.firstLineIndent = indents.firstLine;
+    span.rightIndent = std::max(0, indents.right);
+    version_++;
+}
+
+void TextBuffer::commitParagraphIndents(std::size_t row,
+                                        ParagraphIndents oldIndents,
+                                        ParagraphIndents newIndents) {
+    if (row >= line_spans_.size() || oldIndents == newIndents) return;
+    // Already applied live; record only, so the whole drag is one step.
+    history_.push(std::make_unique<SetParagraphIndentsCommand>(
+        row, oldIndents, newIndents));
 }
 
 // ============================================================================
@@ -1243,6 +1291,14 @@ void DeleteSelectionCommand::execute(TextBuffer& buffer) {
 void DeleteSelectionCommand::undo(TextBuffer& buffer) {
     buffer.insertTextAt(start_, deletedText_);
     buffer.setCaret(end_);
+}
+
+void SetParagraphIndentsCommand::execute(TextBuffer& buffer) {
+    buffer.setLineIndents(row_, new_);
+}
+
+void SetParagraphIndentsCommand::undo(TextBuffer& buffer) {
+    buffer.setLineIndents(row_, old_);
 }
 
 void ReplaceRangesCommand::applyRange(TextBuffer& buffer, CaretPosition start,

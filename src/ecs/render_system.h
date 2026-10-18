@@ -347,6 +347,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Apply indentation
         int leftIndent = buffer.lineLeftIndent(row);
         int firstLineIndent = buffer.lineFirstLineIndent(row);
+        int rightIndent = buffer.lineRightIndent(row);
         // Note: firstLineIndent only applies to first line of paragraph
         // For now, we treat each line as its own paragraph
         int totalIndent = leftIndent + firstLineIndent;
@@ -360,7 +361,8 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int listIndent = (listType != ListType::None) ? (listLevel + 1) * 20 : 0;
         
         int indentedBaseX = baseX + totalIndent + listIndent;
-        int indentedWidth = availableWidth - totalIndent - listIndent;
+        int indentedWidth =
+            std::max(0, availableWidth - totalIndent - listIndent - rightIndent);
         
         // Calculate text width for alignment
         int textWidth = displayLine.empty() ? 0 : afterhours::graphics::measure_text(displayLine.c_str(), lineFontSize);
@@ -621,6 +623,25 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 }
 
 // System for rendering the complete editor UI
+// Filled triangle via horizontal scanlines (no draw_triangle in the
+// backend-agnostic drawing API). Apex (ax, ay), base endpoints
+// (ax - halfWidth, baseY) and (ax + halfWidth, baseY).
+inline void drawFilledTriangle(float ax, float ay, float baseY, float halfWidth,
+                               afterhours::Color color) {
+    int top = static_cast<int>(std::min(ay, baseY));
+    int bottom = static_cast<int>(std::max(ay, baseY));
+    for (int y = top; y <= bottom; ++y) {
+        float t = (bottom == top)
+                      ? 1.0f
+                      : (static_cast<float>(y - top) /
+                         static_cast<float>(bottom - top));
+        float half = (ay < baseY) ? halfWidth * t : halfWidth * (1.0f - t);
+        int x1 = static_cast<int>(ax - half);
+        int x2 = static_cast<int>(ax + half);
+        afterhours::draw_line(x1, y, x2, y, color);
+    }
+}
+
 struct EditorRenderSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
                                 ScrollComponent,
@@ -699,58 +720,122 @@ struct EditorRenderSystem
                        ScrollComponent& scroll,
                        LayoutComponent& layout,
                        const float) override {
-        // Draw horizontal ruler (after toolbars, before text area)
-        if (!layout.focusMode) {
-            float rulerY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + 
-                                               theme::layout::MENU_BAR_HEIGHT + 
-                                               theme::layout::TOOLBAR_HEIGHT + 
-                                               theme::layout::FORMATTING_BAR_HEIGHT);
-            Rectangle rulerRect = {
-                0, rulerY,
-                static_cast<float>(layout.screenWidth),
-                theme::layout::scale(theme::layout::RULER_HEIGHT)
-            };
-            afterhours::draw_rectangle(rulerRect, theme::RULER_BG);
+        // Draw horizontal ruler (Word 95 style): the band sits at
+        // textArea.y - rulerHeight, directly below the Formatting
+        // toolbar (component_helpers reserves it above the text area).
+        // Gray outside the margins, white between them, inch numbers +
+        // ticks from the left margin, indent triangles for the caret
+        // paragraph, L-shaped default tab-stop marks.
+        if (ruler::visible(layout)) {
+            LayoutComponent::Rect r = ruler::rect(layout);
+            ruler_math::Geometry g = ruler::geometry(layout);
+            Rectangle rulerRect = {r.x, r.y, r.width, r.height};
+            float rulerY = r.y;
+            float rulerH = r.height;
+
+            // Gray outside the margins, white between left/right margins.
+            afterhours::draw_rectangle(
+                rulerRect, afterhours::Color{192, 192, 192, 255});
+            afterhours::draw_rectangle(
+                Rectangle{g.whiteLeft, rulerY, g.whiteRight - g.whiteLeft,
+                          rulerH},
+                theme::RULER_BG);
             util::drawSunkenBorder(rulerRect);
-            
-            // Draw ruler marks (inches/centimeters)
-            // For simplicity, use 1 inch = 72 pixels (standard DPI)
-            int rulerStartX = theme::layout::scaleInt(50);  // Offset for left margin
-            int pixelsPerInch = theme::layout::scaleInt(72);
-            int maxInches = (layout.screenWidth - rulerStartX) / pixelsPerInch;
-            
-            for (int inch = 0; inch <= maxInches; ++inch) {
-                int x = rulerStartX + inch * pixelsPerInch;
-                
-                // Draw inch mark (tall line)
-                afterhours::draw_line(x, static_cast<int>(rulerY) + theme::layout::scaleInt(12), 
-                               x, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
-                               theme::RULER_MARKS);
-                
-                // Draw inch number
-                std::string inchStr = std::to_string(inch);
-                int textWidth = theme::MeasureUIText(inchStr.c_str(), 10);
-                theme::DrawUIText(inchStr.c_str(), x - textWidth / 2, 
-                                static_cast<int>(rulerY) + theme::layout::scaleInt(1), 
-                                10, theme::RULER_TEXT);
-                
-                // Draw half-inch marks
-                if (inch < maxInches) {
-                    int halfX = x + pixelsPerInch / 2;
-                    afterhours::draw_line(halfX, static_cast<int>(rulerY) + theme::layout::scaleInt(14), 
-                                   halfX, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
-                                   theme::RULER_MARKS);
-                    
-                    // Draw quarter-inch marks
-                    int quarterX1 = x + pixelsPerInch / 4;
-                    int quarterX2 = x + 3 * pixelsPerInch / 4;
-                    afterhours::draw_line(quarterX1, static_cast<int>(rulerY) + theme::layout::scaleInt(16), 
-                                   quarterX1, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
-                                   theme::RULER_MARKS);
-                    afterhours::draw_line(quarterX2, static_cast<int>(rulerY) + theme::layout::scaleInt(16), 
-                                   quarterX2, static_cast<int>(rulerY) + theme::layout::scaleInt(18), 
-                                   theme::RULER_MARKS);
+
+            // Ticks every quarter inch from the left margin (inch 0),
+            // running both ways across the ruler. Numbers 1.. only
+            // inside the white band.
+            auto drawTick = [&](float x, int quarter) {
+                int tickTop;
+                if (quarter % 4 == 0) {
+                    tickTop = static_cast<int>(rulerY + rulerH - 8);
+                } else if (quarter % 2 == 0) {
+                    tickTop = static_cast<int>(rulerY + rulerH - 6);
+                } else {
+                    tickTop = static_cast<int>(rulerY + rulerH - 4);
                 }
+                afterhours::draw_line(static_cast<int>(x), tickTop,
+                                      static_cast<int>(x),
+                                      static_cast<int>(rulerY + rulerH - 1),
+                                      theme::RULER_MARKS);
+            };
+            for (int q = 0;; ++q) {
+                float x = g.originX + static_cast<float>(q) *
+                                         ruler_math::PIXELS_PER_INCH / 4.0f;
+                if (x > static_cast<float>(layout.screenWidth)) break;
+                drawTick(x, q);
+                if (q % 4 == 0 && q > 0 && x >= g.whiteLeft &&
+                    x <= g.whiteRight) {
+                    std::string inchStr = std::to_string(q / 4);
+                    int textWidth = theme::MeasureUIText(inchStr.c_str(), 10);
+                    theme::DrawUIText(inchStr.c_str(),
+                                      static_cast<int>(x) - textWidth / 2,
+                                      static_cast<int>(rulerY) + 1, 10,
+                                      theme::RULER_TEXT);
+                }
+                if (q == 0) {
+                    // Mirror ticks left of inch 0, into the gray margin.
+                    for (int ql = -1;; --ql) {
+                        float xl = g.originX +
+                                   static_cast<float>(ql) *
+                                       ruler_math::PIXELS_PER_INCH / 4.0f;
+                        if (xl < 0.0f) break;
+                        drawTick(xl, ql);
+                    }
+                }
+            }
+
+            // Default tab stops: small L marks along the bottom edge.
+            {
+                TextStyle tabStyle = doc.buffer.textStyle();
+                int tabFontSize =
+                    std::max(8, static_cast<int>(std::round(
+                                    tabStyle.fontSize * layout.zoomLevel)));
+                float spaceWidth = static_cast<float>(
+                    afterhours::graphics::measure_text(" ", tabFontSize));
+                for (float x : ruler_math::tabStopXs(
+                         g, doc.docSettings.tabWidth, spaceWidth)) {
+                    afterhours::draw_line(static_cast<int>(x),
+                                          static_cast<int>(rulerY + rulerH - 6),
+                                          static_cast<int>(x),
+                                          static_cast<int>(rulerY + rulerH - 1),
+                                          theme::RULER_MARKS);
+                    afterhours::draw_line(static_cast<int>(x),
+                                          static_cast<int>(rulerY + rulerH - 1),
+                                          static_cast<int>(x) + 4,
+                                          static_cast<int>(rulerY + rulerH - 1),
+                                          theme::RULER_MARKS);
+                }
+            }
+
+            // Indent markers for the caret paragraph.
+            {
+                std::size_t row = doc.buffer.caret().row;
+                int leftIndent = doc.buffer.lineLeftIndent(row);
+                int firstLineIndent = doc.buffer.lineFirstLineIndent(row);
+                int rightIndent = doc.buffer.lineRightIndent(row);
+                afterhours::Color markerColor{0, 0, 0, 255};
+                // First-line indent: triangle pointing down, top half.
+                drawFilledTriangle(
+                    ruler_math::firstLineMarkerX(g, leftIndent,
+                                                 firstLineIndent),
+                    rulerY + 1.0f, rulerY + rulerH / 2.0f - 1.0f, 4.0f,
+                    markerColor);
+                // Left / hanging indent: triangle pointing up + block,
+                // bottom half.
+                float leftX = ruler_math::leftMarkerX(g, leftIndent);
+                drawFilledTriangle(leftX, rulerY + rulerH - 1.0f,
+                                   rulerY + rulerH / 2.0f + 1.0f, 4.0f,
+                                   markerColor);
+                afterhours::draw_rectangle(
+                    Rectangle{leftX - 3.0f, rulerY + rulerH - 3.0f, 6.0f,
+                              2.0f},
+                    markerColor);
+                // Right indent: triangle pointing up, bottom half.
+                drawFilledTriangle(
+                    ruler_math::rightMarkerX(g, rightIndent),
+                    rulerY + rulerH - 1.0f, rulerY + rulerH / 2.0f + 1.0f,
+                    4.0f, markerColor);
             }
         }
 

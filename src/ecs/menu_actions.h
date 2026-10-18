@@ -16,6 +16,7 @@
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
 #include "../ui/menu_setup.h"
+#include "component_helpers.h"
 #include "components.h"
 #include "document_commands.h"
 
@@ -208,49 +209,56 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                                          layout.screenHeight);
                     toast_notify::info("Switched to Paged mode");
                     break;
-                case 3:  // Zoom In
+                case 3:  // Ruler
+                    ruler::toggleRuler(layout);
+                    menu.menus[2].items[3].mark =
+                        layout.showRuler ? win95::MenuMark::Checkmark
+                                         : win95::MenuMark::None;
+                    toast_notify::info(layout.showRuler ? "Ruler: On" : "Ruler: Off");
+                    break;
+                case 5:  // Zoom In
                     layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
                     toast_notify::info("Zoom in");
                     break;
-                case 4:  // Zoom Out
+                case 6:  // Zoom Out
                     layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
                     toast_notify::info("Zoom out");
                     break;
-                case 5:  // Zoom Reset
+                case 7:  // Zoom Reset
                     layout.zoomLevel = 1.0f;
                     toast_notify::info("Zoom reset");
                     break;
-                case 7:  // Focus Mode
+                case 9:  // Focus Mode
                     layout.focusMode = !layout.focusMode;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
                     toast_notify::info(layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
                     break;
-                case 8:  // Split View
+                case 10:  // Split View
                     layout.splitViewEnabled = !layout.splitViewEnabled;
                     toast_notify::info(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
                     break;
-                case 9:  // Dark Mode
+                case 11:  // Dark Mode
                     theme::applyDarkMode(!theme::DARK_MODE_ENABLED);
                     toast_notify::info(theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
                     break;
-                case 11:  // Line Width: Normal (no limit)
+                case 13:  // Line Width: Normal (no limit)
                     layout::setLineWidthLimit(layout, 0.0f);
                     toast_notify::info("Line width: Normal");
                     break;
-                case 12:  // Line Width: Narrow (60 chars)
+                case 14:  // Line Width: Narrow (60 chars)
                     layout::setLineWidthLimit(layout, 60.0f);
                     toast_notify::info("Line width: Narrow (60 chars)");
                     break;
-                case 13:  // Line Width: Wide (100 chars)
+                case 15:  // Line Width: Wide (100 chars)
                     layout::setLineWidthLimit(layout, 100.0f);
                     toast_notify::info("Line width: Wide (100 chars)");
                     break;
-                case 15:  // Show Line Numbers
+                case 17:  // Show Line Numbers
                     layout.showLineNumbers = !layout.showLineNumbers;
                     toast_notify::info(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     break;
-                case 16:  // Show Outline
+                case 18:  // Show Outline
                     layout.showOutline = !layout.showOutline;
                     toast_notify::info(layout.showOutline ? "Outline: On" : "Outline: Off");
                     break;

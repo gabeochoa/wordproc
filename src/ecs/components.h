@@ -177,6 +177,9 @@ struct MenuComponent : public afterhours::BaseComponent {
     int activeMenuIndex = -1;
     int lastClickedResult = -1;
     int recentFilesCount = 0;
+    // Label of the Window menu's current-document item ("1 <name>"),
+    // tracked so MenuUISystem rebuilds the bar when the file changes.
+    std::string windowDocLabel;
 
     int consumeClickedResult() {
         int result = lastClickedResult;
@@ -298,6 +301,7 @@ struct LayoutComponent : public afterhours::BaseComponent {
     // View options
     float zoomLevel = 1.0f;
     bool focusMode = false;
+    bool showRuler = true;  // View > Ruler; hidden reclaims rulerHeight
     bool splitViewEnabled = false;
     bool splitViewHorizontal = true;
 

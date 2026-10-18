@@ -11,6 +11,7 @@
 #include "ecs/menu_ui_system.h"
 #include "ecs/mouse_selection_system.h"
 #include "ecs/render_system.h"
+#include "ecs/ruler_system.h"
 #include "ecs/scrollbar_system.h"
 #include "ecs/test_systems.h"
 #include "ecs/toolbar_system.h"
@@ -288,6 +289,8 @@ static void app_init() {
             std::make_unique<ecs::NavigationSystem>());
         sm.register_update_system(
             std::make_unique<ecs::ScrollbarSystem>());
+        sm.register_update_system(
+            std::make_unique<ecs::RulerSystem>());
         sm.register_update_system(
             std::make_unique<ecs::MouseSelectionSystem>());
         
