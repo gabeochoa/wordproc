@@ -31,21 +31,28 @@ inline ComponentConfig win95ButtonStyle(bool enabled = true, bool pressed = fals
         .with_roundness(0.0f)
         .with_custom_background(bg)
         .with_custom_text_color(textColor)
-        .with_bevel(afterhours::ui::BevelStyle::Raised,
+        .with_bevel(pressed ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
                     ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 2.0f)
         .with_cursor(CursorType::Pointer)
-        .with_padding(Padding{
-            .top = pixels(4),
-            .right = pixels(8),
-            .bottom = pixels(4),
-            .left = pixels(8)
-        })
+        .with_alignment(afterhours::ui::TextAlignment::Center)
+        // Label inset ~8px horizontal, centered. Padding on a label is a
+        // no-op in afterhours (it warns); text_inset is the mechanism
+        // that actually insets the label.
+        .with_text_inset(8.0f, 4.0f)
         .with_margin(Margin{
             .top = pixels(2),
             .right = pixels(2),
             .bottom = pixels(2),
             .left = pixels(2)
         });
+
+    if (pressed) {
+        // The framework has no label-only offset (text_inset is
+        // symmetric, so it cannot shift a centered label), so the whole
+        // face translates 1px down/right: the visible Win95 pressed
+        // effect (label moves with the sunken face).
+        config.with_translate(1.0f, 1.0f);
+    }
 
     if (!enabled) {
         config.disabled = true;

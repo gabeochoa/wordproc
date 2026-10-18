@@ -3,6 +3,10 @@
 #include "../src/ui/menu_geometry.h"
 #include "catch2/catch.hpp"
 
+// NOTE: P0-6 has no unit test: ah_win95_widgets.h pulls the afterhours
+// graphics backend, which the test binary does not define. The E2E
+// screenshot (pass_p0_dialog_buttons.e2e) is its check.
+
 // P0-2: menu-bar headers carry ~7px padding per side, so the button width
 // is label + 2 * padding. Reverting the header to the old +16 total (or
 // dropping padding) breaks headerWidth's contract here.
@@ -79,3 +83,4 @@ TEST_CASE("P0-4 mouse selection", "[p0][selection]") {
         REQUIRE(buffer.getText() == " world");
     }
 }
+
