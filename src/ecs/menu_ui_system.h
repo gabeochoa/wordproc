@@ -16,6 +16,7 @@
 #include "menu_actions.h"
 #include "../input_mapping.h"  // For InputAction enum
 #include "../ui/ah_win95_widgets.h"
+#include "../ui/menu_geometry.h"
 #include "../ui/input.h"       // For input::isKeyPressed
 // test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
@@ -142,9 +143,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             auto& menuDef = menu.menus[menuIdx];
             bool isOpen = menuDef.open;
             
-            // Calculate button width using actual text measurement (matching original Win95 DrawMenuBar)
+            // Header width = label + 7px padding per side (Word95),
+            // via menu_geometry so click rects and dropdowns agree.
             int menuFontSize = 16;
-            float buttonWidth = static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+            float headerPadding = theme::layout::scale(menu_geometry::HEADER_PADDING_X);
+            float buttonWidth = menu_geometry::headerWidth(
+                static_cast<float>(theme::MeasureUIText(menuDef.label.c_str(), menuFontSize)),
+                headerPadding);
             float menuBarHeight = theme::layout::scale(theme::layout::MENU_BAR_HEIGHT);
             
             // Register menu label for E2E tests
@@ -165,7 +170,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 ComponentConfig{}
                     .with_debug_name("menu_header_" + menuDef.label)
                     .with_label(menuDef.label)
-                    .with_size(ComponentSize{pixels(buttonWidth), 
+                    .with_size(ComponentSize{pixels(buttonWidth),
                                             pixels(menuBarHeight)})
                     .with_absolute_position()
                     .with_translate(headerX, headerY)
@@ -174,11 +179,32 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     .with_alignment(afterhours::ui::TextAlignment::Left)
                     .with_justify_content(afterhours::ui::JustifyContent::FlexStart)
                     .with_align_items(afterhours::ui::AlignItems::Center)
+                    .with_padding(afterhours::ui::Padding{.left = pixels(headerPadding),
+                                                         .right = pixels(headerPadding)})
                     .with_roundness(0.0f)
                     .with_bevel(highlighted ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
                                 toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
                     .with_cursor(afterhours::ui::CursorType::Pointer)
                     .with_render_layer(1));
+
+            // Mnemonic underline: Word95 underlines the menu's hotkey
+            // letter (the first character) beneath the label.
+            if (!menuDef.label.empty()) {
+                std::string firstChar = menuDef.label.substr(0, 1);
+                float underlineW = static_cast<float>(
+                    theme::MeasureUIText(firstChar.c_str(), menuFontSize));
+                div(ctx, mk(entity, 600 + static_cast<int>(menuIdx)),
+                    ComponentConfig{}
+                        .with_debug_name("menu_mnemonic_" + menuDef.label)
+                        .with_size(ComponentSize{pixels(underlineW), pixels(1.0f)})
+                        .with_absolute_position()
+                        .with_translate(headerX + headerPadding,
+                                        headerY + menuBarHeight - theme::layout::scale(5.0f))
+                        .with_custom_background(highlighted ? toAhColor(theme::MENU_TEXT_HOVER)
+                                                            : toAhColor(theme::MENU_TEXT))
+                        .with_roundness(0.0f)
+                        .with_render_layer(1));
+            }
 
             // Handle header click: toggle this menu, close others
             if (headerResult) {
@@ -211,7 +237,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             int menuFontSize = 16;
             float dropdownX = theme::layout::scale(4.0f);
             for (size_t i = 0; i < menuIdx; ++i) {
-                dropdownX += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+                dropdownX += menu_geometry::headerWidth(
+                    static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize)),
+                    theme::layout::scale(menu_geometry::HEADER_PADDING_X));
             }
             float dropdownY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + 
                                                   theme::layout::MENU_BAR_HEIGHT);
@@ -363,7 +391,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     float hy = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT);
                     int menuFontSize = 16;
                     for (size_t i = 0; i < menu.menus.size(); ++i) {
-                        float bw = static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+                        float bw = menu_geometry::headerWidth(
+                            static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize)),
+                            theme::layout::scale(menu_geometry::HEADER_PADDING_X));
                         float bh = theme::layout::scale(theme::layout::MENU_BAR_HEIGHT);
                         if (afterhours::ui::is_mouse_inside(ctx.mouse.pos, {hx, hy, bw, bh})) {
                             clickInMenu = true;
@@ -380,7 +410,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         if (!menu.menus[menuIdx].open) continue;
                         float dx = theme::layout::scale(4.0f);
                         for (size_t i = 0; i < menuIdx; ++i) {
-                            dx += static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize) + theme::layout::scaleInt(16));
+                            dx += menu_geometry::headerWidth(
+                                static_cast<float>(theme::MeasureUIText(menu.menus[i].label.c_str(), menuFontSize)),
+                                theme::layout::scale(menu_geometry::HEADER_PADDING_X));
                         }
                         float dy = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + theme::layout::MENU_BAR_HEIGHT);
                         float dh = 0;
