@@ -10,7 +10,7 @@ namespace menu_geometry {
 
 // Horizontal padding inside a menu-bar header button, per side (Word95:
 // ~7px). Callers scale it with theme::layout::scale().
-inline constexpr float HEADER_PADDING_X = 7.0f;
+inline constexpr float HEADER_PADDING_X = 6.0f;  // 6-8px Win95 range; scale() applies display factor
 
 // Total header button width from the measured label width plus padding.
 inline float headerWidth(float textWidth, float scaledPaddingX) {

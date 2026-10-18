@@ -191,15 +191,24 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                             pixels(menuBarHeight)})
                     .with_absolute_position()
                     .with_translate(headerX, headerY)
+                    // Win95 menu titles: flat at rest; the OPEN title
+                    // (and hover-switch target) is the navy selection
+                    // with white text — see real Word 95 captures (the
+                    // open Insert menu title is navy/white).
                     .with_custom_background(highlighted ? toAhColor(theme::MENU_HOVER) : toAhColor(theme::MENU_BG))
                     .with_custom_text_color(highlighted ? toAhColor(theme::MENU_TEXT_HOVER) : toAhColor(theme::MENU_TEXT))
-                    .with_alignment(afterhours::ui::TextAlignment::Left)
-                    .with_justify_content(afterhours::ui::JustifyContent::FlexStart)
+                    // Label centered in its hot area (Word 95): width is
+                    // text + 2*padding, so centering makes both insets
+                    // exactly headerPadding. NOTE: with_padding on a label
+                    // button is a no-op in afterhours (use text_inset /
+                    // alignment) — the old Left+padding left the label
+                    // hard against the left bevel.
+                    .with_alignment(afterhours::ui::TextAlignment::Center)
+                    .with_justify_content(afterhours::ui::JustifyContent::Center)
                     .with_align_items(afterhours::ui::AlignItems::Center)
-                    .with_padding(afterhours::ui::Padding{.left = pixels(headerPadding),
-                                                         .right = pixels(headerPadding)})
                     .with_roundness(0.0f)
-                    .with_bevel(highlighted ? afterhours::ui::BevelStyle::Sunken : afterhours::ui::BevelStyle::Raised,
+                    .with_bevel(isOpen ? afterhours::ui::BevelStyle::Sunken
+                                       : afterhours::ui::BevelStyle::None,
                                 toAhColor(theme::BORDER_LIGHT), toAhColor(theme::BORDER_DARK), 1.0f)
                     .with_cursor(afterhours::ui::CursorType::Pointer)
                     .with_render_layer(1));
