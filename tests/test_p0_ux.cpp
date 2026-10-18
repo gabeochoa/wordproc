@@ -85,6 +85,36 @@ TEST_CASE("P0-4 mouse selection", "[p0][selection]") {
     }
 }
 
+// P0-10: File menu width cap + middle-ellipsized recent paths.
+TEST_CASE("P0-10 recent path ellipsizing", "[p0][menu]") {
+    SECTION("short paths pass through unchanged") {
+        REQUIRE(menu_geometry::ellipsizeMiddle("/a/b.doc", 40) == "/a/b.doc");
+        REQUIRE(menu_geometry::ellipsizeMiddle("name.doc", 40) == "name.doc");
+    }
+    SECTION("long paths ellipsize in the middle, filename intact") {
+        std::string path = "/Users/gabeochoa/p/wordproc/docs/very/long/nested/folder/report.doc";
+        std::string out = menu_geometry::ellipsizeMiddle(path, 40);
+        REQUIRE(out.size() == 40);
+        REQUIRE(out.find("report.doc") != std::string::npos);
+        REQUIRE(out.substr(out.size() - 10) == "report.doc");
+        REQUIRE(out.find("...") != std::string::npos);
+        REQUIRE(out.rfind("/", 0) == 0);
+    }
+    SECTION("filename alone over budget is end-truncated, never dropped") {
+        std::string out = menu_geometry::ellipsizeMiddle(
+            "/x/verylongfilename-that-exceeds-the-budget.doc", 20);
+        REQUIRE(out.size() == 20);
+        REQUIRE(out.substr(out.size() - 3) == "...");
+    }
+    SECTION("dropdown width caps at the max") {
+        REQUIRE(menu_geometry::dropdownWidth(1000.0f, 0.0f, 8.0f,
+                                             menu_geometry::MAX_DROPDOWN_WIDTH) ==
+                menu_geometry::MAX_DROPDOWN_WIDTH);
+        REQUIRE(menu_geometry::MAX_DROPDOWN_WIDTH == 400.0f);
+        REQUIRE(menu_geometry::RECENT_PATH_MAX_CHARS == 40);
+    }
+}
+
 // P0-8: dropdown insets — label left and shortcut right are symmetric
 // 8px insets from the dropdown edge.
 TEST_CASE("P0-8 dropdown insets", "[p0][menu]") {

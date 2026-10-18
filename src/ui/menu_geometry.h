@@ -34,6 +34,14 @@ inline float dropdownShortcutRight(float dropdownX, float maxWidth) {
     return dropdownX + maxWidth - ITEM_PADDING_X;
 }
 
+// Maximum dropdown width in pixels: long content (notably File > recent
+// paths) must not stretch the menu across the screen.
+inline constexpr float MAX_DROPDOWN_WIDTH = 400.0f;
+
+// Character budget for a recent-file path inside its "Recent: " label.
+// 8 ("Recent: ") + 40 chars at ~7px + 50px slack ≈ 386px < the cap.
+inline constexpr std::size_t RECENT_PATH_MAX_CHARS = 40;
+
 // Dropdown width: label + shortcut + insets, capped (see File menu cap).
 inline float dropdownWidth(float labelWidth, float shortcutWidth,
                            float scaledPaddingX, float maxWidth) {

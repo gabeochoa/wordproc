@@ -4,6 +4,7 @@
 
 #include "../ecs/components.h"
 #include "../editor/document_io.h"
+#include "../settings.h"
 #include "../util/file_dialog.h"
 
 #include <afterhours/src/plugins/e2e_testing/e2e_testing.h>
@@ -478,6 +479,24 @@ struct HandleReleaseKeyCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'seed_recent_file <path>' - adds a path to Settings' recent
+// files (e.g. a long path, to exercise File-menu ellipsizing). The menu
+// system refreshes from Settings when the recent count changes. The
+// batch reset clears Settings between tests.
+struct HandleSeedRecentFileCommand : System<testing::PendingE2ECommand> {
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("seed_recent_file"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("seed_recent_file requires a path");
+      return;
+    }
+    Settings::get().add_recent_file(cmd.arg(0));
+    cmd.consume();
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -529,6 +548,7 @@ inline void register_app_commands(
 
   sm.register_update_system(std::make_unique<HandleHoldKeyCommand>());
   sm.register_update_system(std::make_unique<HandleReleaseKeyCommand>());
+  sm.register_update_system(std::make_unique<HandleSeedRecentFileCommand>());
 
   auto load_tmpl = std::make_unique<HandleLoadTemplateCommand>();
   load_tmpl->doc_comp = doc_comp;

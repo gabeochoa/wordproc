@@ -1,0 +1,11 @@
+# P0-10: File menu width is capped and long recent paths are
+# middle-ellipsized with the filename intact (separator plus capped
+# width). The seeded path is 66 chars; the displayed recent label is
+# "Recent: " + 40 chars with "..." and the filename intact.
+seed_recent_file /Users/gabeochoa/p/wordproc/docs/very/long/nested/folder/report.doc
+wait_frames 12
+menu_open File
+wait_frames 12
+validate menu_open=File
+expect_text "report.doc"
+screenshot p0_file_menu_long_recent

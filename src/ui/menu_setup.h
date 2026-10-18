@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "menu_geometry.h"
 #include "win95_widgets.h"
 
 namespace menu_setup {
@@ -29,7 +30,12 @@ inline std::vector<win95::Menu> createMenuBar(
 
     if (!recentFiles.empty()) {
         for (const auto& path : recentFiles) {
-            fileMenu.items.push_back({"Recent: " + path, "", true, false, nullptr});
+            win95::MenuItem item{"Recent: " + path, "", true, false, nullptr};
+            // Middle-ellipsize for display so a long path can't stretch
+            // the dropdown; `label` keeps the full path for dispatch.
+            item.displayLabel = "Recent: " + menu_geometry::ellipsizeMiddle(
+                                                path, menu_geometry::RECENT_PATH_MAX_CHARS);
+            fileMenu.items.push_back(std::move(item));
         }
         fileMenu.items.push_back({"", "", false, true, nullptr});  // Separator
     }

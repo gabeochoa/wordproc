@@ -27,6 +27,10 @@ struct MenuItem {
     bool separator = false;
     std::function<void()> action;
     MenuMark mark = MenuMark::None;  // Standard mark (checkmark/radio/dash)
+    // Display text for rendering. Empty = use label. Recent-file items
+    // set an ellipsized form here so the dropdown stays narrow, while
+    // `label` keeps the full path for dispatch (open) and E2E matching.
+    std::string displayLabel;
 };
 
 // Menu structure

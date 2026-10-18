@@ -255,13 +255,20 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 dropdownHeight += item.separator ? theme::layout::scale(8.0f) : theme::layout::scale(20.0f);
             }
             
-            // Compute max width from content
+            // Compute max width from content (display labels, so an
+            // ellipsized recent path measures as displayed), capped so
+            // long content can't stretch the dropdown across the screen.
             float maxWidth = 150.0f;
             for (const auto& item : menuDef.items) {
-                float labelWidth = static_cast<float>(item.label.length() * 7);
+                const std::string& showLabel =
+                    item.displayLabel.empty() ? item.label : item.displayLabel;
+                float labelWidth = static_cast<float>(showLabel.length() * 7);
                 float shortcutWidth = static_cast<float>(item.shortcut.length() * 7);
                 float totalWidth = labelWidth + shortcutWidth + 50.0f;
                 if (totalWidth > maxWidth) maxWidth = totalWidth;
+            }
+            if (maxWidth > menu_geometry::MAX_DROPDOWN_WIDTH) {
+                maxWidth = menu_geometry::MAX_DROPDOWN_WIDTH;
             }
             
             // Dropdown container background
@@ -315,8 +322,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         markPrefix = "  ";  // Reserve space for mark column
                     }
                     
+                    // Display label (ellipsized for recent paths).
+                    const std::string& showLabel =
+                        item.displayLabel.empty() ? item.label : item.displayLabel;
+
                     // Register menu item label for E2E tests
-                    test_input::register_visible_text(item.label);
+                    test_input::register_visible_text(showLabel);
                     
                     int itemId = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
                     float itemHeight = theme::layout::scale(20.0f);
@@ -335,7 +346,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     auto itemResult = button(ctx, mk(entity, itemId),
                         ComponentConfig{}
                             .with_debug_name("item_" + item.label)
-                            .with_label(markPrefix + item.label)
+                            .with_label(markPrefix + showLabel)
                             .with_size(ComponentSize{pixels(maxWidth - 4.0f), pixels(itemHeight)})
                             .with_absolute_position()
                             .with_translate(dropdownX + 2.0f, itemY)
@@ -442,8 +453,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         }
                         float dw = 150.0f;
                         for (const auto& item : menu.menus[menuIdx].items) {
-                            float tw = static_cast<float>(item.label.length() * 7 + item.shortcut.length() * 7) + 50.0f;
+                            const std::string& showLabel =
+                                item.displayLabel.empty() ? item.label : item.displayLabel;
+                            float tw = static_cast<float>(showLabel.length() * 7 + item.shortcut.length() * 7) + 50.0f;
                             if (tw > dw) dw = tw;
+                        }
+                        if (dw > menu_geometry::MAX_DROPDOWN_WIDTH) {
+                            dw = menu_geometry::MAX_DROPDOWN_WIDTH;
                         }
                         if (afterhours::ui::is_mouse_inside(ctx.mouse.pos, {dx, dy, dw, dh + 4.0f})) {
                             clickInMenu = true;
