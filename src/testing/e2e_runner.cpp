@@ -911,6 +911,9 @@ static void setupCallbacksEx(
         dialogState.showWordCountDialog = false;
         dialogState.showGrammarDialog = false;
         dialogState.grammarErrors.clear();
+        dialogState.grammarIndex = 0;
+        dialogState.grammarIgnored.clear();
+        dialogState.grammarNoErrors = false;
         dialogState.showSpellingDialog = false;
         dialogState.spellSearchOffset = 0;
         dialogState.spellCurrentOffset = 0;

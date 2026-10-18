@@ -77,7 +77,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Word Count... | Have | P0 | dialog: words/chars/lines/paragraphs/sentences (verified in menu_ui_system.h) |
 | Spelling (F7 dialog) | Have | P0 | Batch 1: dialog + suggestions + Change All |
 | Red squiggle spell check as you type | Have | P0 | Batch 1: visible-lines cache, reviewer 8/10 |
-| Grammar check | Have | P2 | Batch 3: Tools > Grammar... dialog (read-only list: rule + excerpt + message + suggestion; Close only, no auto-fix). Engine covers repeated word, capitalization, double space, common errors. Tools menu is Word 95 order (Spelling, Word Count, AutoCorrect, sep, Grammar, sep); UI Scale... moved to View bottom; disabled Preferences... stub removed |
+| Grammar check | Have | P2 | Batch 3 + fix round: Tools > Grammar... is a real checker mirroring the Spelling dialog — one issue at a time (sunken In context: sentence with the offending phrase; Issue: human wording, never the enum name, e.g. "Repeated word"; Suggestion: the suggestion), right column Ignore Once (advance), Ignore All (session-ignore that rule+phrase), Change (applies the suggestion through the command layer as one undo step; disabled with no suggestion), Close. Pinned: "The the cat sat." Change -> "The cat sat." (unit + E2E). Grammar issues have NO underlines: GrammarChecker has no render path — the old screenshot's wave under "sat." was a spell squiggle ("sat" is not in the dictionary). Engine covers repeated word, capitalization, double space, common errors |
 | AutoCorrect engine | Have | P0 | Batch 1 |
 | Thesaurus | Missing | P2 | |
 | Mail Merge... | Missing | P2 | stub OK per plan |

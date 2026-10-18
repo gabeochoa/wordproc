@@ -306,6 +306,62 @@ bool SpellChecker::saveUserDictionary(const std::string& path) const {
 }
 
 // ============================================================================
+// Grammar dialog helpers (human wording, sentence context, ignore keys)
+// ============================================================================
+
+std::string grammarRuleDisplayName(const std::string& ruleId) {
+    if (ruleId == "REPEATED_WORD") return "Repeated word";
+    if (ruleId == "DOUBLE_SPACE") return "Double space";
+    if (ruleId == "SENTENCE_CAPITALIZATION")
+        return "Sentence capitalization";
+    if (ruleId == "COMMON_ERRORS") return "Common error";
+    return "Grammar issue";
+}
+
+std::string grammarSentenceContext(const std::string& text,
+                                   const GrammarError& error) {
+    if (text.empty()) return "";
+    std::size_t offset = std::min(error.offset, text.size());
+    auto isTerminator = [](char ch) {
+        return ch == '.' || ch == '!' || ch == '?' || ch == '\n';
+    };
+    // Start: just after the previous terminator (or the doc start).
+    std::size_t start = 0;
+    for (std::size_t i = offset; i > 0;) {
+        --i;
+        if (isTerminator(text[i])) {
+            start = i + 1;
+            break;
+        }
+    }
+    // End: through the next terminator after the error (or doc end).
+    std::size_t end = text.size();
+    std::size_t scanFrom = std::min(error.offset + error.length, text.size());
+    for (std::size_t i = scanFrom; i < text.size(); ++i) {
+        if (isTerminator(text[i])) {
+            end = i + 1;
+            break;
+        }
+    }
+    // Trim surrounding whitespace/newlines (a leading-whitespace
+    // error itself may be trimmed; the sentence is what matters).
+    while (start < end &&
+           std::isspace(static_cast<unsigned char>(text[start]))) {
+        ++start;
+    }
+    while (end > start &&
+           std::isspace(static_cast<unsigned char>(text[end - 1]))) {
+        --end;
+    }
+    if (start >= end) return "";
+    return text.substr(start, end - start);
+}
+
+std::string grammarIgnoreKey(const GrammarError& error) {
+    return error.ruleId + "\x1f" + error.text;
+}
+
+// ============================================================================
 // GrammarChecker Implementation
 // ============================================================================
 

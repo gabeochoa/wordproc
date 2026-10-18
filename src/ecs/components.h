@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -211,11 +212,16 @@ struct DialogState : public afterhours::BaseComponent {
     // Word Count
     bool showWordCountDialog = false;
 
-    // Grammar dialog (Tools > Grammar...): read-only list of
-    // GrammarChecker issues for the document, refreshed on open by
-    // cmd::openGrammarDialog.
+    // Grammar dialog (Tools > Grammar...): interactive, mirroring
+    // the Spelling dialog — one issue at a time at grammarIndex,
+    // refreshed from the document by the cmd::grammar* functions.
+    // grammarIgnored holds session-ignore keys (rule + phrase) from
+    // Ignore All; grammarNoErrors drives the "check complete" screen.
     bool showGrammarDialog = false;
     std::vector<GrammarError> grammarErrors;
+    std::size_t grammarIndex = 0;
+    std::set<std::string> grammarIgnored;
+    bool grammarNoErrors = false;
 
     // Spelling dialog (Tools > Spelling..., F7)
     bool showSpellingDialog = false;

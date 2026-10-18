@@ -105,6 +105,23 @@ enum class GrammarAction {
     Accept       // Accept the suggestion
 };
 
+// Human wording for a grammar rule id. NEVER returns the enum name:
+// unknown ids fall back to "Grammar issue". The dialog shows
+// GrammarError::message when present (already human, e.g.
+// "Repeated word"); this is the fallback and the label for the
+// rule itself.
+std::string grammarRuleDisplayName(const std::string& ruleId);
+
+// The sentence containing a grammar error, for the dialog's
+// "In context:" field: from just after the previous sentence
+// terminator (. ! ? newline) through the next terminator, trimmed.
+std::string grammarSentenceContext(const std::string& text,
+                                   const GrammarError& error);
+
+// Session-ignore key for Ignore All: the rule + the offending
+// phrase, so ignoring "The the" does not ignore every repeated word.
+std::string grammarIgnoreKey(const GrammarError& error);
+
 class GrammarChecker {
    public:
     GrammarChecker() = default;

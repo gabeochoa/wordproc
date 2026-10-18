@@ -939,10 +939,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Grammar dialog (Tools > Grammar...) - Win95 shell: a sunken
-        // scrollable list of GrammarChecker issues (rule + excerpt +
-        // message + suggestion) and a Close button. Read-only: no
-        // auto-fix, no edits; the list is refreshed on open.
+        // Grammar dialog (Tools > Grammar...) - mirrors the Spelling
+        // dialog: left column (In context field, Issue field,
+        // Suggestion field), right column of gray buttons
+        // (Ignore Once, Ignore All, Change, Close). One issue at a
+        // time at grammarIndex; the enum name (e.g. REPEATED_WORD) is
+        // never shown — Issue shows the human message, with the rule
+        // display name as fallback.
         if (dialogs.showGrammarDialog) {
             constexpr int GRAMMAR_MODAL_ID = 50012;
             auto result = afterhours::modal(ctx, mk(entity, GRAMMAR_MODAL_ID),
@@ -960,83 +963,153 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
                                               "Grammar", CONTENT_LAYER);
 
-                if (dialogs.grammarErrors.empty()) {
+                const GrammarError* current =
+                    cmd::grammarCurrentError(dialogs);
+                if (!current) {
                     div(ctx, mk(result.ent(), 901),
                         ComponentConfig{}
-                            .with_label("No grammar issues found.")
+                            .with_label("Grammar check complete.")
                             .with_size(ComponentSize{percent(1.0f), h720(24)})
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_custom_text_color(ui_imm::win95_colors::TEXT)
                             .with_render_layer(CONTENT_LAYER));
-                } else {
-                    div(ctx, mk(result.ent(), 902),
+                    test_input::register_visible_text(
+                        "Grammar check complete.");
+                    auto doneRow = div(ctx, mk(result.ent(), 902),
                         ComponentConfig{}
-                            .with_label("Grammar issues:")
-                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_size(ComponentSize{percent(1.0f), h720(44)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_justify_content(JustifyContent::Center)
+                            .with_align_items(AlignItems::Center)
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
-                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
-                            .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
-
-                    auto issueList = div(ctx, mk(result.ent(), 903),
-                        ah_win95::win95SunkenStyle()
-                            .with_size(ComponentSize{percent(1.0f), h720(180)})
-                            .with_flex_direction(FlexDirection::Column)
-                            .with_overflow(afterhours::ui::Overflow::Auto)
-                            .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
-                            .with_render_layer(CONTENT_LAYER));
-                    if (issueList) {
-                        for (std::size_t i = 0; i < dialogs.grammarErrors.size(); ++i) {
-                            const GrammarError& err = dialogs.grammarErrors[i];
-                            // A double-space excerpt is invisible on
-                            // its own; show it as "(spaces)".
-                            std::string excerpt = err.text;
-                            if (!excerpt.empty() &&
-                                excerpt.find_first_not_of(" \t") == std::string::npos) {
-                                excerpt = "(spaces)";
-                            }
-                            std::string row = err.ruleId + " - \"" + excerpt + "\" - " +
-                                err.message;
-                            if (!err.suggestion.empty()) {
-                                row += " (suggest: \"" + err.suggestion + "\")";
-                            }
-                            test_input::register_visible_text(err.message);
-                            div(ctx, mk(issueList.ent(), 100 + static_cast<int>(i)),
-                                ComponentConfig{}
-                                    .with_label(row)
-                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
-                                    .with_custom_background(
-                                        ui_imm::win95_colors::TEXT_AREA)
-                                    .with_custom_text_color(
-                                        ui_imm::win95_colors::TEXT)
-                                    .with_alignment(afterhours::ui::TextAlignment::Left)
-                                    .with_padding(Padding{.left = pixels(4)})
-                                    .with_render_layer(CONTENT_LAYER));
+                    if (doneRow) {
+                        if (button(ctx, mk(doneRow.ent(), 0),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("grammar_close")
+                                .with_label("Close")
+                                .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.showGrammarDialog = false;
                         }
                     }
-                }
+                } else {
+                    // Body row: left column + right button column
+                    auto bodyRow = div(ctx, mk(result.ent(), 903),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), children()})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (bodyRow) {
+                    // Copy before any button: the button handlers
+                    // rebuild grammarErrors (refresh), which would
+                    // dangle `current`. Declared in bodyRow scope so
+                    // the right column can use it.
+                    bool canChange = !current->suggestion.empty();
+                    auto leftCol = div(ctx, mk(bodyRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{w1280(302), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_gap(pixels(4))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (leftCol) {
+                    std::string sentence = grammarSentenceContext(
+                        doc.buffer.getText(), *current);
+                    std::string issue = cmd::grammarIssueLabel(*current);
+                    std::string suggestion = current->suggestion.empty()
+                        ? "(no suggestion)"
+                        : current->suggestion;
+                    test_input::register_visible_text(sentence);
+                    test_input::register_visible_text(issue);
+                    test_input::register_visible_text(
+                        current->suggestion);
 
-                auto closeRow = div(ctx, mk(result.ent(), 904),
-                    ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(44)})
-                        .with_flex_direction(FlexDirection::Row)
-                        .with_justify_content(JustifyContent::Center)
-                        .with_align_items(AlignItems::Center)
-                        .with_custom_background(
-                            ui_imm::win95_colors::BUTTON_FACE)
-                        .with_render_layer(CONTENT_LAYER));
-                if (closeRow) {
-                    if (button(ctx, mk(closeRow.ent(), 0),
-                        ah_win95::win95DialogButtonStyle()
-                            .with_debug_name("grammar_close")
-                            .with_label("Close")
-                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
-                            .with_render_layer(CONTENT_LAYER))) {
-                        dialogs.showGrammarDialog = false;
-                    }
-                }
+                    auto fieldLabel = [&](int id, const std::string& label) {
+                        div(ctx, mk(leftCol.ent(), id),
+                            ComponentConfig{}
+                                .with_label(label)
+                                .with_size(ComponentSize{percent(1.0f), h720(20)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                                .with_alignment(afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                    };
+                    auto sunkenField = [&](int id, const std::string& text,
+                                           const std::string& debug, float h) {
+                        div(ctx, mk(leftCol.ent(), id),
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name(debug)
+                                .with_label(text)
+                                .with_size(ComponentSize{percent(1.0f), h720(h)})
+                                .with_alignment(afterhours::ui::TextAlignment::Left)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_render_layer(CONTENT_LAYER));
+                    };
+
+                    // "In context:" — the sentence with the offending phrase.
+                    fieldLabel(0, "In context:");
+                    sunkenField(1, sentence, "grammar_context", 44.0f);
+                    // Human wording for the issue (never the enum name).
+                    fieldLabel(2, "Issue:");
+                    sunkenField(3, issue, "grammar_issue", 26.0f);
+                    // Suggestion / message field.
+                    fieldLabel(4, "Suggestion:");
+                    sunkenField(5, suggestion, "grammar_suggestion", 26.0f);
+                    }  // leftCol
+
+                    // Right column: vertical stack of compact 90px
+                    // gray buttons. Ignore Once is the default button
+                    // (dark outline). Change is disabled with no
+                    // concrete suggestion.
+                    auto rightCol = div(ctx, mk(bodyRow.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{w1280(100), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_gap(pixels(6))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (rightCol) {
+                        if (button(ctx, mk(rightCol.ent(), 0),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("grammar_ignore_once")
+                                .with_label("Ignore Once")
+                                .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            cmd::grammarIgnoreOnce(doc, dialogs);
+                        }
+                        if (button(ctx, mk(rightCol.ent(), 1),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("grammar_ignore_all")
+                                .with_label("Ignore All")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            cmd::grammarIgnoreAll(doc, dialogs);
+                        }
+                        if (button(ctx, mk(rightCol.ent(), 2),
+                            ah_win95::win95DialogButtonStyle(canChange)
+                                .with_debug_name("grammar_change")
+                                .with_label("Change")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            if (canChange) cmd::grammarChange(doc, dialogs);
+                        }
+                        if (button(ctx, mk(rightCol.ent(), 3),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("grammar_close")
+                                .with_label("Close")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.showGrammarDialog = false;
+                        }
+                    }  // rightCol
+                    }  // bodyRow
+                }  // else (an issue is current)
             }
         }
 

@@ -261,12 +261,108 @@ inline void requestPrint(DocumentComponent& doc, DialogState& dialogs) {
 }
 
 // --- Grammar dialog commands (Tools > Grammar...) ---
-// Read-only: refresh the cached issues from the current document
-// text on every open. No auto-fix, no edits.
+// Interactive, mirroring the Spelling dialog: one issue at a time
+// at grammarIndex. Ignore Once advances; Ignore All session-ignores
+// this rule + this phrase (other instances of the same rule, or the
+// same phrase under another rule, are unaffected); Change applies
+// the suggestion through the buffer as one undo step, when a
+// concrete suggestion exists. Re-scanning after Change resumes at
+// the first error at/after the change, so later errors (whose
+// offsets shifted) stay in order and earlier ones are not re-shown.
+// The dialog never renders grammar underlines: GrammarChecker has
+// no render path (grammar issues are NOT spell squiggles), and the
+// one squiggle the old screenshot showed under "sat." was a spell
+// squiggle — "sat" is not in the dictionary. Dialog only.
+
+// Human wording for the current issue: the checker's message when
+// present (already human); the rule display name as fallback.
+// The enum name (e.g. REPEATED_WORD) is never shown.
+inline std::string grammarIssueLabel(const GrammarError& err) {
+    return err.message.empty() ? grammarRuleDisplayName(err.ruleId)
+                               : err.message;
+}
+
+inline const GrammarError* grammarCurrentError(const DialogState& dialogs) {
+    if (dialogs.grammarNoErrors) return nullptr;
+    if (dialogs.grammarIndex >= dialogs.grammarErrors.size()) {
+        return nullptr;
+    }
+    return &dialogs.grammarErrors[dialogs.grammarIndex];
+}
+
+// Re-check the document and rebuild the issue list, dropping
+// session-ignored (rule + phrase) issues. Callers own grammarIndex
+// / grammarNoErrors.
+inline void refreshGrammarDialog(DocumentComponent& doc,
+                                 DialogState& dialogs) {
+    GrammarChecker checker;
+    auto all = checker.checkText(doc.buffer.getText());
+    dialogs.grammarErrors.clear();
+    for (auto& err : all) {
+        if (dialogs.grammarIgnored.count(grammarIgnoreKey(err)) == 0) {
+            dialogs.grammarErrors.push_back(std::move(err));
+        }
+    }
+}
+
 inline void openGrammarDialog(DocumentComponent& doc, DialogState& dialogs) {
     dialogs.showGrammarDialog = true;
-    GrammarChecker checker;
-    dialogs.grammarErrors = checker.checkText(doc.buffer.getText());
+    dialogs.grammarIndex = 0;
+    dialogs.grammarNoErrors = false;
+    refreshGrammarDialog(doc, dialogs);
+    if (dialogs.grammarErrors.empty()) dialogs.grammarNoErrors = true;
+}
+
+inline void grammarIgnoreOnce(DocumentComponent& doc,
+                              DialogState& dialogs) {
+    if (!grammarCurrentError(dialogs)) return;
+    ++dialogs.grammarIndex;
+    refreshGrammarDialog(doc, dialogs);
+    if (dialogs.grammarIndex >= dialogs.grammarErrors.size()) {
+        dialogs.grammarNoErrors = true;
+    }
+}
+
+inline void grammarIgnoreAll(DocumentComponent& doc,
+                             DialogState& dialogs) {
+    const GrammarError* current = grammarCurrentError(dialogs);
+    if (!current) return;
+    dialogs.grammarIgnored.insert(grammarIgnoreKey(*current));
+    refreshGrammarDialog(doc, dialogs);
+    // The ignored issue is gone, so the next issue (if any) now
+    // sits at the same index; if none does, the check is complete.
+    if (dialogs.grammarIndex >= dialogs.grammarErrors.size()) {
+        dialogs.grammarNoErrors = true;
+    }
+}
+
+inline void grammarChange(DocumentComponent& doc, DialogState& dialogs) {
+    const GrammarError* current = grammarCurrentError(dialogs);
+    if (!current) return;
+    // No concrete suggestion: Change is disabled in the dialog and
+    // a no-op here.
+    if (current->suggestion.empty()) return;
+    std::size_t offset = current->offset;
+    std::size_t length = current->length;
+    std::string oldText = current->text;
+    std::string suggestion = current->suggestion;
+    recordDeleteRevision(doc, offset, oldText);
+    recordInsertRevision(doc, offset, suggestion);
+    doc.buffer.replaceRange(offset, length, suggestion);
+    doc.isDirty = true;
+    refreshGrammarDialog(doc, dialogs);
+    // Resume at the first remaining error at/after the change.
+    std::size_t next = dialogs.grammarErrors.size();
+    for (std::size_t i = 0; i < dialogs.grammarErrors.size(); ++i) {
+        if (dialogs.grammarErrors[i].offset >= offset) {
+            next = i;
+            break;
+        }
+    }
+    dialogs.grammarIndex = next;
+    if (next >= dialogs.grammarErrors.size()) {
+        dialogs.grammarNoErrors = true;
+    }
 }
 
 // --- Spelling dialog commands (Tools > Spelling..., F7) ---
