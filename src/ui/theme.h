@@ -53,6 +53,11 @@ inline Color BUTTON_FACE = {192, 192, 192, 255};
 inline Color BUTTON_TEXT = {0, 0, 0, 255};
 inline Color BUTTON_PRESSED_BG = {128, 128, 128, 255};
 
+// Tooltips (Win95: pale yellow #FFFFE1, 1px black border, black text)
+inline Color TOOLTIP_BG = {255, 255, 225, 255};
+inline Color TOOLTIP_BORDER = {0, 0, 0, 255};
+inline Color TOOLTIP_TEXT = {0, 0, 0, 255};
+
 // Toolbar colors
 inline Color TOOLBAR_BG = {192, 192, 192, 255};
 inline Color TOOLBAR_HOVER_BG = {220, 220, 220, 255};

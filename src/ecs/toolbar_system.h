@@ -3,6 +3,7 @@
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../rl.h"
 #include "../ui/theme.h"
+#include "../ui/tooltip_math.h"
 #include "../ui/ah_win95_widgets.h"
 #include "../ui/ah_modal_input.h"
 #include "../ui/input.h"
@@ -134,8 +135,14 @@ inline ComponentConfig absDropdownButton(float x, float y, float width, float he
 // Uses absolute positioning for each element (translate doesn't propagate to flex children)
 struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
     EditorEntityCache cache_;
-    
-    void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
+    // Tooltip hover-delay state: which button is hovered and for how long.
+    // A tooltip shows only after ~0.5s of steady hover on the same button.
+    float tooltipHoverTime_ = 0.0f;
+    float tooltipHoverX_ = -1.0f;
+    float tooltipHoverY_ = -1.0f;
+    std::string tooltipHoverText_;
+
+    void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float dt) override {
         cache_.resolve();
         if (!cache_.resolved()) return;
         
@@ -569,26 +576,46 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         trackTooltip(fmtX, fmtBtnY, "Justify (Ctrl+J)");
 
         // === Draw Tooltips ===
-        // Render any tooltip for hovered buttons (drawn last so they appear on top)
-        for (const auto& tip : tooltips) {
-            float tipFontSize = 11.0f;
-            float tipW = theme::MeasureUIText(tip.text.c_str(), static_cast<int>(tipFontSize)) + 8.0f;
-            float tipH = tipFontSize + 6.0f;
-            // Yellow background tooltip with black text and thin border
-            div(ctx, mk(uiRoot, 4000),
-                ComponentConfig{}
-                    .with_label(tip.text)
-                    .with_size(ComponentSize{pixels(tipW), pixels(tipH)})
-                    .with_absolute_position()
-                    .with_translate(tip.x, tip.y)
-                    .with_custom_background(afterhours::Color{255, 255, 225, 255})
-                    .with_custom_text_color(afterhours::Color{0, 0, 0, 255})
-                    .with_roundness(0.0f)
-                    .with_render_layer(20)
-                    .with_bevel(afterhours::ui::BevelStyle::Raised,
-                                afterhours::Color{0, 0, 0, 255}, afterhours::Color{0, 0, 0, 255}, 1.0f)
-                    .with_alignment(afterhours::ui::TextAlignment::Center)
-                    .with_debug_name("tooltip"));
+        // One tooltip at a time, after ~0.5s of steady hover on the same
+        // button. Win95 style: pale yellow #FFFFE1, 1px black border,
+        // 4px horizontal / 2px vertical padding.
+        if (tooltips.empty()) {
+            tooltipHoverTime_ = 0.0f;
+            tooltipHoverX_ = -1.0f;
+            tooltipHoverY_ = -1.0f;
+            tooltipHoverText_.clear();
+        } else {
+            const auto& tip = tooltips.front();
+            if (tip.x == tooltipHoverX_ && tip.y == tooltipHoverY_ &&
+                tip.text == tooltipHoverText_) {
+                tooltipHoverTime_ += dt;
+            } else {
+                tooltipHoverX_ = tip.x;
+                tooltipHoverY_ = tip.y;
+                tooltipHoverText_ = tip.text;
+                tooltipHoverTime_ = 0.0f;
+            }
+            if (tooltip_math::delayElapsed(tooltipHoverTime_)) {
+                float tipFontSize = 11.0f;
+                float tipW = tooltip_math::tooltipWidth(static_cast<float>(
+                    theme::MeasureUIText(tip.text.c_str(), static_cast<int>(tipFontSize))));
+                float tipH = tooltip_math::tooltipHeight(tipFontSize);
+                div(ctx, mk(uiRoot, 4000),
+                    ComponentConfig{}
+                        .with_label(tip.text)
+                        .with_size(ComponentSize{pixels(tipW), pixels(tipH)})
+                        .with_absolute_position()
+                        .with_translate(tip.x, tip.y)
+                        .with_custom_background(toAhColor(theme::TOOLTIP_BG))
+                        .with_custom_text_color(toAhColor(theme::TOOLTIP_TEXT))
+                        .with_roundness(0.0f)
+                        .with_render_layer(20)
+                        .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                    toAhColor(theme::TOOLTIP_BORDER),
+                                    toAhColor(theme::TOOLTIP_BORDER), 1.0f)
+                        .with_alignment(afterhours::ui::TextAlignment::Center)
+                        .with_debug_name("tooltip"));
+            }
         }
         
         // === Close dropdowns on click outside ===

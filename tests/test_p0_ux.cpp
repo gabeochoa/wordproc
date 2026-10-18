@@ -1,6 +1,7 @@
 #include "../src/editor/text_buffer.h"
 #include "../src/editor/text_layout.h"
 #include "../src/ui/menu_geometry.h"
+#include "../src/ui/tooltip_math.h"
 #include "catch2/catch.hpp"
 
 // NOTE: P0-6 has no unit test: ah_win95_widgets.h pulls the afterhours
@@ -81,6 +82,20 @@ TEST_CASE("P0-4 mouse selection", "[p0][selection]") {
         buffer.selectWordAt({0, 1});
         buffer.backspace();
         REQUIRE(buffer.getText() == " world");
+    }
+}
+
+// P0-7: tooltip geometry — 4px horizontal / 2px vertical padding, 0.5s delay.
+TEST_CASE("P0-7 tooltip geometry", "[p0][tooltip]") {
+    SECTION("padding is 4px horizontal, 2px vertical") {
+        REQUIRE(tooltip_math::tooltipWidth(100.0f) == 108.0f);
+        REQUIRE(tooltip_math::tooltipHeight(11.0f) == 15.0f);
+    }
+    SECTION("tooltip shows only after the hover delay") {
+        REQUIRE_FALSE(tooltip_math::delayElapsed(0.0f));
+        REQUIRE_FALSE(tooltip_math::delayElapsed(0.499f));
+        REQUIRE(tooltip_math::delayElapsed(0.5f));
+        REQUIRE(tooltip_math::delayElapsed(2.0f));
     }
 }
 
