@@ -7,8 +7,11 @@ wait_frames 30
 # Verify the current font size is visible
 expect_text "10"
 
-# Click the Font Size dropdown button using text-based click
-click_text "10"
+# Click the Font Size dropdown button by debug name (not
+# click_text "10": the Standard toolbar's Zoom dropdown label
+# "100%" also contains "10" and is created first, so a text click
+# would open the Zoom dropdown instead).
+click_ui dropdown_fontsize
 
 # Wait for dropdown to open
 wait_frames 18
@@ -23,5 +26,7 @@ expect_text "18"
 expect_text "24"
 
 # Click elsewhere to close the dropdown
-click 500 300
+mouse_down 500 300
+wait_frames 2
+mouse_up
 wait_frames 12
