@@ -45,3 +45,21 @@ https://pxl.cl/gBLT1 — Scores: squiggles 8/10, Spelling 6/10, AutoCorrect
 (right-aligned ticks, four-column text wall), field/list sunken edges and
 oversized buttons remain. Fix round 3 dispatched (native checkboxes,
 sunken Replace|With list + editable entries, narrower buttons).
+
+### Round 3 (commit 4a9d895)
+
+AutoCorrect rebuilt as a genuine dialog (native checkboxes, sunken
+Replace|With list, editable entries with Add/Delete, OK/Cancel); 2px sunken
+edges; 90px buttons (root cause: `h720()` widths resolve against screen
+width — dialogs now use `w1280()` for widths).
+
+### Round 3b — FINAL, Batch 1 surfaces
+
+Reviewer (gpt-6-sol): squiggles 8.5/10, Spelling 8/10, AutoCorrect 7.5/10,
+Word Count 8/10 — **"READS AS WORD 95 for these surfaces."** The stacked
+Word Count capture in round 3 was a capture-script bug (stale
+`autocorrect_close` debug name), fixed and re-captured clean:
+https://pxl.cl/gBQ1j (round-3 set: gBPR6/gBPRv/gBPRF/gBPRX).
+Minor non-blockers noted: tiny notch in Word Count caption border,
+AutoCorrect list header separation. App chrome (ruler/page/toolbars/Window
+menu) deliberately unscored — that's Batch 2.
