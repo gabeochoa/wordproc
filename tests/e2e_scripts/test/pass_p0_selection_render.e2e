@@ -1,0 +1,12 @@
+# P0-5: selection renders Win95 inverse — navy #000080 background, white
+# text — and wins over spell squiggles. Visual check: the screenshot
+# must show white text on navy across the whole line, with no red
+# squiggle under the selected misspelled word. ("zzqx" has no
+# AutoCorrect entry, so it stays misspelled; "Zzqx" is sentence-capped.)
+type "zzqx world"
+wait_frames 12
+key CTRL+A
+wait_frames 6
+validate has_selection=true
+validate selected_text=Zzqx world
+screenshot p0_selection_render

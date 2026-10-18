@@ -404,7 +404,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
         
-        // Draw selection highlight (with alignment offset)
+        // Draw selection highlight (with alignment offset).
+        // Selection columns are raw-line coords; map through tab
+        // expansion to display columns so the bg lines up with the text.
         if (hasSelection) {
             bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
             if (lineInSelection) {
@@ -412,11 +414,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     (row == selStart.row) ? selStart.column : 0;
                 std::size_t endCol =
                     (row == selEnd.row) ? selEnd.column : span.length;
+                std::size_t dispStart = rawColumnToDisplayColumn(
+                    lineData, lineLen, startCol, tabWidth);
+                std::size_t dispEnd = rawColumnToDisplayColumn(
+                    lineData, lineLen, endCol, tabWidth);
+                dispStart = std::min(dispStart, displayLine.size());
+                dispEnd = std::min(std::max(dispEnd, dispStart), displayLine.size());
 
-                if (startCol < endCol && !displayLine.empty()) {
-                    std::string beforeSel = displayLine.substr(0, startCol);
+                if (dispStart < dispEnd && !displayLine.empty()) {
+                    std::string beforeSel = displayLine.substr(0, dispStart);
                     std::string selectedText =
-                        displayLine.substr(startCol, endCol - startCol);
+                        displayLine.substr(dispStart, dispEnd - dispStart);
 
                     int selX =
                         x + afterhours::graphics::measure_text(beforeSel.c_str(), lineFontSize);
@@ -497,6 +505,56 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 int strikeY = y + lineFontSize / 2;
                 afterhours::draw_line(x, strikeY, x + textWidth, strikeY, textColor);
             }
+
+            // Win95 inverse selection: the whole-line draw above left the
+            // selected text black-on-navy. Re-draw the selected segment in
+            // white (SELECTION_TEXT) over the navy background, matching
+            // bold / super / subscript / underline / strikethrough.
+            // Drop-cap lines skip this: their x/text are shifted, so the
+            // segment math would misalign (bg rect still shows).
+            if (hasSelection && !span.hasDropCap) {
+                bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
+                if (lineInSelection) {
+                    std::size_t rawStart =
+                        (row == selStart.row) ? selStart.column : 0;
+                    std::size_t rawEnd =
+                        (row == selEnd.row) ? selEnd.column : span.length;
+                    std::size_t dispStart = rawColumnToDisplayColumn(
+                        lineData, lineLen, rawStart, tabWidth);
+                    std::size_t dispEnd = rawColumnToDisplayColumn(
+                        lineData, lineLen, rawEnd, tabWidth);
+                    dispStart = std::min(dispStart, displayLine.size());
+                    dispEnd = std::min(std::max(dispEnd, dispStart), displayLine.size());
+                    if (dispStart < dispEnd) {
+                        std::string selText =
+                            displayLine.substr(dispStart, dispEnd - dispStart);
+                        int selX = x + afterhours::graphics::measure_text(
+                                           displayLine.substr(0, dispStart).c_str(),
+                                           textFontSize);
+                        int selW = afterhours::graphics::measure_text(
+                            selText.c_str(), textFontSize);
+                        if (paragraphStyleIsBold(paraStyle) || globalStyle.bold) {
+                            afterhours::draw_text(selText.c_str(), selX, y + textYOffset,
+                                                 textFontSize, theme::SELECTION_TEXT);
+                            afterhours::draw_text(selText.c_str(), selX + 1, y + textYOffset,
+                                                 textFontSize, theme::SELECTION_TEXT);
+                        } else {
+                            afterhours::draw_text(selText.c_str(), selX, y + textYOffset,
+                                                 textFontSize, theme::SELECTION_TEXT);
+                        }
+                        if (globalStyle.underline) {
+                            int underlineY = y + lineFontSize + 1;
+                            afterhours::draw_line(selX, underlineY, selX + selW, underlineY,
+                                                  theme::SELECTION_TEXT);
+                        }
+                        if (globalStyle.strikethrough) {
+                            int strikeY = y + lineFontSize / 2;
+                            afterhours::draw_line(selX, strikeY, selX + selW, strikeY,
+                                                  theme::SELECTION_TEXT);
+                        }
+                    }
+                }
+            }
         }
 
         // Draw red squiggles under misspelled words (spell check as you type).
@@ -512,6 +570,18 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             while (squiggleIdx < squiggles->size() &&
                    (*squiggles)[squiggleIdx].row == row) {
                 const SpellSquiggle& sq = (*squiggles)[squiggleIdx];
+                // Selection wins over squiggles: skip any squiggle that
+                // overlaps the selected range on this row.
+                if (hasSelection && row >= selStart.row && row <= selEnd.row) {
+                    std::size_t selRawStart =
+                        (row == selStart.row) ? selStart.column : 0;
+                    std::size_t selRawEnd =
+                        (row == selEnd.row) ? selEnd.column : span.length;
+                    if (sq.startCol < selRawEnd && sq.endCol > selRawStart) {
+                        ++squiggleIdx;
+                        continue;
+                    }
+                }
                 std::size_t dispStart = rawColumnToDisplayColumn(
                     lineData, lineLen, sq.startCol, tabWidth);
                 std::size_t dispEnd = rawColumnToDisplayColumn(
