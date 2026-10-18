@@ -89,3 +89,8 @@ Roboto has no U+2713 glyph): menubar 8.5 READS, ruler 8 READS (page
 358px = 8.5in × 42ppi, counted), Window 8.5 READS; paged page 6/10 —
 text not scaled with page zoom + margin boundary guides shown by
 default. Round 2 dispatched for those two.
+
+Round 2 (d953a4c text scales with page zoom, b522188 text boundaries off
+by default): paged page 8.5/10 — **READS AS WORD 95.** Glyph ink 6px at
+10pt/42ppi (expected 5.8). All Batch 2 surfaces pass: menubar 8.5,
+ruler 8, paged 8.5, Window 8.5.
