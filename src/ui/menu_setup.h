@@ -104,7 +104,9 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"Line Width: Wide", "", true, false, nullptr},    // 15
                       {"", "", false, true, nullptr},                    // 16 Separator
                       {"Show Line Numbers", "", true, false, nullptr},   // 17
-                      {"Show Outline", "", true, false, nullptr}};       // 18
+                      {"Show Outline", "", true, false, nullptr},        // 18
+                      {"", "", false, true, nullptr},                    // 19 Separator
+                      {"UI Scale...", "", true, false, nullptr}};        // 20 (moved from Tools)
     menus.push_back(viewMenu);
 
     // Format menu
@@ -238,17 +240,18 @@ inline std::vector<win95::Menu> createMenuBar(
 
     menus.push_back(formatMenu);   // Index 4: Format
 
-    // Tools menu (includes former Settings items; Word 95 Tools starts
-    // with Spelling)
+    // Tools menu in Word 95 order: Spelling, Word Count, AutoCorrect,
+    // separator, Grammar, separator. The modern UI Scale... moved to
+    // View (bottom); the disabled Preferences... stub is gone.
     win95::Menu toolsMenu;
     toolsMenu.label = "Tools";
     toolsMenu.items = {
         {"Spelling...", "F7", true, false, nullptr},             // 0
-        {"AutoCorrect...", "", true, false, nullptr},           // 1
-        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 2
+        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 1
+        {"AutoCorrect...", "", true, false, nullptr},           // 2
         {"", "", false, true, nullptr},                          // 3 Separator
-        {"UI Scale...", "", true, false, nullptr},               // 4 (was Settings)
-        {"Preferences...", "", false, false, nullptr}            // 5 (disabled, was Settings)
+        {"Grammar...", "", true, false, nullptr},                // 4
+        {"", "", false, true, nullptr}                           // 5 Separator
     };
     menus.push_back(toolsMenu);    // Index 5: Tools
 

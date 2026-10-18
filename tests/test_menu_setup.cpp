@@ -181,6 +181,44 @@ TEST_CASE("File menu has Print Preview + Print after Page Setup", "[menu][print]
     REQUIRE(items[print].enabled == true);
 }
 
+TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* tools = nullptr;
+    const MenuData* view = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "Tools") tools = &m;
+        if (m.label == "View") view = &m;
+    }
+    REQUIRE(tools != nullptr);
+    REQUIRE(view != nullptr);
+
+    // Tools: Spelling, Word Count, AutoCorrect, sep, Grammar, sep.
+    REQUIRE(tools->items.size() == 6);
+    REQUIRE(tools->items[0].label == "Spelling...");
+    REQUIRE(tools->items[0].shortcut == "F7");
+    REQUIRE(tools->items[1].label == "Word Count...");
+    REQUIRE(tools->items[2].label == "AutoCorrect...");
+    REQUIRE(tools->items[3].isSeparator);
+    REQUIRE(tools->items[4].label == "Grammar...");
+    REQUIRE(tools->items[5].isSeparator);
+    for (const auto& item : tools->items) {
+        REQUIRE(item.label != "UI Scale...");
+        REQUIRE(item.label != "Preferences...");
+    }
+
+    // View: UI Scale... is the last item, after Show Outline.
+    REQUIRE(!view->items.empty());
+    REQUIRE(view->items.back().label == "UI Scale...");
+    std::size_t outline = view->items.size();
+    for (std::size_t i = 0; i < view->items.size(); ++i) {
+        if (view->items[i].label == "Show Outline") outline = i;
+    }
+    REQUIRE(outline < view->items.size());
+    REQUIRE(view->items.back().label == "UI Scale...");
+    REQUIRE(outline + 2 == view->items.size() - 1);  // sep between
+    REQUIRE(view->items[outline + 1].isSeparator);
+}
+
 TEST_CASE("Window menu sits between Table and Help", "[menu]") {
     auto menus = createMenuBarData();
 

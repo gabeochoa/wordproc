@@ -92,7 +92,9 @@ inline std::vector<MenuData> createMenuBarData() {
                       {"Line Width: Wide", "", true, false},
                       {"", "", false, true},  // Separator
                       {"Show Line Numbers", "", true, false},
-                      {"Show Outline", "", true, false}};
+                      {"Show Outline", "", true, false},
+                      {"", "", false, true},  // Separator
+                      {"UI Scale...", "", true, false}};
     menus.push_back(viewMenu);
 
     // Format menu
@@ -244,10 +246,15 @@ inline std::vector<MenuData> createMenuBarData() {
                       {"About Wordproc", "", true, false}};
     menus.push_back(helpMenu);
 
-    // Tools menu
+    // Tools menu (Word 95 order)
     MenuData toolsMenu;
     toolsMenu.label = "Tools";
-    toolsMenu.items = {{"Word Count...", "", true, false}};
+    toolsMenu.items = {{"Spelling...", "F7", true, false},
+                       {"Word Count...", "Ctrl+Shift+W", true, false},
+                       {"AutoCorrect...", "", true, false},
+                       {"", "", false, true},  // Separator
+                       {"Grammar...", "", true, false},
+                       {"", "", false, true}};  // Separator
     menus.push_back(toolsMenu);
 
     return menus;

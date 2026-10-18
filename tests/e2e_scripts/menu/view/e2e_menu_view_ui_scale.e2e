@@ -1,0 +1,12 @@
+# Test: View > UI Scale... (moved from Tools in the Word 95
+# Tools/View reorder)
+# Validates the settings dialog opens when selecting UI Scale from View.
+
+menu_open View
+wait_frames 12
+menu_select "UI Scale..."
+wait_frames 12
+
+validate dialog_open=Settings
+
+screenshot e2e_menu_view_ui_scale

@@ -281,6 +281,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     layout.showOutline = !layout.showOutline;
                     toast_notify::info(layout.showOutline ? "Outline: On" : "Outline: Off");
                     break;
+                case 20:  // UI Scale... (moved from Tools)
+                    dialogs.showSettingsDialog = true;
+                    {
+                        int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
+                        dialogs.uiScaleInputStr = std::to_string(currentPercentage);
+                    }
+                    break;
                 default:
                     break;
             }
@@ -824,27 +831,23 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             } else if (itemIndex == 2) {  // About (after separator)
                 dialogs.showAboutDialog = true;
             }
-        } else if (menuIndex == 5) {  // Tools menu (includes former Settings items)
+        } else if (menuIndex == 5) {  // Tools menu (Word 95 order)
             switch (itemIndex) {
                 case 0:  // Spelling...
                     cmd::openSpellingDialog(doc, dialogs);
                     break;
-                case 1:  // AutoCorrect...
+                case 1:  // Word Count...
+                    dialogs.showWordCountDialog = true;
+                    break;
+                case 2:  // AutoCorrect...
                     dialogs.showAutoCorrectDialog = true;
                     // Fresh selection/fields on every open.
                     dialogs.autoCorrectSelected = -1;
                     dialogs.autoCorrectReplaceStr.clear();
                     dialogs.autoCorrectWithStr.clear();
                     break;
-                case 2:  // Word Count...
-                    dialogs.showWordCountDialog = true;
-                    break;
-                case 4:  // UI Scale... (was Settings item 0)
-                    dialogs.showSettingsDialog = true;
-                    {
-                        int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
-                        dialogs.uiScaleInputStr = std::to_string(currentPercentage);
-                    }
+                case 4:  // Grammar... (dialog renders in the Grammar item)
+                    dialogs.showGrammarDialog = true;
                     break;
                 default:
                     break;

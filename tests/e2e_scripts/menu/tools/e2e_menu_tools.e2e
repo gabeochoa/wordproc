@@ -1,0 +1,18 @@
+# Test: Tools menu is Word 95 order (Spelling, Word Count,
+# AutoCorrect, separator, Grammar, separator); UI Scale and the
+# disabled Preferences stub are gone from Tools.
+
+menu_open Tools
+wait_frames 12
+
+validate menu_open=Tools
+validate menu_item_Spelling...=true
+validate menu_item_Word Count...=true
+validate menu_item_AutoCorrect...=true
+validate menu_item_Grammar...=true
+validate menu_item_Preferences...=false
+# (UI Scale... still exists, but in View now -- the per-menu Tools
+# composition, including UI Scale's absence from Tools, is pinned by
+# the unit test on the Tools item list.)
+
+screenshot e2e_menu_tools
