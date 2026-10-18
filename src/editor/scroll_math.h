@@ -6,6 +6,29 @@
 
 namespace scroll_math {
 
+// Width of the vertical scrollbar in pixels (Win95: 16px).
+inline constexpr float SCROLLBAR_WIDTH = 16.0f;
+
+// Press-hold auto-repeat for the scrollbar arrow buttons: first repeat
+// after ~400ms, then every ~50ms while held. Pure functions over the
+// (dir, next) pair stored on ScrollComponent so unit tests can drive
+// them with fake clocks.
+inline constexpr double ARROW_REPEAT_INITIAL_DELAY = 0.4;
+inline constexpr double ARROW_REPEAT_INTERVAL = 0.05;
+
+inline void arrowRepeatPress(int& dir, double& next, int d, double now) {
+    dir = d;
+    next = now + ARROW_REPEAT_INITIAL_DELAY;
+}
+
+inline bool arrowRepeatDue(int dir, double& next, double now) {
+    if (dir == 0 || now < next) return false;
+    next = now + ARROW_REPEAT_INTERVAL;
+    return true;
+}
+
+inline void arrowRepeatRelease(int& dir) { dir = 0; }
+
 // Fold one discrete wheel event into the sub-line remainder and return the
 // whole lines to apply this frame. Small deltas accumulate across frames
 // (ten 0.1-notch events sum to 3 lines); a large flick applies at once.

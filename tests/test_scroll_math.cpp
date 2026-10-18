@@ -76,3 +76,27 @@ TEST_CASE("scrollbar geometry", "[scroll]") {
         REQUIRE(back == 40);
     }
 }
+
+TEST_CASE("scrollbar arrow auto-repeat", "[scroll]") {
+    SECTION("first repeat after ~400ms, then every ~50ms") {
+        int dir = 0;
+        double next = 0.0;
+        scroll_math::arrowRepeatPress(dir, next, 1, 10.0);
+        REQUIRE(dir == 1);
+        REQUIRE_FALSE(scroll_math::arrowRepeatDue(dir, next, 10.0 + 0.399));
+        REQUIRE(scroll_math::arrowRepeatDue(dir, next, 10.0 + 0.4));
+        REQUIRE_FALSE(scroll_math::arrowRepeatDue(dir, next, 10.0 + 0.4 + 0.049));
+        REQUIRE(scroll_math::arrowRepeatDue(dir, next, 10.0 + 0.4 + 0.05));
+        scroll_math::arrowRepeatRelease(dir);
+        REQUIRE(dir == 0);
+        REQUIRE_FALSE(scroll_math::arrowRepeatDue(dir, next, 99.0));
+    }
+
+    SECTION("up direction repeats upward") {
+        int dir = 0;
+        double next = 0.0;
+        scroll_math::arrowRepeatPress(dir, next, -1, 0.0);
+        REQUIRE(scroll_math::arrowRepeatDue(dir, next, 0.4));
+        REQUIRE(dir == -1);
+    }
+}

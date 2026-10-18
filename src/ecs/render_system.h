@@ -12,6 +12,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include <afterhours/src/drawing_helpers.h>
+#include "../editor/scroll_math.h"
 #include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
@@ -756,53 +757,90 @@ struct EditorRenderSystem
                              layout.zoomLevel, &doc.spellSquiggles);
         }
 
-        // === Draw Vertical Scroll Bar ===
+        // === Draw Vertical Scroll Bar (Win95) ===
+        // Geometry identical to ScrollbarSystem via scroll_math, so the
+        // thumb the user drags is the thumb that is drawn.
         {
-            float sbWidth = 16.0f;
+            float sbWidth = scroll_math::SCROLLBAR_WIDTH;
             float sbX = textAreaRect.x + textAreaRect.width - sbWidth;
             float sbY = textAreaRect.y;
             float sbHeight = textAreaRect.height;
             int totalLines = static_cast<int>(doc.buffer.lineCount());
             int visibleLines = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
+            int maxScroll = std::max(0, totalLines - visibleLines);
+            auto g = scroll_math::scrollbarGeometry(sbY, sbHeight, totalLines, visibleLines,
+                                                   maxScroll, scroll.offset);
 
-            // Scroll bar track (sunken background)
-            afterhours::draw_rectangle(Rectangle{sbX, sbY, sbWidth, sbHeight},
+            auto drawArrowButton = [&](float y, bool up, bool pressed) {
+                // Raised bevel button; sunken + darker while pressed.
+                afterhours::draw_rectangle(Rectangle{sbX, y, sbWidth, g.arrowHeight},
+                                           pressed ? theme::BUTTON_PRESSED_BG : theme::BUTTON_FACE);
+                afterhours::Color topLeft = pressed ? theme::BORDER_DARK : theme::BORDER_LIGHT;
+                afterhours::Color bottomRight = pressed ? theme::BORDER_LIGHT : theme::BORDER_DARK;
+                afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(y),
+                                      static_cast<int>(sbX + sbWidth - 1), static_cast<int>(y), topLeft);
+                afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(y),
+                                      static_cast<int>(sbX), static_cast<int>(y + g.arrowHeight - 1), topLeft);
+                afterhours::draw_line(static_cast<int>(sbX + sbWidth - 1), static_cast<int>(y),
+                                      static_cast<int>(sbX + sbWidth - 1), static_cast<int>(y + g.arrowHeight - 1),
+                                      bottomRight);
+                afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(y + g.arrowHeight - 1),
+                                      static_cast<int>(sbX + sbWidth - 1), static_cast<int>(y + g.arrowHeight - 1),
+                                      bottomRight);
+                // Triangle glyph.
+                float cx = sbX + sbWidth / 2.0f;
+                afterhours::Color glyph = theme::BUTTON_TEXT;
+                if (up) {
+                    afterhours::draw_line(static_cast<int>(cx), static_cast<int>(y + 4),
+                                          static_cast<int>(cx - 4), static_cast<int>(y + 11), glyph);
+                    afterhours::draw_line(static_cast<int>(cx), static_cast<int>(y + 4),
+                                          static_cast<int>(cx + 4), static_cast<int>(y + 11), glyph);
+                    afterhours::draw_line(static_cast<int>(cx - 4), static_cast<int>(y + 11),
+                                          static_cast<int>(cx + 4), static_cast<int>(y + 11), glyph);
+                } else {
+                    afterhours::draw_line(static_cast<int>(cx), static_cast<int>(y + g.arrowHeight - 4),
+                                          static_cast<int>(cx - 4), static_cast<int>(y + g.arrowHeight - 11), glyph);
+                    afterhours::draw_line(static_cast<int>(cx), static_cast<int>(y + g.arrowHeight - 4),
+                                          static_cast<int>(cx + 4), static_cast<int>(y + g.arrowHeight - 11), glyph);
+                    afterhours::draw_line(static_cast<int>(cx - 4), static_cast<int>(y + g.arrowHeight - 11),
+                                          static_cast<int>(cx + 4), static_cast<int>(y + g.arrowHeight - 11), glyph);
+                }
+            };
+
+            drawArrowButton(g.upArrowY, true, scroll.scrollbarRepeatDir == -1);
+            drawArrowButton(sbY + sbHeight - g.arrowHeight, false, scroll.scrollbarRepeatDir == 1);
+
+            // Track (sunken). No stipple pattern in theme, so the track is
+            // flat BUTTON_FACE with a sunken bevel; stipple would go here.
+            afterhours::draw_rectangle(Rectangle{sbX, g.trackY, sbWidth, g.trackHeight},
                                        theme::BUTTON_FACE);
-            // Sunken border on track
-            afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(sbY),
-                             static_cast<int>(sbX), static_cast<int>(sbY + sbHeight),
-                             theme::BORDER_DARK);
-            afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(sbY),
-                             static_cast<int>(sbX + sbWidth), static_cast<int>(sbY),
-                             theme::BORDER_DARK);
+            afterhours::draw_line(static_cast<int>(sbX), static_cast<int>(g.trackY),
+                                  static_cast<int>(sbX), static_cast<int>(g.trackY + g.trackHeight),
+                                  theme::BORDER_DARK);
+            afterhours::draw_line(static_cast<int>(sbX + sbWidth - 1), static_cast<int>(g.trackY),
+                                  static_cast<int>(sbX + sbWidth - 1), static_cast<int>(g.trackY + g.trackHeight),
+                                  theme::BORDER_LIGHT);
 
-            // Thumb
-            if (totalLines > visibleLines) {
-                float thumbRatio = static_cast<float>(visibleLines) / static_cast<float>(totalLines);
-                float thumbHeight = std::max(20.0f, sbHeight * thumbRatio);
-                float scrollRange = sbHeight - thumbHeight;
-                float scrollRatio = (scroll.maxScroll > 0)
-                    ? static_cast<float>(scroll.offset) / static_cast<float>(scroll.maxScroll)
-                    : 0.0f;
-                float thumbY = sbY + scrollRange * scrollRatio;
-
-                // Raised thumb
+            // Thumb (raised, darker while dragging).
+            if (g.thumbVisible) {
+                bool dragging = scroll.scrollbarDragging;
                 afterhours::draw_rectangle(
-                    Rectangle{sbX + 1, thumbY, sbWidth - 2, thumbHeight},
-                    theme::BUTTON_FACE);
-                // 3D border on thumb (raised)
-                afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(thumbY),
-                                 static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY),
-                                 theme::BORDER_LIGHT);
-                afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(thumbY),
-                                 static_cast<int>(sbX + 1), static_cast<int>(thumbY + thumbHeight),
-                                 theme::BORDER_LIGHT);
-                afterhours::draw_line(static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY),
-                                 static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY + thumbHeight),
-                                 theme::BORDER_DARK);
-                afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(thumbY + thumbHeight - 1),
-                                 static_cast<int>(sbX + sbWidth - 2), static_cast<int>(thumbY + thumbHeight - 1),
-                                 theme::BORDER_DARK);
+                    Rectangle{sbX + 1, g.thumbY, sbWidth - 2, g.thumbHeight},
+                    dragging ? theme::BUTTON_PRESSED_BG : theme::BUTTON_FACE);
+                afterhours::Color topLeft = dragging ? theme::BORDER_DARK : theme::BORDER_LIGHT;
+                afterhours::Color bottomRight = dragging ? theme::BORDER_LIGHT : theme::BORDER_DARK;
+                afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(g.thumbY),
+                                      static_cast<int>(sbX + sbWidth - 2), static_cast<int>(g.thumbY),
+                                      topLeft);
+                afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(g.thumbY),
+                                      static_cast<int>(sbX + 1), static_cast<int>(g.thumbY + g.thumbHeight),
+                                      topLeft);
+                afterhours::draw_line(static_cast<int>(sbX + sbWidth - 2), static_cast<int>(g.thumbY),
+                                      static_cast<int>(sbX + sbWidth - 2), static_cast<int>(g.thumbY + g.thumbHeight),
+                                      bottomRight);
+                afterhours::draw_line(static_cast<int>(sbX + 1), static_cast<int>(g.thumbY + g.thumbHeight - 1),
+                                      static_cast<int>(sbX + sbWidth - 2), static_cast<int>(g.thumbY + g.thumbHeight - 1),
+                                      bottomRight);
             }
         }
 

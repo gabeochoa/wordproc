@@ -40,6 +40,7 @@ struct ScrollComponent : public afterhours::BaseComponent {
     // Scrollbar interaction state (owned by the scrollbar system).
     bool scrollbarDragging = false;
     float scrollbarDragStartY = 0.0f;
+    float scrollbarDragStartThumbY = 0.0f;
     int scrollbarDragStartOffset = 0;
     int scrollbarRepeatDir = 0;  // -1 up, +1 down, 0 idle (arrow hold)
     double scrollbarRepeatNext = 0.0;  // get_time() when the next repeat fires
