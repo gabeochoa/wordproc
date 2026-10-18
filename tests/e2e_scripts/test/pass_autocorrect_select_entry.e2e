@@ -1,0 +1,27 @@
+# Test: AutoCorrect list row click fills Replace/With, and Delete is a
+# no-op for built-in entries. Click the first (visible) row, "accomodate",
+# check the fields, click Delete, close, and confirm the built-in still
+# autocorrects ("teh" -> "The" at the sentence start).
+
+menu_open Tools
+wait_frames 12
+menu_select "AutoCorrect..."
+wait_frames 12
+
+validate dialog_open=AutoCorrect
+
+click_ui autocorrect_entry_accomodate
+wait_frames 12
+expect_input_text autocorrect_replace_input "accomodate"
+expect_input_text autocorrect_with_input "accommodate"
+
+click_ui autocorrect_delete
+wait_frames 12
+
+click_ui autocorrect_ok
+wait_frames 12
+
+type "teh x"
+wait_frames 12
+
+validate text=The x

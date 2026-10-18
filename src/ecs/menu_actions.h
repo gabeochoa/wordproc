@@ -780,6 +780,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 1:  // AutoCorrect...
                     dialogs.showAutoCorrectDialog = true;
+                    // Fresh selection/fields on every open.
+                    dialogs.autoCorrectSelected = -1;
+                    dialogs.autoCorrectReplaceStr.clear();
+                    dialogs.autoCorrectWithStr.clear();
                     break;
                 case 2:  // Word Count...
                     dialogs.showWordCountDialog = true;

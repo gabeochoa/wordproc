@@ -1,0 +1,37 @@
+# Test: AutoCorrect dialog Delete removes a custom entry
+# Add a custom entry (Add selects it), Delete it in the same session,
+# close with OK, then type the trigger word mid-sentence: with the entry
+# gone, no correction applies ("A wrold x" stays "A wrold x").
+# The leading "A " keeps "wrold" off the sentence start, where the
+# capitalize-first-letter rule would otherwise fire on its own.
+
+menu_open Tools
+wait_frames 12
+menu_select "AutoCorrect..."
+wait_frames 12
+
+validate dialog_open=AutoCorrect
+
+focus_ui autocorrect_replace_input
+wait_frames 12
+type "wrold"
+wait_frames 12
+
+focus_ui autocorrect_with_input
+wait_frames 12
+type "world"
+wait_frames 12
+
+click_ui autocorrect_add
+wait_frames 12
+
+click_ui autocorrect_delete
+wait_frames 12
+
+click_ui autocorrect_ok
+wait_frames 12
+
+type "A wrold x"
+wait_frames 12
+
+validate text=A wrold x

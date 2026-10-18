@@ -199,6 +199,12 @@ struct DialogState : public afterhours::BaseComponent {
 
     // AutoCorrect dialog (Tools > AutoCorrect...)
     bool showAutoCorrectDialog = false;
+    // Selected row in the dialog's Replace/With list, as an index into
+    // AutoCorrect::entries(); -1 when nothing is selected. The
+    // Replace:/With: fields mirror the selected row.
+    int autoCorrectSelected = -1;
+    std::string autoCorrectReplaceStr;
+    std::string autoCorrectWithStr;
 
     // Find / Replace
     bool showFindDialog = false;

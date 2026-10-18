@@ -14,7 +14,7 @@ click_ui autocorrect_replace
 wait_frames 12
 click_ui autocorrect_capitalize
 wait_frames 12
-click_ui autocorrect_close
+click_ui autocorrect_ok
 wait_frames 12
 
 type "teh quick"

@@ -55,7 +55,8 @@ TEST_CASE("AutoCorrect - Replacement table", "[autocorrect]") {
 
 TEST_CASE("AutoCorrect::entries - Sorted Replace/With pairs",
           "[autocorrect]") {
-    auto entries = AutoCorrect::entries();
+    AutoCorrect ac;
+    auto entries = ac.entries();
     REQUIRE(entries.size() == AutoCorrect::table().size());
     REQUIRE_FALSE(entries.empty());
     for (std::size_t i = 1; i < entries.size(); ++i) {
@@ -213,6 +214,102 @@ TEST_CASE("AutoCorrect::isSentenceStart - Buffer", "[autocorrect]") {
 
     SECTION("Document start") {
         REQUIRE(AutoCorrect::isSentenceStart(buffer, 0));
+    }
+}
+
+TEST_CASE("AutoCorrect - User entries from the dialog", "[autocorrect]") {
+    SECTION("Added entry autocorrects") {
+        AutoCorrect ac;
+        ac.addUserEntry("wrold", "world");
+        REQUIRE(ac.lookup("wrold") == std::optional<std::string>("world"));
+        REQUIRE(ac.correct("wrold", false) ==
+                std::optional<std::string>("world"));
+        REQUIRE(ac.isUserEntry("wrold"));
+        REQUIRE(ac.userEntries().size() == 1);
+    }
+
+    SECTION("Lookup is case-insensitive, correction keeps case") {
+        AutoCorrect ac;
+        ac.addUserEntry("Wrold", "world");
+        REQUIRE(ac.correct("wrold", false) ==
+                std::optional<std::string>("world"));
+        REQUIRE(ac.correct("Wrold", false) ==
+                std::optional<std::string>("World"));
+    }
+
+    SECTION("User entry shadows a built-in with the same key") {
+        AutoCorrect ac;
+        REQUIRE(ac.correct("teh", false) == std::optional<std::string>("the"));
+        ac.addUserEntry("teh", "teh!");
+        REQUIRE(ac.correct("teh", false) ==
+                std::optional<std::string>("teh!"));
+        REQUIRE(ac.entries().size() == AutoCorrect::table().size());
+    }
+
+    SECTION("Adding the same key twice updates instead of duplicating") {
+        AutoCorrect ac;
+        ac.addUserEntry("wrold", "world");
+        ac.addUserEntry("WROLD", "worlb");
+        REQUIRE(ac.userEntries().size() == 1);
+        REQUIRE(ac.lookup("wrold") == std::optional<std::string>("worlb"));
+    }
+
+    SECTION("Empty or blank entries are ignored") {
+        AutoCorrect ac;
+        ac.addUserEntry("", "world");
+        ac.addUserEntry("wrold", "");
+        ac.addUserEntry("   ", "   ");
+        REQUIRE(ac.userEntries().empty());
+        REQUIRE_FALSE(ac.lookup("wrold").has_value());
+    }
+
+    SECTION("Whitespace around an entry is trimmed") {
+        AutoCorrect ac;
+        ac.addUserEntry("  wrold  ", "  world  ");
+        REQUIRE(ac.correct("wrold", false) ==
+                std::optional<std::string>("world"));
+    }
+
+    SECTION("entries() lists user entries, still sorted") {
+        AutoCorrect ac;
+        ac.addUserEntry("wrold", "world");
+        auto entries = ac.entries();
+        REQUIRE(entries.size() == AutoCorrect::table().size() + 1);
+        for (std::size_t i = 1; i < entries.size(); ++i) {
+            REQUIRE(entries[i - 1].first < entries[i].first);
+        }
+        bool found = false;
+        for (const auto& [from, to] : entries) {
+            if (from == "wrold") {
+                REQUIRE(to == "world");
+                found = true;
+            }
+        }
+        REQUIRE(found);
+    }
+
+    SECTION("Removing a user entry stops its correction") {
+        AutoCorrect ac;
+        ac.addUserEntry("wrold", "world");
+        REQUIRE(ac.removeUserEntry("WROLD"));
+        REQUIRE_FALSE(ac.lookup("wrold").has_value());
+        REQUIRE_FALSE(ac.isUserEntry("wrold"));
+        REQUIRE(ac.userEntries().empty());
+    }
+
+    SECTION("Built-ins are not deletable") {
+        AutoCorrect ac;
+        REQUIRE_FALSE(ac.removeUserEntry("teh"));
+        REQUIRE_FALSE(ac.removeUserEntry("zxqv"));
+        REQUIRE(ac.correct("teh", false) == std::optional<std::string>("the"));
+    }
+
+    SECTION("Entries are per-instance (session-only)") {
+        AutoCorrect ac;
+        ac.addUserEntry("wrold", "world");
+        AutoCorrect fresh;
+        REQUIRE(fresh.userEntries().empty());
+        REQUIRE_FALSE(fresh.lookup("wrold").has_value());
     }
 }
 

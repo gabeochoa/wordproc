@@ -25,6 +25,20 @@ std::string toUpperStr(const std::string& word) {
     return result;
 }
 
+std::string trim(const std::string& text) {
+    std::size_t begin = 0;
+    while (begin < text.size() &&
+           std::isspace(static_cast<unsigned char>(text[begin])) != 0) {
+        ++begin;
+    }
+    std::size_t end = text.size();
+    while (end > begin &&
+           std::isspace(static_cast<unsigned char>(text[end - 1])) != 0) {
+        --end;
+    }
+    return text.substr(begin, end - begin);
+}
+
 }  // namespace
 
 const std::unordered_map<std::string, std::string>& AutoCorrect::table() {
@@ -46,18 +60,73 @@ const std::unordered_map<std::string, std::string>& AutoCorrect::table() {
     return kTable;
 }
 
-std::vector<std::pair<std::string, std::string>> AutoCorrect::entries() {
+std::vector<std::pair<std::string, std::string>> AutoCorrect::entries()
+    const {
     std::vector<std::pair<std::string, std::string>> result(table().begin(),
                                                              table().end());
+    for (const auto& [replace, with] : userEntries_) {
+        bool shadowed = false;
+        for (auto& [key, value] : result) {
+            if (toLowerStr(key) == toLowerStr(replace)) {
+                value = with;
+                shadowed = true;
+                break;
+            }
+        }
+        if (!shadowed) result.emplace_back(replace, with);
+    }
     std::sort(result.begin(), result.end(),
               [](const auto& a, const auto& b) { return a.first < b.first; });
     return result;
 }
 
 std::optional<std::string> AutoCorrect::lookup(const std::string& word) const {
-    auto it = table().find(toLowerStr(word));
+    const std::string key = toLowerStr(word);
+    for (const auto& [replace, with] : userEntries_) {
+        if (toLowerStr(replace) == key) return with;
+    }
+    auto it = table().find(key);
     if (it == table().end()) return std::nullopt;
     return it->second;
+}
+
+void AutoCorrect::addUserEntry(const std::string& replace,
+                               const std::string& with) {
+    const std::string key = trim(replace);
+    const std::string value = trim(with);
+    if (key.empty() || value.empty()) return;
+    for (auto& [existingKey, existingValue] : userEntries_) {
+        if (toLowerStr(existingKey) == toLowerStr(key)) {
+            existingValue = value;
+            return;
+        }
+    }
+    userEntries_.emplace_back(key, value);
+}
+
+bool AutoCorrect::removeUserEntry(const std::string& replace) {
+    const std::string key = toLowerStr(trim(replace));
+    for (auto it = userEntries_.begin(); it != userEntries_.end(); ++it) {
+        if (toLowerStr(it->first) == key && !key.empty()) {
+            userEntries_.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool AutoCorrect::isUserEntry(const std::string& replace) const {
+    const std::string key = toLowerStr(trim(replace));
+    if (key.empty()) return false;
+    for (const auto& [existingKey, _] : userEntries_) {
+        if (toLowerStr(existingKey) == key) return true;
+    }
+    return false;
+}
+
+const std::vector<std::pair<std::string, std::string>>&
+AutoCorrect::userEntries() const {
+    return userEntries_;
 }
 
 std::string AutoCorrect::matchCase(const std::string& original,

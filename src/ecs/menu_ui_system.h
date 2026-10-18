@@ -442,7 +442,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 auto result = afterhours::modal(ctx, mk(entity, WORDCOUNT_MODAL_ID),
                     dialogs.showWordCountDialog,
                     ah_win95::win95DialogConfig(
-                        afterhours::ui::h720(360), afterhours::ui::h720(230),
+                        afterhours::ui::h720(300), afterhours::ui::h720(210),
                         static_cast<float>(layout.screenWidth),
                         static_cast<float>(layout.screenHeight)));
 
@@ -497,12 +497,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     statRow("Paragraphs:", std::to_string(stats.paragraphs));
                     statRow("Sentences:", std::to_string(stats.sentences));
 
-                    // OK button row (OK is the default button: dark outline)
+                    // OK button row: compact 90px button at the bottom
+                    // right (OK is the default button: dark outline).
                     auto button_row = div(ctx, mk(result.ent(), 1),
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(1.0f), h720(44)})
                             .with_flex_direction(FlexDirection::Row)
-                            .with_justify_content(JustifyContent::Center)
+                            .with_justify_content(JustifyContent::FlexEnd)
                             .with_align_items(AlignItems::Center)
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
@@ -510,10 +511,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
 
                     if (button_row) {
                         if (button(ctx, mk(button_row.ent(), 0),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("word_count_ok")
                                 .with_label("OK")
-                                .with_size(ComponentSize{h720(100), h720(32)})
                                 .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                                 .with_render_layer(CONTENT_LAYER))) {
                             dialogs.showWordCountDialog = false;
@@ -531,7 +531,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             auto result = afterhours::modal(ctx, mk(entity, SPELLING_MODAL_ID),
                 dialogs.showSpellingDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(520), afterhours::ui::h720(300),
+                    afterhours::ui::h720(430), afterhours::ui::h720(300),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -563,10 +563,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                     if (doneRow) {
                         if (button(ctx, mk(doneRow.ent(), 0),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_close")
                                 .with_label("Close")
-                                .with_size(ComponentSize{h720(100), h720(32)})
                                 .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                                 .with_render_layer(CONTENT_LAYER))) {
                             dialogs.showSpellingDialog = false;
@@ -585,7 +584,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     if (bodyRow) {
                     auto leftCol = div(ctx, mk(bodyRow.ent(), 0),
                         ComponentConfig{}
-                            .with_size(ComponentSize{percent(0.62f), children()})
+                            .with_size(ComponentSize{w1280(302), children()})
                             .with_flex_direction(FlexDirection::Column)
                             .with_gap(pixels(4))
                             .with_custom_background(
@@ -690,11 +689,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                     }  // leftCol
 
-                    // Right column: vertical stack of gray buttons.
-                    // Ignore is the default button (dark outline).
+                    // Right column: vertical stack of compact 90px
+                    // gray buttons. Ignore is the default button
+                    // (dark outline).
                     auto rightCol = div(ctx, mk(bodyRow.ent(), 1),
                         ComponentConfig{}
-                            .with_size(ComponentSize{percent(0.38f), children()})
+                            .with_size(ComponentSize{w1280(100), children()})
                             .with_flex_direction(FlexDirection::Column)
                             .with_gap(pixels(6))
                             .with_custom_background(
@@ -702,37 +702,33 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                     if (rightCol) {
                         if (button(ctx, mk(rightCol.ent(), 0),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_ignore")
                                 .with_label("Ignore")
-                                .with_size(ComponentSize{percent(1.0f), h720(30)})
                                 .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                                 .with_render_layer(CONTENT_LAYER))) {
                             cmd::spellIgnore(doc, dialogs);
                         }
                         if (button(ctx, mk(rightCol.ent(), 1),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_ignore_all")
                                 .with_label("Ignore All")
-                                .with_size(ComponentSize{percent(1.0f), h720(30)})
                                 .with_render_layer(CONTENT_LAYER))) {
                             cmd::spellIgnoreAll(doc, dialogs);
                         }
                         if (button(ctx, mk(rightCol.ent(), 2),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_add")
                                 .with_label("Add")
-                                .with_size(ComponentSize{percent(1.0f), h720(30)})
                                 .with_render_layer(CONTENT_LAYER))) {
                             std::string added = dialogs.spellCurrentWord;
                             cmd::spellAddToDictionary(doc, dialogs);
                             toast_notify::success("Added to dictionary: " + added);
                         }
                         if (button(ctx, mk(rightCol.ent(), 3),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_change")
                                 .with_label("Change")
-                                .with_size(ComponentSize{percent(1.0f), h720(30)})
                                 .with_render_layer(CONTENT_LAYER))) {
                             if (dialogs.spellReplacementStr.empty()) {
                                 toast_notify::error("Enter a replacement word");
@@ -741,10 +737,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             }
                         }
                         if (button(ctx, mk(rightCol.ent(), 4),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_change_all")
                                 .with_label("Change All")
-                                .with_size(ComponentSize{percent(1.0f), h720(30)})
                                 .with_render_layer(CONTENT_LAYER))) {
                             if (dialogs.spellReplacementStr.empty()) {
                                 toast_notify::error("Enter a replacement word");
@@ -753,10 +748,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             }
                         }
                         if (button(ctx, mk(rightCol.ent(), 5),
-                            ah_win95::win95ButtonStyle()
+                            ah_win95::win95DialogButtonStyle()
                                 .with_debug_name("spell_close")
                                 .with_label("Close")
-                                .with_size(ComponentSize{percent(1.0f), h720(30)})
                                 .with_render_layer(CONTENT_LAYER))) {
                             dialogs.showSpellingDialog = false;
                         }
@@ -766,16 +760,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // AutoCorrect dialog (Tools > AutoCorrect...) - checkboxes bind
-        // directly to the AutoCorrect toggles, so Close just dismisses.
-        // Win95 shell: small native checkboxes on BUTTON_FACE plus a
-        // read-only sunken list of the built-in Replace -> With entries.
+        // AutoCorrect dialog (Tools > AutoCorrect...) - genuine
+        // Word 95 layout: 3 option checkboxes, a scrollable sunken
+        // Replace/With list, editable Replace:/With: fields with
+        // Add/Delete, and OK/Cancel at the bottom right. Toggles bind
+        // directly to the AutoCorrect settings, so OK/Cancel just
+        // dismiss; Add/Delete apply immediately to the session-only
+        // user entries.
         if (dialogs.showAutoCorrectDialog) {
             constexpr int AUTOCORRECT_MODAL_ID = 50011;
             auto result = afterhours::modal(ctx, mk(entity, AUTOCORRECT_MODAL_ID),
                 dialogs.showAutoCorrectDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(520), afterhours::ui::h720(520),
+                    afterhours::ui::h720(400), afterhours::ui::h720(400),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -787,43 +784,54 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
                                               "AutoCorrect", CONTENT_LAYER);
 
-                auto autocorrectCheckbox = [&](int id, bool& value,
-                                               const std::string& debugName,
-                                               const std::string& label) {
-                    checkbox(ctx, mk(result.ent(), id), value,
-                        ComponentConfig{}
-                            .with_debug_name(debugName)
-                            .with_label(label)
-                            .with_size(ComponentSize{percent(1.0f), h720(28)})
-                            .with_roundness(0.0f)
-                            .with_custom_background(
-                                ui_imm::win95_colors::BUTTON_FACE)
-                            .with_custom_text_color(
-                                ui_imm::win95_colors::TEXT)
-                            .with_render_layer(CONTENT_LAYER));
+                // Built-ins + session user entries, sorted by Replace.
+                const auto entries = doc.autoCorrect.entries();
+                // A stale selection (e.g. after Delete) clears itself.
+                if (dialogs.autoCorrectSelected >=
+                    static_cast<int>(entries.size())) {
+                    dialogs.autoCorrectSelected = -1;
+                }
+                const bool selectedIsUser =
+                    dialogs.autoCorrectSelected >= 0 &&
+                    doc.autoCorrect.isUserEntry(
+                        entries[static_cast<std::size_t>(
+                            dialogs.autoCorrectSelected)]
+                            .first);
+                auto hasText = [](const std::string& text) {
+                    return text.find_first_not_of(" \t\r\n") !=
+                           std::string::npos;
                 };
-                autocorrectCheckbox(0,
+                const bool canAdd =
+                    hasText(dialogs.autoCorrectReplaceStr) &&
+                    hasText(dialogs.autoCorrectWithStr);
+
+                // Small native checkboxes immediately left of each label.
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 0),
                     doc.autoCorrect.settings.replaceTextAsYouType,
-                    "autocorrect_replace", "Replace text as you type");
-                autocorrectCheckbox(1,
+                    "autocorrect_replace", "Replace text as you type",
+                    CONTENT_LAYER);
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 1),
                     doc.autoCorrect.settings.capitalizeFirstLetterOfSentence,
                     "autocorrect_capitalize",
-                    "Capitalize first letter of sentences");
-                autocorrectCheckbox(2,
+                    "Capitalize first letter of sentences", CONTENT_LAYER);
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 2),
                     doc.autoCorrect.settings.correctTwoInitialCapitals,
                     "autocorrect_two_initials",
-                    "Correct TWo INitial CApitals");
+                    "Correct TWo INitial CApitals", CONTENT_LAYER);
 
-                // Read-only Replace -> With list: two (Replace, With)
-                // pairs per row so the whole built-in table fits without
-                // scrolling. Each row's two pairs stay matched.
-                const auto entries = AutoCorrect::entries();
-                const std::size_t half = (entries.size() + 1) / 2;
+                // Sunken list: one Replace | With pair per row.
+                // The header stays fixed; the rows scroll (Overflow::Auto).
+                // Clicking a row selects it and fills the Replace:/With:
+                // fields; the selected row is navy/white.
                 auto listBox = div(ctx, mk(result.ent(), 10),
                     ah_win95::win95SunkenStyle()
-                        .with_size(ComponentSize{percent(1.0f), children()})
+                        .with_size(ComponentSize{percent(1.0f), h720(186)})
                         .with_flex_direction(FlexDirection::Column)
                         .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                        .with_margin(Margin{.top = pixels(4)})
                         .with_render_layer(CONTENT_LAYER));
                 if (listBox) {
                     auto headerRow = div(ctx, mk(listBox.ent(), 0),
@@ -834,11 +842,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 ui_imm::win95_colors::TEXT_AREA)
                             .with_render_layer(CONTENT_LAYER));
                     if (headerRow) {
-                        for (int col = 0; col < 4; ++col) {
+                        for (int col = 0; col < 2; ++col) {
                             div(ctx, mk(headerRow.ent(), col),
                                 ComponentConfig{}
-                                    .with_label(col % 2 == 0 ? "Replace" : "With")
-                                    .with_size(ComponentSize{percent(0.25f), h720(20)})
+                                    .with_label(col == 0 ? "Replace" : "With")
+                                    .with_size(ComponentSize{percent(0.5f), h720(20)})
                                     .with_custom_background(
                                         ui_imm::win95_colors::TEXT_AREA)
                                     .with_custom_text_color(
@@ -850,32 +858,58 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                     .with_render_layer(CONTENT_LAYER));
                         }
                     }
-                    for (std::size_t i = 0; i < half; ++i) {
-                        auto entryRow = div(ctx, mk(listBox.ent(), 1 + static_cast<int>(i)),
-                            ComponentConfig{}
-                                .with_size(ComponentSize{percent(1.0f), h720(20)})
-                                .with_flex_direction(FlexDirection::Row)
-                                .with_custom_background(
-                                    ui_imm::win95_colors::TEXT_AREA)
-                                .with_render_layer(CONTENT_LAYER));
-                        if (entryRow) {
-                            for (int col = 0; col < 4; ++col) {
-                                std::size_t pairIdx =
-                                    i + (col < 2 ? 0 : half);
-                                std::string cell;
-                                if (pairIdx < entries.size()) {
-                                    cell = col % 2 == 0
-                                               ? entries[pairIdx].first
-                                               : entries[pairIdx].second;
-                                }
+                    auto scrollArea = div(ctx, mk(listBox.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(160)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_overflow(afterhours::ui::Overflow::Auto)
+                            .with_custom_background(
+                                ui_imm::win95_colors::TEXT_AREA)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (scrollArea) {
+                        for (std::size_t i = 0; i < entries.size(); ++i) {
+                            const bool selected =
+                                dialogs.autoCorrectSelected ==
+                                static_cast<int>(i);
+                            auto entryRow = button(
+                                ctx, mk(scrollArea.ent(), 100 + static_cast<int>(i)),
+                                ComponentConfig{}
+                                    .with_debug_name("autocorrect_entry_" +
+                                                    entries[i].first)
+                                    .with_label("")
+                                    .with_size(ComponentSize{percent(1.0f), h720(20)})
+                                    .with_flex_direction(FlexDirection::Row)
+                                    .with_roundness(0.0f)
+                                    // No theme button padding: a 20px row
+                                    // with 32px of default vertical padding
+                                    // leaves no content area for the cells.
+                                    .with_padding(Padding::all(pixels(0)))
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_cursor(afterhours::ui::CursorType::Pointer)
+                                    .with_render_layer(CONTENT_LAYER));
+                            if (entryRow) {
+                                dialogs.autoCorrectSelected =
+                                    static_cast<int>(i);
+                                dialogs.autoCorrectReplaceStr = entries[i].first;
+                                dialogs.autoCorrectWithStr = entries[i].second;
+                            }
+                            for (int col = 0; col < 2; ++col) {
                                 div(ctx, mk(entryRow.ent(), col),
                                     ComponentConfig{}
-                                        .with_label(cell)
-                                        .with_size(ComponentSize{percent(0.25f), h720(20)})
-                                        .with_custom_background(
-                                            ui_imm::win95_colors::TEXT_AREA)
-                                        .with_custom_text_color(
-                                            ui_imm::win95_colors::TEXT)
+                                        .with_label(col == 0 ? entries[i].first
+                                                            : entries[i].second)
+                                        .with_size(ComponentSize{percent(0.5f), h720(20)})
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
                                         .with_font_size(h720(14))
                                         .with_alignment(afterhours::ui::TextAlignment::Left)
                                         .with_padding(Padding{.left = pixels(4)})
@@ -885,24 +919,168 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                 }
 
+                // Editable Replace:/With: fields (left) + Add/Delete
+                // (right). Add appends a custom entry that autocorrects;
+                // Delete removes the selected custom entry and is
+                // disabled for built-ins (and with no selection).
+                auto fieldsRow = div(ctx, mk(result.ent(), 11),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), children()})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_margin(Margin{.top = pixels(8)})
+                        .with_render_layer(CONTENT_LAYER));
+                if (fieldsRow) {
+                    auto fieldsCol = div(ctx, mk(fieldsRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{w1280(278), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_gap(pixels(6))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (fieldsCol) {
+                        auto replaceRow = div(ctx, mk(fieldsCol.ent(), 0),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{percent(1.0f), h720(28)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_align_items(AlignItems::Center)
+                                .with_gap(pixels(6))
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_render_layer(CONTENT_LAYER));
+                        if (replaceRow) {
+                            div(ctx, mk(replaceRow.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label("Replace:")
+                                    .with_size(ComponentSize{w1280(64), h720(20)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(
+                                        ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_render_layer(CONTENT_LAYER));
+                            afterhours::text_input::text_input(
+                                ctx, mk(replaceRow.ent(), 1),
+                                dialogs.autoCorrectReplaceStr,
+                                ah_win95::win95SunkenStyle()
+                                    .with_debug_name("autocorrect_replace_input")
+                                    .with_size(ComponentSize{w1280(208), h720(28)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        }
+                        auto withRow = div(ctx, mk(fieldsCol.ent(), 1),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{percent(1.0f), h720(28)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_align_items(AlignItems::Center)
+                                .with_gap(pixels(6))
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_render_layer(CONTENT_LAYER));
+                        if (withRow) {
+                            div(ctx, mk(withRow.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label("With:")
+                                    .with_size(ComponentSize{w1280(64), h720(20)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(
+                                        ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_render_layer(CONTENT_LAYER));
+                            afterhours::text_input::text_input(
+                                ctx, mk(withRow.ent(), 1),
+                                dialogs.autoCorrectWithStr,
+                                ah_win95::win95SunkenStyle()
+                                    .with_debug_name("autocorrect_with_input")
+                                    .with_size(ComponentSize{w1280(208), h720(28)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        }
+                    }
+                    auto addDeleteCol = div(ctx, mk(fieldsRow.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{w1280(90), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_gap(pixels(6))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (addDeleteCol) {
+                        if (button(ctx, mk(addDeleteCol.ent(), 0),
+                            ah_win95::win95DialogButtonStyle(canAdd)
+                                .with_debug_name("autocorrect_add")
+                                .with_label("Add")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            doc.autoCorrect.addUserEntry(
+                                dialogs.autoCorrectReplaceStr,
+                                dialogs.autoCorrectWithStr);
+                            // Select the entry just added.
+                            const auto updated = doc.autoCorrect.entries();
+                            for (std::size_t i = 0; i < updated.size(); ++i) {
+                                std::string key = updated[i].first;
+                                std::string wanted =
+                                    dialogs.autoCorrectReplaceStr;
+                                auto lower = [](std::string s) {
+                                    for (char& ch : s) {
+                                        ch = static_cast<char>(std::tolower(
+                                            static_cast<unsigned char>(ch)));
+                                    }
+                                    return s;
+                                };
+                                if (lower(key) == lower(wanted)) {
+                                    dialogs.autoCorrectSelected =
+                                        static_cast<int>(i);
+                                    break;
+                                }
+                            }
+                        }
+                        if (button(ctx, mk(addDeleteCol.ent(), 1),
+                            ah_win95::win95DialogButtonStyle(selectedIsUser)
+                                .with_debug_name("autocorrect_delete")
+                                .with_label("Delete")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            if (selectedIsUser) {
+                                doc.autoCorrect.removeUserEntry(
+                                    entries[static_cast<std::size_t>(
+                                        dialogs.autoCorrectSelected)]
+                                        .first);
+                                dialogs.autoCorrectSelected = -1;
+                                dialogs.autoCorrectReplaceStr.clear();
+                                dialogs.autoCorrectWithStr.clear();
+                            }
+                        }
+                    }
+                }
+
+                // OK/Cancel: compact 90px buttons at the bottom right.
+                // OK is the default button (dark outline).
                 auto buttonRow = div(ctx, mk(result.ent(), 3),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(44)})
                         .with_flex_direction(FlexDirection::Row)
-                        .with_justify_content(JustifyContent::Center)
+                        .with_justify_content(JustifyContent::FlexEnd)
                         .with_align_items(AlignItems::Center)
                         .with_gap(afterhours::ui::pixels(8))
                         .with_custom_background(
                             ui_imm::win95_colors::BUTTON_FACE)
+                        .with_margin(Margin{.top = pixels(4)})
                         .with_render_layer(CONTENT_LAYER));
 
                 if (buttonRow) {
                     if (button(ctx, mk(buttonRow.ent(), 0),
-                        ah_win95::win95ButtonStyle()
-                            .with_debug_name("autocorrect_close")
-                            .with_label("Close")
-                            .with_size(ComponentSize{h720(100), h720(32)})
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("autocorrect_ok")
+                            .with_label("OK")
                             .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showAutoCorrectDialog = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("autocorrect_cancel")
+                            .with_label("Cancel")
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.showAutoCorrectDialog = false;
                     }

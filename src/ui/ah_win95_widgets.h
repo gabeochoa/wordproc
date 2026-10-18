@@ -275,7 +275,9 @@ inline auto win95DialogTitleBar(UIContextT& ctx,
 }
 
 // Sunken white field / list box (Not-in-dictionary field,
-// Suggestions list, AutoCorrect Replace list).
+// Suggestions list, AutoCorrect Replace list). 2px bevel: the
+// 1px version rendered but was too faint to read as sunken at
+// dialog scale (dark top/left, light bottom/right).
 inline ComponentConfig win95SunkenStyle() {
     return ComponentConfig{}
         .with_roundness(0.0f)
@@ -283,7 +285,66 @@ inline ComponentConfig win95SunkenStyle() {
         .with_custom_text_color(ui_imm::win95_colors::TEXT)
         .with_bevel(afterhours::ui::BevelStyle::Sunken,
                     ui_imm::win95_colors::BORDER_LIGHT,
-                    ui_imm::win95_colors::BORDER_DARK, 1.0f);
+                    ui_imm::win95_colors::BORDER_DARK, 2.0f);
+}
+
+// Standard Win95 dialog button: compact gray raised button,
+// ~90px wide (Word Count OK, Spelling right column, AutoCorrect
+// OK/Cancel). Callers add debug name, label, render layer.
+// Widths use w1280, not h720: h720 resolves against the layout
+// axis, so h720(90) as a width is 90/720*1280 = 160px (that is
+// why these buttons used to render ~174px wide).
+inline ComponentConfig win95DialogButtonStyle(bool enabled = true) {
+    return win95ButtonStyle(enabled).with_size(
+        ComponentSize{w1280(90), afterhours::ui::h720(28)});
+}
+
+// Win95 option checkbox: a small (14px) white sunken square box
+// with the afterhours checkbox widget inside it, immediately left
+// of its label on BUTTON_FACE. The checkbox widget owns state,
+// focus, and the check mark; the sunken box is a separate div
+// because the widget's config merge drops bevel_config, so a
+// bevel passed to checkbox() would never reach its toggle.
+// The checkbox itself is transparent so the box shows through.
+template<typename UIContextT>
+inline void win95Checkbox(UIContextT& ctx,
+                          afterhours::ui::imm::EntityParent epPair,
+                          bool& value, const std::string& debugName,
+                          const std::string& label, int renderLayer) {
+    using namespace afterhours::ui;
+    using namespace afterhours::ui::imm;
+    auto row = div(ctx, epPair,
+                   ComponentConfig{}
+                       .with_size(ComponentSize{percent(1.0f), h720(22)})
+                       .with_flex_direction(FlexDirection::Row)
+                       .with_align_items(AlignItems::Center)
+                       .with_gap(pixels(6))
+                       .with_custom_background(
+                           ui_imm::win95_colors::BUTTON_FACE)
+                       .with_render_layer(renderLayer));
+    if (!row) return;
+    auto box = div(ctx, mk(row.ent(), 0),
+                   win95SunkenStyle()
+                       // Square: width in w1280, height in h720.
+                       .with_size(ComponentSize{w1280(14), h720(14)})
+                       .with_render_layer(renderLayer));
+    if (box) {
+        checkbox(ctx, mk(box.ent(), 0), value,
+                 ComponentConfig{}
+                     .with_debug_name(debugName)
+                     .with_size(ComponentSize{percent(1.0f), percent(1.0f)})
+                     .with_transparent_bg()
+                     .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                     .with_render_layer(renderLayer));
+    }
+    div(ctx, mk(row.ent(), 1),
+        ComponentConfig{}
+            .with_label(label)
+            .with_size(ComponentSize{children(), h720(20)})
+            .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+            .with_alignment(afterhours::ui::TextAlignment::Left)
+            .with_render_layer(renderLayer));
 }
 
 // ============================================================
