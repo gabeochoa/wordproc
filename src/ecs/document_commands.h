@@ -537,6 +537,29 @@ inline bool tryAutoCorrect(DocumentComponent& doc, char delimiter) {
     return true;
 }
 
+// --- Format Painter (Standard toolbar) ---
+// Click the button to copy the current style and arm; clicking it
+// again disarms. The next click in the text applies the captured
+// style (through here) and disarms. See format_painter.h: the
+// buffer's style is document-global, so apply sets the global
+// style like the Bold/Italic buttons do.
+inline void toggleFormatPainter(DocumentComponent& doc,
+                                ToolbarComponent& toolbar) {
+    if (toolbar.formatPainter.armed) {
+        toolbar.formatPainter.disarm();
+    } else {
+        toolbar.formatPainter.arm(doc.buffer.textStyle());
+    }
+}
+
+inline bool applyFormatPainter(DocumentComponent& doc,
+                               ToolbarComponent& toolbar) {
+    if (!toolbar.formatPainter.armed) return false;
+    if (!toolbar.formatPainter.apply(doc.buffer)) return false;
+    doc.isDirty = true;
+    return true;
+}
+
 // --- Format toggles ---
 
 inline void toggleBold(DocumentComponent& doc) {

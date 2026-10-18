@@ -226,7 +226,8 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              int tabWidth = 4, float displayScale = 1.0f,
                              const SpellSquiggleCache* spellCache = nullptr,
                              float indentScale = 1.0f,
-                             bool suppressSelection = false) {
+                             bool suppressSelection = false,
+                             bool showParagraphMarks = false) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
@@ -582,6 +583,16 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     }
                 }
             }
+        }
+
+        // Show/Hide ¶: a pilcrow glyph at the end of each line
+        // (each line is its own paragraph in this model). Skipped
+        // on drop-cap lines (x/text are shifted there) and in
+        // Print Preview (callers pass false there).
+        if (showParagraphMarks && !span.hasDropCap) {
+            afterhours::draw_text("\xC2\xB6",
+                                  x + textWidth, y, lineFontSize,
+                                  afterhours::Color{128, 128, 128, 255});
         }
 
         // Draw red squiggles under misspelled words (spell check as you type).
@@ -967,6 +978,9 @@ struct EditorRenderSystem
         // Line numbers are an editing adornment: hidden in preview.
         bool showLineNumbers =
             layout.showLineNumbers && !layout.previewMode;
+        // Same for ¶ marks: shown only in the editing view.
+        bool showParagraphMarks =
+            layout.showParagraphMarks && !layout.previewMode;
 
         if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
@@ -978,12 +992,14 @@ struct EditorRenderSystem
                              lineHeight, renderScrollOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
-                             layout::displayScale(layout));
+                             layout::displayScale(layout),
+                             layout.previewMode, showParagraphMarks);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
-                             layout::displayScale(layout));
+                             layout::displayScale(layout),
+                             layout.previewMode, showParagraphMarks);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -997,7 +1013,7 @@ struct EditorRenderSystem
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode);
+                             layout.previewMode, showParagraphMarks);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

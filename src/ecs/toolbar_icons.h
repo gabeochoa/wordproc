@@ -137,23 +137,47 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             break;
         }
         case ToolbarIcon::Spelling: {
-            // Page with a green checkmark (Spelling): the document
-            // passes the check. No text glyphs — the 16px canvas
-            // cannot render a legible "ABC".
-            afterhours::draw_rectangle(
-                Rectangle{x0, y0, iw, ih},
-                afterhours::Color{255, 255, 255, 255});
-            afterhours::draw_rectangle_outline(
-                Rectangle{x0, y0, iw, ih}, fg);
-            afterhours::draw_line(static_cast<int>(x0 + 2), static_cast<int>(y0 + 3),
-                                  static_cast<int>(x0 + iw - 2), static_cast<int>(y0 + 3), fg);
-            afterhours::draw_line(static_cast<int>(x0 + 2), static_cast<int>(y0 + 6),
-                                  static_cast<int>(x0 + iw - 2), static_cast<int>(y0 + 6), fg);
+            // "ABC" tiny letters with a green check mark (Word 95
+            // Spelling icon): the ABC is drawn as text at 6px, the
+            // check as two green strokes below-right of it.
+            afterhours::draw_text("ABC", static_cast<int>(x0),
+                                  static_cast<int>(y0), 6, fg);
             afterhours::Color check{0, 128, 0, 255};
-            afterhours::draw_line(static_cast<int>(x0 + 2), static_cast<int>(y0 + ih * 0.62f),
-                                  static_cast<int>(x0 + iw * 0.4f), static_cast<int>(y0 + ih * 0.82f), check);
-            afterhours::draw_line(static_cast<int>(x0 + iw * 0.4f), static_cast<int>(y0 + ih * 0.82f),
-                                  static_cast<int>(x0 + iw - 2), static_cast<int>(y0 + ih * 0.3f), check);
+            afterhours::draw_line(static_cast<int>(x0 + 1), static_cast<int>(y0 + ih * 0.66f),
+                                  static_cast<int>(x0 + iw * 0.38f), static_cast<int>(y0 + ih * 0.88f), check);
+            afterhours::draw_line(static_cast<int>(x0 + iw * 0.38f), static_cast<int>(y0 + ih * 0.88f),
+                                  static_cast<int>(x0 + iw - 1), static_cast<int>(y0 + ih * 0.38f), check);
+            break;
+        }
+        case ToolbarIcon::FormatPainter: {
+            // Paintbrush, diagonal: bristle head top-left, ferrule,
+            // handle to bottom-right.
+            afterhours::draw_rectangle(
+                Rectangle{x0 + 1, y0 + 1, iw * 0.34f, ih * 0.34f},
+                afterhours::Color{205, 170, 90, 255});
+            afterhours::draw_rectangle_outline(
+                Rectangle{x0 + 1, y0 + 1, iw * 0.34f, ih * 0.34f}, fg);
+            afterhours::draw_rectangle(
+                Rectangle{x0 + iw * 0.3f, y0 + ih * 0.3f, iw * 0.28f, ih * 0.2f},
+                afterhours::Color{192, 192, 192, 255});
+            afterhours::draw_rectangle_outline(
+                Rectangle{x0 + iw * 0.3f, y0 + ih * 0.3f, iw * 0.28f, ih * 0.2f}, fg);
+            afterhours::draw_line(static_cast<int>(x0 + iw * 0.45f),
+                                  static_cast<int>(y0 + ih * 0.45f),
+                                  static_cast<int>(x0 + iw - 1),
+                                  static_cast<int>(y0 + ih - 1), fg);
+            afterhours::draw_line(static_cast<int>(x0 + iw * 0.45f + 1),
+                                  static_cast<int>(y0 + ih * 0.45f),
+                                  static_cast<int>(x0 + iw - 1),
+                                  static_cast<int>(y0 + ih - 2), fg);
+            break;
+        }
+        case ToolbarIcon::ShowParagraph: {
+            // Pilcrow ¶ glyph (Show/Hide ¶), drawn as text: the
+            // default font carries the Latin-1 ¶ (verified in the
+            // toolbar screenshot).
+            afterhours::draw_text("\xC2\xB6", static_cast<int>(x0 + 1),
+                                  static_cast<int>(y0), 13, fg);
             break;
         }
         case ToolbarIcon::Cut: {

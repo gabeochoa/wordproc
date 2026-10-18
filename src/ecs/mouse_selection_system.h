@@ -11,6 +11,7 @@
 #include "../ui/theme.h"
 #include "component_helpers.h"
 #include "components.h"
+#include "document_commands.h"
 #include "scrollbar_system.h"
 
 namespace ecs {
@@ -24,7 +25,8 @@ namespace ecs {
 // prevDown_ tracking while a menu is open, so it never leaks through.
 struct MouseSelectionSystem
     : public afterhours::System<DocumentComponent, CaretComponent, ScrollComponent,
-                                LayoutComponent, MenuComponent, DialogState> {
+                                LayoutComponent, MenuComponent, DialogState,
+                                ToolbarComponent> {
     bool prevDown_ = false;
     bool dragging_ = false;
     // Whether this drag already auto-scrolled on a move frame. The
@@ -64,7 +66,8 @@ struct MouseSelectionSystem
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, ScrollComponent& scroll,
                        LayoutComponent& layout, MenuComponent& menu,
-                       DialogState& dialogs, const float) override {
+                       DialogState& dialogs, ToolbarComponent& toolbar,
+                       const float) override {
         bool anyMenuOpen = false;
         for (const auto& m : menu.menus) {
             if (m.open) { anyMenuOpen = true; break; }
@@ -94,6 +97,15 @@ struct MouseSelectionSystem
                           mouse.y < area.y + area.height;
 
         if (pressed && inTextArea) {
+            // Format Painter: an armed painter applies the captured
+            // style on this click (click or the press that starts a
+            // click-drag) through the command layer, then disarms;
+            // the click still places the caret / starts the drag.
+            // Not in Print Preview: the preview toolbar replaces the
+            // Standard toolbar, so the painter cannot be armed there.
+            if (!layout.previewMode) {
+                cmd::applyFormatPainter(doc, toolbar);
+            }
             bool shiftDown = test_input::is_key_down(afterhours::keys::LEFT_SHIFT) ||
                              test_input::is_key_down(afterhours::keys::RIGHT_SHIFT);
             CaretPosition pos = hitTest(doc.buffer, layout, area, mouse.x, mouse.y,

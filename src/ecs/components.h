@@ -6,6 +6,7 @@
 
 #include "../editor/autocorrect.h"
 #include "../editor/document_settings.h"
+#include "../editor/format_painter.h"
 #include "../editor/spell_squiggles.h"
 #include "../editor/spellcheck.h"
 #include "../editor/drawing.h"
@@ -329,6 +330,10 @@ struct LayoutComponent : public afterhours::BaseComponent {
     // View options
     float zoomLevel = 1.0f;
     bool focusMode = false;
+    // Show/Hide ¶ (Standard toolbar): render a ¶ glyph at the end
+    // of each line in the text pass. Editing adornment: hidden in
+    // Print Preview.
+    bool showParagraphMarks = false;
     bool showRuler = true;  // View > Ruler; hidden reclaims rulerHeight
     bool splitViewEnabled = false;
     bool splitViewHorizontal = true;
@@ -414,7 +419,8 @@ struct InputComponent : public afterhours::BaseComponent {
 // Toolbar icon types for overlay rendering
 enum class ToolbarIcon {
     None, New, Open, Save, Print, PrintPreview, Spelling,
-    Cut, Copy, Paste, Undo, Redo,
+    Cut, Copy, Paste, FormatPainter, Undo, Redo,
+    ShowParagraph,
     AlignLeft, AlignCenter, AlignRight, AlignJustify
 };
 
@@ -446,6 +452,10 @@ struct ToolbarComponent : public afterhours::BaseComponent {
     // toolbar zoom dropdown open states.
     bool previewZoomDropdownOpen = false;
     bool zoomDropdownOpen = false;
+
+    // Format Painter (Standard toolbar): captured style + armed
+    // state. See src/editor/format_painter.h for the subset note.
+    FormatPainter formatPainter;
 
 };
 

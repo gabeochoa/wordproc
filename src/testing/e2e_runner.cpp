@@ -434,6 +434,10 @@ static void setupCallbacksEx(
         if (prop == "spell_check_as_you_type")
             return docComp.docSettings.spellCheckAsYouType ? "true"
                                                            : "false";
+        if (prop == "paragraph_marks")
+            return layoutComp.showParagraphMarks ? "true" : "false";
+        if (prop == "format_painter_armed")
+            return toolbarComp.formatPainter.armed ? "true" : "false";
         if (prop == "autocorrect_as_you_type")
             return docComp.autoCorrect.settings.replaceTextAsYouType
                        ? "true"
@@ -777,12 +781,15 @@ static void setupCallbacksEx(
             if (!pcr) return "false";
             int winW = pcr->current_resolution.width;
             // Calculate toolbar width: buttons + separators + formatting bar dropdowns
-            int buttonCount = 11;  // New, Open, Save, Print, Print Preview, Spelling, Cut, Copy, Paste, Undo, Redo
-            int separatorCount = 3; // Between groups
+            // New, Open, Save, Print, Print Preview, Spelling, Cut,
+            // Copy, Paste, Format Painter, Undo, Redo, Show/Hide ¶.
+            int buttonCount = 13;
+            int separatorCount = 4; // Between groups
             float toolbarWidth = static_cast<float>(
-                buttonCount * theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE + 
+                buttonCount * theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE +
                     theme::layout::TOOLBAR_BUTTON_PADDING * 2) +
-                separatorCount * theme::layout::scaleInt(theme::layout::TOOLBAR_SEPARATOR_WIDTH + 8));
+                separatorCount * theme::layout::scaleInt(theme::layout::TOOLBAR_SEPARATOR_WIDTH + 8) +
+                theme::layout::scaleInt(76));  // Zoom dropdown at right end
             return toolbarWidth <= static_cast<float>(winW) ? "true" : "false";
         }
         
@@ -960,6 +967,7 @@ static void setupCallbacksEx(
         layoutComp.previewPageCount = 1;
         layoutComp.previewLinesPerPage = 50;
         layoutComp.showLineNumbers = false;
+        layoutComp.showParagraphMarks = false;
         layoutComp.showOutline = false;
         layoutComp.splitViewEnabled = false;
         layoutComp.splitViewHorizontal = true;
@@ -973,6 +981,7 @@ static void setupCallbacksEx(
         toolbarComp.fontSizeDropdownOpen = false;
         toolbarComp.previewZoomDropdownOpen = false;
         toolbarComp.zoomDropdownOpen = false;
+        toolbarComp.formatPainter = FormatPainter{};
 
         // Reset scroll state (no offset / remainder leaks between tests)
         scrollComp.offset = 0;

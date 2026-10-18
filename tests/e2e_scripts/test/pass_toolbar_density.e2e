@@ -1,0 +1,54 @@
+# Test: Standard toolbar density (Batch 3 fix round).
+# - Show/Hide ¶ toggles paragraph marks.
+# - Zoom dropdown at the right end sets the zoom.
+# - Format Painter copies the current style, arms, and the next
+#   click in the text applies it and disarms. Spelling's new ABC +
+#   check icon is verified visually in the screenshot.
+
+type "Hello"
+wait_frames 12
+
+# Show/Hide ¶ on, then Zoom to 150% for the toolbar screenshot.
+click_ui btn_show_paragraph
+wait_frames 12
+validate paragraph_marks=true
+
+click_ui dropdown_zoom
+wait_frames 12
+click_ui zoom_item_150
+wait_frames 12
+validate zoom_level=150
+
+screenshot toolbar_density
+
+# ¶ off, zoom back to 100% (stable coordinates for the click below).
+click_ui btn_show_paragraph
+wait_frames 12
+validate paragraph_marks=false
+
+click_ui dropdown_zoom
+wait_frames 12
+click_ui zoom_item_100
+wait_frames 12
+validate zoom_level=100
+
+# Format Painter: capture bold, clear bold, click in text.
+click_ui btn_bold
+wait_frames 12
+validate bold=true
+
+click_ui btn_format_painter
+wait_frames 12
+validate format_painter_armed=true
+
+click_ui btn_bold
+wait_frames 12
+validate bold=false
+validate format_painter_armed=true
+
+mouse_down 200 170
+wait_frames 2
+mouse_up
+wait_frames 12
+validate bold=true
+validate format_painter_armed=false

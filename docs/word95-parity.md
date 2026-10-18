@@ -107,7 +107,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Chrome (toolbars / ruler / status bar)
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Standard toolbar (icons) | Partial | P0 | Batch 3: Print Preview + Spelling buttons added in Word 95 Standard order (Print, Print Preview, Spelling, Cut/Copy/Paste, Undo/Redo), drawn icons. Show/Hide ¶ NOT added: pilcrow rendering in the text pass is not trivial. Insert Table grid button NOT added: needs a grid popup that does not exist |
+| Standard toolbar (icons) | Partial | P0 | Batch 3 + fix round: Word 95 Standard order — New Open Save \| Print Print Preview Spelling (ABC + green check icon) \| Cut Copy Paste FormatPainter \| Undo Redo \| ¶ ... Zoom (dropdown 50/75/100/125/150/200% at the right end, wired to zoomLevel). Format Painter: click copies the current style and arms; the next click in text applies it and disarms (command layer; unit + E2E). Subset: the buffer carries one document-global TextStyle, not per-range styles, so apply sets the global style like Bold/Italic do. Show/Hide ¶ (pressed state) renders a ¶ glyph at each line end in the text pass, hidden in Print Preview. Insert Table grid button NOT added: needs a grid popup that does not exist |
 | Formatting toolbar (style/font/size/BIU/align) | Partial | P0 | present; font list = 2 families |
 | Title bar / menu bar / bevels | Have | P0 | Win95 theme, drop shadows, focus ring |
 | Scrollbars (Win95 style) | Partial | P1 | verify |

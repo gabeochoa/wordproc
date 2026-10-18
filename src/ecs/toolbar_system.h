@@ -520,12 +520,24 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         trackTooltip(curX, btnY, "Paste (Ctrl+V)");
         curX += buttonSize + buttonPadding;
-        
+
+        // Format Painter: copy the current style and arm; the next
+        // click in the text applies it and disarms (MouseSelection-
+        // System). Sunken while armed. Word 95 Standard order:
+        // Cut/Copy/Paste, Format Painter, then Undo/Redo.
+        int painterBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, painterBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, toolbar.formatPainter.armed, isMouseOver(curX, btnY), ToolbarIcon::FormatPainter).with_label("").with_debug_name("btn_format_painter"))) {
+            cmd::toggleFormatPainter(doc, toolbar);
+        }
+        trackTooltip(curX, btnY, "Format Painter");
+        curX += buttonSize + buttonPadding;
+
         // Separator (etched)
         drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
         btnId += 2;
         curX += sepWidth + sepPadding;
-        
+
         // Undo/Redo
         bool canUndo = doc.buffer.canUndo();
         int undoBtnId = btnId++;
@@ -535,7 +547,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         trackTooltip(curX, btnY, "Undo (Ctrl+Z)");
         curX += buttonSize + buttonPadding;
-        
+
         bool canRedo = doc.buffer.canRedo();
         int redoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, redoBtnId),
@@ -543,6 +555,76 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             cmd::redo(doc);
         }
         trackTooltip(curX, btnY, "Redo (Ctrl+Y)");
+        curX += buttonSize + buttonPadding;
+
+        // Separator (etched)
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        btnId += 2;
+        curX += sepWidth + sepPadding;
+
+        // Show/Hide ¶: toggles paragraph marks in the text pass
+        // (¶ glyph at each line end). Sunken while on.
+        int pilcrowBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, pilcrowBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, layout.showParagraphMarks, isMouseOver(curX, btnY), ToolbarIcon::ShowParagraph).with_label("").with_debug_name("btn_show_paragraph"))) {
+            layout.showParagraphMarks = !layout.showParagraphMarks;
+        }
+        trackTooltip(curX, btnY, "Show/Hide Paragraph Marks");
+        curX += buttonSize + buttonPadding;
+
+        // Zoom control at the right end of the Standard toolbar:
+        // dropdown showing the current zoom %, wired to zoomLevel.
+        float zoomBtnW = theme::layout::scale(76);
+        float zoomBtnX = screenWidth - zoomBtnW - buttonPadding;
+        float zoomBtnY = btnY;
+        std::string zoomLabel =
+            std::to_string(static_cast<int>(std::lround(
+                layout.zoomLevel * 100.0f))) + "%";
+        test_input::register_visible_text(zoomLabel);
+        if (button(ctx, mk(uiRoot, btnId++),
+            absDropdownButton(zoomBtnX, zoomBtnY, zoomBtnW, theme::layout::scale(22), toolbar.zoomDropdownOpen)
+                .with_label(zoomLabel)
+                .with_debug_name("dropdown_zoom"))) {
+            toolbar.zoomDropdownOpen = !toolbar.zoomDropdownOpen;
+            toolbar.styleDropdownOpen = false;
+            toolbar.fontDropdownOpen = false;
+            toolbar.fontSizeDropdownOpen = false;
+        }
+        if (toolbar.zoomDropdownOpen) {
+            const int zoomChoices[] = {50, 75, 100, 125, 150, 200};
+            float zoomListY = zoomBtnY + buttonSize + 2.0f;
+            div(ctx, mk(uiRoot, 3300),
+                ah_win95::win95DropdownListStyle(zoomBtnW, 6)
+                    .with_translate(zoomBtnX, zoomListY)
+                    .with_render_layer(50)
+                    .with_debug_name("dropdown_zoom_list"));
+            for (int i = 0; i < 6; ++i) {
+                int pct = zoomChoices[i];
+                bool selected = static_cast<int>(std::lround(
+                    layout.zoomLevel * 100.0f)) == pct;
+                float itemY = zoomListY + 2.0f + static_cast<float>(i) *
+                                                 theme::layout::scale(20);
+                if (button(ctx, mk(uiRoot, 3301 + i),
+                    ComponentConfig{}
+                        .with_label(std::to_string(pct) + "%")
+                        .with_size(ComponentSize{pixels(zoomBtnW - 4.0f), pixels(theme::layout::scale(18))})
+                        .with_absolute_position()
+                        .with_translate(zoomBtnX + 2.0f, itemY)
+                        .with_custom_background(selected
+                            ? ui_imm::win95_colors::HIGHLIGHT
+                            : ui_imm::win95_colors::TEXT_AREA)
+                        .with_custom_text_color(selected
+                            ? ui_imm::win95_colors::TEXT_WHITE
+                            : ui_imm::win95_colors::TEXT)
+                        .with_roundness(0.0f)
+                        .with_render_layer(51)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_debug_name("zoom_item_" + std::to_string(pct)))) {
+                    layout.zoomLevel = static_cast<float>(pct) / 100.0f;
+                    toolbar.zoomDropdownOpen = false;
+                }
+            }
+        }
         
         // === Formatting Toolbar Background ===
         div(ctx, mk(uiRoot, 2000),
@@ -862,7 +944,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         // === Close dropdowns on click outside ===
         // If mouse was pressed and no dropdown button is hovered, close all dropdowns
-        if (ctx.mouse.just_pressed && (toolbar.styleDropdownOpen || toolbar.fontDropdownOpen || toolbar.fontSizeDropdownOpen)) {
+        if (ctx.mouse.just_pressed && (toolbar.styleDropdownOpen || toolbar.fontDropdownOpen || toolbar.fontSizeDropdownOpen || toolbar.zoomDropdownOpen)) {
             float mx = ctx.mouse.pos.x;
             float my = ctx.mouse.pos.y;
             // Check if click is inside any dropdown button or dropdown list
@@ -884,10 +966,25 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 if (toolbar.fontDropdownOpen && mx >= fdx && mx <= fdx + fdw) insideDropdown = true;
                 if (toolbar.fontSizeDropdownOpen && mx >= fsdx && mx <= fsdx + fsdw) insideDropdown = true;
             }
+            // Standard toolbar Zoom dropdown button + list (right end).
+            if (toolbar.zoomDropdownOpen) {
+                if (mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
+                    my >= zoomBtnY && my <= zoomBtnY + theme::layout::scale(22)) {
+                    insideDropdown = true;
+                }
+                float zoomListY = zoomBtnY + buttonSize + 2.0f;
+                float zoomListBottom = zoomListY + 6.0f * theme::layout::scale(20) +
+                                       theme::layout::scale(4);
+                if (mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
+                    my >= zoomListY && my <= zoomListBottom) {
+                    insideDropdown = true;
+                }
+            }
             if (!insideDropdown) {
                 toolbar.styleDropdownOpen = false;
                 toolbar.fontDropdownOpen = false;
                 toolbar.fontSizeDropdownOpen = false;
+                toolbar.zoomDropdownOpen = false;
             }
         }
     }
