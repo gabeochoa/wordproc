@@ -217,7 +217,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              bool caretVisible, int baseFontSize, int baseLineHeight,
                              int scrollOffset, bool showLineNumbers = false,
                              float lineNumberGutterWidth = 50.0f,
-                             int tabWidth = 4, float zoomLevel = 1.0f,
+                             int tabWidth = 4, float displayScale = 1.0f,
                              const SpellSquiggleCache* spellCache = nullptr,
                              float indentScale = 1.0f) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
@@ -284,9 +284,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         };
         std::string displayLine = expandTabs(lineData, lineLen);
         
-        // Get paragraph style for this line
+        // Get paragraph style for this line. The paragraph font
+        // scales by displayScale (fit * zoom in paged mode), so
+        // text, caret height, line height, and squiggle offsets
+        // all live in the page's coordinate scale. In pageless
+        // mode displayScale == zoomLevel, so this is unchanged.
         ParagraphStyle paraStyle = buffer.lineParagraphStyle(row);
-        int lineFontSize = static_cast<int>(paragraphStyleFontSize(paraStyle) * zoomLevel);
+        int lineFontSize = ruler_math::scaledParagraphFontSize(
+            paragraphStyleFontSize(paraStyle), displayScale);
         int baseLineHeightForStyle = lineFontSize + 4;
         
         // Use base font size as minimum if paragraph style would be smaller
@@ -836,11 +841,12 @@ struct EditorRenderSystem
             }
 
             // Default tab stops: small L marks along the bottom edge.
+            // The space width is measured at the scaled font, so
+            // tab stops land where the scaled text's tabs land.
             {
                 TextStyle tabStyle = doc.buffer.textStyle();
-                int tabFontSize =
-                    std::max(8, static_cast<int>(std::round(
-                                    tabStyle.fontSize * layout.zoomLevel)));
+                int tabFontSize = ruler_math::scaledFontSize(
+                    tabStyle.fontSize, layout::displayScale(layout));
                 float spaceWidth = static_cast<float>(
                     afterhours::graphics::measure_text(" ", tabFontSize));
                 for (float x : ruler_math::tabStopXs(
@@ -895,9 +901,15 @@ struct EditorRenderSystem
             util::drawSunkenBorder(textAreaRect);
         }
 
-        // Render text buffer using effective text area (respects page margins)
+        // Render text buffer using effective text area (respects page margins).
+        // The document font scales by displayScale (fit * zoom in
+        // paged mode): at the ~0.58 paged fit a 16px base renders
+        // at 9px, so the text sits in the page's coordinate scale
+        // instead of overflowing the 6.5" text width at full size.
+        // Pageless displayScale == zoomLevel, so this is unchanged.
         TextStyle style = doc.buffer.textStyle();
-        int fontSize = std::max(8, static_cast<int>(std::round(style.fontSize * layout.zoomLevel)));
+        float ds = layout::displayScale(layout);
+        int fontSize = ruler_math::scaledFontSize(style.fontSize, ds);
         int lineHeight = fontSize + 4;
         LayoutComponent::Rect effectiveArea = layout::effectiveTextArea(layout);
 
@@ -931,12 +943,12 @@ struct EditorRenderSystem
             renderTextBuffer(doc.buffer, topArea, caret.visible, fontSize,
                              lineHeight, scroll.offset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel, &doc.spellSquiggles,
+                             ds, &doc.spellSquiggles,
                              layout::displayScale(layout));
             renderTextBuffer(doc.buffer, bottomArea, caret.visible, fontSize,
                              lineHeight, scroll.secondaryOffset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel, &doc.spellSquiggles,
+                             ds, &doc.spellSquiggles,
                              layout::displayScale(layout));
 
             // Split divider
@@ -949,7 +961,7 @@ struct EditorRenderSystem
             renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
                              lineHeight, scroll.offset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel, &doc.spellSquiggles,
+                             ds, &doc.spellSquiggles,
                              layout::displayScale(layout));
         }
 

@@ -78,8 +78,13 @@ struct MouseSelectionSystem
             return;
         }
 
+        // Hit-testing uses the same scaled font as the renderer
+        // (displayScale = fit * zoom in paged mode), so a click
+        // lands on the column whose glyph is drawn at that x.
+        // Pageless displayScale == zoomLevel, so this is unchanged.
         TextStyle style = doc.buffer.textStyle();
-        int fontSize = std::max(8, static_cast<int>(std::round(style.fontSize * layout.zoomLevel)));
+        float ds = layout::displayScale(layout);
+        int fontSize = ruler_math::scaledFontSize(style.fontSize, ds);
         int lineHeight = fontSize + 4;
         LayoutComponent::Rect area = layout::effectiveTextArea(layout);
         float sbX = layout.textArea.x + layout.textArea.width - scroll_math::SCROLLBAR_WIDTH;

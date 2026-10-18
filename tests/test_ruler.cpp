@@ -159,6 +159,37 @@ TEST_CASE("paragraph indents are one undo step", "[ruler]") {
     }
 }
 
+TEST_CASE("scaled document font follows displayScale", "[ruler]") {
+    // Paged fit ~0.58 (ruler 42px/in): the 16px base renders at 9px
+    // with a 13px line height, so text sits in the page's scale
+    // instead of overflowing the 6.5" text width at full size.
+    constexpr float paged = 42.0f / 72.0f;  // ~0.5833
+    SECTION("paged fit scales the base font down") {
+        REQUIRE(ruler_math::scaledFontSize(16, paged) == 9);
+        REQUIRE(ruler_math::scaledLineHeight(16, paged) == 13);
+        REQUIRE(ruler_math::scaledParagraphFontSize(16, paged) == 9);
+    }
+    SECTION("headings scale by the same factor") {
+        REQUIRE(ruler_math::scaledParagraphFontSize(28, paged) == 16);
+        // Paragraph path truncates (11.67 -> 11), it does not round.
+        REQUIRE(ruler_math::scaledParagraphFontSize(20, paged) == 11);
+    }
+    SECTION("pageless displayScale == zoomLevel, so output is unchanged") {
+        REQUIRE(ruler_math::scaledFontSize(16, 1.0f) == 16);
+        REQUIRE(ruler_math::scaledLineHeight(16, 1.0f) == 20);
+        REQUIRE(ruler_math::scaledParagraphFontSize(16, 1.0f) == 16);
+        REQUIRE(ruler_math::scaledFontSize(16, 1.5f) == 24);
+        REQUIRE(ruler_math::scaledParagraphFontSize(16, 1.5f) == 24);
+    }
+    SECTION("the pre-existing 8px floor is preserved") {
+        // A 10px base at the paged fit would round to 6; the floor
+        // keeps it at 8, exactly as pageless zoom did before.
+        REQUIRE(ruler_math::scaledFontSize(10, paged) == 8);
+        REQUIRE(ruler_math::scaledFontSize(8, paged) == 8);
+        REQUIRE(ruler_math::scaledLineHeight(10, paged) == 12);
+    }
+}
+
 TEST_CASE("View menu lists Ruler", "[menu][ruler]") {
     auto menus = createMenuBarData();
     bool hasRuler = false;

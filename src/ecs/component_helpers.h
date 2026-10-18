@@ -144,11 +144,12 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
     }
 }
 
-// ONE scale source for page, ruler, margins, and indents.
+// ONE scale source for page, ruler, margins, indents, and text.
 //   displayScale = (paged ? pageScale(fit) : 1) * zoomLevel
 //   pixelsPerInch = 72 * displayScale
 // Every consumer — drawPageBackground, effectiveTextArea, ruler
-// geometry/ticks, indent marker/text positions — derives from these,
+// geometry/ticks, indent marker/text positions, document font
+// sizes (ruler_math::scaledFontSize) — derives from these,
 // so the page width is exactly 8.5 * pixelsPerInch and a stored
 // indent of 72 always lands on the 1" ruler tick.
 inline float displayScale(const LayoutComponent& layout) {

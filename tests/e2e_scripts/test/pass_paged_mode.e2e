@@ -17,6 +17,20 @@ validate page_mode=paged
 validate ruler_ppi=42
 validate page_display_width=361
 validate page_width_inches_x10=85
+# ONE scale for text too: the 16px base renders at 9px with a 13px
+# line height at the ~0.58 paged fit (was 16/20: full-size text
+# overflowing the 6.5" text width). Pre-fix these props are unknown.
+validate text_font_size=9
+validate text_line_height=13
+# Click hit-testing uses the same scaled font: x=550 is 40px into
+# "Paged mode check." at 9px, landing on col 9 (at the old 16px
+# font the same click landed near col 5).
+mouse_down 550 220
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_col=9
+validate caret_row=0
 # Mode switch is transient status-bar text, not a floating toast.
 validate status_text=Paged mode
 screenshot paged_mode
@@ -25,4 +39,8 @@ menu_open View
 menu_select "Pageless Mode"
 wait_frames 12
 validate page_mode=pageless
+# Pageless displayScale == zoomLevel: font metrics back to 16/20,
+# byte-identical to before the paged scaling fix.
+validate text_font_size=16
+validate text_line_height=20
 validate status_text=Pageless mode

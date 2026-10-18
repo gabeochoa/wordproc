@@ -407,6 +407,16 @@ static void setupCallbacksEx(
         if (prop == "ruler_ppi")
             return std::to_string(static_cast<int>(std::lround(
                 ecs::layout::pixelsPerInch(layoutComp))));
+        // Scaled document font metrics: the font size / line height
+        // the renderer actually draws with (base * displayScale,
+        // so paged text shrinks with the page fit). Pageless this
+        // is base * zoomLevel, as before.
+        if (prop == "text_font_size")
+            return std::to_string(ruler_math::scaledFontSize(
+                style.fontSize, ecs::layout::displayScale(layoutComp)));
+        if (prop == "text_line_height")
+            return std::to_string(ruler_math::scaledLineHeight(
+                style.fontSize, ecs::layout::displayScale(layoutComp)));
         if (prop == "page_display_width")
             return std::to_string(static_cast<int>(
                 std::lround(layoutComp.pageDisplayWidth)));

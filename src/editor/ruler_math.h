@@ -25,11 +25,38 @@
 // indentScale = pixelsPerInch / 72, so a stored 72 sits exactly on
 // the 1" tick at any page fit / zoom. The text renderer scales
 // indents by the same factor, so marker, text, and ruler ticks agree.
+// Document font sizes scale by displayScale the same way
+// (scaledFontSize / scaledParagraphFontSize), so in paged mode the
+// text, caret, line height, squiggles, and click hit-testing all
+// live in the same coordinate scale as the page and ruler.
 namespace ruler_math {
 
 inline constexpr float TEXT_PADDING = 8.0f;
 inline constexpr float PIXELS_PER_INCH = 72.0f;
 inline constexpr float GRAB_RADIUS = 7.0f;
+
+// Scaled document font metrics — the ONE text scale. `displayScale`
+// is layout::displayScale: (paged ? pageScale(fit) : 1) * zoomLevel,
+// so in pageless mode this is exactly the old base * zoomLevel
+// computation (byte-identical), while in paged mode the fit factor
+// scales the text with the page. The 8px floor is the pre-existing
+// one: a 16px base at the ~0.58 paged fit still yields 9px.
+// Line height is font size + 4, as in the render/mouse systems.
+// The paragraph path keeps its historical truncation (not round),
+// so pageless output is unchanged there too.
+inline int scaledFontSize(int baseFontSize, float displayScale) {
+    return std::max(
+        8, static_cast<int>(std::lround(baseFontSize * displayScale)));
+}
+
+inline int scaledLineHeight(int baseFontSize, float displayScale) {
+    return scaledFontSize(baseFontSize, displayScale) + 4;
+}
+
+inline int scaledParagraphFontSize(int paragraphBaseFontSize,
+                                   float displayScale) {
+    return static_cast<int>(paragraphBaseFontSize * displayScale);
+}
 
 struct Geometry {
     float rulerY = 0.0f;
