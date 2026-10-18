@@ -3,8 +3,11 @@
 # (one undo step per drag), and View > Ruler toggling reclaims space.
 # Coordinates are the 1280x720 layout at ui_scale 1.2 (scaled chrome:
 # 31 title + 28 menu + 34 toolbar + 34 formatting + 24 ruler + 4 border):
-# text area y=153, ruler band y=129..153, origin x=11.6
-# (text area x=3.6 + 8px padding), right marker x=1268.
+# text area y=153, ruler band y=129..153. Pageless margins are 1in
+# (72px) each side, so the white band is x=76..1204, origin x=83.6
+# (effective x=75.6 + 8px padding), right marker x=1196.
+# Pageless ppi is 72 (zoom 1); the paged scale check lives in
+# pass_paged_mode.e2e (page width = 8.5 * ruler ppi).
 
 type "Ruler drag test"
 wait_frames 12
@@ -12,9 +15,13 @@ wait_frames 12
 validate ruler_visible=true
 validate text_area_y=153
 validate left_indent=0
+validate ruler_ppi=72
+validate ruler_white_left=76
+validate ruler_white_right=1204
+validate effective_text_x=76
 
 # Drag the left-indent marker (bottom half of ruler) +72px right.
-drag_to 12 148 84 148
+drag_to 84 148 156 148
 wait_frames 6
 validate left_indent=72
 
@@ -24,12 +31,12 @@ wait_frames 6
 validate left_indent=0
 
 # Drag the first-line marker (top half of ruler) +36px right.
-drag_to 12 135 48 135
+drag_to 84 135 120 135
 wait_frames 6
 validate first_line_indent=36
 
 # Drag the right-indent marker (bottom half) 72px left.
-drag_to 1268 148 1196 148
+drag_to 1196 148 1124 148
 wait_frames 6
 validate right_indent=72
 

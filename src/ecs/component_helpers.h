@@ -62,6 +62,11 @@ inline bool hasMessage(const StatusComponent& status, double currentTime) {
 
 namespace layout {
 
+// ONE scale source — definitions below updateLayout, declared here
+// because updateLayout uses them.
+inline float displayScale(const LayoutComponent& layout);
+inline float pixelsPerInch(const LayoutComponent& layout);
+
 inline void updateLayout(LayoutComponent& layout, int w, int h) {
     layout.screenWidth = w;
     layout.screenHeight = h;
@@ -101,7 +106,12 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
     layout.textArea = {borderWidth, textTop,
                        static_cast<float>(w) - 2 * borderWidth, textHeight};
 
-    // Calculate page display dimensions for paged mode
+    // Calculate page display dimensions for paged mode.
+    // pageScale is the FIT factor only (no zoom); displayScale()
+    // below folds zoom in, so pageDisplayWidth = pageWidth(points) *
+    // displayScale = (pageWidth/72) * pixelsPerInch = 8.5 * ppi.
+    // updateLayout runs every frame (LayoutUpdateSystem), so a zoom
+    // change is picked up without a separate invalidation call.
     if (layout.pageMode == PageMode::Paged) {
         float availableWidth =
             layout.textArea.width - 20.0f;  // Margin for page shadow
@@ -114,35 +124,61 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
             layout.pageScale = (availableHeight * 0.9f) / layout.pageHeight;
         }
 
-        layout.pageDisplayWidth = layout.pageWidth * layout.pageScale;
-        layout.pageDisplayHeight = layout.pageHeight * layout.pageScale;
+        float ds = displayScale(layout);
+        layout.pageDisplayWidth = layout.pageWidth * ds;
+        layout.pageDisplayHeight = layout.pageHeight * ds;
         layout.pageOffsetX =
             layout.textArea.x +
             (layout.textArea.width - layout.pageDisplayWidth) / 2.0f;
     }
 }
 
+// ONE scale source for page, ruler, margins, and indents.
+//   displayScale = (paged ? pageScale(fit) : 1) * zoomLevel
+//   pixelsPerInch = 72 * displayScale
+// Every consumer — drawPageBackground, effectiveTextArea, ruler
+// geometry/ticks, indent marker/text positions — derives from these,
+// so the page width is exactly 8.5 * pixelsPerInch and a stored
+// indent of 72 always lands on the 1" ruler tick.
+inline float displayScale(const LayoutComponent& layout) {
+    float fit = layout.pageMode == PageMode::Paged ? layout.pageScale : 1.0f;
+    return fit * layout.zoomLevel;
+}
+
+inline float pixelsPerInch(const LayoutComponent& layout) {
+    return ruler_math::PIXELS_PER_INCH * displayScale(layout);
+}
+
 inline LayoutComponent::Rect effectiveTextArea(const LayoutComponent& layout) {
+    // Margin in display pixels: pageMargin is in points (72/in), so
+    // marginPx = (pageMargin/72) * pixelsPerInch =
+    // pageMargin * displayScale — the same scale as the page, ruler,
+    // and indents. Pageless therefore also gets a real margin band:
+    // the ruler is gray outside it, white inside it, instead of
+    // white edge-to-edge.
+    float marginPx = layout.pageMargin * displayScale(layout);
     if (layout.pageMode == PageMode::Pageless) {
-        // Apply line width limit if set
+        float x = layout.textArea.x + marginPx;
+        float w = layout.textArea.width - 2.0f * marginPx;
+        if (w < 0.0f) w = 0.0f;
+        // Apply line width limit if set, centered inside the margins.
         if (layout.lineWidthLimit > 0.0f) {
             float limitedWidth =
                 layout.lineWidthLimit * 8.0f;  // Approximate char width
-            if (limitedWidth < layout.textArea.width) {
-                float offset = (layout.textArea.width - limitedWidth) / 2.0f;
-                return {layout.textArea.x + offset, layout.textArea.y,
-                        limitedWidth, layout.textArea.height};
+            if (limitedWidth < w) {
+                float offset = (w - limitedWidth) / 2.0f;
+                return {x + offset, layout.textArea.y, limitedWidth,
+                        layout.textArea.height};
             }
         }
-        return layout.textArea;
+        return {x, layout.textArea.y, w, layout.textArea.height};
     }
 
     // Paged mode: return area within page margins
-    float marginScaled = layout.pageMargin * layout.pageScale;
-    return {layout.pageOffsetX + marginScaled,
-            layout.textArea.y + 10.0f + marginScaled,  // 10px for page shadow
-            layout.pageDisplayWidth - 2.0f * marginScaled,
-            layout.pageDisplayHeight - 2.0f * marginScaled};
+    return {layout.pageOffsetX + marginPx,
+            layout.textArea.y + 10.0f + marginPx,  // 10px for page shadow
+            layout.pageDisplayWidth - 2.0f * marginPx,
+            layout.pageDisplayHeight - 2.0f * marginPx};
 }
 
 }  // namespace layout
@@ -173,7 +209,8 @@ inline ruler_math::Geometry geometry(const LayoutComponent& layout) {
     float gutter = layout.showLineNumbers ? layout.lineNumberGutterWidth : 0.0f;
     return ruler_math::geometry(layout.textArea.y,
                                 theme::layout::scale(layout.rulerHeight),
-                                effective.x, effective.width, gutter);
+                                effective.x, effective.width, gutter,
+                                layout::pixelsPerInch(layout));
 }
 
 inline void toggleRuler(LayoutComponent& layout) {

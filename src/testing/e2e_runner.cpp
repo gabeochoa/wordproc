@@ -2,6 +2,7 @@
 // Uses afterhours E2ERunner with ECS-based command handlers
 
 #include "e2e_runner.h"
+#include "../ecs/component_helpers.h"
 #include "deferred_screenshot.h"
 #include "../editor/document_settings.h"
 #include "../input_mapping.h"
@@ -401,6 +402,43 @@ static void setupCallbacksEx(
             return layoutComp.pageMode == PageMode::Paged ? "paged" : "pageless";
         if (prop == "ruler_visible")
             return (!layoutComp.focusMode && layoutComp.showRuler) ? "true" : "false";
+        // Ruler/page scale coherence (ONE scale source):
+        // ruler_ppi = 72 * displayScale; page width = 8.5 * ppi.
+        if (prop == "ruler_ppi")
+            return std::to_string(static_cast<int>(std::lround(
+                ecs::layout::pixelsPerInch(layoutComp))));
+        if (prop == "page_display_width")
+            return std::to_string(static_cast<int>(
+                std::lround(layoutComp.pageDisplayWidth)));
+        if (prop == "page_width_inches_x10") {
+            if (layoutComp.pageMode != PageMode::Paged) return "0";
+            float ppi = ecs::layout::pixelsPerInch(layoutComp);
+            if (ppi <= 0.0f) return "0";
+            return std::to_string(static_cast<int>(std::lround(
+                layoutComp.pageDisplayWidth / ppi * 10.0f)));
+        }
+        // Ruler white band = effective (margin) area; in pageless it
+        // must be inset from the text area by the 1\" margins, not
+        // edge-to-edge.
+        if (prop == "ruler_white_left" || prop == "effective_text_x") {
+            auto eff = ecs::layout::effectiveTextArea(layoutComp);
+            return std::to_string(static_cast<int>(std::lround(eff.x)));
+        }
+        if (prop == "ruler_white_right") {
+            auto eff = ecs::layout::effectiveTextArea(layoutComp);
+            return std::to_string(
+                static_cast<int>(std::lround(eff.x + eff.width)));
+        }
+        if (prop == "effective_text_width") {
+            auto eff = ecs::layout::effectiveTextArea(layoutComp);
+            return std::to_string(static_cast<int>(std::lround(eff.width)));
+        }
+        if (prop == "text_area_x")
+            return std::to_string(
+                static_cast<int>(std::lround(layoutComp.textArea.x)));
+        if (prop == "text_area_width")
+            return std::to_string(
+                static_cast<int>(std::lround(layoutComp.textArea.width)));
         if (prop == "text_area_y")
             return std::to_string(static_cast<int>(layoutComp.textArea.y));
         if (prop == "first_line_indent")

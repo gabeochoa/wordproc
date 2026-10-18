@@ -64,6 +64,36 @@ TEST_CASE("ruler marker-x <-> indent mapping", "[ruler]") {
         REQUIRE(paged.whiteRight == 750.0f);
         REQUIRE(ruler_math::leftMarkerX(paged, 72) == 530.0f);
     }
+    SECTION("scaled geometry: stored 72 lands on the 1-inch tick") {
+        // Paged fit ~0.5: 36 px/inch. A stored 1\" indent (72) must
+        // draw at origin+36 and drag back to 72 — not origin+72.
+        auto scaled = ruler_math::geometry(123.0f, 20.0f, 450.0f, 300.0f,
+                                            0.0f, 36.0f);
+        REQUIRE(scaled.pixelsPerInch == 36.0f);
+        REQUIRE(scaled.indentScale() == 0.5f);
+        REQUIRE(ruler_math::leftMarkerX(scaled, 72) == 458.0f + 36.0f);
+        REQUIRE(ruler_math::firstLineMarkerX(scaled, 72, 36) ==
+                458.0f + 54.0f);
+        REQUIRE(ruler_math::rightMarkerX(scaled, 72) ==
+                458.0f + scaled.textSpanWidth - 36.0f);
+        REQUIRE(ruler_math::indentFromX(scaled, 458.0f + 36.0f) == 72);
+        REQUIRE(ruler_math::firstLineIndentFromX(scaled, 458.0f + 54.0f,
+                                                  72) == 36);
+        REQUIRE(ruler_math::rightIndentFromX(
+                    scaled, 458.0f + scaled.textSpanWidth - 36.0f) == 72);
+        // Clamp is in stored units: dragging past the right edge
+        // yields the span in stored units, not screen pixels.
+        REQUIRE(ruler_math::indentFromX(scaled, 100000.0f) ==
+                static_cast<int>(std::lround(scaled.textSpanWidth / 0.5f)));
+    }
+    SECTION("page width is 8.5 * pixelsPerInch at any scale") {
+        // The layout layer's contract: pageDisplayWidth =
+        // pageWidth(points) * displayScale = 8.5 * ppi. Here the
+        // ruler half: 8.5 inches at 36 px/in spans 306 px.
+        auto scaled = ruler_math::geometry(123.0f, 20.0f, 450.0f, 300.0f,
+                                            0.0f, 36.0f);
+        REQUIRE(8.5f * scaled.pixelsPerInch == 306.0f);
+    }
 }
 
 TEST_CASE("paragraph indents are one undo step", "[ruler]") {

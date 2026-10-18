@@ -49,8 +49,10 @@ struct RulerSystem : public afterhours::System<DocumentComponent, LayoutComponen
                 break;
             case ruler_math::Marker::Right: {
                 next.right = ruler_math::rightIndentFromX(g, mouseX);
-                int span = static_cast<int>(
-                    std::lround(g.textSpanWidth));
+                // Span in stored (72-dpi) units, not screen pixels:
+                // textSpanWidth is screen px, markers scale by indentScale.
+                int span = static_cast<int>(std::lround(
+                    g.textSpanWidth / g.indentScale()));
                 if (next.right > span - next.left)
                     next.right = std::max(0, span - next.left);
                 break;

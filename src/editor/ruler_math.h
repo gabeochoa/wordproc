@@ -9,17 +9,22 @@
 // marker a drag at X grabs, and the indent a drag computes is the
 // indent the text renderer applies.
 //
-// Coordinate contract (all screen pixels, unscaled — indents are raw
-// pixels in TextBuffer, so the ruler is too):
+// Coordinate contract:
 //   originX = left edge of the text span (effective text area + text
 //   padding + line-number gutter). Inch 0 sits at originX; inch N at
-//   originX + N * PIXELS_PER_INCH. The white band is the effective
-//   text area; everything else on the ruler is gray (outside margins).
-//   left marker   = originX + leftIndent
-//   first-line   = originX + leftIndent + firstLineIndent
-//   right marker  = originX + textSpanWidth - rightIndent
-// where textSpanWidth = effective width - 2*TEXT_PADDING - gutter, the
-// span the text renderer lays text into.
+//   originX + N * pixelsPerInch, where pixelsPerInch is THE single
+//   display scale (layout::pixelsPerInch in component_helpers):
+//   72 * displayScale, displayScale = (paged ? pageScale(fit) : 1) *
+//   zoomLevel. The page width is therefore 8.5 * pixelsPerInch and the
+//   page edges sit 1" (one margin) either side of the white band:
+//   page left = originX - TEXT_PADDING - marginPx, page right =
+//   originX - TEXT_PADDING + pageWidthPx. The white band is the
+//   effective text area; everything else on the ruler is gray.
+// Indents are stored in TextBuffer in 72-dpi units (72 = 1 inch at
+// scale 1); on screen they are indent * indentScale where
+// indentScale = pixelsPerInch / 72, so a stored 72 sits exactly on
+// the 1" tick at any page fit / zoom. The text renderer scales
+// indents by the same factor, so marker, text, and ruler ticks agree.
 namespace ruler_math {
 
 inline constexpr float TEXT_PADDING = 8.0f;
@@ -33,14 +38,19 @@ struct Geometry {
     float textSpanWidth = 0.0f;
     float whiteLeft = 0.0f;
     float whiteRight = 0.0f;
+    // Display pixels per inch used for ticks and indent scaling.
+    // Must come from layout::pixelsPerInch — never a second constant.
+    float pixelsPerInch = PIXELS_PER_INCH;
+    float indentScale() const { return pixelsPerInch / PIXELS_PER_INCH; }
 };
 
 // textArea: the layout text area (ruler sits directly above it).
 // effectiveX / effectiveWidth: the margin-respecting text area
 // (component_helpers effectiveTextArea). gutterWidth: line-number
-// gutter when shown, else 0.
+// gutter when shown, else 0. pixelsPerInch: layout::pixelsPerInch.
 inline Geometry geometry(float textAreaY, float rulerHeight, float effectiveX,
-                         float effectiveWidth, float gutterWidth) {
+                         float effectiveWidth, float gutterWidth,
+                         float pixelsPerInch = PIXELS_PER_INCH) {
     Geometry g;
     g.rulerY = textAreaY - rulerHeight;
     g.rulerHeight = rulerHeight;
@@ -49,40 +59,52 @@ inline Geometry geometry(float textAreaY, float rulerHeight, float effectiveX,
     if (g.textSpanWidth < 0.0f) g.textSpanWidth = 0.0f;
     g.whiteLeft = effectiveX;
     g.whiteRight = effectiveX + effectiveWidth;
+    g.pixelsPerInch = pixelsPerInch;
     return g;
 }
 
 inline float leftMarkerX(const Geometry& g, int leftIndent) {
-    return g.originX + static_cast<float>(leftIndent);
+    return g.originX + static_cast<float>(leftIndent) * g.indentScale();
 }
 
 inline float firstLineMarkerX(const Geometry& g, int leftIndent,
                               int firstLineIndent) {
-    return g.originX + static_cast<float>(leftIndent + firstLineIndent);
+    return g.originX +
+           static_cast<float>(leftIndent + firstLineIndent) * g.indentScale();
 }
 
 inline float rightMarkerX(const Geometry& g, int rightIndent) {
-    return g.originX + g.textSpanWidth - static_cast<float>(rightIndent);
+    return g.originX + g.textSpanWidth -
+           static_cast<float>(rightIndent) * g.indentScale();
 }
 
 // Inverse mappings, clamped to the text span. The first-line indent
 // may go negative (hanging) but never left of the margin (0 absolute).
+// Stored units: divide the screen distance by indentScale.
 inline int indentFromX(const Geometry& g, float x) {
-    int v = static_cast<int>(std::lround(x - g.originX));
-    return std::clamp(v, 0, static_cast<int>(std::lround(g.textSpanWidth)));
+    float scale = g.indentScale();
+    if (scale <= 0.0f) scale = 1.0f;
+    int maxIndent = static_cast<int>(std::lround(g.textSpanWidth / scale));
+    int v = static_cast<int>(std::lround((x - g.originX) / scale));
+    return std::clamp(v, 0, maxIndent);
 }
 
 inline int firstLineIndentFromX(const Geometry& g, float x, int leftIndent) {
+    float scale = g.indentScale();
+    if (scale <= 0.0f) scale = 1.0f;
+    int maxIndent = static_cast<int>(std::lround(g.textSpanWidth / scale));
     int v = static_cast<int>(
-        std::lround(x - g.originX - static_cast<float>(leftIndent)));
-    return std::clamp(v, -leftIndent,
-                      static_cast<int>(std::lround(g.textSpanWidth)) - leftIndent);
+        std::lround((x - g.originX) / scale - static_cast<float>(leftIndent)));
+    return std::clamp(v, -leftIndent, maxIndent - leftIndent);
 }
 
 inline int rightIndentFromX(const Geometry& g, float x) {
+    float scale = g.indentScale();
+    if (scale <= 0.0f) scale = 1.0f;
+    int maxIndent = static_cast<int>(std::lround(g.textSpanWidth / scale));
     int v = static_cast<int>(
-        std::lround(g.originX + g.textSpanWidth - x));
-    return std::clamp(v, 0, static_cast<int>(std::lround(g.textSpanWidth)));
+        std::lround((g.originX + g.textSpanWidth - x) / scale));
+    return std::clamp(v, 0, maxIndent);
 }
 
 enum class Marker { None, FirstLine, Left, Right };

@@ -70,8 +70,10 @@ inline void drawPageBackground(const LayoutComponent& layout) {
     // Draw page border
     afterhours::draw_rectangle_outline(pageRect, {80, 80, 80, 255}, 1.0f);
 
-    // Draw margin guidelines (dotted or light lines)
-    float marginScaled = layout.pageMargin * layout.pageScale;
+    // Draw margin guidelines (dotted or light lines). Margin from the
+    // ONE scale source: pageMargin(points) * displayScale, so the
+    // margin lines sit exactly on the ruler's 1" marks.
+    float marginScaled = layout.pageMargin * layout::displayScale(layout);
     afterhours::Color marginColor = afterhours::Color{200, 200, 200, 100};
 
     // Left margin
@@ -216,7 +218,8 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              int scrollOffset, bool showLineNumbers = false,
                              float lineNumberGutterWidth = 50.0f,
                              int tabWidth = 4, float zoomLevel = 1.0f,
-                             const SpellSquiggleCache* spellCache = nullptr) {
+                             const SpellSquiggleCache* spellCache = nullptr,
+                             float indentScale = 1.0f) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
@@ -344,10 +347,15 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             theme::DrawUIText(lineNumStr, gutterX, y, 14, lineNumColor);
         }
         
-        // Apply indentation
-        int leftIndent = buffer.lineLeftIndent(row);
-        int firstLineIndent = buffer.lineFirstLineIndent(row);
-        int rightIndent = buffer.lineRightIndent(row);
+        // Apply indentation, scaled by the ONE display scale so the
+        // text indent lands on the same ruler tick as its marker:
+        // stored indents are 72-dpi units, display = stored * indentScale.
+        int leftIndent = static_cast<int>(
+            std::lround(buffer.lineLeftIndent(row) * indentScale));
+        int firstLineIndent = static_cast<int>(
+            std::lround(buffer.lineFirstLineIndent(row) * indentScale));
+        int rightIndent = static_cast<int>(
+            std::lround(buffer.lineRightIndent(row) * indentScale));
         // Note: firstLineIndent only applies to first line of paragraph
         // For now, we treat each line as its own paragraph
         int totalIndent = leftIndent + firstLineIndent;
@@ -759,9 +767,13 @@ struct EditorRenderSystem
                                       static_cast<int>(rulerY + rulerH - 1),
                                       theme::RULER_MARKS);
             };
+            // Tick spacing is g.pixelsPerInch — the ONE scale source —
+            // so in paged mode (fit ~0.59) ticks sit ~42px apart and
+            // the page right edge spans exactly 8.5" from the page
+            // left edge (origin - margin), not 72px apart.
             for (int q = 0;; ++q) {
                 float x = g.originX + static_cast<float>(q) *
-                                         ruler_math::PIXELS_PER_INCH / 4.0f;
+                                         g.pixelsPerInch / 4.0f;
                 if (x > static_cast<float>(layout.screenWidth)) break;
                 drawTick(x, q);
                 if (q % 4 == 0 && q > 0 && x >= g.whiteLeft &&
@@ -778,7 +790,7 @@ struct EditorRenderSystem
                     for (int ql = -1;; --ql) {
                         float xl = g.originX +
                                    static_cast<float>(ql) *
-                                       ruler_math::PIXELS_PER_INCH / 4.0f;
+                                       g.pixelsPerInch / 4.0f;
                         if (xl < 0.0f) break;
                         drawTick(xl, ql);
                     }
@@ -893,11 +905,13 @@ struct EditorRenderSystem
             renderTextBuffer(doc.buffer, topArea, caret.visible, fontSize,
                              lineHeight, scroll.offset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel, &doc.spellSquiggles);
+                             layout.zoomLevel, &doc.spellSquiggles,
+                             layout::displayScale(layout));
             renderTextBuffer(doc.buffer, bottomArea, caret.visible, fontSize,
                              lineHeight, scroll.secondaryOffset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel, &doc.spellSquiggles);
+                             layout.zoomLevel, &doc.spellSquiggles,
+                             layout::displayScale(layout));
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -909,7 +923,8 @@ struct EditorRenderSystem
             renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
                              lineHeight, scroll.offset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             layout.zoomLevel, &doc.spellSquiggles);
+                             layout.zoomLevel, &doc.spellSquiggles,
+                             layout::displayScale(layout));
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===
