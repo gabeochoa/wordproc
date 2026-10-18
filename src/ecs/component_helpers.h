@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../editor/ruler_math.h"
+#include "../editor/scroll_math.h"
 #include "../ui/theme.h"
 #include "components.h"
 
@@ -243,6 +244,58 @@ inline void togglePageMode(LayoutComponent& layout) {
 
 inline void setLineWidthLimit(LayoutComponent& layout, float chars) {
     layout.lineWidthLimit = chars;
+}
+
+// --- Print Preview (File > Print Preview) ---
+// Enters preview: remembers the current page mode, forces Paged so the
+// paged renderer draws ONE page on the gray workspace, and estimates
+// pagination from geometry (see scroll_math.h: no real pagination
+// exists, so the page count is an estimate). Exiting restores the
+// remembered mode. Idempotent: entering twice is a no-op (the second
+// enter must not overwrite previewPrevPageMode with Paged).
+inline void enterPrintPreview(LayoutComponent& layout, std::size_t totalLines,
+                              int baseFontSize) {
+    if (layout.previewMode) return;
+    layout.previewPrevPageMode = layout.pageMode;
+    layout.previewMode = true;
+    layout.previewPage = 0;
+    layout.pageMode = PageMode::Paged;
+    updateLayout(layout, layout.screenWidth, layout.screenHeight);
+    // Lines per page from the paged geometry: page text height (page
+    // height minus both margins, in display px) divided by the scaled
+    // line height. Uses the Normal-paragraph font; headings/spacing
+    // shift individual breaks (estimate, not pagination).
+    float ds = displayScale(layout);
+    float textHeightPx = layout.pageDisplayHeight -
+                         2.0f * layout.pageMargin * ds;
+    int fontSize = ruler_math::scaledFontSize(baseFontSize, ds);
+    int lineHeight = fontSize + 4;
+    layout.previewLinesPerPage =
+        scroll_math::previewLinesPerPage(textHeightPx, static_cast<float>(lineHeight));
+    layout.previewPageCount =
+        scroll_math::previewPageCount(totalLines, layout.previewLinesPerPage);
+}
+
+inline void exitPrintPreview(LayoutComponent& layout) {
+    if (!layout.previewMode) return;
+    layout.previewMode = false;
+    layout.pageMode = layout.previewPrevPageMode;
+    layout.previewPage = 0;
+    layout.previewPageCount = 1;
+    layout.previewLinesPerPage = 50;
+    updateLayout(layout, layout.screenWidth, layout.screenHeight);
+}
+
+inline void previewNextPage(LayoutComponent& layout) {
+    if (!layout.previewMode) return;
+    layout.previewPage = scroll_math::previewPageClamp(
+        layout.previewPage + 1, layout.previewPageCount);
+}
+
+inline void previewPrevPage(LayoutComponent& layout) {
+    if (!layout.previewMode) return;
+    layout.previewPage = scroll_math::previewPageClamp(
+        layout.previewPage - 1, layout.previewPageCount);
 }
 
 }  // namespace layout

@@ -920,13 +920,24 @@ struct EditorRenderSystem
         int lineHeight = fontSize + 4;
         LayoutComponent::Rect effectiveArea = layout::effectiveTextArea(layout);
 
+        // Print Preview: the rendered rows start at the current preview
+        // page (previewPage * previewLinesPerPage), not at scroll.offset;
+        // the caret is hidden (read-only mode) and split view is ignored.
+        int renderScrollOffset = scroll.offset;
+        bool caretVisible = caret.visible;
+        if (layout.previewMode) {
+            renderScrollOffset = scroll_math::previewFirstLine(
+                layout.previewPage, layout.previewLinesPerPage);
+            caretVisible = false;
+        }
+
         // Refresh the spell-squiggle cache for the visible rows (union of
         // both panes in split view). No-op when the buffer version and the
         // visible range are unchanged, so this costs nothing per frame.
         {
             int visible = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
-            std::size_t firstRow = scroll.offset > 0
-                                       ? static_cast<std::size_t>(scroll.offset)
+            std::size_t firstRow = renderScrollOffset > 0
+                                       ? static_cast<std::size_t>(renderScrollOffset)
                                        : 0;
             std::size_t lastRow = firstRow + static_cast<std::size_t>(visible) + 1;
             if (layout.splitViewEnabled) {
@@ -941,18 +952,18 @@ struct EditorRenderSystem
             doc.spellSquiggles.update(doc.buffer, doc.spellChecker, firstRow, lastRow);
         }
 
-        if (layout.splitViewEnabled) {
+        if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
             LayoutComponent::Rect topArea = {effectiveArea.x, effectiveArea.y,
                                              effectiveArea.width, splitHeight - 4.0f};
             LayoutComponent::Rect bottomArea = {effectiveArea.x, effectiveArea.y + splitHeight + 4.0f,
                                                 effectiveArea.width, splitHeight - 4.0f};
-            renderTextBuffer(doc.buffer, topArea, caret.visible, fontSize,
-                             lineHeight, scroll.offset, layout.showLineNumbers,
+            renderTextBuffer(doc.buffer, topArea, caretVisible, fontSize,
+                             lineHeight, renderScrollOffset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, &doc.spellSquiggles,
                              layout::displayScale(layout));
-            renderTextBuffer(doc.buffer, bottomArea, caret.visible, fontSize,
+            renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, &doc.spellSquiggles,
@@ -965,8 +976,8 @@ struct EditorRenderSystem
                              static_cast<int>(effectiveArea.y + splitHeight),
                              theme::BORDER_DARK);
         } else {
-            renderTextBuffer(doc.buffer, effectiveArea, caret.visible, fontSize,
-                             lineHeight, scroll.offset, layout.showLineNumbers,
+            renderTextBuffer(doc.buffer, effectiveArea, caretVisible, fontSize,
+                             lineHeight, renderScrollOffset, layout.showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, &doc.spellSquiggles,
                              layout::displayScale(layout));
@@ -975,7 +986,9 @@ struct EditorRenderSystem
         // === Draw Vertical Scroll Bar (Win95) ===
         // Geometry identical to ScrollbarSystem via scroll_math, so the
         // thumb the user drags is the thumb that is drawn.
-        {
+        // Skipped in Print Preview: the thumb tracks scroll.offset,
+        // not the preview page (Next/Prev page there).
+        if (!layout.previewMode) {
             float sbWidth = scroll_math::SCROLLBAR_WIDTH;
             float sbX = textAreaRect.x + textAreaRect.width - sbWidth;
             float sbY = textAreaRect.y;
@@ -1059,8 +1072,9 @@ struct EditorRenderSystem
             }
         }
 
-        // Draw comment markers in the right margin
-        if (!doc.comments.empty()) {
+        // Draw comment markers in the right margin (skipped in Print
+        // Preview: marker Y math uses scroll.offset, not the preview page).
+        if (!layout.previewMode && !doc.comments.empty()) {
             for (const auto& comment : doc.comments) {
                 CaretPosition pos = doc.buffer.positionForOffset(comment.startOffset);
                 if (pos.row < static_cast<std::size_t>(scroll.offset)) continue;

@@ -444,6 +444,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             menu.activeMenuIndex = -1;
         }
 
+        // Esc exits Print Preview (only when no menu was open this
+        // frame: an Esc that just closed a menu must not also exit
+        // preview). Restores the pre-preview page mode.
+        if (!anyMenuOpen && layout.previewMode &&
+            input::isKeyPressed(afterhours::keys::ESCAPE)) {
+            cmd::closePrintPreview(layout);
+        }
+
         // Close menus on click outside and consume stray clicks.
         // Use direct mouse position checks against known rects instead of was_hot(),
         // because was_hot() compares entity IDs but we only have MK IDs here.

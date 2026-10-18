@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 
+#include "../external.h"
 #include "../util/clipboard.h"
 #include "../editor/document_io.h"
+#include "../editor/export/export_pdf.h"
 #include "../editor/spell_session.h"
 #include "../settings.h"
 #include "../ui/ui_context.h"
@@ -211,6 +214,50 @@ inline void paste(DocumentComponent& doc) {
 
 inline void selectAll(DocumentComponent& doc) {
     doc.buffer.selectAll();
+}
+
+// --- Print Preview / Print (File menu, Ctrl+P) ---
+
+inline void openPrintPreview(DocumentComponent& doc, LayoutComponent& layout) {
+    layout::enterPrintPreview(layout, doc.buffer.lineCount(),
+                              doc.buffer.textStyle().fontSize);
+}
+
+inline void closePrintPreview(LayoutComponent& layout) {
+    layout::exitPrintPreview(layout);
+}
+
+// File > Print... / Ctrl+P / preview-toolbar Print: render the document
+// to PDF via the existing export_pdf path, then hand the file to the OS
+// printer (`lp`). In test mode the PDF is still written (so tests can
+// assert it exists) but `lp` is NEVER invoked — printing from a test
+// would spool a real job. HONEST PARTIAL: export_pdf writes a single
+// page and lets long documents overflow past its bottom margin — Print
+// prints what's supported, not a true multi-page job.
+inline void requestPrint(DocumentComponent& doc, DialogState& dialogs) {
+    dialogs.printRequested = true;
+    dialogs.printPdfExists = false;
+    std::filesystem::path pdfPath;
+    if (test_input::test_mode) {
+        // Deterministic relative path so E2E can assert on it (same
+        // convention as the Export PDF path: relative to the CWD the
+        // test runner launched from).
+        std::filesystem::create_directories("output");
+        pdfPath = std::filesystem::path("output") / "print_test.pdf";
+    } else {
+        pdfPath = std::filesystem::temp_directory_path() / "wordproc_print.pdf";
+    }
+    dialogs.printPdfPath = pdfPath.string();
+    auto result = exportDocumentPdf(doc.buffer, doc.docSettings, pdfPath.string());
+    dialogs.printPdfExists =
+        result.success && std::filesystem::exists(pdfPath);
+    if (!result.success) {
+        toast_notify::error("Print failed: PDF export failed: " + result.error);
+        return;
+    }
+    if (test_input::test_mode) return;  // Never spool from a test.
+    std::string cmd = "lp \"" + pdfPath.string() + "\"";
+    std::system(cmd.c_str());
 }
 
 // --- Spelling dialog commands (Tools > Spelling..., F7) ---

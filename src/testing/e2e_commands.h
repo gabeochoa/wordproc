@@ -497,6 +497,49 @@ struct HandleSeedRecentFileCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'fill_lines <n> <text>' - sets the document to <n> lines of
+// <text>. Test scaffolding for multi-page scenarios (e.g. Print
+// Preview paging) that would otherwise need hundreds of typed chars.
+struct HandleFillLinesCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("fill_lines"))
+      return;
+    if (!cmd.has_args(2)) {
+      cmd.fail("fill_lines requires a line count and text");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+    int count = 0;
+    try {
+      count = std::stoi(cmd.arg(0));
+    } catch (...) {
+      cmd.fail("fill_lines requires an integer count, got: " + cmd.arg(0));
+      return;
+    }
+    if (count < 0) {
+      cmd.fail("fill_lines count must be >= 0");
+      return;
+    }
+    std::string text = cmd.args[1];
+    for (size_t i = 2; i < cmd.args.size(); ++i)
+      text += " " + cmd.args[i];
+    std::string content;
+    for (int i = 0; i < count; ++i) {
+      if (i > 0) content += "\n";
+      content += text;
+    }
+    doc_comp->buffer.setText(content);
+    doc_comp->isDirty = true;
+    cmd.consume();
+  }
+};
+
 // Handle 'assert_scroll_min <n>' - fails unless the scroll offset is >= n.
 // Equality validates cannot express the drag-auto-scroll invariant:
 // auto-scroll is per-frame continuous, so the final offset after dragging
@@ -616,6 +659,10 @@ inline void register_app_commands(
 
   auto file_dialog_set = std::make_unique<HandleFileDialogSetPathCommand>();
   sm.register_update_system(std::move(file_dialog_set));
+
+  auto fill_lines = std::make_unique<HandleFillLinesCommand>();
+  fill_lines->doc_comp = doc_comp;
+  sm.register_update_system(std::move(fill_lines));
 
 }
 

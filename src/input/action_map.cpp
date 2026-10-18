@@ -143,6 +143,8 @@ const char* ActionMap::actionName(Action action) {
             return "Save";
         case Action::SaveAs:
             return "SaveAs";
+        case Action::Print:
+            return "Print";
         case Action::ToggleBold:
             return "ToggleBold";
         case Action::ToggleItalic:
@@ -411,8 +413,9 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({afterhours::keys::UP, true, true, true}, Action::IncreaseSpaceAfter);
     map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 
-    // File: Save As (F12 - standard Word shortcut)
+    // File: Save As (F12 - standard Word shortcut), Print (Ctrl+P)
     map.bind({afterhours::keys::F12, false, false, false}, Action::SaveAs);
+    map.bind({afterhours::keys::P, true, false, false}, Action::Print);
 
     // Tools: Word Count (Ctrl+Shift+W), Spelling (F7)
     map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
@@ -523,8 +526,9 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({afterhours::keys::UP, true, true, true}, Action::IncreaseSpaceAfter);
     map.bind({afterhours::keys::DOWN, true, true, true}, Action::DecreaseSpaceAfter);
 
-    // File: Save As (F12 - same as Windows)
+    // File: Save As (F12 - same as Windows), Print (Ctrl+P)
     map.bind({afterhours::keys::F12, false, false, false}, Action::SaveAs);
+    map.bind({afterhours::keys::P, true, false, false}, Action::Print);
 
     // Tools: Word Count (Cmd+Shift+W), Spelling (F7)
     map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
@@ -612,6 +616,8 @@ const char* actionDisplayName(Action action) {
             return "Save";
         case Action::SaveAs:
             return "Save As";
+        case Action::Print:
+            return "Print";
         case Action::ToggleBold:
             return "Toggle Bold";
         case Action::ToggleItalic:
@@ -1046,8 +1052,9 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // Hyperlinks
     addBinding(Action::InsertHyperlink, {afterhours::keys::K, true, false, false});  // Ctrl+K
 
-    // File: Save As
+    // File: Save As, Print
     addBinding(Action::SaveAs, {afterhours::keys::F12, false, false, false});  // F12
+    addBinding(Action::Print, {afterhours::keys::P, true, false, false});  // Ctrl+P
 
     // Tools: Word Count, Spelling
     addBinding(Action::ShowWordCount, {afterhours::keys::W, true, true, false});  // Ctrl+Shift+W

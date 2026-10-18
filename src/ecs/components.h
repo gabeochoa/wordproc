@@ -283,6 +283,13 @@ struct DialogState : public afterhours::BaseComponent {
     bool showContextMenu = false;
     float contextMenuX = 0;
     float contextMenuY = 0;
+
+    // Print (File > Print..., Ctrl+P): in test mode the PDF is written
+    // but never handed to `lp`; printRequested / printPdfExists are the
+    // test-visible record (see e2e_runner property getter).
+    bool printRequested = false;
+    std::string printPdfPath;
+    bool printPdfExists = false;
 };
 
 // PageMode is defined in document_settings.h
@@ -344,6 +351,18 @@ struct LayoutComponent : public afterhours::BaseComponent {
     // Outline panel
     bool showOutline = false;        // Toggle outline panel display
     float outlinePanelWidth = 200.0f;  // Width of outline panel in pixels
+
+    // Print Preview (File > Print Preview): a read-only mode showing one
+    // paged page at a time. Entering forces pageMode=Paged (the paged
+    // renderer draws the page + gray workspace); exiting restores the
+    // remembered mode in previewPrevPageMode. previewPageCount /
+    // previewLinesPerPage are ESTIMATES from scroll_math (no real
+    // pagination exists); see scroll_math.h for the honesty note.
+    bool previewMode = false;
+    PageMode previewPrevPageMode = PageMode::Pageless;
+    int previewPage = 0;          // 0-based current preview page
+    int previewPageCount = 1;     // Estimated total pages
+    int previewLinesPerPage = 50; // Estimated rendered lines per page
 };
 
 // Component for test mode configuration

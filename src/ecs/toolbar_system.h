@@ -175,6 +175,110 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float sepWidth = theme::layout::scale(theme::layout::TOOLBAR_SEPARATOR_WIDTH);
         float sepPadding = theme::layout::scale(4); // padding around separators
         
+        // === Print Preview toolbar ===
+        // Replaces BOTH toolbars in preview mode: Print, Prev/Next Page,
+        // Zoom In/Out, "Page X of Y", Close Print Preview. Editing is
+        // disabled (TextInputSystem gates on previewMode); these
+        // buttons plus scroll and zoom are the only live preview
+        // controls. Returns early: no standard/formatting toolbar.
+        if (layout.previewMode) {
+            float previewBarHeight = toolbarHeight + formattingBarHeight;
+            div(ctx, mk(uiRoot, 1000),
+                ComponentConfig{}
+                    .with_size(ComponentSize{pixels(screenWidth), pixels(previewBarHeight)})
+                    .with_absolute_position()
+                    .with_translate(0, toolbarY)
+                    .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                    .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                    .with_roundness(0.0f)
+                    .with_debug_name("preview_toolbar"));
+
+            float pvX = buttonPadding;
+            float pvY = toolbarY + buttonPadding;
+            int pvId = 1100;
+            auto previewTextButton = [&](float x, float w, const std::string& label,
+                                         const std::string& debug, bool enabled) {
+                return button(ctx, mk(uiRoot, pvId++),
+                    absToolbarButton(x, pvY, buttonSize, enabled, false,
+                                     false, ToolbarIcon::None)
+                        .with_label(label)
+                        .with_size(ComponentSize{pixels(w), pixels(buttonSize)})
+                        .with_debug_name(debug));
+            };
+
+            // Print (same action as File > Print... / Ctrl+P)
+            if (button(ctx, mk(uiRoot, pvId++),
+                absToolbarButton(pvX, pvY, buttonSize, true, false, false,
+                                 ToolbarIcon::Print)
+                    .with_label("").with_debug_name("btn_preview_print"))) {
+                if (cache_.dialogs) cmd::requestPrint(doc, *cache_.dialogs);
+            }
+            pvX += buttonSize + buttonPadding;
+
+            drawEtchedSeparator(ctx, uiRoot, pvId, pvX + sepPadding / 2, pvY, buttonSize - 4);
+            pvId += 2;
+            pvX += sepWidth + sepPadding;
+
+            // Prev / Next Page (disabled at the first / last page)
+            if (previewTextButton(pvX, theme::layout::scale(72), "Prev Page",
+                                  "btn_preview_prev", layout.previewPage > 0)) {
+                layout::previewPrevPage(layout);
+            }
+            pvX += theme::layout::scale(72) + buttonPadding;
+            if (previewTextButton(pvX, theme::layout::scale(72), "Next Page",
+                                  "btn_preview_next",
+                                  layout.previewPage < layout.previewPageCount - 1)) {
+                layout::previewNextPage(layout);
+            }
+            pvX += theme::layout::scale(72) + buttonPadding;
+
+            drawEtchedSeparator(ctx, uiRoot, pvId, pvX + sepPadding / 2, pvY, buttonSize - 4);
+            pvId += 2;
+            pvX += sepWidth + sepPadding;
+
+            // "Page X of Y" (page count is the scroll_math estimate)
+            std::string pageLabel = "Page " +
+                std::to_string(layout.previewPage + 1) + " of " +
+                std::to_string(layout.previewPageCount);
+            test_input::register_visible_text(pageLabel);
+            div(ctx, mk(uiRoot, pvId++),
+                ComponentConfig{}
+                    .with_label(pageLabel)
+                    .with_size(ComponentSize{pixels(theme::layout::scale(110)), pixels(buttonSize)})
+                    .with_absolute_position()
+                    .with_translate(pvX, pvY)
+                    .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                    .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                    .with_alignment(afterhours::ui::TextAlignment::Center)
+                    .with_roundness(0.0f)
+                    .with_debug_name("preview_page_label"));
+            pvX += theme::layout::scale(110) + buttonPadding;
+
+            // Zoom In / Out (same +/-0.1 steps as View > Zoom)
+            if (previewTextButton(pvX, theme::layout::scale(64), "Zoom +",
+                                  "btn_preview_zoom_in", true)) {
+                layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
+            }
+            pvX += theme::layout::scale(64) + buttonPadding;
+            if (previewTextButton(pvX, theme::layout::scale(64), "Zoom -",
+                                  "btn_preview_zoom_out", true)) {
+                layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
+            }
+            pvX += theme::layout::scale(64) + buttonPadding;
+
+            drawEtchedSeparator(ctx, uiRoot, pvId, pvX + sepPadding / 2, pvY, buttonSize - 4);
+            pvId += 2;
+            pvX += sepWidth + sepPadding;
+
+            // Close Print Preview (Esc does the same; mode is restored)
+            if (previewTextButton(pvX, theme::layout::scale(120),
+                                  "Close Print Preview", "btn_preview_close", true)) {
+                cmd::closePrintPreview(layout);
+            }
+            return;
+        }
+
         // === Standard Toolbar Background ===
         div(ctx, mk(uiRoot, 1000),
             ComponentConfig{}
@@ -251,11 +355,11 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         btnId += 2;
         curX += sepWidth + sepPadding;
         
-        // Print
+        // Print (File > Print... / Ctrl+P)
         int printBtnId = btnId++;
         if (button(ctx, mk(uiRoot, printBtnId),
             absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Print).with_label("").with_debug_name("btn_print"))) {
-            // Print (not implemented)
+            if (cache_.dialogs) cmd::requestPrint(doc, *cache_.dialogs);
         }
         trackTooltip(curX, btnY, "Print (Ctrl+P)");
         curX += buttonSize + buttonPadding;

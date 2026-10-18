@@ -41,6 +41,8 @@ inline std::vector<MenuData> createMenuBarData() {
         {"Export RTF...", "", true, false},
         {"", "", false, true},  // Separator
         {"Page Setup...", "", true, false},
+        {"Print Preview", "", true, false},
+        {"Print...", "Ctrl+P", true, false},
         {"", "", false, true},  // Separator
         {"Exit", "Alt+F4", true, false}};
     menus.push_back(fileMenu);

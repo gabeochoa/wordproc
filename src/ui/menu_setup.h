@@ -40,7 +40,9 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"Export RTF...", "", true, false, nullptr},          // 8
                       {"", "", false, true, nullptr},                       // 9 Separator
                       {"Page Setup...", "", true, false, nullptr},          // 10
-                      {"", "", false, true, nullptr}};                      // 11 Separator
+                      {"Print Preview", "", true, false, nullptr},         // 11
+                      {"Print...", "Ctrl+P", true, false, nullptr},        // 12
+                      {"", "", false, true, nullptr}};                      // 13 Separator
 
     if (!recentFiles.empty()) {
         for (const auto& path : recentFiles) {

@@ -107,6 +107,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 {
                     dialogs.showPageSetup = !dialogs.showPageSetup;
                 } break;
+                case 11:  // Print Preview
+                    cmd::openPrintPreview(doc, layout);
+                    break;
+                case 12:  // Print...
+                    cmd::requestPrint(doc, dialogs);
+                    break;
                 default:
                     break;
             }
@@ -200,7 +206,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
         } else if (menuIndex == 2) {  // View menu
             switch (itemIndex) {
-                case 0:  // Pageless Mode
+                case 0:  // Pageless Mode (preview owns pageMode: ignored)
+                    if (layout.previewMode) break;
                     layout.pageMode = PageMode::Pageless;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
@@ -210,7 +217,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         status::flash(*statusComp, "Pageless mode",
                                       afterhours::graphics::get_time());
                     break;
-                case 1:  // Paged Mode
+                case 1:  // Paged Mode (preview owns pageMode: ignored)
+                    if (layout.previewMode) break;
                     layout.pageMode = PageMode::Paged;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);

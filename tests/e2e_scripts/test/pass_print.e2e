@@ -1,0 +1,21 @@
+# Test: File > Print... and Ctrl+P record a print request and write
+# the PDF (in test mode the PDF is written but never handed to `lp`,
+# so no real print job is spooled).
+
+type "Print me"
+wait_frames 12
+
+menu_open File
+wait_frames 12
+menu_select "Print..."
+wait_frames 12
+
+validate print_requested=true
+validate print_pdf_exists=true
+
+# Ctrl+P is the same action.
+key CTRL+P
+wait_frames 12
+
+validate print_requested=true
+validate print_pdf_exists=true

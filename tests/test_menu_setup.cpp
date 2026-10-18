@@ -160,6 +160,27 @@ TEST_CASE("File menu specifically exists", "[menu][e2e][regression]") {
     REQUIRE(hasExit);
 }
 
+TEST_CASE("File menu has Print Preview + Print after Page Setup", "[menu][print]") {
+    auto menus = createMenuBarData();
+    REQUIRE(menus.size() >= 1);
+    REQUIRE(menus[0].label == "File");
+    const auto& items = menus[0].items;
+
+    // Word 95 File order: ... Page Setup..., Print Preview, Print...
+    std::size_t pageSetup = items.size(), preview = items.size(),
+                print = items.size();
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        if (items[i].label == "Page Setup...") pageSetup = i;
+        if (items[i].label == "Print Preview") preview = i;
+        if (items[i].label == "Print...") print = i;
+    }
+    REQUIRE(pageSetup < items.size());
+    REQUIRE(preview == pageSetup + 1);
+    REQUIRE(print == preview + 1);
+    REQUIRE(items[print].shortcut == "Ctrl+P");
+    REQUIRE(items[print].enabled == true);
+}
+
 TEST_CASE("Window menu sits between Table and Help", "[menu]") {
     auto menus = createMenuBarData();
 

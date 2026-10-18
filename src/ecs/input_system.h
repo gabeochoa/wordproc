@@ -23,14 +23,28 @@ using cmd::recordDeleteRevision;
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
-    : public afterhours::System<DocumentComponent, CaretComponent, DialogState, InputComponent> {
+    : public afterhours::System<DocumentComponent, CaretComponent, DialogState, InputComponent,
+                              LayoutComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, DialogState& dialogs,
-                       InputComponent& inputComp, const float) override {
+                       InputComponent& inputComp, LayoutComponent& layout,
+                       const float) override {
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
-        
+
+        // Print Preview is read-only: no typing, newline, backspace,
+        // delete, or tab insertion while previewMode is on. Scroll and
+        // zoom stay live (NavigationSystem pages, KeyboardShortcutSystem
+        // allows zoom/print in preview). The queued chars are drained
+        // (not just ignored): an unconsumed char would otherwise sit
+        // in the queue and insert itself the frame preview exits.
+        if (layout.previewMode) {
+            while (test_input::get_char_pressed() > 0) {
+            }
+            return;
+        }
+
         // Find/Replace keyboard shortcuts
         if (actionMap_.isActionPressed(Action::Find)) {
             dialogs.showFindDialog = true;
@@ -149,6 +163,30 @@ struct KeyboardShortcutSystem
                        DialogState& dialogs, InputComponent& inputComp, const float) override {
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
+
+        // Print Preview is read-only: only zoom and Print stay live.
+        // Everything else below (New/Save, formatting, clipboard,
+        // undo/redo, Spelling...) is blocked while previewMode is on.
+        if (layout.previewMode) {
+            if (actionMap_.isActionPressed(Action::ZoomIn)) {
+                layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
+            }
+            if (actionMap_.isActionPressed(Action::ZoomOut)) {
+                layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
+            }
+            if (actionMap_.isActionPressed(Action::ZoomReset)) {
+                layout.zoomLevel = 1.0f;
+            }
+            if (actionMap_.isActionPressed(Action::Print)) {
+                cmd::requestPrint(doc, dialogs);
+            }
+            return;
+        }
+
+        // Print (Ctrl+P)
+        if (actionMap_.isActionPressed(Action::Print)) {
+            cmd::requestPrint(doc, dialogs);
+        }
 
         // New document
         if (actionMap_.isActionPressed(Action::New)) {
@@ -371,6 +409,29 @@ struct NavigationSystem
         };
         bool shift_down = isKeyDownOrSynthetic(afterhours::keys::LEFT_SHIFT) ||
                           isKeyDownOrSynthetic(afterhours::keys::RIGHT_SHIFT);
+
+        // Print Preview: wheel / PageUp / PageDown page through the
+        // preview; caret navigation is skipped (the render stride is
+        // previewPage * previewLinesPerPage, not the caret row).
+        if (layout.previewMode) {
+            float wheelMove = input::getMouseWheelMove();
+            if (wheelMove != 0.0f) {
+                int wheelLines = scroll_math::accumulateWheel(
+                    scroll.wheelRemainder, wheelMove);
+                // accumulateWheel returns whole lines in scroll
+                // direction; a full page per notch would jump, so each
+                // line-step moves one preview page when it crosses zero.
+                if (wheelLines < 0) layout::previewPrevPage(layout);
+                if (wheelLines > 0) layout::previewNextPage(layout);
+            }
+            if (actionMap_.isActionPressed(Action::PageUp)) {
+                layout::previewPrevPage(layout);
+            }
+            if (actionMap_.isActionPressed(Action::PageDown)) {
+                layout::previewNextPage(layout);
+            }
+            return;
+        }
 
         auto navigateWithSelection = [&](auto moveFunc) {
             CaretPosition before = doc.buffer.caret();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 // Pure scroll math: no backend, no allocations. Shared by the navigation
 // system (wheel input), the render system (scrollbar thumb geometry) and
 // the unit tests, so all three agree on offset <-> thumb mapping.
@@ -80,6 +82,43 @@ inline ScrollbarGeometry scrollbarGeometry(float barY, float barHeight,
     if (scrollRatio > 1.0f) scrollRatio = 1.0f;
     g.thumbY = g.trackY + (g.trackHeight - g.thumbHeight) * scrollRatio;
     return g;
+}
+
+// --- Print Preview pagination (estimate — see below) ---
+// Wordproc has no real pagination: the renderer draws buffer lines top
+// to bottom and clips at the text-area bottom, and the PDF exporter
+// writes a single page. Print Preview therefore ESTIMATES page breaks
+// from geometry: the number of rendered lines that fit in one page's
+// text height. Headings (larger fonts), paragraph spacing, and explicit
+// page-break indicators shift the true breaks, so "Page X of Y" is an
+// estimate, not a paginated layout. These pure helpers keep the
+// estimate identical in the preview toolbar, the renderer stride, and
+// the unit tests.
+inline int previewLinesPerPage(float textHeightPx, float lineHeightPx) {
+    if (textHeightPx <= 0.0f || lineHeightPx <= 0.0f) return 1;
+    int lines = static_cast<int>(textHeightPx / lineHeightPx);
+    return lines < 1 ? 1 : lines;
+}
+
+inline int previewPageCount(std::size_t totalLines, int linesPerPage) {
+    if (linesPerPage <= 0) linesPerPage = 1;
+    if (totalLines == 0) return 1;
+    return static_cast<int>((totalLines + static_cast<std::size_t>(linesPerPage) - 1) /
+                            static_cast<std::size_t>(linesPerPage));
+}
+
+// First buffer line shown on a preview page (0-based page index).
+inline int previewFirstLine(int previewPage, int linesPerPage) {
+    if (previewPage < 0) previewPage = 0;
+    if (linesPerPage < 1) linesPerPage = 1;
+    return previewPage * linesPerPage;
+}
+
+inline int previewPageClamp(int previewPage, int pageCount) {
+    if (previewPage < 0) return 0;
+    if (pageCount < 1) pageCount = 1;
+    if (previewPage > pageCount - 1) return pageCount - 1;
+    return previewPage;
 }
 
 // Inverse of scrollbarGeometry: thumb top (in track coords) -> scroll offset.

@@ -346,6 +346,13 @@ static void setupCallbacksEx(
             return std::to_string(count);
         }
 
+        // Print Preview / Print properties
+        if (prop == "preview_mode") return layoutComp.previewMode ? "true" : "false";
+        if (prop == "preview_page") return std::to_string(layoutComp.previewPage);
+        if (prop == "preview_page_count") return std::to_string(layoutComp.previewPageCount);
+        if (prop == "print_requested") return dialogState.printRequested ? "true" : "false";
+        if (prop == "print_pdf_exists") return dialogState.printPdfExists ? "true" : "false";
+
         // Dialog properties
         if (prop == "dialog_open") {
             if (dialogState.showQuitPrompt) return "QuitPrompt";
@@ -910,6 +917,9 @@ static void setupCallbacksEx(
         dialogState.spellNoErrors = false;
         dialogState.showAutoCorrectDialog = false;
         docComp.autoCorrect = AutoCorrect{};
+        dialogState.printRequested = false;
+        dialogState.printPdfPath.clear();
+        dialogState.printPdfExists = false;
         dialogState.showContextMenu = false;
         dialogState.contextMenuX = 0;
         dialogState.contextMenuY = 0;
@@ -926,6 +936,11 @@ static void setupCallbacksEx(
         layoutComp.focusMode = false;
         layoutComp.showRuler = true;
         layoutComp.pageMode = PageMode::Pageless;
+        layoutComp.previewMode = false;
+        layoutComp.previewPrevPageMode = PageMode::Pageless;
+        layoutComp.previewPage = 0;
+        layoutComp.previewPageCount = 1;
+        layoutComp.previewLinesPerPage = 50;
         layoutComp.showLineNumbers = false;
         layoutComp.showOutline = false;
         layoutComp.splitViewEnabled = false;

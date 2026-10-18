@@ -46,6 +46,7 @@ enum class Action {
     Open,
     Save,
     SaveAs,
+    Print,  // Ctrl+P - File > Print... (PDF via export_pdf, then `lp`)
 
     // Formatting
     ToggleBold,
