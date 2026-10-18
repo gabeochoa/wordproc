@@ -56,7 +56,7 @@ if [ $FAIL -eq 0 ]; then
         || { echo "FAIL fresh-clone build"; tail -5 /tmp/prepush_build.log; FAIL=1; }
 fi
 if [ $FAIL -eq 0 ]; then
-    (cd /tmp/wp-prepush-check && perl -e 'alarm 900; exec @ARGV' make test 2>&1 | tail -1)
+    (cd /tmp/wp-prepush-check && perl -e 'alarm 900; exec @ARGV' make test 2>&1 | grep -E "All tests passed|FAILED" | head -2)
     (cd /tmp/wp-prepush-check && perl -e 'alarm 900; exec @ARGV' make bench-unit 2>&1 | grep -E "AoS \(|SoA \(" | head -2)
     echo "fresh-clone ✓"
 fi
