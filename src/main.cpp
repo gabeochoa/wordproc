@@ -25,6 +25,7 @@
 #include <afterhours/src/plugins/files.h>
 #endif
 #include "testing/e2e_runner.h"
+#include "testing/deferred_screenshot.h"
 #include "ui/menu_setup.h"
 #include "ui/theme.h"
 #include "ui/ui_context.h"
@@ -58,6 +59,7 @@ namespace app_state {
 
 // Command-line config (set before run())
 bool testModeEnabled = false;
+bool headless = false;
 std::string screenshotDir = "tests/screenshots";
 int frameLimit = 0;
 std::string testScriptPath;
@@ -341,7 +343,7 @@ static void app_init() {
             std::filesystem::path dir = std::filesystem::absolute(app_state::screenshotDir);
             std::filesystem::create_directories(dir);
             std::filesystem::path path = dir / (name + ".png");
-            afterhours::graphics::take_screenshot(path.c_str());
+            deferred_screenshot::request(path);
         };
         e2e::register_e2e_systems(sm, e2eConfig);
     }
@@ -511,6 +513,7 @@ static void app_frame() {
             Settings::get().write_save_file();
             app_state::returnCode = runner->hasFailed() ? 1 : 0;
             afterhours::graphics::end_drawing();
+            deferred_screenshot::flush();
             afterhours::graphics::request_quit();
             return;
         }
@@ -521,6 +524,7 @@ static void app_frame() {
 
     // End the GPU render pass — flush all accumulated draw commands
     afterhours::graphics::end_drawing();
+    deferred_screenshot::flush();
 
     // Check for test mode exit
     if (testComp->enabled && testComp->frameLimit > 0 &&
@@ -567,6 +571,7 @@ int main(int argc, char* argv[]) {
 
     // Test mode configuration
     app_state::testModeEnabled = cmdl["--test-mode"];
+    app_state::headless = cmdl["--headless"];
     // Parse named parameters
     for (auto& [name, value] : cmdl.params()) {
         if (name == "screenshot-dir") {
@@ -692,9 +697,35 @@ int main(int argc, char* argv[]) {
     cfg.title = "Wordproc - Untitled";
     cfg.target_fps = 200;
     cfg.flags = afterhours::graphics::FLAG_WINDOW_RESIZABLE;
+    if (app_state::headless)
+        cfg.display = afterhours::graphics::DisplayMode::Headless;
     cfg.init = app_init;
     cfg.frame = app_frame;
     cfg.cleanup = app_cleanup;
+
+    if (app_state::headless) {
+        // Headless: graphics::run() always opens a window on the Metal
+        // backend (cfg.display is honoured by graphics::init, not run —
+        // logged in docs/afterhours-feature-requests.md). Drive the same
+        // init/frame callbacks manually against the offscreen target so
+        // capture_frame() can read back screenshots without a display.
+        afterhours::graphics::Config hcfg;
+        hcfg.display = afterhours::graphics::DisplayMode::Headless;
+        hcfg.width = cfg.width;
+        hcfg.height = cfg.height;
+        hcfg.title = cfg.title;
+        if (!afterhours::graphics::init(hcfg)) return 1;
+        app_init();
+        int maxFrames = app_state::frameLimit > 0 ? app_state::frameLimit : 2000;
+        for (int i = 0; i < maxFrames; i++) {
+            app_frame();
+            if (app_state::scriptRunner && app_state::scriptRunner->isFinished())
+                break;
+        }
+        app_cleanup();
+        afterhours::graphics::shutdown();
+        return app_state::returnCode;
+    }
 
     afterhours::graphics::run(cfg);
 

@@ -2,6 +2,7 @@
 // Uses afterhours E2ERunner with ECS-based command handlers
 
 #include "e2e_runner.h"
+#include "deferred_screenshot.h"
 #include "../editor/document_settings.h"
 #include "../input_mapping.h"
 #include "../rl.h"
@@ -24,7 +25,8 @@ static void takeScreenshot(const std::string& dir, const std::string& name) {
     std::filesystem::path screenshotDir = std::filesystem::absolute(dir);
     std::filesystem::create_directories(screenshotDir);
     std::filesystem::path path = screenshotDir / (name + ".png");
-    afterhours::graphics::take_screenshot(path.c_str());
+    // Deferred: capture happens after end_drawing (see deferred_screenshot.h)
+    deferred_screenshot::request(path);
 }
 
 // Set up common callbacks for the runner

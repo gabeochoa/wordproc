@@ -15,6 +15,7 @@
 #include "../editor/table.h"
 #include "../input/action_map.h"
 #include "../rl.h"
+#include "../testing/deferred_screenshot.h"
 #include "../settings.h"
 // test_input:: available via rl.h -> external.h
 #include "../ui/theme.h"
@@ -574,13 +575,8 @@ struct EditorRenderSystem
                     std::filesystem::create_directories(testConfig.screenshotDir);
                     std::string pathStr = testConfig.screenshotDir + "/01_startup.png";
                     LOG_INFO("Taking startup screenshot: %s", pathStr.c_str());
-                    afterhours::graphics::take_screenshot(pathStr.c_str());
-                    // Verify screenshot was taken
-                    if (std::filesystem::exists(pathStr)) {
-                        LOG_INFO("Screenshot saved successfully");
-                    } else {
-                        LOG_WARNING("Screenshot file not found after TakeScreenshot");
-                    }
+                    deferred_screenshot::request(std::filesystem::path(pathStr));
+                    // File lands at deferred_screenshot::flush() after end_drawing
                 }
             }
             

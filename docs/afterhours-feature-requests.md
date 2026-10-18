@@ -576,3 +576,27 @@ not adopted (needs eyes — see its new-gap note); 12 and 13 are partial; 2, 3,
 | 7 | ~~Sans-serif font~~ | ~~Resolved~~ | — | Done |
 | 6 | Animation/motion | Minor — polish | High | Old API replaced by Track/Timeline at `d1d7f0e` |
 | 16 | Crash handler vs asserting log_error | Minor — latent | Low | Do not install handler until upstream fixes |
+
+
+## 2026-10-18 — Metal: graphics::run() ignores DisplayMode::Headless; capture_frame deadlocks mid-frame
+
+Found by wordproc Batch 1 visual-review work (boulder, sandbox blocks
+/usr/sbin/screencapture, so OS capture is unavailable there).
+
+1. `MetalPlatformAPI::run()` (backends/sokol/backend.h) always calls
+   `sapp_run()` — `RunConfig.display == DisplayMode::Headless` is honoured
+   only by `metal_init()` behind `graphics::init()`. Wordproc's main loop
+   is built on `graphics::run(cfg)` with init/frame callbacks, so
+   `--headless` was a no-op until wordproc added a manual
+   init+frame-loop path for headless. Desired: `run()` should branch to
+   the headless offscreen path when `cfg.display == Headless`, running
+   cfg.init/cfg.frame itself. Mailboy avoids this only because it has a
+   separate `run_game_headless()` built on `graphics::init`.
+2. `graphics::capture_frame()` called mid-frame (before `end_drawing()`
+   commits the offscreen pass) hangs forever in
+   `metal_copy_to_shared`'s `waitUntilCompleted` (verified: startup
+   screenshot in a system deadlocked frame 1; deferring the same call to
+   just after `end_drawing()` works). Desired: document "capture only
+   between frames" on `capture_frame`, or queue the readback internally
+   until the next commit. Wordproc works around it with
+   `src/testing/deferred_screenshot.h` (queue + flush after end_drawing).
