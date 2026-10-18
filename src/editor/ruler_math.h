@@ -107,6 +107,44 @@ inline int rightIndentFromX(const Geometry& g, float x) {
     return std::clamp(v, 0, maxIndent);
 }
 
+// Marker shapes for the render pass: Word 95 hourglass pair +
+// rectangle base + right triangle. Directions point TOWARD the ruler
+// centre (first-line apex down, hanging/right apex up), so the pair
+// forms an hourglass when first-line == 0. The left (hanging) triangle
+// sits on a small rectangle at the band's bottom edge.
+struct Triangle {
+    float apexX = 0.0f;
+    float apexY = 0.0f;
+    float baseY = 0.0f;
+    float halfWidth = 4.0f;
+};
+struct MarkerShapes {
+    Triangle firstLine;
+    Triangle left;
+    Triangle right;
+    float rectX = 0.0f;
+    float rectY = 0.0f;
+    float rectW = 6.0f;
+    float rectH = 2.0f;
+};
+
+inline MarkerShapes markerShapes(const Geometry& g, int leftIndent,
+                                 int firstLineIndent, int rightIndent) {
+    MarkerShapes s;
+    float mid = g.rulerY + g.rulerHeight / 2.0f;
+    float leftX = leftMarkerX(g, leftIndent);
+    s.firstLine = {firstLineMarkerX(g, leftIndent, firstLineIndent),
+                   mid - 1.0f, g.rulerY + 1.0f, 4.0f};
+    s.left = {leftX, mid + 1.0f, g.rulerY + g.rulerHeight - 3.0f, 4.0f};
+    s.right = {rightMarkerX(g, rightIndent), mid + 1.0f,
+               g.rulerY + g.rulerHeight - 1.0f, 4.0f};
+    s.rectX = leftX - 3.0f;
+    s.rectY = g.rulerY + g.rulerHeight - 3.0f;
+    s.rectW = 6.0f;
+    s.rectH = 2.0f;
+    return s;
+}
+
 enum class Marker { None, FirstLine, Left, Right };
 
 // Which marker, if any, a press at (x, y) grabs. The top half of the

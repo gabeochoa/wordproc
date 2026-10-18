@@ -650,6 +650,44 @@ inline void drawFilledTriangle(float ax, float ay, float baseY, float halfWidth,
     }
 }
 
+// Word 95 ruler marker: pale raised/beveled triangle — light face,
+// dark edge lines, with the top/left edges highlighted (light comes
+// from the top-left, as in the Win95 scrollbar-thumb bevel). Not a
+// solid-black glyph: the face is BUTTON_FACE gray, the outline is
+// dark, the top/left edges are white.
+inline void drawBeveledTriangle(const ruler_math::Triangle& t) {
+    const afterhours::Color face = theme::BUTTON_FACE;
+    const afterhours::Color dark = theme::RULER_MARKS;
+    const afterhours::Color light = theme::BORDER_LIGHT;
+    drawFilledTriangle(t.apexX, t.apexY, t.baseY, t.halfWidth, face);
+    int ax = static_cast<int>(t.apexX);
+    int ay = static_cast<int>(t.apexY);
+    int baseY = static_cast<int>(t.baseY);
+    int leftX = static_cast<int>(t.apexX - t.halfWidth);
+    int rightX = static_cast<int>(t.apexX + t.halfWidth);
+    // Left (top-left-lit) edge: white. Right edge: dark.
+    afterhours::draw_line(ax, ay, leftX, baseY, light);
+    afterhours::draw_line(ax, ay, rightX, baseY, dark);
+    // Base: light when it is the top edge (apex down), dark when it
+    // is the bottom edge (apex up).
+    afterhours::draw_line(leftX, baseY, rightX, baseY,
+                          t.baseY < t.apexY ? light : dark);
+}
+
+// Word 95 hanging-marker rectangle base: same raised bevel as the
+// triangles (light top/left, dark bottom/right, gray face).
+inline void drawBeveledRect(float x, float y, float w, float h) {
+    afterhours::draw_rectangle(Rectangle{x, y, w, h}, theme::BUTTON_FACE);
+    int xi = static_cast<int>(x);
+    int yi = static_cast<int>(y);
+    int xe = static_cast<int>(x + w);
+    int ye = static_cast<int>(y + h);
+    afterhours::draw_line(xi, yi, xe, yi, theme::BORDER_LIGHT);
+    afterhours::draw_line(xi, yi, xi, ye, theme::BORDER_LIGHT);
+    afterhours::draw_line(xe, yi, xe, ye, theme::RULER_MARKS);
+    afterhours::draw_line(xi, ye, xe, ye, theme::RULER_MARKS);
+}
+
 struct EditorRenderSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
                                 ScrollComponent,
@@ -820,34 +858,22 @@ struct EditorRenderSystem
                 }
             }
 
-            // Indent markers for the caret paragraph.
+            // Indent markers for the caret paragraph: Word 95
+            // beveled hourglass pair + rectangle base + right
+            // triangle, from ruler_math::markerShapes (same
+            // positions the drag hit-test uses). Directions point
+            // toward the centre; faces are pale gray, edges dark.
             {
                 std::size_t row = doc.buffer.caret().row;
-                int leftIndent = doc.buffer.lineLeftIndent(row);
-                int firstLineIndent = doc.buffer.lineFirstLineIndent(row);
-                int rightIndent = doc.buffer.lineRightIndent(row);
-                afterhours::Color markerColor{0, 0, 0, 255};
-                // First-line indent: triangle pointing down, top half.
-                drawFilledTriangle(
-                    ruler_math::firstLineMarkerX(g, leftIndent,
-                                                 firstLineIndent),
-                    rulerY + 1.0f, rulerY + rulerH / 2.0f - 1.0f, 4.0f,
-                    markerColor);
-                // Left / hanging indent: triangle pointing up + block,
-                // bottom half.
-                float leftX = ruler_math::leftMarkerX(g, leftIndent);
-                drawFilledTriangle(leftX, rulerY + rulerH - 1.0f,
-                                   rulerY + rulerH / 2.0f + 1.0f, 4.0f,
-                                   markerColor);
-                afterhours::draw_rectangle(
-                    Rectangle{leftX - 3.0f, rulerY + rulerH - 3.0f, 6.0f,
-                              2.0f},
-                    markerColor);
-                // Right indent: triangle pointing up, bottom half.
-                drawFilledTriangle(
-                    ruler_math::rightMarkerX(g, rightIndent),
-                    rulerY + rulerH - 1.0f, rulerY + rulerH / 2.0f + 1.0f,
-                    4.0f, markerColor);
+                auto shapes = ruler_math::markerShapes(
+                    g, doc.buffer.lineLeftIndent(row),
+                    doc.buffer.lineFirstLineIndent(row),
+                    doc.buffer.lineRightIndent(row));
+                drawBeveledTriangle(shapes.firstLine);
+                drawBeveledTriangle(shapes.left);
+                drawBeveledRect(shapes.rectX, shapes.rectY, shapes.rectW,
+                                shapes.rectH);
+                drawBeveledTriangle(shapes.right);
             }
         }
 

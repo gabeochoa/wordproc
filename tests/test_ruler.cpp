@@ -86,6 +86,32 @@ TEST_CASE("ruler marker-x <-> indent mapping", "[ruler]") {
         REQUIRE(ruler_math::indentFromX(scaled, 100000.0f) ==
                 static_cast<int>(std::lround(scaled.textSpanWidth / 0.5f)));
     }
+    SECTION("marker shapes point toward the centre (hourglass)") {
+        auto g = ruler_math::geometry(123.0f, 20.0f, 3.0f, 1274.0f, 0.0f);
+        // rulerY = 103, height 20, mid = 113.
+        auto s = ruler_math::markerShapes(g, 72, 36, 48);
+        // First-line (top): apex down at mid-1, base at the top.
+        REQUIRE(s.firstLine.apexX == 11.0f + 72.0f + 36.0f);
+        REQUIRE(s.firstLine.apexY == 112.0f);
+        REQUIRE(s.firstLine.baseY == 104.0f);
+        // Left / hanging (bottom): apex up at mid+1, base above the
+        // rectangle, rectangle at the band's bottom edge.
+        REQUIRE(s.left.apexX == 11.0f + 72.0f);
+        REQUIRE(s.left.apexY == 114.0f);
+        REQUIRE(s.left.baseY == 120.0f);
+        REQUIRE(s.rectX == 11.0f + 72.0f - 3.0f);
+        REQUIRE(s.rectY == 120.0f);
+        REQUIRE(s.rectW == 6.0f);
+        REQUIRE(s.rectH == 2.0f);
+        // Right: apex up at mid+1, base at the bottom edge.
+        REQUIRE(s.right.apexX == 11.0f + g.textSpanWidth - 48.0f);
+        REQUIRE(s.right.apexY == 114.0f);
+        REQUIRE(s.right.baseY == 122.0f);
+        // At firstLine == 0 the pair forms an hourglass: both apexes
+        // share the left-indent x.
+        auto aligned = ruler_math::markerShapes(g, 72, 0, 0);
+        REQUIRE(aligned.firstLine.apexX == aligned.left.apexX);
+    }
     SECTION("page width is 8.5 * pixelsPerInch at any scale") {
         // The layout layer's contract: pageDisplayWidth =
         // pageWidth(points) * displayScale = 8.5 * ppi. Here the
