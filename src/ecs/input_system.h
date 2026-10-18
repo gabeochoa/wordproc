@@ -24,14 +24,35 @@ using cmd::recordDeleteRevision;
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
     : public afterhours::System<DocumentComponent, CaretComponent, DialogState, InputComponent,
-                              LayoutComponent> {
+                              LayoutComponent, MenuComponent> {
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, DialogState& dialogs,
                        InputComponent& inputComp, LayoutComponent& layout,
-                       const float) override {
+                       MenuComponent& menu, const float) override {
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
+
+        // Menu typing gate: while any dropdown menu is open, menus
+        // consume keys -- typed characters must not reach the document
+        // (arrows/Esc are already handled by MenuUISystem). Queued
+        // chars are drained, not just ignored: an unconsumed char
+        // would otherwise sit in the queue and insert itself the
+        // frame the menu closes.
+        bool anyMenuOpen = menu.activeMenuIndex >= 0;
+        if (!anyMenuOpen) {
+            for (const auto& m : menu.menus) {
+                if (m.open) {
+                    anyMenuOpen = true;
+                    break;
+                }
+            }
+        }
+        if (anyMenuOpen) {
+            while (test_input::get_char_pressed() > 0) {
+            }
+            return;
+        }
 
         // Print Preview is read-only: no typing, newline, backspace,
         // delete, or tab insertion while previewMode is on. Scroll and

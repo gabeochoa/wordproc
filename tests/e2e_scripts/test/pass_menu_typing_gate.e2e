@@ -1,0 +1,25 @@
+# Test: Menu typing gate (P0-9 leftover) -- while a dropdown menu is
+# open, typed characters must not reach the document. Menus consume
+# keys; Esc still closes the menu, and typing works again afterwards.
+# Regression: without the TextInputSystem gate, the "x" typed with
+# the File menu open lands in the document (RED-ON-REVERT proven).
+
+type "Hello"
+wait_frames 12
+
+menu_open File
+wait_frames 12
+validate menu_open=File
+
+type "x"
+wait_frames 12
+
+escape
+wait_frames 12
+validate menu_open=false
+validate text=Hello
+
+# Typing works again after the menu closes.
+type "!"
+wait_frames 12
+validate text=Hello!
