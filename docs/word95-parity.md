@@ -15,8 +15,8 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Save/open .doc (Word binary) | Missing | P2 | RTF is the interchange path |
 | Save/open .rtf / .txt | Have | P0 | document_io + tests |
 | Page Setup (margins/paper) | Partial | P0 | dialog + margins state; verify paged render honors all fields |
-| Print | Missing | P1 | toolbar Print icon exists; no File>Print, no print path |
-| Print Preview | Missing | P1 | — |
+| Print | Have | P1 | File > Print... / Ctrl+P / toolbar Print: PDF via export_pdf to a temp file, then `lp`; in test mode the PDF is written but `lp` never runs. Honest partial: export_pdf is single-page with overflow past the bottom margin, so Print prints what's supported, not a true multi-page job |
+| Print Preview | Have | P1 | Batch 3: read-only mode (File > Print Preview, toolbar button); forces Paged, one page on gray workspace, preview toolbar (Print, Prev/Next Page, Zoom +/-, Page X of Y, Close); Esc/Close restores the previous mode; typing/scroll/zoom gated. Page count is an ESTIMATE from geometry (page text height / scaled line height) — no real pagination exists, so headings/spacing shift true breaks |
 | Exit / MRU list | Have | P2 | — |
 
 ## Edit
@@ -77,7 +77,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Word Count... | Have | P0 | dialog: words/chars/lines/paragraphs/sentences (verified in menu_ui_system.h) |
 | Spelling (F7 dialog) | Have | P0 | Batch 1: dialog + suggestions + Change All |
 | Red squiggle spell check as you type | Have | P0 | Batch 1: visible-lines cache, reviewer 8/10 |
-| Grammar check | Partial | P2 | GrammarChecker engine, no UI |
+| Grammar check | Have | P2 | Batch 3: Tools > Grammar... dialog (read-only list: rule + excerpt + message + suggestion; Close only, no auto-fix). Engine covers repeated word, capitalization, double space, common errors. Tools menu is Word 95 order (Spelling, Word Count, AutoCorrect, sep, Grammar, sep); UI Scale... moved to View bottom; disabled Preferences... stub removed |
 | AutoCorrect engine | Have | P0 | Batch 1 |
 | Thesaurus | Missing | P2 | |
 | Mail Merge... | Missing | P2 | stub OK per plan |
@@ -106,16 +106,22 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Chrome (toolbars / ruler / status bar)
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Standard toolbar (icons) | Partial | P0 | pixel icons in render pass; verify vs Word 95 set (Print Preview, Spelling, etc.) |
+| Standard toolbar (icons) | Partial | P0 | Batch 3: Print Preview + Spelling buttons added in Word 95 Standard order (Print, Print Preview, Spelling, Cut/Copy/Paste, Undo/Redo), drawn icons. Show/Hide ¶ NOT added: pilcrow rendering in the text pass is not trivial. Insert Table grid button NOT added: needs a grid popup that does not exist |
 | Formatting toolbar (style/font/size/BIU/align) | Partial | P0 | present; font list = 2 families |
 | Title bar / menu bar / bevels | Have | P0 | Win95 theme, drop shadows, focus ring |
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 34 · Partial 18 · Missing 13** (after Batch 2) (65 grouped rows; several rows bundle
+**Have 37 · Partial 17 · Missing 11** (after Batch 3) (65 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95
-ruler + drag, paged framing verify, Window menu). Then: Print Preview/Print,
-Normal/Outline views, Columns, Borders/Shading dialog,
-full Font dialog + more families, Date/Time insert, toolbar icon fidelity.
+ruler + drag, paged framing verify, Window menu). Batch 3 = Print Preview +
+Print, Standard toolbar (Print Preview + Spelling), period Tools/View menus,
+Grammar dialog, menu typing gate. Then: Normal/Outline views, Columns,
+Borders/Shading dialog, full Font dialog + more families, Date/Time insert,
+toolbar icon fidelity (¶ button, Insert Table grid).
+Also Batch 3: vendored fmt (11.2.0) verified compiling on system clang 17
+and zig-bundled clang 21.1.8 (header + format-inl.h) — already newer than
+the kart-afterhours sibling (8.0.1), no bump needed; the mailboy
+consteval breakage does not affect it.
