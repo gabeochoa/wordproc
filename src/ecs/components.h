@@ -183,6 +183,16 @@ struct DialogState : public afterhours::BaseComponent {
     // Word Count
     bool showWordCountDialog = false;
 
+    // Spelling dialog (Tools > Spelling..., F7)
+    bool showSpellingDialog = false;
+    std::size_t spellSearchOffset = 0;  // Resume scanning from here
+    std::size_t spellCurrentOffset = 0;
+    std::size_t spellCurrentLength = 0;
+    std::string spellCurrentWord;
+    std::vector<std::string> spellSuggestions;
+    std::string spellReplacementStr;
+    bool spellNoErrors = false;  // "Spell check complete"
+
     // Find / Replace
     bool showFindDialog = false;
     bool findReplaceMode = false;

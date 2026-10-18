@@ -474,6 +474,193 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Spelling dialog (Tools > Spelling..., F7) - Win95-style modal
+        if (dialogs.showSpellingDialog) {
+            constexpr int SPELLING_MODAL_ID = 50010;
+            auto result = afterhours::modal(ctx, mk(entity, SPELLING_MODAL_ID),
+                dialogs.showSpellingDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(460), afterhours::ui::h720(430))
+                    .with_title("Spelling")
+                    .with_show_close_button(true));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                if (dialogs.spellNoErrors) {
+                    div(ctx, mk(result.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("The spell check is complete.")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+                } else {
+                    // Misspelled word
+                    div(ctx, mk(result.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("Not in dictionary:")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+
+                    div(ctx, mk(result.ent(), 1),
+                        ComponentConfig{}
+                            .with_label(dialogs.spellCurrentWord)
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_render_layer(CONTENT_LAYER));
+
+                    // Suggestions list (click one to use it as the replacement)
+                    div(ctx, mk(result.ent(), 2),
+                        ComponentConfig{}
+                            .with_label("Suggestions:")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+
+                    float suggHeight = 30.0f * static_cast<float>(
+                        std::max<std::size_t>(dialogs.spellSuggestions.size(), 1));
+                    auto suggList = div(ctx, mk(result.ent(), 3),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(suggHeight)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_render_layer(CONTENT_LAYER));
+
+                    if (suggList) {
+                        if (dialogs.spellSuggestions.empty()) {
+                            div(ctx, mk(suggList.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label("(no suggestions)")
+                                    .with_size(ComponentSize{percent(1.0f), h720(28)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        } else {
+                            for (std::size_t i = 0; i < dialogs.spellSuggestions.size(); ++i) {
+                                const std::string& suggestion = dialogs.spellSuggestions[i];
+                                if (button(ctx, mk(suggList.ent(), 100 + static_cast<int>(i)),
+                                    ComponentConfig{}
+                                        .with_debug_name("spell_suggestion_" + suggestion)
+                                        .with_label(suggestion)
+                                        .with_size(ComponentSize{percent(1.0f), h720(28)})
+                                        .with_background(Theme::Usage::Surface)
+                                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    dialogs.spellReplacementStr = suggestion;
+                                }
+                            }
+                        }
+                    }
+
+                    // Replacement input
+                    div(ctx, mk(result.ent(), 4),
+                        ComponentConfig{}
+                            .with_label("Change to:")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+
+                    afterhours::text_input::text_input(ctx, mk(result.ent(), 5),
+                        dialogs.spellReplacementStr,
+                        ComponentConfig{}
+                            .with_debug_name("spell_change_to_input")
+                            .with_size(ComponentSize{percent(1.0f), h720(32)})
+                            .with_background(Theme::Usage::Surface)
+                            .with_render_layer(CONTENT_LAYER));
+
+                    // Button row 1: Ignore / Ignore All / Add
+                    auto buttonRow1 = div(ctx, mk(result.ent(), 6),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(44)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_justify_content(JustifyContent::Center)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(afterhours::ui::pixels(8))
+                            .with_render_layer(CONTENT_LAYER));
+
+                    if (buttonRow1) {
+                        if (button(ctx, mk(buttonRow1.ent(), 0),
+                            ComponentConfig{}
+                                .with_debug_name("spell_ignore")
+                                .with_label("Ignore")
+                                .with_size(ComponentSize{h720(100), h720(32)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            cmd::spellIgnore(doc, dialogs);
+                        }
+                        if (button(ctx, mk(buttonRow1.ent(), 1),
+                            ComponentConfig{}
+                                .with_debug_name("spell_ignore_all")
+                                .with_label("Ignore All")
+                                .with_size(ComponentSize{h720(100), h720(32)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            cmd::spellIgnoreAll(doc, dialogs);
+                        }
+                        if (button(ctx, mk(buttonRow1.ent(), 2),
+                            ComponentConfig{}
+                                .with_debug_name("spell_add")
+                                .with_label("Add")
+                                .with_size(ComponentSize{h720(100), h720(32)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            std::string added = dialogs.spellCurrentWord;
+                            cmd::spellAddToDictionary(doc, dialogs);
+                            toast_notify::success("Added to dictionary: " + added);
+                        }
+                    }
+                }
+
+                // Button row 2 (or the only row when the check is complete):
+                // Change / Change All / Close
+                auto buttonRow2 = div(ctx, mk(result.ent(), 7),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+
+                if (buttonRow2) {
+                    if (!dialogs.spellNoErrors) {
+                        if (button(ctx, mk(buttonRow2.ent(), 0),
+                            ComponentConfig{}
+                                .with_debug_name("spell_change")
+                                .with_label("Change")
+                                .with_size(ComponentSize{h720(100), h720(32)})
+                                .with_background(Theme::Usage::Primary)
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            if (dialogs.spellReplacementStr.empty()) {
+                                toast_notify::error("Enter a replacement word");
+                            } else {
+                                cmd::spellChange(doc, dialogs);
+                            }
+                        }
+                        if (button(ctx, mk(buttonRow2.ent(), 1),
+                            ComponentConfig{}
+                                .with_debug_name("spell_change_all")
+                                .with_label("Change All")
+                                .with_size(ComponentSize{h720(100), h720(32)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            if (dialogs.spellReplacementStr.empty()) {
+                                toast_notify::error("Enter a replacement word");
+                            } else {
+                                cmd::spellChangeAll(doc, dialogs);
+                            }
+                        }
+                    }
+                    if (button(ctx, mk(buttonRow2.ent(), 2),
+                        ComponentConfig{}
+                            .with_debug_name("spell_close")
+                            .with_label("Close")
+                            .with_size(ComponentSize{h720(100), h720(32)})
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showSpellingDialog = false;
+                    }
+                }
+            }
+        }
+
         // Comment input dialog
         if (dialogs.showCommentDialog) {
             constexpr int COMMENT_MODAL_ID = 50002;
@@ -1147,6 +1334,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
+            !dialogs.showSpellingDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&
             !dialogs.showSettingsDialog && !dialogs.showBookmarkListDialog &&
             !dialogs.showSaveAsDialog && !dialogs.showPageSetup) {

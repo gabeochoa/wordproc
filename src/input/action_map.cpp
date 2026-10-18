@@ -265,6 +265,8 @@ const char* ActionMap::actionName(Action action) {
             return "RemoveHyperlink";
         case Action::ShowWordCount:
             return "ShowWordCount";
+        case Action::ShowSpelling:
+            return "ShowSpelling";
         case Action::COUNT:
         default:
             return "NONE";
@@ -412,8 +414,9 @@ static void bindWindowsPreset(ActionMap& map) {
     // File: Save As (F12 - standard Word shortcut)
     map.bind({afterhours::keys::F12, false, false, false}, Action::SaveAs);
 
-    // Tools: Word Count (Ctrl+Shift+W)
+    // Tools: Word Count (Ctrl+Shift+W), Spelling (F7)
     map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
+    map.bind({afterhours::keys::F7, false, false, false}, Action::ShowSpelling);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent
@@ -523,8 +526,9 @@ static void bindMacOSPreset(ActionMap& map) {
     // File: Save As (F12 - same as Windows)
     map.bind({afterhours::keys::F12, false, false, false}, Action::SaveAs);
 
-    // Tools: Word Count (Cmd+Shift+W)
+    // Tools: Word Count (Cmd+Shift+W), Spelling (F7)
     map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
+    map.bind({afterhours::keys::F7, false, false, false}, Action::ShowSpelling);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -730,6 +734,8 @@ const char* actionDisplayName(Action action) {
             return "Remove Hyperlink";
         case Action::ShowWordCount:
             return "Word Count";
+        case Action::ShowSpelling:
+            return "Spelling";
         case Action::COUNT:
         default:
             return "";
@@ -1043,8 +1049,9 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // File: Save As
     addBinding(Action::SaveAs, {afterhours::keys::F12, false, false, false});  // F12
 
-    // Tools: Word Count
+    // Tools: Word Count, Spelling
     addBinding(Action::ShowWordCount, {afterhours::keys::W, true, true, false});  // Ctrl+Shift+W
+    addBinding(Action::ShowSpelling, {afterhours::keys::F7, false, false, false});  // F7
 
     return result;
 }

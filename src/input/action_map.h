@@ -133,6 +133,7 @@ enum class Action {
 
     // Tools
     ShowWordCount,          // Ctrl+Shift+W - show word count dialog
+    ShowSpelling,           // F7 - show spelling dialog
 
     // Count (for iteration)
     COUNT

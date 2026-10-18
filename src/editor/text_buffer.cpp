@@ -1206,6 +1206,38 @@ void DeleteSelectionCommand::undo(TextBuffer& buffer) {
     buffer.setCaret(end_);
 }
 
+void ReplaceRangesCommand::applyRange(TextBuffer& buffer, CaretPosition start,
+                                      const std::string& oldText,
+                                      const std::string& newText) {
+    // Low-level ops only: no history recording, so this whole command is
+    // one undo step no matter how many ranges or characters it covers.
+    buffer.setCaret(start);
+    for (std::size_t i = 0; i < oldText.size(); ++i) {
+        buffer.deleteCharAt(start);
+    }
+    CaretPosition cur = start;
+    for (char ch : newText) {
+        buffer.insertCharAt(cur, ch);
+        cur = buffer.caret();
+    }
+    buffer.setCaret(cur);
+}
+
+void ReplaceRangesCommand::execute(TextBuffer& buffer) {
+    // Back to front so earlier offsets stay valid while later ones change.
+    for (auto it = replacements_.rbegin(); it != replacements_.rend(); ++it) {
+        applyRange(buffer, it->start, it->oldText, it->newText);
+    }
+}
+
+void ReplaceRangesCommand::undo(TextBuffer& buffer) {
+    // Same order as execute: undoing later ranges first leaves earlier
+    // positions valid, since they sit before everything already restored.
+    for (auto it = replacements_.rbegin(); it != replacements_.rend(); ++it) {
+        applyRange(buffer, it->start, it->newText, it->oldText);
+    }
+}
+
 // ============================================================================
 // ============================================================================
 
@@ -1302,6 +1334,31 @@ void TextBuffer::insertTextAt(CaretPosition pos, const std::string& text) {
         insertCharAt(caret_, ch);
     }
     recordingHistory_ = true;
+}
+
+void TextBuffer::replaceRange(std::size_t offset, std::size_t length,
+                              const std::string& replacement) {
+    if (offset > chars_.size() || length > chars_.size() - offset) return;
+    CaretPosition start = offsetToPosition(offset);
+    std::string oldText;
+    oldText.reserve(length);
+    for (std::size_t i = 0; i < length; ++i) {
+        oldText.push_back(chars_.at(offset + i));
+    }
+    replaceRanges({{start, oldText, replacement}});
+}
+
+void TextBuffer::replaceRanges(std::vector<TextReplacement> replacements) {
+    if (replacements.empty()) return;
+    // Ascending by (row, column) so back-to-front application in the
+    // command keeps every range's position valid.
+    std::sort(replacements.begin(), replacements.end(),
+              [](const TextReplacement& a, const TextReplacement& b) {
+                  if (a.start.row != b.start.row) return a.start.row < b.start.row;
+                  return a.start.column < b.start.column;
+              });
+    history_.execute(
+        std::make_unique<ReplaceRangesCommand>(std::move(replacements)), *this);
 }
 
 std::size_t TextBuffer::caretOffset() const {

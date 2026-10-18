@@ -1,0 +1,22 @@
+# Test: Spelling dialog Ignore All ignores every instance
+# Both "wrold" instances are ignored, so no errors remain and the
+# document text is unchanged.
+
+type "The wrold wrold fox"
+wait_frames 12
+
+menu_open Tools
+wait_frames 12
+menu_select "Spelling..."
+wait_frames 12
+
+validate dialog_open=Spelling
+
+click_ui spell_ignore_all
+wait_frames 12
+
+validate spell_error_count=0
+validate text=The wrold wrold fox
+
+click_ui spell_close
+wait_frames 12

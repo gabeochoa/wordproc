@@ -214,14 +214,16 @@ inline std::vector<win95::Menu> createMenuBar(
 
     menus.push_back(formatMenu);   // Index 4: Format
 
-    // Tools menu (includes former Settings items)
+    // Tools menu (includes former Settings items; Word 95 Tools starts
+    // with Spelling)
     win95::Menu toolsMenu;
     toolsMenu.label = "Tools";
     toolsMenu.items = {
-        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 0
-        {"", "", false, true, nullptr},                          // 1 Separator
-        {"UI Scale...", "", true, false, nullptr},               // 2 (was Settings)
-        {"Preferences...", "", false, false, nullptr}            // 3 (disabled, was Settings)
+        {"Spelling...", "F7", true, false, nullptr},             // 0
+        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 1
+        {"", "", false, true, nullptr},                          // 2 Separator
+        {"UI Scale...", "", true, false, nullptr},               // 3 (was Settings)
+        {"Preferences...", "", false, false, nullptr}            // 4 (disabled, was Settings)
     };
     menus.push_back(toolsMenu);    // Index 5: Tools
 

@@ -347,6 +347,7 @@ static void setupCallbacksEx(
             if (dialogState.showPageSetup) return "PageSetup";
             if (dialogState.showSettingsDialog) return "Settings";
             if (dialogState.showWordCountDialog) return "WordCount";
+            if (dialogState.showSpellingDialog) return "Spelling";
             return "false";
         }
         if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";
@@ -755,6 +756,14 @@ static void setupCallbacksEx(
         dialogState.showSettingsDialog = false;
         dialogState.uiScaleInputStr.clear();
         dialogState.showWordCountDialog = false;
+        dialogState.showSpellingDialog = false;
+        dialogState.spellSearchOffset = 0;
+        dialogState.spellCurrentOffset = 0;
+        dialogState.spellCurrentLength = 0;
+        dialogState.spellCurrentWord.clear();
+        dialogState.spellSuggestions.clear();
+        dialogState.spellReplacementStr.clear();
+        dialogState.spellNoErrors = false;
         dialogState.showContextMenu = false;
         dialogState.contextMenuX = 0;
         dialogState.contextMenuY = 0;

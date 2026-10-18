@@ -1,0 +1,12 @@
+# Test: F7 opens the Spelling dialog (Tools > Spelling... shortcut)
+
+type "The wrold fox"
+wait_frames 12
+
+key F7
+wait_frames 12
+
+validate dialog_open=Spelling
+
+click_ui spell_close
+wait_frames 12

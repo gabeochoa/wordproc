@@ -168,6 +168,11 @@ struct KeyboardShortcutSystem
             dialogs.showWordCountDialog = true;
         }
 
+        // Spelling (F7)
+        if (actionMap_.isActionPressed(Action::ShowSpelling)) {
+            cmd::openSpellingDialog(doc, dialogs);
+        }
+
         // Text formatting
         if (actionMap_.isActionPressed(Action::ToggleBold)) cmd::toggleBold(doc);
         if (actionMap_.isActionPressed(Action::ToggleItalic)) cmd::toggleItalic(doc);

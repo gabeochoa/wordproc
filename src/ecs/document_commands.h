@@ -5,6 +5,7 @@
 
 #include "../util/clipboard.h"
 #include "../editor/document_io.h"
+#include "../editor/spell_session.h"
 #include "../settings.h"
 #include "../ui/ui_context.h"
 #include "../ui/menu_setup.h"
@@ -198,6 +199,106 @@ inline void paste(DocumentComponent& doc) {
 
 inline void selectAll(DocumentComponent& doc) {
     doc.buffer.selectAll();
+}
+
+// --- Spelling dialog commands (Tools > Spelling..., F7) ---
+// The dialog shows one error at a time; each action advances
+// spellSearchOffset and refreshes the current error from the buffer.
+
+inline void refreshSpellingDialog(DocumentComponent& doc, DialogState& dialogs) {
+    auto error = findNextSpellingError(doc.spellChecker, doc.buffer.getText(),
+                                       dialogs.spellSearchOffset);
+    if (!error) {
+        dialogs.spellNoErrors = true;
+        dialogs.spellCurrentWord.clear();
+        dialogs.spellCurrentLength = 0;
+        dialogs.spellSuggestions.clear();
+        dialogs.spellReplacementStr.clear();
+        return;
+    }
+    dialogs.spellNoErrors = false;
+    dialogs.spellCurrentOffset = error->offset;
+    dialogs.spellCurrentLength = error->length;
+    dialogs.spellCurrentWord = error->word;
+    dialogs.spellSuggestions = error->suggestions;
+    dialogs.spellReplacementStr =
+        error->suggestions.empty() ? "" : error->suggestions[0];
+}
+
+inline void openSpellingDialog(DocumentComponent& doc, DialogState& dialogs) {
+    dialogs.showSpellingDialog = true;
+    // Start at the caret, like Word; if nothing remains after it, wrap
+    // to the start (errors before the caret still get checked).
+    dialogs.spellSearchOffset = doc.buffer.caretOffset();
+    refreshSpellingDialog(doc, dialogs);
+    if (dialogs.spellNoErrors && dialogs.spellSearchOffset != 0) {
+        dialogs.spellSearchOffset = 0;
+        refreshSpellingDialog(doc, dialogs);
+    }
+}
+
+inline void spellIgnore(DocumentComponent& doc, DialogState& dialogs) {
+    dialogs.spellSearchOffset =
+        dialogs.spellCurrentOffset + dialogs.spellCurrentLength;
+    refreshSpellingDialog(doc, dialogs);
+}
+
+inline void spellIgnoreAll(DocumentComponent& doc, DialogState& dialogs) {
+    doc.spellChecker.ignoreWord(dialogs.spellCurrentWord);
+    // Re-scan from the same offset: the word is now ignored, so the
+    // scan passes it (and the squiggle cache drops it on next edit).
+    dialogs.spellSearchOffset = dialogs.spellCurrentOffset;
+    refreshSpellingDialog(doc, dialogs);
+}
+
+inline void spellAddToDictionary(DocumentComponent& doc, DialogState& dialogs) {
+    doc.spellChecker.addToUserDictionary(dialogs.spellCurrentWord);
+    dialogs.spellSearchOffset = dialogs.spellCurrentOffset;
+    refreshSpellingDialog(doc, dialogs);
+}
+
+inline void spellChange(DocumentComponent& doc, DialogState& dialogs) {
+    std::string replacement = dialogs.spellReplacementStr;
+    if (replacement.empty()) return;
+    std::size_t offset = dialogs.spellCurrentOffset;
+    std::size_t length = dialogs.spellCurrentLength;
+    recordDeleteRevision(doc, offset, dialogs.spellCurrentWord);
+    recordInsertRevision(doc, offset, replacement);
+    doc.buffer.replaceRange(offset, length, replacement);
+    doc.isDirty = true;
+    dialogs.spellSearchOffset = offset + replacement.size();
+    refreshSpellingDialog(doc, dialogs);
+}
+
+inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
+    std::string replacement = dialogs.spellReplacementStr;
+    if (replacement.empty()) return;
+    std::string word = dialogs.spellCurrentWord;
+    FindOptions options;
+    options.caseSensitive = false;
+    options.wholeWord = true;
+    std::vector<TextReplacement> replacements;
+    for (const FindResult& match : doc.buffer.findAll(word, options)) {
+        std::size_t startOffset = doc.buffer.offsetForPosition(match.start);
+        std::size_t endOffset = doc.buffer.offsetForPosition(match.end);
+        std::string oldText;
+        oldText.reserve(endOffset - startOffset);
+        for (std::size_t i = startOffset; i < endOffset; ++i) {
+            oldText.push_back(doc.buffer.charAtOffset(i));
+        }
+        recordDeleteRevision(doc, startOffset, oldText);
+        recordInsertRevision(doc, startOffset, replacement);
+        replacements.push_back(
+            {match.start, std::move(oldText), replacement});
+    }
+    if (replacements.empty()) return;
+    // One undo step for the whole Change All.
+    doc.buffer.replaceRanges(std::move(replacements));
+    doc.isDirty = true;
+    // Continue from the top: the replaced word is gone everywhere, so
+    // the next refresh shows the first remaining error in doc order.
+    dialogs.spellSearchOffset = 0;
+    refreshSpellingDialog(doc, dialogs);
 }
 
 // --- Format toggles ---

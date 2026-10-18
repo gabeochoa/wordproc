@@ -78,6 +78,30 @@ class DeleteSelectionCommand : public afterhours::Command<TextBuffer> {
     std::string deletedText_;
 };
 
+// Replace one or more ranges with new text, as a single undo step.
+// Ranges are CaretPositions into the current buffer; oldText must match
+// the buffer contents at start (callers read it from the buffer).
+struct TextReplacement {
+    CaretPosition start;
+    std::string oldText;
+    std::string newText;
+};
+
+class ReplaceRangesCommand : public afterhours::Command<TextBuffer> {
+   public:
+    explicit ReplaceRangesCommand(std::vector<TextReplacement> replacements)
+        : replacements_(std::move(replacements)) {}
+    void execute(TextBuffer& buffer) override;
+    void undo(TextBuffer& buffer) override;
+    std::string description() const override { return "Replace text"; }
+
+   private:
+    static void applyRange(TextBuffer& buffer, CaretPosition start,
+                           const std::string& oldText,
+                           const std::string& newText);
+    std::vector<TextReplacement> replacements_;
+};
+
 // TextStyle is now defined in document_settings.h
 
 // Line metadata for SoA layout - stores offset and length instead of copying
@@ -393,6 +417,16 @@ class TextBuffer {
     void insertCharAt(CaretPosition pos, char ch);
     void deleteCharAt(CaretPosition pos);
     void insertTextAt(CaretPosition pos, const std::string& text);
+
+    // Replace the range [offset, offset + length) with replacement text, as
+    // a single undo step. No-op if the range is out of bounds.
+    void replaceRange(std::size_t offset, std::size_t length,
+                      const std::string& replacement);
+
+    // Replace several ranges with new text, as a single undo step.
+    // Ranges are sorted by position (ascending) before applying, so
+    // callers may pass them in any order. Used by Change All and AutoCorrect.
+    void replaceRanges(std::vector<TextReplacement> replacements);
 
     // Offset/position helpers
     std::size_t caretOffset() const;
