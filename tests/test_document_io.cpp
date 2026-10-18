@@ -255,6 +255,37 @@ TEST_CASE("DocumentSettings separation from app settings", "[document_io]") {
     REQUIRE(loadedSettings2.textStyle.fontSize == 18);
 }
 
+TEST_CASE("Options flags persist with the document", "[document_io]") {
+    TestDirGuard guard;
+    std::string path = (guard.dir / "options_doc.wpdoc").string();
+
+    SECTION("text boundaries + spell-as-you-type round-trip") {
+        TextBuffer original;
+        original.setText("Options test");
+        DocumentSettings settings;
+        settings.showTextBoundaries = true;
+        settings.spellCheckAsYouType = false;
+        REQUIRE(saveDocumentEx(original, settings, path).success);
+
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path).success);
+        REQUIRE(loadedSettings.showTextBoundaries);
+        REQUIRE_FALSE(loadedSettings.spellCheckAsYouType);
+    }
+    SECTION("old files without the options field load defaults") {
+        {
+            std::ofstream ofs(path);
+            ofs << R"({"version":1,"text":"Old doc"})";
+        }
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path).success);
+        REQUIRE_FALSE(loadedSettings.showTextBoundaries);
+        REQUIRE(loadedSettings.spellCheckAsYouType);
+    }
+}
+
 TEST_CASE("Text boundaries are off by default", "[document_io]") {
     // Word 95 shows margin boundary guides only with Tools >
     // Options > View "Text boundaries" enabled. There is no

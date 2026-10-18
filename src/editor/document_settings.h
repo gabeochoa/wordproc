@@ -645,6 +645,11 @@ struct DocumentSettings {
     // Word shows them only when this option is enabled.
     bool showTextBoundaries = false;
 
+    // Tools > Options "Spell check as you type": gates the red
+    // squiggle render/cache. On by default; the Spelling dialog
+    // (explicit check) is unaffected.
+    bool spellCheckAsYouType = true;
+
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed
     std::vector<FontRequirement> fontRequirements;

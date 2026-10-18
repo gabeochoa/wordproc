@@ -1441,6 +1441,147 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Options dialog (Tools > Options...) - Win95 shell with
+        // live checkboxes. Each checkbox binds directly to its
+        // setting, so toggling flips the state immediately; OK
+        // just dismisses.
+        if (dialogs.showOptionsDialog) {
+            constexpr int OPTIONS_MODAL_ID = 50013;
+            auto result = afterhours::modal(ctx, mk(entity, OPTIONS_MODAL_ID),
+                dialogs.showOptionsDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(400), afterhours::ui::h720(220),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Options", CONTENT_LAYER);
+
+                test_input::register_visible_text("Show text boundaries");
+                test_input::register_visible_text("Spell check as you type");
+                test_input::register_visible_text("AutoCorrect as you type");
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 0),
+                    doc.docSettings.showTextBoundaries,
+                    "options_text_boundaries", "Show text boundaries",
+                    CONTENT_LAYER);
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 1),
+                    doc.docSettings.spellCheckAsYouType,
+                    "options_spell_as_you_type", "Spell check as you type",
+                    CONTENT_LAYER);
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 2),
+                    doc.autoCorrect.settings.replaceTextAsYouType,
+                    "options_autocorrect_as_you_type",
+                    "AutoCorrect as you type", CONTENT_LAYER);
+
+                auto buttonRow = div(ctx, mk(result.ent(), 3),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::FlexEnd)
+                        .with_align_items(AlignItems::Center)
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("options_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showOptionsDialog = false;
+                    }
+                }
+            }
+        }
+
+        // Mail Merge Helper (Tools > Mail Merge...) - parity stub in
+        // a Win95 shell: Create / Get Data are disabled, and the text
+        // says a data source is required. No merge engine exists.
+        if (dialogs.showMailMergeDialog) {
+            constexpr int MAILMERGE_MODAL_ID = 50014;
+            auto result = afterhours::modal(ctx, mk(entity, MAILMERGE_MODAL_ID),
+                dialogs.showMailMergeDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(400), afterhours::ui::h720(220),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Mail Merge Helper",
+                                              CONTENT_LAYER);
+
+                test_input::register_visible_text("Mail Merge Helper");
+                test_input::register_visible_text(
+                    "A data source is required");
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("A data source is required before "
+                                    "you can merge.")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_render_layer(CONTENT_LAYER));
+                div(ctx, mk(result.ent(), 902),
+                    ComponentConfig{}
+                        .with_label("Create a main document, then get data "
+                                    "to begin a merge.")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto buttonRow = div(ctx, mk(result.ent(), 903),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    // Disabled: no merge engine, no data source.
+                    button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle(false)
+                            .with_debug_name("mail_merge_create")
+                            .with_label("Create")
+                            .with_render_layer(CONTENT_LAYER));
+                    button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle(false)
+                            .with_debug_name("mail_merge_get_data")
+                            .with_label("Get Data")
+                            .with_render_layer(CONTENT_LAYER));
+                    if (button(ctx, mk(buttonRow.ent(), 2),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("mail_merge_close")
+                            .with_label("Close")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showMailMergeDialog = false;
+                    }
+                }
+            }
+        }
+
         // Comment input dialog
         if (dialogs.showCommentDialog) {
             constexpr int COMMENT_MODAL_ID = 50002;

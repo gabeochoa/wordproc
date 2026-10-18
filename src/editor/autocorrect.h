@@ -64,6 +64,14 @@ class AutoCorrect {
 
     static const std::unordered_map<std::string, std::string>& table();
 
+    // Batch pass over the whole document (Tools > AutoFormat...):
+    // applies correct() to every word, as a single undo step via
+    // TextBuffer::replaceRanges. Uses the same settings as
+    // as-you-type (table lookup honors replaceTextAsYouType, etc.).
+    // Returns the number of words corrected (0 = no change, no
+    // undo step recorded).
+    std::size_t autoFormatPass(TextBuffer& buffer) const;
+
     // The replacement table as (Replace, With) pairs sorted by the
     // Replace key, for the AutoCorrect dialog's list: built-ins plus
     // user entries, a user entry shadowing a built-in with the same key.

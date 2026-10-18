@@ -254,7 +254,11 @@ inline std::vector<MenuData> createMenuBarData() {
                        {"AutoCorrect...", "", true, false},
                        {"", "", false, true},  // Separator
                        {"Grammar...", "", true, false},
-                       {"", "", false, true}};  // Separator
+                       {"AutoFormat...", "", true, false},
+                       {"", "", false, true},  // Separator
+                       {"Mail Merge...", "", true, false},
+                       {"", "", false, true},  // Separator
+                       {"Options...", "", true, false}};
     menus.push_back(toolsMenu);
 
     return menus;

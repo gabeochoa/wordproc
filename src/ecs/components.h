@@ -233,6 +233,12 @@ struct DialogState : public afterhours::BaseComponent {
     std::string spellReplacementStr;
     bool spellNoErrors = false;  // "Spell check complete"
 
+    // Options dialog (Tools > Options...)
+    bool showOptionsDialog = false;
+
+    // Mail Merge Helper (Tools > Mail Merge...): parity stub.
+    bool showMailMergeDialog = false;
+
     // AutoCorrect dialog (Tools > AutoCorrect...)
     bool showAutoCorrectDialog = false;
     // Selected row in the dialog's Replace/With list, as an index into

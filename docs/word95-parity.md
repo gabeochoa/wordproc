@@ -79,9 +79,10 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Red squiggle spell check as you type | Have | P0 | Batch 1: visible-lines cache, reviewer 8/10 |
 | Grammar check | Have | P2 | Batch 3 + fix round: Tools > Grammar... is a real checker mirroring the Spelling dialog — one issue at a time (sunken In context: sentence with the offending phrase; Issue: human wording, never the enum name, e.g. "Repeated word"; Suggestion: the suggestion), right column Ignore Once (advance), Ignore All (session-ignore that rule+phrase), Change (applies the suggestion through the command layer as one undo step; disabled with no suggestion), Close. Pinned: "The the cat sat." Change -> "The cat sat." (unit + E2E). Grammar issues have NO underlines: GrammarChecker has no render path — the old screenshot's wave under "sat." was a spell squiggle ("sat" is not in the dictionary). Engine covers repeated word, capitalization, double space, common errors |
 | AutoCorrect engine | Have | P0 | Batch 1 |
+| AutoFormat... | Have | P2 | Fix round: Tools > AutoFormat... runs the AutoCorrect replacements as a batch pass over the whole document through the command layer, one undo step (unit + E2E) |
 | Thesaurus | Missing | P2 | |
-| Mail Merge... | Missing | P2 | stub OK per plan |
-| Options/Preferences | Partial | P2 | Preferences disabled in menu |
+| Mail Merge... | Partial | P2 | Fix round: Tools > Mail Merge... opens a Win95 "Mail Merge Helper" stub dialog (disabled Create / Get Data buttons + "A data source is required" text); no merge engine — parity stub OK'd by owner |
+| Options/Preferences | Have | P2 | Fix round: Tools > Options... is a real Win95 dialog with live checkboxes: "Show text boundaries" (docSettings.showTextBoundaries), "Spell check as you type" (new toggle gating squiggle render/cache; Spelling dialog unaffected), "AutoCorrect as you type" (existing AutoCorrect flag). Options flags persist with the document |
 
 ## Table
 | Feature | Status | Priority | Notes |
@@ -112,7 +113,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 37 · Partial 17 · Missing 11** (after Batch 3) (65 grouped rows; several rows bundle
+**Have 39 · Partial 17 · Missing 10** (after Batch 3 fix round, Tools) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

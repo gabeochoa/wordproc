@@ -35,7 +35,8 @@ struct ScrollbarSystem : public afterhours::System<DocumentComponent, ScrollComp
                dialogs.showAutoCorrectDialog ||
                dialogs.showWordCountDialog || dialogs.showTabWidthDialog ||
                dialogs.showSettingsDialog || dialogs.showBookmarkListDialog ||
-               dialogs.showSaveAsDialog || dialogs.showPageSetup;
+               dialogs.showSaveAsDialog || dialogs.showPageSetup ||
+               dialogs.showOptionsDialog || dialogs.showMailMergeDialog;
     }
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,

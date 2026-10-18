@@ -1,5 +1,7 @@
 #include "autocorrect.h"
 
+#include "spellcheck.h"  // SpellChecker::extractWords (word scan)
+
 #include <algorithm>
 #include <cctype>
 
@@ -199,6 +201,22 @@ std::optional<std::string> AutoCorrect::correct(const std::string& word,
         return capitalizeFirst(result);
     }
     return std::nullopt;
+}
+
+std::size_t AutoCorrect::autoFormatPass(TextBuffer& buffer) const {
+    std::string text = buffer.getText();
+    std::vector<TextReplacement> replacements;
+    for (const auto& [offset, word] : SpellChecker::extractWords(text)) {
+        bool sentenceStart = isSentenceStart(buffer, offset);
+        auto corrected = correct(word, sentenceStart);
+        if (!corrected) continue;
+        replacements.push_back(
+            {buffer.positionForOffset(offset), word, *corrected});
+    }
+    if (replacements.empty()) return 0;
+    std::size_t count = replacements.size();
+    buffer.replaceRanges(std::move(replacements));
+    return count;
 }
 
 bool AutoCorrect::isSentenceStart(const std::string& textBeforeWord) {

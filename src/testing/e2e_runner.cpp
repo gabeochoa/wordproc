@@ -365,6 +365,8 @@ static void setupCallbacksEx(
             if (dialogState.showSpellingDialog) return "Spelling";
             if (dialogState.showGrammarDialog) return "Grammar";
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
+            if (dialogState.showOptionsDialog) return "Options";
+            if (dialogState.showMailMergeDialog) return "MailMerge";
             return "false";
         }
         if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";
@@ -429,6 +431,13 @@ static void setupCallbacksEx(
         if (prop == "text_boundaries")
             return docComp.docSettings.showTextBoundaries ? "true"
                                                           : "false";
+        if (prop == "spell_check_as_you_type")
+            return docComp.docSettings.spellCheckAsYouType ? "true"
+                                                           : "false";
+        if (prop == "autocorrect_as_you_type")
+            return docComp.autoCorrect.settings.replaceTextAsYouType
+                       ? "true"
+                       : "false";
         if (prop == "page_display_width")
             return std::to_string(static_cast<int>(
                 std::lround(layoutComp.pageDisplayWidth)));
@@ -923,6 +932,8 @@ static void setupCallbacksEx(
         dialogState.spellReplacementStr.clear();
         dialogState.spellNoErrors = false;
         dialogState.showAutoCorrectDialog = false;
+        dialogState.showOptionsDialog = false;
+        dialogState.showMailMergeDialog = false;
         docComp.autoCorrect = AutoCorrect{};
         dialogState.printRequested = false;
         dialogState.printPdfPath.clear();

@@ -1,0 +1,62 @@
+# Test: Tools menu density (Batch 3 fix round).
+# - AutoFormat... runs the AutoCorrect replacements as a batch pass
+#   over the whole document, one undo step.
+# - Options... toggles "Show text boundaries" live (flips the
+#   text_boundaries state), and the other two checkboxes are present.
+# - Mail Merge... opens the "Mail Merge Helper" stub (disabled
+#   Create/Get Data + data-source-required text) and closes cleanly.
+
+# AutoFormat: "teh" -> "The" (sentence start), "hello" -> "Hello".
+# Seed via replace_text (setText): typing would autocorrect
+# as-you-type and mask AutoFormat (it would find 0 corrections).
+type "seed"
+wait_frames 12
+replace_text "seed" "teh cat sat. hello world."
+wait_frames 12
+validate text=teh cat sat. hello world.
+
+menu_open Tools
+wait_frames 12
+menu_select "AutoFormat..."
+wait_frames 12
+
+validate text=The cat sat. Hello world.
+
+# Options: "Show text boundaries" flips live, then flips back.
+validate text_boundaries=false
+menu_open Tools
+wait_frames 12
+menu_select "Options..."
+wait_frames 12
+validate dialog_open=Options
+expect_text "Show text boundaries"
+expect_text "Spell check as you type"
+expect_text "AutoCorrect as you type"
+
+click_ui options_text_boundaries
+wait_frames 12
+validate text_boundaries=true
+
+click_ui options_text_boundaries
+wait_frames 12
+validate text_boundaries=false
+
+click_ui options_ok
+wait_frames 12
+validate dialog_open=false
+
+# Mail Merge: stub dialog, Close leaves the document untouched.
+menu_open Tools
+wait_frames 12
+menu_select "Mail Merge..."
+wait_frames 12
+validate dialog_open=MailMerge
+expect_text "Mail Merge Helper"
+expect_text "A data source is required"
+
+click_ui mail_merge_close
+wait_frames 12
+validate dialog_open=false
+validate text=The cat sat. Hello world.
+
+screenshot tools_density

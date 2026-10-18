@@ -313,6 +313,43 @@ TEST_CASE("AutoCorrect - User entries from the dialog", "[autocorrect]") {
     }
 }
 
+TEST_CASE("AutoCorrect::autoFormatPass - batch pass, one undo step",
+          "[autocorrect]") {
+    SECTION("corrects table words, sentence caps, two-initials") {
+        TextBuffer buffer;
+        buffer.setText("teh cat sat. hello world. TWo dogs.");
+        AutoCorrect ac;
+        std::size_t corrected = ac.autoFormatPass(buffer);
+        REQUIRE(corrected == 3);
+        REQUIRE(buffer.getText() ==
+                "The cat sat. Hello world. Two dogs.");
+    }
+    SECTION("one undo restores the whole document") {
+        TextBuffer buffer;
+        buffer.setText("teh cat sat. hello world.");
+        AutoCorrect ac;
+        REQUIRE(ac.autoFormatPass(buffer) == 2);
+        REQUIRE(buffer.getText() == "The cat sat. Hello world.");
+        buffer.undo();
+        REQUIRE(buffer.getText() == "teh cat sat. hello world.");
+    }
+    SECTION("clean text: no change, no undo step recorded") {
+        TextBuffer buffer;
+        buffer.setText("The cat sat.");
+        AutoCorrect ac;
+        REQUIRE(ac.autoFormatPass(buffer) == 0);
+        REQUIRE(buffer.getText() == "The cat sat.");
+        REQUIRE_FALSE(buffer.canUndo());
+    }
+    SECTION("empty document is a no-op") {
+        TextBuffer buffer;
+        buffer.setText("");
+        AutoCorrect ac;
+        REQUIRE(ac.autoFormatPass(buffer) == 0);
+        REQUIRE_FALSE(buffer.canUndo());
+    }
+}
+
 TEST_CASE("AutoCorrect - One-step undo via replaceRange", "[autocorrect]") {
     // The typing hook applies word + delimiter as one ReplaceRangesCommand;
     // one undo must restore the word before correction.

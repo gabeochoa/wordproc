@@ -465,6 +465,15 @@ inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
     refreshSpellingDialog(doc, dialogs);
 }
 
+// --- AutoFormat (Tools > AutoFormat...) ---
+// Batch pass over the whole document: the AutoCorrect replacements
+// as one undo step. Returns the number of words corrected.
+inline std::size_t autoFormatDocument(DocumentComponent& doc) {
+    std::size_t corrected = doc.autoCorrect.autoFormatPass(doc.buffer);
+    if (corrected > 0) doc.isDirty = true;
+    return corrected;
+}
+
 // --- AutoCorrect (replace-as-you-type) ---
 
 // Word-completion characters that trigger AutoCorrect: space and

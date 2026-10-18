@@ -278,7 +278,9 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
     // Text options
     doc["options"] = {
         {"smartQuotesEnabled", settings.smartQuotesEnabled},
-        {"tabWidth", settings.tabWidth}
+        {"tabWidth", settings.tabWidth},
+        {"showTextBoundaries", settings.showTextBoundaries},
+        {"spellCheckAsYouType", settings.spellCheckAsYouType}
     };
 
     // Page layout settings (document-specific, saved with file)
@@ -446,6 +448,14 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             }
             if (opts.contains("tabWidth")) {
                 settings.tabWidth = opts.at("tabWidth").get<int>();
+            }
+            if (opts.contains("showTextBoundaries")) {
+                settings.showTextBoundaries =
+                    opts.at("showTextBoundaries").get<bool>();
+            }
+            if (opts.contains("spellCheckAsYouType")) {
+                settings.spellCheckAsYouType =
+                    opts.at("spellCheckAsYouType").get<bool>();
             }
         }
 

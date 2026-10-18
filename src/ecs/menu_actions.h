@@ -849,6 +849,24 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 4:  // Grammar...
                     cmd::openGrammarDialog(doc, dialogs);
                     break;
+                case 5: {  // AutoFormat...: AutoCorrect batch pass,
+                           // one undo step.
+                    std::size_t corrected = cmd::autoFormatDocument(doc);
+                    if (corrected == 0) {
+                        toast_notify::info("AutoFormat: no corrections");
+                    } else {
+                        toast_notify::info(
+                            "AutoFormat: " + std::to_string(corrected) +
+                            (corrected == 1 ? " correction" : " corrections"));
+                    }
+                    break;
+                }
+                case 7:  // Mail Merge...: parity stub dialog.
+                    dialogs.showMailMergeDialog = true;
+                    break;
+                case 9:  // Options...
+                    dialogs.showOptionsDialog = true;
+                    break;
                 default:
                     break;
             }

@@ -241,8 +241,9 @@ inline std::vector<win95::Menu> createMenuBar(
     menus.push_back(formatMenu);   // Index 4: Format
 
     // Tools menu in Word 95 order: Spelling, Word Count, AutoCorrect,
-    // separator, Grammar, separator. The modern UI Scale... moved to
-    // View (bottom); the disabled Preferences... stub is gone.
+    // separator, Grammar, AutoFormat, separator, Mail Merge,
+    // separator, Options. The modern UI Scale... moved to View
+    // (bottom); the disabled Preferences... stub is gone.
     win95::Menu toolsMenu;
     toolsMenu.label = "Tools";
     toolsMenu.items = {
@@ -251,7 +252,11 @@ inline std::vector<win95::Menu> createMenuBar(
         {"AutoCorrect...", "", true, false, nullptr},           // 2
         {"", "", false, true, nullptr},                          // 3 Separator
         {"Grammar...", "", true, false, nullptr},                // 4
-        {"", "", false, true, nullptr}                           // 5 Separator
+        {"AutoFormat...", "", true, false, nullptr},            // 5
+        {"", "", false, true, nullptr},                          // 6 Separator
+        {"Mail Merge...", "", true, false, nullptr},            // 7
+        {"", "", false, true, nullptr},                          // 8 Separator
+        {"Options...", "", true, false, nullptr}                // 9
     };
     menus.push_back(toolsMenu);    // Index 5: Tools
 

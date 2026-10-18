@@ -942,8 +942,9 @@ struct EditorRenderSystem
         // visible range are unchanged, so this costs nothing per frame.
         // Skipped in Print Preview: preview shows printable content
         // only, so no squiggles are computed or rendered there.
-        // (Item 3 adds the spellCheckAsYouType gate to this same flag.)
-        bool wantSquiggles = !layout.previewMode;
+        // Also gated by Tools > Options "Spell check as you type".
+        bool wantSquiggles =
+            !layout.previewMode && doc.docSettings.spellCheckAsYouType;
         if (wantSquiggles) {
             int visible = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
             std::size_t firstRow = renderScrollOffset > 0
