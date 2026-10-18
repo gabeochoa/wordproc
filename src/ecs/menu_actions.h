@@ -778,10 +778,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 0:  // Spelling...
                     cmd::openSpellingDialog(doc, dialogs);
                     break;
-                case 1:  // Word Count...
+                case 1:  // AutoCorrect...
+                    dialogs.showAutoCorrectDialog = true;
+                    break;
+                case 2:  // Word Count...
                     dialogs.showWordCountDialog = true;
                     break;
-                case 3:  // UI Scale... (was Settings item 0)
+                case 4:  // UI Scale... (was Settings item 0)
                     dialogs.showSettingsDialog = true;
                     {
                         int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);

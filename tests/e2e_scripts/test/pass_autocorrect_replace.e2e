@@ -1,0 +1,8 @@
+# Test: AutoCorrect replace-as-you-type (table + sentence capital)
+# Typing "teh " corrects to "The " (table teh->the, then first-letter
+# capitalization at the sentence start).
+
+type "teh quick"
+wait_frames 12
+
+validate text=The quick

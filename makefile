@@ -252,6 +252,7 @@ TEST_SRC += src/editor/image.cpp
 TEST_SRC += src/editor/drawing.cpp
 TEST_SRC += src/editor/equation.cpp
 TEST_SRC += src/editor/spellcheck.cpp
+TEST_SRC += src/editor/autocorrect.cpp
 TEST_SRC += src/util/logging.cpp
 
 # Test object files
@@ -315,6 +316,10 @@ $(OBJ_DIR)/test/equation.o: src/editor/equation.cpp | $(OBJ_DIR)/test
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
 $(OBJ_DIR)/test/spellcheck.o: src/editor/spellcheck.cpp | $(OBJ_DIR)/test
+	@echo "Compiling $< for tests..."
+	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/test/autocorrect.o: src/editor/autocorrect.cpp | $(OBJ_DIR)/test
 	@echo "Compiling $< for tests..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 

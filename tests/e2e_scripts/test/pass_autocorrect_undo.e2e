@@ -1,0 +1,11 @@
+# Test: AutoCorrect is one undo step
+# Typing "TWo " corrects to "Two "; one Ctrl+Z restores "TWo"
+# (word + delimiter were replaced as a single command).
+
+type "TWo "
+wait_frames 12
+
+key CTRL+Z
+wait_frames 12
+
+validate text=TWo

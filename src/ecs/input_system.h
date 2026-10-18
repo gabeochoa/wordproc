@@ -70,10 +70,17 @@ struct TextInputSystem
                         insertSmartQuote(ch, "\xE2\x80\x98", "\xE2\x80\x99");
                     }
                 } else {
-                    std::size_t offset = doc.buffer.caretOffset();
-                    recordInsertRevision(doc, offset, std::string(1, ch));
-                    doc.buffer.insertChar(ch);
-                    doc.isDirty = true;
+                    // AutoCorrect: on word completion (space/punctuation),
+                    // replace the word + delimiter as a single undo step.
+                    // tryAutoCorrect returns true when it handled the key.
+                    bool handled = cmd::isAutoCorrectDelimiter(ch) &&
+                                   cmd::tryAutoCorrect(doc, ch);
+                    if (!handled) {
+                        std::size_t offset = doc.buffer.caretOffset();
+                        recordInsertRevision(doc, offset, std::string(1, ch));
+                        doc.buffer.insertChar(ch);
+                        doc.isDirty = true;
+                    }
                     caret::resetBlink(caret);
                 }
             }

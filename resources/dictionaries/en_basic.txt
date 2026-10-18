@@ -725,4 +725,19 @@ september
 october
 november
 december
+# AutoCorrect replacement targets (Batch 1): corrections must be known
+# words, or the corrected text would still be flagged as misspelled.
+address
+receive
+separate
+definitely
+occurred
+environment
+necessary
+success
+tomorrow
+weird
+truly
+accommodate
+occurrence
 

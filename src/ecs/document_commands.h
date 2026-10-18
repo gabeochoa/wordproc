@@ -301,6 +301,69 @@ inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
     refreshSpellingDialog(doc, dialogs);
 }
 
+// --- AutoCorrect (replace-as-you-type) ---
+
+// Word-completion characters that trigger AutoCorrect: space and
+// punctuation. Deliberately excludes newline (its own action) and
+// '-'/'/' (word-internal). '"' is included: when smart quotes are on,
+// the smart-quote branch handles quotes before this is reached, so this
+// only fires with smart quotes off (e.g. teh" -> the").
+inline bool isAutoCorrectDelimiter(char ch) {
+    switch (ch) {
+        case ' ':
+        case '.':
+        case ',':
+        case ';':
+        case ':':
+        case '!':
+        case '?':
+        case ')':
+        case ']':
+        case '}':
+        case '"':
+            return true;
+        default:
+            return false;
+    }
+}
+
+// If the word just before the caret has an AutoCorrect fix, replace the
+// word AND the delimiter being typed with the corrected word + delimiter,
+// as a single undo step. Returns true when a correction was applied
+// (the caller must not insert the delimiter separately then).
+inline bool tryAutoCorrect(DocumentComponent& doc, char delimiter) {
+    TextBuffer& buffer = doc.buffer;
+    if (buffer.hasSelection()) return false;
+    std::size_t caret = buffer.caretOffset();
+    // Caret inside a word (inserting mid-word) is not a completion.
+    if (caret < buffer.textSize() &&
+        SpellChecker::isWordChar(buffer.charAtOffset(caret))) {
+        return false;
+    }
+    std::size_t start = caret;
+    while (start > 0 &&
+           SpellChecker::isWordChar(buffer.charAtOffset(start - 1))) {
+        --start;
+    }
+    if (start == caret) return false;  // No word before the caret
+    std::string word;
+    word.reserve(caret - start);
+    for (std::size_t i = start; i < caret; ++i) {
+        word.push_back(buffer.charAtOffset(i));
+    }
+    bool sentenceStart =
+        doc.autoCorrect.settings.capitalizeFirstLetterOfSentence &&
+        AutoCorrect::isSentenceStart(buffer, start);
+    auto corrected = doc.autoCorrect.correct(word, sentenceStart);
+    if (!corrected) return false;
+    std::string replacement = *corrected + delimiter;
+    recordDeleteRevision(doc, start, word);
+    recordInsertRevision(doc, start, replacement);
+    buffer.replaceRange(start, word.size(), replacement);
+    doc.isDirty = true;
+    return true;
+}
+
 // --- Format toggles ---
 
 inline void toggleBold(DocumentComponent& doc) {

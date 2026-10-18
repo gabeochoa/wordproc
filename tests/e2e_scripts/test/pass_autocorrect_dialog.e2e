@@ -1,0 +1,23 @@
+# Test: Tools > AutoCorrect... dialog toggles work
+# Open the dialog, turn off "Replace text as you type" and "Capitalize
+# first letter of sentences", close, then type "teh quick": with both
+# off, no correction is applied.
+
+menu_open Tools
+wait_frames 12
+menu_select "AutoCorrect..."
+wait_frames 12
+
+validate dialog_open=AutoCorrect
+
+click_ui autocorrect_replace
+wait_frames 12
+click_ui autocorrect_capitalize
+wait_frames 12
+click_ui autocorrect_close
+wait_frames 12
+
+type "teh quick"
+wait_frames 12
+
+validate text=teh quick

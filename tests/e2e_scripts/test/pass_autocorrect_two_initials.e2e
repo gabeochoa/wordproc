@@ -1,0 +1,7 @@
+# Test: AutoCorrect TWo INitials correction
+# Typing "TWo " corrects to "Two " (second capital lowered).
+
+type "TWo initials"
+wait_frames 12
+
+validate text=Two initials

@@ -661,6 +661,70 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // AutoCorrect dialog (Tools > AutoCorrect...) - checkboxes bind
+        // directly to the AutoCorrect toggles, so Close just dismisses.
+        if (dialogs.showAutoCorrectDialog) {
+            constexpr int AUTOCORRECT_MODAL_ID = 50011;
+            auto result = afterhours::modal(ctx, mk(entity, AUTOCORRECT_MODAL_ID),
+                dialogs.showAutoCorrectDialog,
+                afterhours::ModalConfig{}
+                    .with_size(afterhours::ui::h720(420), afterhours::ui::h720(260))
+                    .with_title("AutoCorrect")
+                    .with_show_close_button(true));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                checkbox(ctx, mk(result.ent(), 0),
+                    doc.autoCorrect.settings.replaceTextAsYouType,
+                    ComponentConfig{}
+                        .with_debug_name("autocorrect_replace")
+                        .with_label("Replace text as you type")
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_render_layer(CONTENT_LAYER));
+
+                checkbox(ctx, mk(result.ent(), 1),
+                    doc.autoCorrect.settings.capitalizeFirstLetterOfSentence,
+                    ComponentConfig{}
+                        .with_debug_name("autocorrect_capitalize")
+                        .with_label("Capitalize first letter of sentences")
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_render_layer(CONTENT_LAYER));
+
+                checkbox(ctx, mk(result.ent(), 2),
+                    doc.autoCorrect.settings.correctTwoInitialCapitals,
+                    ComponentConfig{}
+                        .with_debug_name("autocorrect_two_initials")
+                        .with_label("Correct TWo INitial CApitals")
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto buttonRow = div(ctx, mk(result.ent(), 3),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_debug_name("autocorrect_close")
+                            .with_label("Close")
+                            .with_size(ComponentSize{h720(100), h720(32)})
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showAutoCorrectDialog = false;
+                    }
+                }
+            }
+        }
+
         // Comment input dialog
         if (dialogs.showCommentDialog) {
             constexpr int COMMENT_MODAL_ID = 50002;
@@ -1334,7 +1398,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
-            !dialogs.showSpellingDialog &&
+            !dialogs.showSpellingDialog && !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&
             !dialogs.showSettingsDialog && !dialogs.showBookmarkListDialog &&
             !dialogs.showSaveAsDialog && !dialogs.showPageSetup) {

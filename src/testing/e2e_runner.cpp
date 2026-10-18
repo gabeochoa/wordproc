@@ -348,6 +348,7 @@ static void setupCallbacksEx(
             if (dialogState.showSettingsDialog) return "Settings";
             if (dialogState.showWordCountDialog) return "WordCount";
             if (dialogState.showSpellingDialog) return "Spelling";
+            if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
             return "false";
         }
         if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";
@@ -764,6 +765,8 @@ static void setupCallbacksEx(
         dialogState.spellSuggestions.clear();
         dialogState.spellReplacementStr.clear();
         dialogState.spellNoErrors = false;
+        dialogState.showAutoCorrectDialog = false;
+        docComp.autoCorrect = AutoCorrect{};
         dialogState.showContextMenu = false;
         dialogState.contextMenuX = 0;
         dialogState.contextMenuY = 0;

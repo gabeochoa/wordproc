@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "../editor/autocorrect.h"
 #include "../editor/document_settings.h"
 #include "../editor/spell_squiggles.h"
 #include "../editor/spellcheck.h"
@@ -115,6 +116,9 @@ struct DocumentComponent : public afterhours::BaseComponent {
     SpellChecker spellChecker;
     SpellSquiggleCache spellSquiggles;
 
+    // AutoCorrect engine + toggles (Tools > AutoCorrect...).
+    AutoCorrect autoCorrect;
+
     // Drawings/shapes embedded in the document
     DrawingCollection drawings;
     
@@ -192,6 +196,9 @@ struct DialogState : public afterhours::BaseComponent {
     std::vector<std::string> spellSuggestions;
     std::string spellReplacementStr;
     bool spellNoErrors = false;  // "Spell check complete"
+
+    // AutoCorrect dialog (Tools > AutoCorrect...)
+    bool showAutoCorrectDialog = false;
 
     // Find / Replace
     bool showFindDialog = false;

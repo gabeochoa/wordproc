@@ -220,10 +220,11 @@ inline std::vector<win95::Menu> createMenuBar(
     toolsMenu.label = "Tools";
     toolsMenu.items = {
         {"Spelling...", "F7", true, false, nullptr},             // 0
-        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 1
-        {"", "", false, true, nullptr},                          // 2 Separator
-        {"UI Scale...", "", true, false, nullptr},               // 3 (was Settings)
-        {"Preferences...", "", false, false, nullptr}            // 4 (disabled, was Settings)
+        {"AutoCorrect...", "", true, false, nullptr},           // 1
+        {"Word Count...", "Ctrl+Shift+W", true, false, nullptr}, // 2
+        {"", "", false, true, nullptr},                          // 3 Separator
+        {"UI Scale...", "", true, false, nullptr},               // 4 (was Settings)
+        {"Preferences...", "", false, false, nullptr}            // 5 (disabled, was Settings)
     };
     menus.push_back(toolsMenu);    // Index 5: Tools
 
