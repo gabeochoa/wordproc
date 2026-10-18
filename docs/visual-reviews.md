@@ -63,3 +63,17 @@ https://pxl.cl/gBQ1j (round-3 set: gBPR6/gBPRv/gBPRF/gBPRX).
 Minor non-blockers noted: tiny notch in Word Count caption border,
 AutoCorrect list header separation. App chrome (ruler/page/toolbars/Window
 menu) deliberately unscored — that's Batch 2.
+
+## 2026-10-18 — P0 UX fixes (owner-reported, items 2/5/6/7/8/10)
+
+Reviewer: gpt-6-sol vs WinWorld Word 95 references. Before/after screenshots
+in /tmp/p0_before, /tmp/p0_after (after uploads: pxl.cl/gC9p9 idle,
+gC9pn Format menu, gC9pT selection, gC9q0 dialog buttons, gC9qr tooltip,
+gC9qD File menu long recent).
+
+Scores: menu labels 7/10, selection 9.5/10, beveled-button label 9/10,
+tooltip 9/10, shortcut inset 8.5/10, File-menu width/ellipsis 8/10.
+**Verdict: pass for all six scoped UX fixes.** Polish noted (not blockers):
+menu-bar File lacks the Word app icon/padding and labels sit in boxed
+separators; MRU entries read "Recent: <unix path>" instead of Word 95's
+numbered filenames — queued with the chrome batch.
