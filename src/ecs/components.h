@@ -430,6 +430,11 @@ struct ToolbarComponent : public afterhours::BaseComponent {
     bool fontDropdownOpen = false;
     bool fontSizeDropdownOpen = false;
 
+    // Print Preview zoom dropdown (preview toolbar) + Standard
+    // toolbar zoom dropdown open states.
+    bool previewZoomDropdownOpen = false;
+    bool zoomDropdownOpen = false;
+
 };
 
 }  // namespace ecs

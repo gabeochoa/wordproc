@@ -225,14 +225,19 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              float lineNumberGutterWidth = 50.0f,
                              int tabWidth = 4, float displayScale = 1.0f,
                              const SpellSquiggleCache* spellCache = nullptr,
-                             float indentScale = 1.0f) {
+                             float indentScale = 1.0f,
+                             bool suppressSelection = false) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
         spellCache ? &spellCache->squiggles : nullptr;
     std::size_t lineCount = buffer.lineCount();
     CaretPosition caret = buffer.caret();
-    bool hasSelection = buffer.hasSelection();
+    // suppressSelection (Print Preview): printable content only — no
+    // selection highlight, no inverse-selection redraw, no squiggle/
+    // selection interaction. Callers also pass spellCache=nullptr in
+    // preview so no squiggles render at all.
+    bool hasSelection = buffer.hasSelection() && !suppressSelection;
     CaretPosition selStart = buffer.selectionStart();
     CaretPosition selEnd = buffer.selectionEnd();
     
@@ -314,8 +319,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         int paragraphSpaceBefore = buffer.lineSpaceBefore(row);
         y += paragraphSpaceBefore;
         
-        // Draw page break indicator if present
-        if (buffer.hasPageBreakBefore(row)) {
+        // Draw page break indicator if present (editing adornment:
+        // hidden in Print Preview, which shows printable content only).
+        if (buffer.hasPageBreakBefore(row) && !suppressSelection) {
             // In paged mode, this would force a new page
             // In pageless mode, we show a visual indicator
             int breakY = y - 8;  // Position above the line
@@ -934,7 +940,11 @@ struct EditorRenderSystem
         // Refresh the spell-squiggle cache for the visible rows (union of
         // both panes in split view). No-op when the buffer version and the
         // visible range are unchanged, so this costs nothing per frame.
-        {
+        // Skipped in Print Preview: preview shows printable content
+        // only, so no squiggles are computed or rendered there.
+        // (Item 3 adds the spellCheckAsYouType gate to this same flag.)
+        bool wantSquiggles = !layout.previewMode;
+        if (wantSquiggles) {
             int visible = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
             std::size_t firstRow = renderScrollOffset > 0
                                        ? static_cast<std::size_t>(renderScrollOffset)
@@ -951,6 +961,11 @@ struct EditorRenderSystem
             }
             doc.spellSquiggles.update(doc.buffer, doc.spellChecker, firstRow, lastRow);
         }
+        const SpellSquiggleCache* squiggleCache =
+            wantSquiggles ? &doc.spellSquiggles : nullptr;
+        // Line numbers are an editing adornment: hidden in preview.
+        bool showLineNumbers =
+            layout.showLineNumbers && !layout.previewMode;
 
         if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
@@ -959,14 +974,14 @@ struct EditorRenderSystem
             LayoutComponent::Rect bottomArea = {effectiveArea.x, effectiveArea.y + splitHeight + 4.0f,
                                                 effectiveArea.width, splitHeight - 4.0f};
             renderTextBuffer(doc.buffer, topArea, caretVisible, fontSize,
-                             lineHeight, renderScrollOffset, layout.showLineNumbers,
+                             lineHeight, renderScrollOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             ds, &doc.spellSquiggles,
+                             ds, squiggleCache,
                              layout::displayScale(layout));
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
-                             lineHeight, scroll.secondaryOffset, layout.showLineNumbers,
+                             lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             ds, &doc.spellSquiggles,
+                             ds, squiggleCache,
                              layout::displayScale(layout));
 
             // Split divider
@@ -977,10 +992,11 @@ struct EditorRenderSystem
                              theme::BORDER_DARK);
         } else {
             renderTextBuffer(doc.buffer, effectiveArea, caretVisible, fontSize,
-                             lineHeight, renderScrollOffset, layout.showLineNumbers,
+                             lineHeight, renderScrollOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
-                             ds, &doc.spellSquiggles,
-                             layout::displayScale(layout));
+                             ds, squiggleCache,
+                             layout::displayScale(layout),
+                             layout.previewMode);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

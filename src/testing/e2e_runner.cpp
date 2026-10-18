@@ -410,7 +410,7 @@ static void setupCallbacksEx(
         if (prop == "page_mode")
             return layoutComp.pageMode == PageMode::Paged ? "paged" : "pageless";
         if (prop == "ruler_visible")
-            return (!layoutComp.focusMode && layoutComp.showRuler) ? "true" : "false";
+            return ecs::ruler::visible(layoutComp) ? "true" : "false";
         // Ruler/page scale coherence (ONE scale source):
         // ruler_ppi = 72 * displayScale; page width = 8.5 * ppi.
         if (prop == "ruler_ppi")
@@ -957,6 +957,8 @@ static void setupCallbacksEx(
         toolbarComp.styleDropdownOpen = false;
         toolbarComp.fontDropdownOpen = false;
         toolbarComp.fontSizeDropdownOpen = false;
+        toolbarComp.previewZoomDropdownOpen = false;
+        toolbarComp.zoomDropdownOpen = false;
 
         // Reset scroll state (no offset / remainder leaks between tests)
         scrollComp.offset = 0;

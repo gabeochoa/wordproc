@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../rl.h"
 #include "../ui/theme.h"
@@ -176,13 +178,19 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         float sepPadding = theme::layout::scale(4); // padding around separators
         
         // === Print Preview toolbar ===
-        // Replaces BOTH toolbars in preview mode: Print, Prev/Next Page,
-        // Zoom In/Out, "Page X of Y", Close Print Preview. Editing is
+        // ONE compact row (toolbarHeight, ~28px like the other
+        // toolbars), replacing BOTH toolbars in preview mode: Print,
+        // Prev/Next Page, "Page X of Y", Zoom dropdown, Close Print
+        // Preview. The old bar was toolbarHeight +
+        // formattingBarHeight (~56px, double height) because it
+        // replaced both toolbars' height; the Formatting toolbar and
+        // the ruler are gone in preview (component_helpers reclaims
+        // their height), so the bar is one row now. Editing is
         // disabled (TextInputSystem gates on previewMode); these
         // buttons plus scroll and zoom are the only live preview
         // controls. Returns early: no standard/formatting toolbar.
         if (layout.previewMode) {
-            float previewBarHeight = toolbarHeight + formattingBarHeight;
+            float previewBarHeight = toolbarHeight;
             div(ctx, mk(uiRoot, 1000),
                 ComponentConfig{}
                     .with_size(ComponentSize{pixels(screenWidth), pixels(previewBarHeight)})
@@ -197,21 +205,42 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             float pvX = buttonPadding;
             float pvY = toolbarY + buttonPadding;
             int pvId = 1100;
-            auto previewTextButton = [&](float x, float w, const std::string& label,
-                                         const std::string& debug, bool enabled) {
-                return button(ctx, mk(uiRoot, pvId++),
-                    absToolbarButton(x, pvY, buttonSize, enabled, false,
-                                     false, ToolbarIcon::None)
-                        .with_label(label)
-                        .with_size(ComponentSize{pixels(w), pixels(buttonSize)})
-                        .with_debug_name(debug));
+            // Beveled Win95 button (same visual language as
+            // win95ToolbarButtonStyle: raised bevel, BUTTON_FACE),
+            // absolute-positioned like the Standard toolbar buttons.
+            auto previewButton = [&](float x, float w, const std::string& label,
+                                     const std::string& debug, bool enabled,
+                                     ToolbarIcon icon = ToolbarIcon::None) {
+                auto cfg = ComponentConfig{}
+                    .with_size(ComponentSize{pixels(w), pixels(buttonSize)})
+                    .with_absolute_position()
+                    .with_translate(x, pvY)
+                    .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                    .with_custom_text_color(enabled ? ui_imm::win95_colors::TEXT
+                                                    : ui_imm::win95_colors::TEXT_DISABLED)
+                    .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                ui_imm::win95_colors::BORDER_LIGHT,
+                                ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                    .with_roundness(0.0f)
+                    .with_alignment(afterhours::ui::TextAlignment::Center)
+                    .with_justify_content(JustifyContent::Center)
+                    .with_align_items(AlignItems::Center)
+                    .with_cursor(afterhours::ui::CursorType::Pointer)
+                    .with_label(label)
+                    .with_debug_name(debug);
+                if (!enabled) cfg.disabled = true;
+                if (icon != ToolbarIcon::None) {
+                    cfg.with_on_draw_fg([icon, enabled](RectangleType r) {
+                        drawToolbarIcon(icon, r.x, r.y,
+                                        std::min(r.width, r.height), enabled);
+                    });
+                }
+                return button(ctx, mk(uiRoot, pvId++), cfg);
             };
 
             // Print (same action as File > Print... / Ctrl+P)
-            if (button(ctx, mk(uiRoot, pvId++),
-                absToolbarButton(pvX, pvY, buttonSize, true, false, false,
-                                 ToolbarIcon::Print)
-                    .with_label("").with_debug_name("btn_preview_print"))) {
+            if (previewButton(pvX, buttonSize, "", "btn_preview_print", true,
+                              ToolbarIcon::Print)) {
                 if (cache_.dialogs) cmd::requestPrint(doc, *cache_.dialogs);
             }
             pvX += buttonSize + buttonPadding;
@@ -221,14 +250,14 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             pvX += sepWidth + sepPadding;
 
             // Prev / Next Page (disabled at the first / last page)
-            if (previewTextButton(pvX, theme::layout::scale(72), "Prev Page",
-                                  "btn_preview_prev", layout.previewPage > 0)) {
+            if (previewButton(pvX, theme::layout::scale(72), "Prev Page",
+                              "btn_preview_prev", layout.previewPage > 0)) {
                 layout::previewPrevPage(layout);
             }
             pvX += theme::layout::scale(72) + buttonPadding;
-            if (previewTextButton(pvX, theme::layout::scale(72), "Next Page",
-                                  "btn_preview_next",
-                                  layout.previewPage < layout.previewPageCount - 1)) {
+            if (previewButton(pvX, theme::layout::scale(72), "Next Page",
+                              "btn_preview_next",
+                              layout.previewPage < layout.previewPageCount - 1)) {
                 layout::previewNextPage(layout);
             }
             pvX += theme::layout::scale(72) + buttonPadding;
@@ -255,26 +284,101 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                     .with_debug_name("preview_page_label"));
             pvX += theme::layout::scale(110) + buttonPadding;
 
-            // Zoom In / Out (same +/-0.1 steps as View > Zoom)
-            if (previewTextButton(pvX, theme::layout::scale(64), "Zoom +",
-                                  "btn_preview_zoom_in", true)) {
-                layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
+            drawEtchedSeparator(ctx, uiRoot, pvId, pvX + sepPadding / 2, pvY, buttonSize - 4);
+            pvId += 2;
+            pvX += sepWidth + sepPadding;
+
+            // Zoom dropdown: shows the current zoom %; choices wire
+            // to layout.zoomLevel and recompute the preview
+            // pagination estimate (zoom changes lines per page).
+            float zoomBtnX = pvX;
+            float zoomBtnW = theme::layout::scale(76);
+            std::string zoomLabel =
+                std::to_string(static_cast<int>(std::lround(
+                    layout.zoomLevel * 100.0f))) + "%";
+            test_input::register_visible_text(zoomLabel);
+            bool zoomOpen = cache_.toolbar &&
+                            cache_.toolbar->previewZoomDropdownOpen;
+            if (button(ctx, mk(uiRoot, pvId++),
+                absDropdownButton(zoomBtnX, pvY, zoomBtnW, buttonSize, zoomOpen)
+                    .with_label(zoomLabel)
+                    .with_debug_name("preview_zoom_dropdown"))) {
+                if (cache_.toolbar) {
+                    cache_.toolbar->previewZoomDropdownOpen = !zoomOpen;
+                }
             }
-            pvX += theme::layout::scale(64) + buttonPadding;
-            if (previewTextButton(pvX, theme::layout::scale(64), "Zoom -",
-                                  "btn_preview_zoom_out", true)) {
-                layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
+            pvX += zoomBtnW + buttonPadding;
+
+            if (zoomOpen) {
+                const int zoomChoices[] = {50, 75, 100, 150, 200};
+                float listY = pvY + buttonSize + 2.0f;
+                div(ctx, mk(uiRoot, pvId++),
+                    ah_win95::win95DropdownListStyle(zoomBtnW, 5)
+                        .with_translate(zoomBtnX, listY)
+                        .with_render_layer(50)
+                        .with_debug_name("preview_zoom_list"));
+                for (int i = 0; i < 5; ++i) {
+                    int pct = zoomChoices[i];
+                    bool selected = static_cast<int>(std::lround(
+                        layout.zoomLevel * 100.0f)) == pct;
+                    float itemY = listY + 2.0f + static_cast<float>(i) *
+                                                 theme::layout::scale(20);
+                    if (button(ctx, mk(uiRoot, pvId++),
+                        ComponentConfig{}
+                            .with_label(std::to_string(pct) + "%")
+                            .with_size(ComponentSize{pixels(zoomBtnW - 4.0f),
+                                                     pixels(theme::layout::scale(18))})
+                            .with_absolute_position()
+                            .with_translate(zoomBtnX + 2.0f, itemY)
+                            .with_custom_background(selected
+                                ? ui_imm::win95_colors::HIGHLIGHT
+                                : ui_imm::win95_colors::TEXT_AREA)
+                            .with_custom_text_color(selected
+                                ? ui_imm::win95_colors::TEXT_WHITE
+                                : ui_imm::win95_colors::TEXT)
+                            .with_roundness(0.0f)
+                            .with_render_layer(51)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_debug_name("preview_zoom_item_" +
+                                            std::to_string(pct)))) {
+                        layout.zoomLevel = static_cast<float>(pct) / 100.0f;
+                        if (cache_.toolbar) {
+                            cache_.toolbar->previewZoomDropdownOpen = false;
+                        }
+                        layout::updateLayout(layout, layout.screenWidth,
+                                             layout.screenHeight);
+                        layout::refreshPreviewPagination(
+                            layout, doc.buffer.lineCount(),
+                            doc.buffer.textStyle().fontSize);
+                    }
+                }
             }
-            pvX += theme::layout::scale(64) + buttonPadding;
 
             drawEtchedSeparator(ctx, uiRoot, pvId, pvX + sepPadding / 2, pvY, buttonSize - 4);
             pvId += 2;
             pvX += sepWidth + sepPadding;
 
             // Close Print Preview (Esc does the same; mode is restored)
-            if (previewTextButton(pvX, theme::layout::scale(120),
-                                  "Close Print Preview", "btn_preview_close", true)) {
+            if (previewButton(pvX, theme::layout::scale(120),
+                              "Close Print Preview", "btn_preview_close", true)) {
                 cmd::closePrintPreview(layout);
+            }
+
+            // Close the zoom dropdown on a click outside it (same
+            // rule as the formatting-bar dropdowns).
+            if (zoomOpen && cache_.toolbar && ctx.mouse.just_pressed) {
+                float mx = ctx.mouse.pos.x;
+                float my = ctx.mouse.pos.y;
+                float listY = pvY + buttonSize + 2.0f;
+                float listH = 5.0f * theme::layout::scale(20) +
+                              theme::layout::scale(4);
+                bool insideButton = mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
+                                    my >= pvY && my <= pvY + buttonSize;
+                bool insideList = mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
+                                  my >= listY && my <= listY + listH;
+                if (!insideButton && !insideList) {
+                    cache_.toolbar->previewZoomDropdownOpen = false;
+                }
             }
             return;
         }

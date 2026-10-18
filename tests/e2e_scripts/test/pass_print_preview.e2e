@@ -2,6 +2,13 @@
 # pages through a multi-page document, and closes back to pageless.
 # 200 lines guarantees more than one estimated preview page at any
 # window size; typing in preview must not change the document.
+#
+# Batch 3 fix round: preview is printable content only (no squiggles,
+# caret, selection — verified visually in the screenshot), ONE compact
+# ~28px toolbar row, the ruler is hidden in preview and the Formatting
+# bar is gone (text_area_y drops from 153 to 96 at ui_scale 1.2), the
+# status bar shows "Page X of Y" + zoom, and the Zoom dropdown wires
+# to the preview zoom.
 
 fill_lines 200 Preview page line
 wait_frames 12
@@ -14,6 +21,9 @@ wait_frames 12
 validate preview_mode=true
 validate preview_page=0
 validate page_mode=paged
+validate ruler_visible=false
+validate text_area_y=96
+expect_text "Page 1 of"
 
 screenshot print_preview
 
@@ -26,14 +36,27 @@ click_ui btn_preview_prev
 wait_frames 12
 validate preview_page=0
 
+# Zoom dropdown: 150% wires to the preview zoom (status bar shows
+# the new zoom; the page count estimate is recomputed from it).
+click_ui preview_zoom_dropdown
+wait_frames 12
+click_ui preview_zoom_item_150
+wait_frames 12
+validate zoom_level=150
+validate preview_page=0
+expect_text "150%"
+
 # Editing is disabled in preview: typed chars are drained, not inserted.
 type "x"
 wait_frames 12
 validate line_count=200
 
-# Close exits preview and restores the previous (pageless) mode.
+# Close exits preview and restores the previous (pageless) mode,
+# the ruler, and the full chrome height.
 click_ui btn_preview_close
 wait_frames 12
 validate preview_mode=false
 validate page_mode=pageless
+validate ruler_visible=true
+validate text_area_y=153
 validate line_count=200

@@ -95,10 +95,16 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
         layout.focusMode ? 0.0f : theme::layout::scale(layout.menuBarHeight);
     float toolbarHeight =
         layout.focusMode ? 0.0f : theme::layout::scale(layout.toolbarHeight);
-    float formattingBarHeight = layout.focusMode
-                                    ? 0.0f
-                                    : theme::layout::scale(layout.formattingBarHeight);
-    float rulerHeight = (layout.focusMode || !layout.showRuler)
+    // Print Preview shows ONE compact toolbar row: the Formatting
+    // toolbar is gone in preview, and the ruler is hidden in preview
+    // (Word shows a ruler in preview only via its toggle; default
+    // off), so both heights are reclaimed by the text area.
+    float formattingBarHeight =
+        (layout.focusMode || layout.previewMode)
+            ? 0.0f
+            : theme::layout::scale(layout.formattingBarHeight);
+    float rulerHeight = (layout.focusMode || !layout.showRuler ||
+                         layout.previewMode)
                             ? 0.0f
                             : theme::layout::scale(layout.rulerHeight);
     float statusHeight =
@@ -199,9 +205,11 @@ inline LayoutComponent::Rect effectiveTextArea(const LayoutComponent& layout) {
 namespace ruler {
 
 // The ruler is visible only outside focus mode and when not toggled
-// off (View > Ruler). When hidden, updateLayout reclaims its height.
+// off (View > Ruler). Hidden in Print Preview (Word default): the
+// showRuler flag itself is untouched, so exiting preview restores it.
+// When hidden, updateLayout reclaims its height.
 inline bool visible(const LayoutComponent& layout) {
-    return !layout.focusMode && layout.showRuler;
+    return !layout.focusMode && layout.showRuler && !layout.previewMode;
 }
 
 // Screen rect of the ruler band: immediately above the text area,
@@ -253,14 +261,14 @@ inline void setLineWidthLimit(LayoutComponent& layout, float chars) {
 // exists, so the page count is an estimate). Exiting restores the
 // remembered mode. Idempotent: entering twice is a no-op (the second
 // enter must not overwrite previewPrevPageMode with Paged).
-inline void enterPrintPreview(LayoutComponent& layout, std::size_t totalLines,
-                              int baseFontSize) {
-    if (layout.previewMode) return;
-    layout.previewPrevPageMode = layout.pageMode;
-    layout.previewMode = true;
-    layout.previewPage = 0;
-    layout.pageMode = PageMode::Paged;
-    updateLayout(layout, layout.screenWidth, layout.screenHeight);
+// Recompute the preview pagination estimate from the current
+// geometry (zoom changes the scaled line height, hence the lines
+// per page). No-op outside preview. Clamps the current page into
+// the new page count.
+inline void refreshPreviewPagination(LayoutComponent& layout,
+                                     std::size_t totalLines,
+                                     int baseFontSize) {
+    if (!layout.previewMode) return;
     // Lines per page from the paged geometry: page text height (page
     // height minus both margins, in display px) divided by the scaled
     // line height. Uses the Normal-paragraph font; headings/spacing
@@ -274,6 +282,19 @@ inline void enterPrintPreview(LayoutComponent& layout, std::size_t totalLines,
         scroll_math::previewLinesPerPage(textHeightPx, static_cast<float>(lineHeight));
     layout.previewPageCount =
         scroll_math::previewPageCount(totalLines, layout.previewLinesPerPage);
+    layout.previewPage = scroll_math::previewPageClamp(
+        layout.previewPage, layout.previewPageCount);
+}
+
+inline void enterPrintPreview(LayoutComponent& layout, std::size_t totalLines,
+                              int baseFontSize) {
+    if (layout.previewMode) return;
+    layout.previewPrevPageMode = layout.pageMode;
+    layout.previewMode = true;
+    layout.previewPage = 0;
+    layout.pageMode = PageMode::Paged;
+    updateLayout(layout, layout.screenWidth, layout.screenHeight);
+    refreshPreviewPagination(layout, totalLines, baseFontSize);
 }
 
 inline void exitPrintPreview(LayoutComponent& layout) {

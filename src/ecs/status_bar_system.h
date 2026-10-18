@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <ctime>
 #include <format>
 
@@ -45,16 +46,38 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
 
         Entity& uiRoot = ui_imm::getUIRootEntity();
 
-        // Build the left-side status string
-        CaretPosition caretPos = doc.buffer.caret();
-        TextStats stats = doc.buffer.stats();
+        // Build the left-side status string. In Print Preview the
+        // caret fields (Ln/Col/At) are meaningless — the preview page
+        // has no caret — so the bar shows "Page X of Y" plus the
+        // preview zoom instead, and the REC/MRK/EXT/OVR block on the
+        // right is suppressed. Exiting preview restores both sides.
+        std::string leftText;
+        std::string rightText;
+        if (layout.previewMode) {
+            int zoomPct =
+                static_cast<int>(std::lround(layout.zoomLevel * 100.0f));
+            leftText = std::format("Page {} of {}      {}%",
+                                    layout.previewPage + 1,
+                                    layout.previewPageCount, zoomPct);
+            rightText = "";
+        } else {
+            CaretPosition caretPos = doc.buffer.caret();
+            TextStats stats = doc.buffer.stats();
 
-        float inchPos = static_cast<float>(caretPos.column) / 72.0f;
-        std::string leftText = std::format(
-            "Page 1   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}",
-            caretPos.row + 1, stats.lines,
-            inchPos,
-            caretPos.row + 1, caretPos.column + 1);
+            float inchPos = static_cast<float>(caretPos.column) / 72.0f;
+            leftText = std::format(
+                "Page 1   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}",
+                caretPos.row + 1, stats.lines,
+                inchPos,
+                caretPos.row + 1, caretPos.column + 1);
+
+            // Build the right-side status string
+            std::time_t now = std::time(nullptr);
+            std::tm* localTime = std::localtime(&now);
+            char timeStr[16];
+            std::strftime(timeStr, sizeof(timeStr), "%I:%M %p", localTime);
+            rightText = std::format("REC   MRK   EXT   OVR      {}", timeStr);
+        }
 
         // Transient status message (e.g. "Paged mode" after a View >
         // Paged Mode switch) replaces the stats line until it expires.
@@ -65,13 +88,6 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
                                afterhours::graphics::get_time())) {
             leftText = cache_.status->text;
         }
-
-        // Build the right-side status string
-        std::time_t now = std::time(nullptr);
-        std::tm* localTime = std::localtime(&now);
-        char timeStr[16];
-        std::strftime(timeStr, sizeof(timeStr), "%I:%M %p", localTime);
-        std::string rightText = std::format("REC   MRK   EXT   OVR      {}", timeStr);
 
         // Register status bar text for E2E testing
         test_input::register_visible_text(leftText);
