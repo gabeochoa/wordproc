@@ -11,7 +11,8 @@ struct MenuItemData {
     bool enabled = true;
     bool isSeparator = false;
     // Checked mark (win95::MenuItem::mark == Checkmark in the real bar;
-    // MenuUISystem renders it as the "✓ " prefix).
+    // MenuUISystem renders it as the "√ " prefix — U+221A, since
+    // Roboto has no U+2713 ✓ glyph).
     bool checked = false;
 };
 

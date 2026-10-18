@@ -338,7 +338,15 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     std::string markPrefix;
                     if (item.mark != win95::MenuMark::None) {
                         switch (item.mark) {
-                            case win95::MenuMark::Checkmark: markPrefix = "\xE2\x9C\x93 "; break;
+                            // Checkmark is U+221A √, NOT U+2713 ✓:
+                            // the UI font (Roboto-Regular) has no
+                            // U+2713/U+2714 glyph (verified from its
+                            // cmap), so a ✓ prefix rendered as blank
+                            // and every checked item (View > Ruler,
+                            // Window's "1 <doc>") looked unchecked.
+                            // Roboto does have U+221A (glyph 391),
+                            // which reads as a checkmark at menu size.
+                            case win95::MenuMark::Checkmark: markPrefix = "\xE2\x88\x9A "; break;
                             case win95::MenuMark::Radio:     markPrefix = "\xE2\x80\xA2 "; break;
                             case win95::MenuMark::Dash:      markPrefix = "- "; break;
                             case win95::MenuMark::None: break;
