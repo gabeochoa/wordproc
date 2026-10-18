@@ -28,7 +28,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Find / Replace / Find Next-Prev | Have | P0 | dialog + F3/Shift+F3 |
 | Go To / Bookmarks | Partial | P1 | bookmark dialog + Go To Bookmark |
 | Track Changes (revise mode) | Partial | P1 | toggle + accept/reject all; no per-revision UI |
-| AutoCorrect | Missing | P0 | no engine hook on typing — Batch 1 |
+| AutoCorrect | Have | P0 | replace-as-type + TWo-caps + sentence cap; Tools dialog (Batch 1) |
 | Repeat (F4) | Missing | P2 | |
 
 ## View
@@ -75,10 +75,10 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
 | Word Count... | Have | P0 | dialog: words/chars/lines/paragraphs/sentences (verified in menu_ui_system.h) |
-| Spelling (F7 dialog) | Missing | P0 | SpellChecker engine exists, no dialog — Batch 1 |
-| Red squiggle spell check as you type | Missing | P0 | engine exists, no render — Batch 1 |
+| Spelling (F7 dialog) | Have | P0 | Batch 1: dialog + suggestions + Change All |
+| Red squiggle spell check as you type | Have | P0 | Batch 1: visible-lines cache, reviewer 8/10 |
 | Grammar check | Partial | P2 | GrammarChecker engine, no UI |
-| AutoCorrect engine | Missing | P0 | Batch 1 (two initial caps, replace-as-type table) |
+| AutoCorrect engine | Have | P0 | Batch 1 |
 | Thesaurus | Missing | P2 | |
 | Mail Merge... | Missing | P2 | stub OK per plan |
 | Options/Preferences | Partial | P2 | Preferences disabled in menu |
