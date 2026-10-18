@@ -948,10 +948,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // display name as fallback.
         if (dialogs.showGrammarDialog) {
             constexpr int GRAMMAR_MODAL_ID = 50012;
+            // Height fits the content: issue view is title(20) +
+            // body(~176) + panel padding(8) = ~204, so 215; the
+            // "check complete" view is ~96 tall, so 120. The old
+            // fixed 300 left ~95px of empty bottom in the issue view.
+            float grammarHeight =
+                cmd::grammarCurrentError(dialogs) ? 215.0f : 120.0f;
             auto result = afterhours::modal(ctx, mk(entity, GRAMMAR_MODAL_ID),
                 dialogs.showGrammarDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(430), afterhours::ui::h720(300),
+                    afterhours::ui::h720(430), afterhours::ui::h720(grammarHeight),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -1020,8 +1026,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
                     if (leftCol) {
-                    std::string sentence = grammarSentenceContext(
-                        doc.buffer.getText(), *current);
+                    GrammarContext grammarCtx =
+                        grammarSentenceContextWithHighlight(
+                            doc.buffer.getText(), *current);
+                    std::string sentence = grammarCtx.sentence;
                     std::string issue = cmd::grammarIssueLabel(*current);
                     std::string suggestion = current->suggestion.empty()
                         ? "(no suggestion)"
@@ -1054,9 +1062,68 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_render_layer(CONTENT_LAYER));
                     };
 
-                    // "In context:" — the sentence with the offending phrase.
+                    // "In context:" — the sentence as three spans:
+                    // before / offending phrase / after. The offending
+                    // span is navy bg + white text (HIGHLIGHT /
+                    // TEXT_WHITE), the rest white bg + black text, so
+                    // the exact phrase (e.g. the doubled "the the")
+                    // is visually marked. Each span sizes to its own
+                    // text (children() width), like the stepper value
+                    // labels; the row wraps at span boundaries.
                     fieldLabel(0, "In context:");
-                    sunkenField(1, sentence, "grammar_context", 44.0f);
+                    {
+                        auto contextRow = div(ctx, mk(leftCol.ent(), 1),
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name("grammar_context")
+                                .with_size(ComponentSize{percent(1.0f), h720(44.0f)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_wrap()
+                                .with_align_items(AlignItems::Center)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (contextRow) {
+                            auto span = [&](int id, const std::string& text,
+                                            afterhours::Color bg,
+                                            afterhours::Color fg,
+                                            const std::string& debug) {
+                                if (text.empty()) return;
+                                div(ctx, mk(contextRow.ent(), id),
+                                    ComponentConfig{}
+                                        .with_debug_name(debug)
+                                        .with_label(text)
+                                        // Text-height bg (children() tall),
+                                        // not full-field height: a rounded
+                                        // full-height div overflowed the
+                                        // sunken field and theme roundness
+                                        // made it a blob.
+                                        .with_size(ComponentSize{children(), children()})
+                                        .with_roundness(0.0f)
+                                        .with_padding(Padding::all(pixels(0)))
+                                        .with_margin(Margin{.top = pixels(0), .right = pixels(0), .bottom = pixels(0), .left = pixels(0)})
+                                        .with_custom_background(bg)
+                                        .with_custom_text_color(fg)
+                                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                                        .with_render_layer(CONTENT_LAYER));
+                            };
+                            std::string before = sentence.substr(
+                                0, grammarCtx.highlightStart);
+                            std::string marked = sentence.substr(
+                                grammarCtx.highlightStart,
+                                grammarCtx.highlightLength);
+                            std::string after = sentence.substr(
+                                grammarCtx.highlightStart +
+                                grammarCtx.highlightLength);
+                            span(0, before, ui_imm::win95_colors::TEXT_AREA,
+                                 ui_imm::win95_colors::TEXT,
+                                 "grammar_context_before");
+                            span(1, marked, ui_imm::win95_colors::HIGHLIGHT,
+                                 ui_imm::win95_colors::TEXT_WHITE,
+                                 "grammar_context_highlight");
+                            span(2, after, ui_imm::win95_colors::TEXT_AREA,
+                                 ui_imm::win95_colors::TEXT,
+                                 "grammar_context_after");
+                        }
+                    }
                     // Human wording for the issue (never the enum name).
                     fieldLabel(2, "Issue:");
                     sunkenField(3, issue, "grammar_issue", 26.0f);

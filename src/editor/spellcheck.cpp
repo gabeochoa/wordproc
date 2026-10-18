@@ -320,7 +320,12 @@ std::string grammarRuleDisplayName(const std::string& ruleId) {
 
 std::string grammarSentenceContext(const std::string& text,
                                    const GrammarError& error) {
-    if (text.empty()) return "";
+    return grammarSentenceContextWithHighlight(text, error).sentence;
+}
+
+GrammarContext grammarSentenceContextWithHighlight(
+    const std::string& text, const GrammarError& error) {
+    if (text.empty()) return {};
     std::size_t offset = std::min(error.offset, text.size());
     auto isTerminator = [](char ch) {
         return ch == '.' || ch == '!' || ch == '?' || ch == '\n';
@@ -353,8 +358,20 @@ std::string grammarSentenceContext(const std::string& text,
            std::isspace(static_cast<unsigned char>(text[end - 1]))) {
         --end;
     }
-    if (start >= end) return "";
-    return text.substr(start, end - start);
+    if (start >= end) return {};
+    // Offending span, clamped to the trimmed sentence: intersect
+    // [error.offset, error.offset+error.length) with [start, end).
+    GrammarContext out;
+    out.sentence = text.substr(start, end - start);
+    std::size_t errBegin = error.offset;
+    std::size_t errEnd = std::min(error.offset + error.length, text.size());
+    std::size_t spanBegin = std::max(errBegin, start);
+    std::size_t spanEnd = std::min(errEnd, end);
+    if (spanEnd > spanBegin) {
+        out.highlightStart = spanBegin - start;
+        out.highlightLength = spanEnd - spanBegin;
+    }
+    return out;
 }
 
 std::string grammarIgnoreKey(const GrammarError& error) {

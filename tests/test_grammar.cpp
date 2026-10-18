@@ -92,6 +92,50 @@ TEST_CASE("Grammar dialog - sentence context for In context:",
     }
 }
 
+TEST_CASE("Grammar dialog - In-context highlight span is sentence-relative",
+          "[grammar]") {
+    GrammarChecker checker;
+
+    SECTION("repeated word: 'The the' is 0:7 in its sentence") {
+        auto errors = checker.checkText("The the cat sat.");
+        REQUIRE(errors.size() == 1);
+        auto ctx = grammarSentenceContextWithHighlight(
+            "The the cat sat.", errors[0]);
+        REQUIRE(ctx.sentence == "The the cat sat.");
+        REQUIRE(ctx.highlightStart == 0);
+        REQUIRE(ctx.highlightLength == 7);
+        REQUIRE(ctx.sentence.substr(ctx.highlightStart,
+                                    ctx.highlightLength) == "The the");
+    }
+    SECTION("middle sentence: span is relative to the sentence, not the doc") {
+        std::string text = "First sentence here. The the cat sat. Last one.";
+        auto errors = checker.checkText(text);
+        REQUIRE(errors.size() == 1);
+        auto ctx = grammarSentenceContextWithHighlight(text, errors[0]);
+        REQUIRE(ctx.sentence == "The the cat sat.");
+        REQUIRE(ctx.highlightStart == 0);
+        REQUIRE(ctx.highlightLength == 7);
+    }
+    SECTION("double space inside a sentence") {
+        std::string text = "The the cat sat. A  B";
+        auto errors = checker.checkText(text);
+        REQUIRE(errors.size() == 2);
+        auto ctx = grammarSentenceContextWithHighlight(text, errors[1]);
+        REQUIRE(ctx.sentence == "A  B");
+        REQUIRE(ctx.highlightStart == 1);
+        REQUIRE(ctx.highlightLength == 2);
+        REQUIRE(ctx.sentence.substr(ctx.highlightStart,
+                                    ctx.highlightLength) == "  ");
+    }
+    SECTION("empty text has an empty span") {
+        GrammarError err;
+        auto ctx = grammarSentenceContextWithHighlight("", err);
+        REQUIRE(ctx.sentence.empty());
+        REQUIRE(ctx.highlightStart == 0);
+        REQUIRE(ctx.highlightLength == 0);
+    }
+}
+
 TEST_CASE("Grammar dialog - Change applies the suggestion, one undo step",
           "[grammar]") {
     // Pinned flow, at buffer level (the command layer does exactly

@@ -20,6 +20,7 @@ wait_frames 12
 
 validate dialog_open=Grammar
 validate grammar_error_count=2
+validate grammar_context_span=0:7
 expect_text "Repeated word"
 expect_text "The the cat sat."
 
@@ -30,6 +31,7 @@ screenshot grammar_dialog
 click_ui grammar_ignore_all
 wait_frames 12
 validate grammar_error_count=1
+validate grammar_context_span=1:2
 validate text=The the cat sat. A  B
 expect_text "Multiple consecutive spaces"
 expect_text "A  B"

@@ -365,6 +365,20 @@ static void setupCallbacksEx(
         if (prop == "print_requested") return dialogState.printRequested ? "true" : "false";
         if (prop == "print_pdf_exists") return dialogState.printPdfExists ? "true" : "false";
         if (prop == "grammar_error_count") return std::to_string(dialogState.grammarErrors.size());
+        // grammar_context_span=start:length — the offending span
+        // INSIDE the dialog's In-context sentence (not the document
+        // offset), e.g. 0:7 for "The the" in "The the cat sat.".
+        if (prop == "grammar_context_span") {
+            if (dialogState.grammarNoErrors ||
+                dialogState.grammarIndex >= dialogState.grammarErrors.size()) {
+                return "none";
+            }
+            GrammarContext ctx = grammarSentenceContextWithHighlight(
+                buffer.getText(),
+                dialogState.grammarErrors[dialogState.grammarIndex]);
+            return std::to_string(ctx.highlightStart) + ":" +
+                   std::to_string(ctx.highlightLength);
+        }
 
         // Dialog properties
         if (prop == "dialog_open") {

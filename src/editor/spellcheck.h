@@ -118,6 +118,21 @@ std::string grammarRuleDisplayName(const std::string& ruleId);
 std::string grammarSentenceContext(const std::string& text,
                                    const GrammarError& error);
 
+// Same sentence, plus the offending span INSIDE it: highlightStart
+// / highlightLength are offsets into `sentence` (not into the
+// document), clamped to the trimmed sentence, so the dialog can
+// render the context as spans with the exact phrase marked
+// (navy bg / white text). Zero length when the error does not
+// intersect the sentence (should not happen for real errors).
+struct GrammarContext {
+    std::string sentence;
+    std::size_t highlightStart = 0;
+    std::size_t highlightLength = 0;
+};
+
+GrammarContext grammarSentenceContextWithHighlight(
+    const std::string& text, const GrammarError& error);
+
 // Session-ignore key for Ignore All: the rule + the offending
 // phrase, so ignoring "The the" does not ignore every repeated word.
 std::string grammarIgnoreKey(const GrammarError& error);
