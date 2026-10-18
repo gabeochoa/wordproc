@@ -55,26 +55,15 @@ inline void vlog(LogLevel level, const char *file, int line,
     fmt::print("\n");
 }
 
+// fmt 11: compile-time-checked format strings replace make_args_checked
+// (removed in fmt 10). format_string<Args...> keeps the same call sites.
 template<typename... Args>
 inline void log_me(LogLevel level, const char *file, int line,
-                   const char *format, Args &&...args) {
+                   fmt::format_string<Args...> format, Args &&...args) {
     vlog(level, file, line, format,
-         fmt::make_args_checked<Args...>(format, args...));
+         fmt::make_format_args(args...));
 }
 
-template<typename... Args>
-inline void log_me(LogLevel level, const char *file, int line,
-                   const wchar_t *format, Args &&...args) {
-    vlog(level, file, line, format,
-         fmt::make_args_checked<Args...>(format, args...));
-}
-
-template<>
-inline void log_me(LogLevel level, const char *file, int line,
-                   const char *format, const char *&&args) {
-    vlog(level, file, line, format,
-         fmt::make_args_checked<const char *>(format, args));
-}
 
 // Thread-safe storage for log_once_per timing
 namespace {
@@ -98,8 +87,9 @@ inline void log_once_per(std::chrono::milliseconds interval, Level level,
         if (it == log_once_per_timestamps.end() ||
             (now - it->second) >= interval) {
             // Log the message and update timestamp
-            log_me(static_cast<LogLevel>(level), file, line, format,
-                   std::forward<Args>(args)...);
+            vlog(static_cast<LogLevel>(level), file, line,
+                 fmt::string_view(format),
+                 fmt::make_format_args(args...));
             log_once_per_timestamps[key] = now;
         }
     }

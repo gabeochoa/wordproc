@@ -8,6 +8,7 @@
 #include <fmt/args.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <fmt/std.h>  // fmt 11: std::filesystem::path formatter (was implicit in fmt 8)
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
