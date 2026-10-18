@@ -35,10 +35,10 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
 | Normal view | Missing | P1 | only pageless/paged |
-| Page Layout view | Partial | P0 | Paged Mode exists; verify margins/header rendering |
+| Page Layout view | Have | P0 | Paged Mode; framing verified headless screenshot 2026-10-18 (white Letter page, gray workspace, text inside 1in margins) |
 | Outline view | Partial | P1 | Show Outline pane exists; not a Word outline view |
 | Zoom (in/out/reset, %) | Have | P0 | Ctrl+Alt +/-/0 |
-| Ruler (indents/tabs draggable) | Partial | P0 | ruler rendered; drag indents/tabs to verify |
+| Ruler (indents/tabs draggable) | Have | P0 | Word 95 ruler: gray outside margins, white between, inch ticks, indent triangles; left/first-line/right markers drag to set indents (one undo step per drag); View > Ruler toggles; tab-stop marks at default stops (not draggable) |
 | Toolbars show/hide | Missing | P2 | Standard+Formatting always on |
 | Status bar | Partial | P0 | Word 6-style; page/sec/Ln/Col present, verify accuracy |
 | Header/Footer view | Partial | P1 | Insert Header/Footer entries exist |
@@ -63,7 +63,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Font... dialog (family/size/effects) | Partial | P0 | Formatting toolbar dropdowns; only 2 families wired |
 | Bold/Italic/Underline/Strike/Super/Sub | Have | P0 | |
 | Alignment L/C/R/Justify | Have | P0 | |
-| Indents & Tabs (ruler + dialog) | Partial | P0 | indent keys + Tab Width dialog |
+| Indents & Tabs (ruler + dialog) | Partial | P0 | ruler drag sets indents (one undo step) + indent keys + Tab Width dialog; no full Paragraph dialog |
 | Bullets & Numbering | Have | P0 | multi-level list indent |
 | Paragraph... (spacing/line spacing) | Partial | P1 | menu increments, no full dialog |
 | Borders and Shading... | Missing | P1 | table borders render; no dialog |
@@ -94,8 +94,8 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Window
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Window menu (multi-document) | Missing | P1 | single-document app; menu absent entirely |
-| Split pane | Partial | P1 | View>Split View exists |
+| Window menu (multi-document) | Have | P1 | single-document app: Window menu between Table and Help with Split + "1 <current file>" checked/disabled |
+| Split pane | Have | P1 | View > Split View + Window > Split, both toggle splitViewEnabled |
 
 ## Help
 | Feature | Status | Priority | Notes |
@@ -112,9 +112,10 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 30 · Partial 21 · Missing 14** (after Batch 1) (65 grouped rows; several rows bundle
+**Have 34 · Partial 18 · Missing 13** (after Batch 2) (65 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
-highest daily value, engine already exists. Then: Print Preview/Print,
-Window menu + Normal/Outline views, Columns, Borders/Shading dialog,
+highest daily value, engine already exists. Batch 2 = app chrome (Word 95
+ruler + drag, paged framing verify, Window menu). Then: Print Preview/Print,
+Normal/Outline views, Columns, Borders/Shading dialog,
 full Font dialog + more families, Date/Time insert, toolbar icon fidelity.

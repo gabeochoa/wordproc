@@ -59,16 +59,33 @@ struct MenuUISystem : System<UIContext<InputAction>> {
 
         if (layout.focusMode) return;
 
-        // Refresh menus if recent file count changed
+        // Refresh menus if recent file count changed, or if the open
+        // document changed (the Window menu lists "1 <current file>").
         const auto& recentFiles = Settings::get().get_recent_files();
-        if (static_cast<int>(recentFiles.size()) != menu.recentFilesCount) {
-            menu.menus = menu_setup::createMenuBar(recentFiles);
+        std::string expectedWindowLabel =
+            menu_setup::windowDocLabel(doc.filePath);
+        if (static_cast<int>(recentFiles.size()) != menu.recentFilesCount ||
+            menu.windowDocLabel != expectedWindowLabel) {
+            menu.menus = menu_setup::createMenuBar(recentFiles, doc.filePath);
             menu.recentFilesCount = static_cast<int>(recentFiles.size());
+            menu.windowDocLabel = expectedWindowLabel;
 
             if (doc.trackChangesEnabled &&
                 menu.menus.size() > 1 &&
                 menu.menus[1].items.size() > 3) {
                 menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
+            }
+        }
+
+        // Keep the View > Ruler checkmark in sync: any menu rebuild
+        // resets marks to the createMenuBar defaults.
+        for (auto& m : menu.menus) {
+            if (m.label != "View") continue;
+            for (auto& item : m.items) {
+                if (item.label == "Ruler") {
+                    item.mark = layout.showRuler ? win95::MenuMark::Checkmark
+                                                 : win95::MenuMark::None;
+                }
             }
         }
         

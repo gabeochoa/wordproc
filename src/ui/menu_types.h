@@ -220,6 +220,14 @@ inline std::vector<MenuData> createMenuBarData() {
                        {"Split Cell", "", true, false}};
     menus.push_back(tableMenu);
 
+    // Window menu (between Table and Help, as in menu_setup)
+    MenuData windowMenu;
+    windowMenu.label = "Window";
+    windowMenu.items = {{"Split", "", true, false},
+                        {"", "", false, true},  // Separator
+                        {"1 Untitled", "", false, false}};
+    menus.push_back(windowMenu);
+
     // Help menu
     MenuData helpMenu;
     helpMenu.label = "Help";

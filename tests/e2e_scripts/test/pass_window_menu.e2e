@@ -1,0 +1,24 @@
+# Test: Window menu (Word 95 order)
+# Validates the menu bar order File Edit View Insert Format Tools
+# Table Window Help, the Window menu's checked/disabled-active
+# current-document item, and Window > Split toggling split view.
+
+validate menu_labels=File,Edit,View,Insert,Format,Tools,Table,Window,Help
+validate window_doc_label=1 Untitled
+validate split_view=false
+
+menu_open Window
+validate menu_open=Window
+menu_select "Split"
+wait_frames 6
+validate split_view=true
+
+menu_open Window
+menu_select "Split"
+wait_frames 6
+validate split_view=false
+
+# Opening a file retitles the Window doc item to that file.
+open_file test_files/e2e/hello.txt
+wait_frames 12
+validate window_doc_label=1 hello.txt

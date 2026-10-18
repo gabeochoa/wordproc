@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 
 #include "menu_geometry.h"
@@ -7,9 +8,22 @@
 
 namespace menu_setup {
 
+// Label of the Window menu's current-document item ("1 <name>"),
+// shared by createMenuBar and by the MenuUISystem rebuild check so
+// the label follows the open document.
+inline std::string windowDocLabel(const std::string& filePath) {
+    std::string name;
+    if (!filePath.empty()) {
+        name = std::filesystem::path(filePath).filename().string();
+    }
+    if (name.empty()) name = "Untitled";
+    return "1 " + name;
+}
+
 // Create the standard Win95-style menu bar for the word processor
 inline std::vector<win95::Menu> createMenuBar(
-    const std::vector<std::string>& recentFiles = {}) {
+    const std::vector<std::string>& recentFiles = {},
+    const std::string& currentFilePath = {}) {
     std::vector<win95::Menu> menus;
 
     // File menu
@@ -255,13 +269,26 @@ inline std::vector<win95::Menu> createMenuBar(
     };
     menus.push_back(tableMenu);    // Index 6: Table
 
+    // Window menu (Word 95 order: between Table and Help).
+    // Single-document app, so the document list is just the current
+    // document, checked and disabled (it is the active window).
+    win95::Menu windowMenu;
+    windowMenu.label = "Window";
+    win95::MenuItem docItem{windowDocLabel(currentFilePath), "", false,
+                            false, nullptr};
+    docItem.mark = win95::MenuMark::Checkmark;
+    windowMenu.items = {{"Split", "", true, false, nullptr},  // 0
+                        {"", "", false, true, nullptr},        // 1 Separator
+                        std::move(docItem)};                   // 2 "1 <name>"
+    menus.push_back(windowMenu);   // Index 7: Window
+
     // Help menu (always last per Win95 guidelines)
     win95::Menu helpMenu;
     helpMenu.label = "Help";
     helpMenu.items = {{"Keyboard Shortcuts...", "F1", true, false, nullptr},
                       {"", "", false, true, nullptr},  // Separator
                       {"About Wordproc", "", true, false, nullptr}};
-    menus.push_back(helpMenu);     // Index 7: Help
+    menus.push_back(helpMenu);     // Index 8: Help
 
     return menus;
 }

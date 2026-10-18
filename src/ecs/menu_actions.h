@@ -776,7 +776,17 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 default:
                     break;
             }
-        } else if (menuIndex == 7) {  // Help menu
+        } else if (menuIndex == 7) {  // Window menu
+            switch (itemIndex) {
+                case 0:  // Split (same as View > Split View)
+                    layout.splitViewEnabled = !layout.splitViewEnabled;
+                    toast_notify::info(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
+                    break;
+                case 2:  // "1 <current document>" — checked, disabled: no-op
+                default:
+                    break;
+            }
+        } else if (menuIndex == 8) {  // Help menu
             if (itemIndex == 0) {     // Keyboard Shortcuts
                 dialogs.showHelpWindow = true;
             } else if (itemIndex == 2) {  // About (after separator)

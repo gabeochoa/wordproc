@@ -192,7 +192,10 @@ static void app_init() {
     app_state::menuComp = &menuComp;
     {
         SCOPED_TIMER("createMenuBar");
-        menuComp.menus = menu_setup::createMenuBar(Settings::get().get_recent_files());
+        menuComp.menus = menu_setup::createMenuBar(
+            Settings::get().get_recent_files(), docComp.filePath);
+        menuComp.windowDocLabel =
+            menu_setup::windowDocLabel(docComp.filePath);
     }
     menuComp.recentFilesCount =
         static_cast<int>(Settings::get().get_recent_files().size());

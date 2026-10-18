@@ -115,9 +115,15 @@ TEST_CASE("Menu items have correct properties", "[menu]") {
     SECTION("Enabled items are marked as enabled") {
         for (const auto& menu : menus) {
             for (const auto& item : menu.items) {
-                if (!item.isSeparator) {
-                    REQUIRE(item.enabled == true);
+                if (item.isSeparator) continue;
+                // Except the Window menu's current-document item:
+                // checked + disabled by design (it is the active window).
+                if (menu.label == "Window" &&
+                    item.label.rfind("1 ", 0) == 0) {
+                    REQUIRE(item.enabled == false);
+                    continue;
                 }
+                REQUIRE(item.enabled == true);
             }
         }
     }
@@ -152,4 +158,27 @@ TEST_CASE("File menu specifically exists", "[menu][e2e][regression]") {
     REQUIRE(hasOpen);
     REQUIRE(hasSave);
     REQUIRE(hasExit);
+}
+
+TEST_CASE("Window menu sits between Table and Help", "[menu]") {
+    auto menus = createMenuBarData();
+
+    std::size_t tableIdx = menus.size(), windowIdx = menus.size(),
+                helpIdx = menus.size();
+    for (std::size_t i = 0; i < menus.size(); ++i) {
+        if (menus[i].label == "Table") tableIdx = i;
+        if (menus[i].label == "Window") windowIdx = i;
+        if (menus[i].label == "Help") helpIdx = i;
+    }
+    REQUIRE(tableIdx < menus.size());
+    REQUIRE(windowIdx == tableIdx + 1);
+    REQUIRE(helpIdx == windowIdx + 1);
+
+    const auto& window = menus[windowIdx];
+    REQUIRE(window.items.size() == 3);
+    REQUIRE(window.items[0].label == "Split");
+    REQUIRE(window.items[0].enabled == true);
+    REQUIRE(window.items[1].isSeparator);
+    REQUIRE(window.items[2].label == "1 Untitled");
+    REQUIRE(window.items[2].enabled == false);
 }

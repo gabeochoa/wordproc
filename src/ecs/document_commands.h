@@ -74,7 +74,8 @@ inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
                            const std::string& filePath) {
     Settings::get().add_recent_file(filePath);
     menu.menus = menu_setup::createMenuBar(
-        Settings::get().get_recent_files());
+        Settings::get().get_recent_files(), doc.filePath);
+    menu.windowDocLabel = menu_setup::windowDocLabel(doc.filePath);
     menu.recentFilesCount = static_cast<int>(
         Settings::get().get_recent_files().size());
     if (doc.trackChangesEnabled &&
