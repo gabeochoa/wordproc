@@ -30,6 +30,7 @@ void initializeRunner(
     ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
+    ecs::ScrollComponent& scrollComp,
     const std::string& screenshotDir
 );
 
@@ -50,6 +51,7 @@ void initializeRunnerBatch(
     ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
+    ecs::ScrollComponent& scrollComp,
     const std::string& screenshotDir
 );
 

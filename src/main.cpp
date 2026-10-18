@@ -324,10 +324,10 @@ static void app_init() {
     app_state::scriptRunner = &runner;
     if (!app_state::testScriptDir.empty()) {
         // Batch mode: load all scripts from directory
-        e2e::initializeRunnerBatch(runner, app_state::testScriptDir, docComp, menuComp, dialogState, layoutComp, toolbarComp, app_state::screenshotDir);
+        e2e::initializeRunnerBatch(runner, app_state::testScriptDir, docComp, menuComp, dialogState, layoutComp, toolbarComp, *app_state::scrollComp, app_state::screenshotDir);
     } else if (!app_state::testScriptPath.empty()) {
         // Single script mode
-        e2e::initializeRunner(runner, app_state::testScriptPath, docComp, menuComp, dialogState, layoutComp, toolbarComp, app_state::screenshotDir);
+        e2e::initializeRunner(runner, app_state::testScriptPath, docComp, menuComp, dialogState, layoutComp, toolbarComp, *app_state::scrollComp, app_state::screenshotDir);
     }
     
     // Set E2E timeout (default 30s, can be increased for large document tests)

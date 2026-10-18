@@ -176,10 +176,11 @@ static void setupCallbacksEx(
     ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
+    ecs::ScrollComponent& scrollComp,
     const std::string& screenshotDir
 ) {
     // Set up property getter for validation (extended version)
-    runner.set_property_getter([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp](const std::string& prop) -> std::string {
+    runner.set_property_getter([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp, &scrollComp](const std::string& prop) -> std::string {
         (void)toolbarComp; // Available if needed for future property queries
         const auto& buffer = docComp.buffer;
         const auto& style = buffer.textStyle();
@@ -208,7 +209,8 @@ static void setupCallbacksEx(
         if (prop == "caret_col") return std::to_string(buffer.caret().column);
         if (prop == "superscript") return style.superscript ? "true" : "false";
         if (prop == "subscript") return style.subscript ? "true" : "false";
-        
+        if (prop == "scroll_offset") return std::to_string(scrollComp.offset);
+
         // Text statistics
         if (prop == "word_count") {
             TextStats stats = buffer.stats();
@@ -704,7 +706,7 @@ static void setupCallbacksEx(
     // Note: document_dump command is now handled by ECS system in e2e_commands.h
     
     // Set up document clearer (for batch mode)
-    runner.set_reset_callback([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp]() {
+    runner.set_reset_callback([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp, &scrollComp]() {
         // Reset document state
         docComp.buffer.setText("");
         docComp.buffer.clearSelection();
@@ -790,6 +792,13 @@ static void setupCallbacksEx(
         toolbarComp.styleDropdownOpen = false;
         toolbarComp.fontDropdownOpen = false;
         toolbarComp.fontSizeDropdownOpen = false;
+
+        // Reset scroll state (no offset / remainder leaks between tests)
+        scrollComp.offset = 0;
+        scrollComp.secondaryOffset = 0;
+        scrollComp.wheelRemainder = 0.0f;
+        scrollComp.scrollbarDragging = false;
+        scrollComp.scrollbarRepeatDir = 0;
         
         // Reset theme
         theme::applyDarkMode(false);
@@ -827,12 +836,13 @@ void initializeRunner(
     ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
+    ecs::ScrollComponent& scrollComp,
     const std::string& screenshotDir
 ) {
     if (scriptPath.empty()) {
         return;
     }
-    
+
     LOG_INFO("Loading E2E test script: %s", scriptPath.c_str());
     runner.load_script(scriptPath);
     
@@ -849,7 +859,7 @@ void initializeRunner(
     
     fprintf(stderr, "[E2E DEBUG] Setting up callbacks for script\n");
     fflush(stderr);
-    setupCallbacksEx(runner, docComp, menuComp, dialogState, layoutComp, toolbarComp, screenshotDir);
+    setupCallbacksEx(runner, docComp, menuComp, dialogState, layoutComp, toolbarComp, scrollComp, screenshotDir);
     fprintf(stderr, "[E2E DEBUG] Callbacks setup complete\n");
     fflush(stderr);
 }
@@ -862,6 +872,7 @@ void initializeRunnerBatch(
     ecs::DialogState& dialogState,
     ecs::LayoutComponent& layoutComp,
     ecs::ToolbarComponent& toolbarComp,
+    ecs::ScrollComponent& scrollComp,
     const std::string& screenshotDir
 ) {
     if (scriptDir.empty()) {
@@ -876,7 +887,7 @@ void initializeRunnerBatch(
         return;
     }
     
-    setupCallbacksEx(runner, docComp, menuComp, dialogState, layoutComp, toolbarComp, screenshotDir);
+    setupCallbacksEx(runner, docComp, menuComp, dialogState, layoutComp, toolbarComp, scrollComp, screenshotDir);
 }
 
 }  // namespace e2e

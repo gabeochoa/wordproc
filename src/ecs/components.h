@@ -33,6 +33,16 @@ struct ScrollComponent : public afterhours::BaseComponent {
     int visibleLines = 20;  // Number of visible lines
     int maxScroll = 0;      // Maximum scroll value
     int secondaryOffset = 0;  // Secondary scroll offset for split view
+    // Sub-line wheel remainder: fractional lines carried across frames so
+    // small wheel deltas accumulate instead of being truncated away.
+    // Owned by NavigationSystem via scroll_math::accumulateWheel.
+    float wheelRemainder = 0.0f;
+    // Scrollbar interaction state (owned by the scrollbar system).
+    bool scrollbarDragging = false;
+    float scrollbarDragStartY = 0.0f;
+    int scrollbarDragStartOffset = 0;
+    int scrollbarRepeatDir = 0;  // -1 up, +1 down, 0 idle (arrow hold)
+    double scrollbarRepeatNext = 0.0;  // get_time() when the next repeat fires
 };
 
 // Component for document state

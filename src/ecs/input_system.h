@@ -9,6 +9,7 @@
 #include "../input/action_map.h"
 #include "../rl.h"
 // test_input:: available via rl.h -> external.h
+#include "../editor/scroll_math.h"
 #include "../ui/input.h"
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"
@@ -352,6 +353,10 @@ struct KeyboardShortcutSystem
 struct NavigationSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
                                 ScrollComponent, LayoutComponent, InputComponent> {
+    // Last caret row we snapped to. The caret snap only fires when the
+    // caret actually moved: otherwise every wheel/scrollbar scroll would
+    // be undone on the next frame by snapping back to the caret.
+    int lastCaretRow_ = -1;
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, ScrollComponent& scroll,
@@ -441,27 +446,36 @@ struct NavigationSystem
             }
         }
 
-        // Mouse wheel scrolling
+        // Mouse wheel scrolling: fractional wheel deltas accumulate in
+        // scroll.wheelRemainder so small deltas sum to whole lines instead
+        // of being truncated away each frame; large flicks apply at once.
         float wheelMove = input::getMouseWheelMove();
-        bool scrolledWithWheel = false;
+        int wheelLines = 0;
         if (wheelMove != 0.0f) {
-            int scrollLines = static_cast<int>(-wheelMove * 3);
+            wheelLines = scroll_math::accumulateWheel(scroll.wheelRemainder, wheelMove);
             if (layout.splitViewEnabled && shift_down) {
-                scroll.secondaryOffset += scrollLines;
+                scroll.secondaryOffset += wheelLines;
                 clampSecondary();
             } else {
-                scroll.offset += scrollLines;
-                scrolledWithWheel = true;
+                scroll.offset += wheelLines;
             }
         }
 
-        // Auto-scroll to keep caret visible, but NOT if user just scrolled with mouse wheel
-        // (allow user to freely scroll through document without caret snapping back)
-        if (!scrolledWithWheel) {
-            CaretPosition caretPos = doc.buffer.caret();
-            scroll::scrollToRow(scroll, static_cast<int>(caretPos.row));
+        // Auto-scroll to keep the caret visible, but only when the caret
+        // actually moved (typing, arrows, clicks). Wheel/scrollbar scrolls
+        // leave the caret alone, so snapping every frame would undo them.
+        {
+            int caretRow = static_cast<int>(doc.buffer.caret().row);
+            if (caretRow != lastCaretRow_) {
+                scroll::scrollToRow(scroll, caretRow);
+                lastCaretRow_ = caretRow;
+            }
         }
         scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
+        // Pinned at a bound in the direction of travel: drop the remainder
+        // so reversing doesn't have to overcome a stale fraction.
+        if (wheelLines < 0 && scroll.offset == 0) scroll.wheelRemainder = 0.0f;
+        if (wheelLines > 0 && scroll.offset == scroll.maxScroll) scroll.wheelRemainder = 0.0f;
     }
 };
 

@@ -1,0 +1,74 @@
+# P0-1: wheel scrolling accumulates sub-line deltas; large flicks apply at once.
+# Ten 0.1-notch downward events = 3 lines (each is 0.3 lines, truncated
+# away pre-fix so ten events moved 0 lines).
+
+open_file test_files/public_domain/war_and_peace.txt
+wait_frames 30
+key CTRL+UP
+wait_frames 12
+validate scroll_offset=0
+
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=0
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=0
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=0
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=1
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=1
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=1
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=2
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=2
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=2
+scroll_wheel 0 -0.1
+wait_frames 6
+validate scroll_offset=3
+
+# Large flick: 2 notches down = 6 lines at once.
+scroll_wheel 0 -2
+wait_frames 6
+validate scroll_offset=9
+
+# Scroll back up: ten 0.1-notch events return 3 lines, then a 2-notch
+# flick returns the remaining 6.
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+scroll_wheel 0 0.1
+wait_frames 6
+validate scroll_offset=6
+scroll_wheel 0 2
+wait_frames 6
+validate scroll_offset=0
+
+screenshot p0_scroll_accumulation
