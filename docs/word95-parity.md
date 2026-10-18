@@ -112,7 +112,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 26 · Partial 21 · Missing 18** (65 grouped rows; several rows bundle
+**Have 30 · Partial 21 · Missing 14** (after Batch 1) (65 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Then: Print Preview/Print,
