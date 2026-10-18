@@ -347,6 +347,7 @@ static void app_init() {
         e2eConfig.doc_comp = &docComp;
         e2eConfig.menu_comp = &menuComp;
         e2eConfig.dialog_state = &dialogState;
+        e2eConfig.scroll_comp = app_state::scrollComp;
         e2eConfig.screenshot_callback = [](const std::string& name) {
             std::filesystem::path dir = std::filesystem::absolute(app_state::screenshotDir);
             std::filesystem::create_directories(dir);

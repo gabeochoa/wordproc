@@ -52,18 +52,6 @@ struct ScrollbarSystem : public afterhours::System<DocumentComponent, ScrollComp
         bool swallow = pressed && prevMenuOpen_;
         prevMenuOpen_ = anyMenuOpen;
 
-        // A menu or modal owns this press: cancel any in-progress
-        // scrollbar gesture and do nothing else.
-        if (anyMenuOpen || anyModalDialogOpen(dialogs) || swallow) {
-            scroll.scrollbarDragging = false;
-            scroll_math::arrowRepeatRelease(scroll.scrollbarRepeatDir);
-            return;
-        }
-        if (released) {
-            scroll.scrollbarDragging = false;
-            scroll_math::arrowRepeatRelease(scroll.scrollbarRepeatDir);
-        }
-
         int totalLines = static_cast<int>(doc.buffer.lineCount());
         int visible = scroll.visibleLines > 0 ? scroll.visibleLines : 20;
         int maxScroll = std::max(0, totalLines - visible);
@@ -80,6 +68,30 @@ struct ScrollbarSystem : public afterhours::System<DocumentComponent, ScrollComp
         };
 
         auto mouse = input::getMousePosition();
+
+        // A menu or modal owns this press: cancel any in-progress
+        // scrollbar gesture and do nothing else.
+        if (anyMenuOpen || anyModalDialogOpen(dialogs) || swallow) {
+            scroll.scrollbarDragging = false;
+            scroll_math::arrowRepeatRelease(scroll.scrollbarRepeatDir);
+            return;
+        }
+        if (released && scroll.scrollbarDragging) {
+            // Apply the drag's final position on release: if the move
+            // frame was missed (drag phases racing the auto-release),
+            // the drop still lands where the pointer is.
+            float thumbY = scroll.scrollbarDragStartThumbY +
+                           (mouse.y - scroll.scrollbarDragStartY);
+            scroll.offset = scroll_math::offsetForThumbY(thumbY, g.trackY,
+                                                         g.trackHeight, g.thumbHeight,
+                                                         maxScroll);
+            if (scroll.offset < 0) scroll.offset = 0;
+            if (scroll.offset > maxScroll) scroll.offset = maxScroll;
+        }
+        if (released) {
+            scroll.scrollbarDragging = false;
+            scroll_math::arrowRepeatRelease(scroll.scrollbarRepeatDir);
+        }
 
         // Thumb drag in progress: move the thumb with the pointer.
         if (scroll.scrollbarDragging) {

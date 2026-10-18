@@ -43,9 +43,19 @@ extern "C" void metal_set_window_size(int width, int height) {
     @autoreleasepool {
         NSWindow* window = (__bridge NSWindow*)sapp_macos_get_window();
         if (window) {
+            // Size by CONTENT, not frame: setFrame: sizes the outer frame
+            // (title bar included), so a resize to 1280x720 left only
+            // 1280x688 of drawable area. The E2E `resize` command and
+            // the layout system both treat the requested size as the
+            // content size (it matches the size the window is created
+            // with), and a resize test that restores 1280x720 must
+            // restore the full 569px text area, not 537px. Convert via
+            // frameRectForContentRect: and keep the current origin.
             NSRect frame = [window frame];
+            NSRect contentRect = NSMakeRect(0, 0, (CGFloat)width, (CGFloat)height);
+            NSRect frameRect = [window frameRectForContentRect:contentRect];
             NSRect newFrame = NSMakeRect(frame.origin.x, frame.origin.y,
-                                         (CGFloat)width, (CGFloat)height);
+                                         frameRect.size.width, frameRect.size.height);
             [window setFrame:newFrame display:YES animate:NO];
         }
     }

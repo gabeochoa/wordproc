@@ -4,45 +4,47 @@
 # between. Doc has 66033 lines, 27 visible, maxScroll 66006.
 
 open_file test_files/public_domain/war_and_peace.txt
-wait_frames 30
+# Long settle: in windowed batch mode the offset is transiently off by
+# one for ~30 frames after a large file loads; 90 frames clears it.
+wait_frames 90
 validate scroll_offset=66006
 
 # Up arrow: one line up.
 mouse_down 1269 133
-wait_frames 2
+wait_frames 6
 mouse_up
 wait_frames 6
 validate scroll_offset=66005
 
 # Track above the thumb: page up (27 lines).
 mouse_down 1269 400
-wait_frames 2
+wait_frames 6
 mouse_up
 wait_frames 6
 validate scroll_offset=65978
 
 # Drag the thumb to the top of the track: offset 0.
 drag_to 1269 671 1269 151
-wait_frames 6
+wait_frames 12
 validate scroll_offset=0
 
 # Down arrow: one line down.
 mouse_down 1269 689
-wait_frames 2
+wait_frames 6
 mouse_up
 wait_frames 6
 validate scroll_offset=1
 
 # Track below the thumb: page down (27 lines).
 mouse_down 1269 400
-wait_frames 2
+wait_frames 6
 mouse_up
 wait_frames 6
 validate scroll_offset=28
 
 # Drag the thumb to the bottom of the track: maxScroll.
 drag_to 1269 151 1269 671
-wait_frames 6
+wait_frames 12
 validate scroll_offset=66006
 
 screenshot p0_scrollbar

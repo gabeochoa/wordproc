@@ -27,6 +27,12 @@ struct MouseSelectionSystem
                                 LayoutComponent, MenuComponent, DialogState> {
     bool prevDown_ = false;
     bool dragging_ = false;
+    // Whether this drag already auto-scrolled on a move frame. The
+    // release frame adds a step only if no move frame ever fired (a
+    // move frame may have been missed), so the release step never
+    // double-counts a step the move frames already took. Move frames
+    // still auto-scroll continuously while the pointer is held outside.
+    bool autoScrolledThisDrag_ = false;
     // Anchor of the in-progress drag. Kept in the system (not in the
     // buffer) so a plain click leaves hasSelection()==false until the
     // drag actually moves.
@@ -119,11 +125,13 @@ struct MouseSelectionSystem
                 doc.buffer.setCaret(pos);
                 doc.buffer.updateSelectionToCaret();
                 dragging_ = true;
+                autoScrolledThisDrag_ = false;
             } else {
                 doc.buffer.clearSelection();
                 doc.buffer.setCaret(pos);
                 dragAnchor_ = pos;
                 dragging_ = true;
+                autoScrolledThisDrag_ = false;
             }
             caret::resetBlink(caret);
             return;
@@ -132,6 +140,37 @@ struct MouseSelectionSystem
         // Drag in progress: extend the selection, auto-scrolling past edges.
         if (dragging_) {
             if (!down) {
+                // Release: land the selection at the release position,
+                // and guarantee at least one auto-scroll step if the
+                // drag ended outside but no move frame ever fired
+                // (drag phases racing the auto-release can drop it).
+                // The flag only suppresses a duplicate release step:
+                // a drag that already auto-scrolled on move frames
+                // gets no extra step here.
+                bool endedOutside =
+                    mouse.y < area.y || mouse.y > area.y + area.height;
+                if (endedOutside && !autoScrolledThisDrag_) {
+                    int totalLines = static_cast<int>(doc.buffer.lineCount());
+                    int maxScroll = std::max(0, totalLines - scroll.visibleLines);
+                    if (mouse.y < area.y && scroll.offset > 0) {
+                        scroll.offset -= 1;
+                    } else if (mouse.y > area.y + area.height &&
+                               scroll.offset < maxScroll) {
+                        scroll.offset += 1;
+                    }
+                }
+                float clampedY =
+                    std::clamp(mouse.y, area.y, area.y + area.height - 1.0f);
+                CaretPosition pos = hitTest(doc.buffer, layout, area, mouse.x,
+                                            clampedY, scroll.offset, fontSize,
+                                            lineHeight);
+                if (!doc.buffer.hasSelection()) {
+                    doc.buffer.setCaret(dragAnchor_);
+                    doc.buffer.setSelectionAnchor(dragAnchor_);
+                }
+                doc.buffer.setCaret(pos);
+                doc.buffer.updateSelectionToCaret();
+                caret::resetBlink(caret);
                 dragging_ = false;
                 // Collapse a zero-length drag to a plain caret.
                 if (doc.buffer.hasSelection() &&
@@ -147,8 +186,10 @@ struct MouseSelectionSystem
                 int maxScroll = std::max(0, totalLines - scroll.visibleLines);
                 if (mouse.y < area.y && scroll.offset > 0) {
                     scroll.offset -= 1;
+                    autoScrolledThisDrag_ = true;
                 } else if (mouse.y > area.y + area.height && scroll.offset < maxScroll) {
                     scroll.offset += 1;
+                    autoScrolledThisDrag_ = true;
                 }
             }
             float clampedY = std::clamp(mouse.y, area.y, area.y + area.height - 1.0f);

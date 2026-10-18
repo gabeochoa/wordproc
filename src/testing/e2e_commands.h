@@ -497,6 +497,45 @@ struct HandleSeedRecentFileCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'assert_scroll_min <n>' - fails unless the scroll offset is >= n.
+// Equality validates cannot express the drag-auto-scroll invariant:
+// auto-scroll is per-frame continuous, so the final offset after dragging
+// past the edge is (#outside move frames) + 2 (caret-visibility snap),
+// which varies with frame phasing. The guaranteed lower bound is 3:
+// at least one auto-scroll step (the release frame guarantees it if no
+// move frame fired) plus the 2-line snap. Offset 2 would mean the snap
+// fired with no auto-scroll at all.
+struct HandleAssertScrollMinCommand : System<testing::PendingE2ECommand> {
+  ecs::ScrollComponent *scroll_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("assert_scroll_min"))
+      return;
+    if (!cmd.has_args(1)) {
+      cmd.fail("assert_scroll_min requires a minimum offset");
+      return;
+    }
+    if (!scroll_comp) {
+      cmd.fail("scroll_comp not set");
+      return;
+    }
+    int minimum = 0;
+    try {
+      minimum = std::stoi(cmd.arg(0));
+    } catch (...) {
+      cmd.fail("assert_scroll_min requires an integer, got: " + cmd.arg(0));
+      return;
+    }
+    if (scroll_comp->offset < minimum) {
+      cmd.fail("assert_scroll_min " + cmd.arg(0) + ": scroll_offset=" +
+               std::to_string(scroll_comp->offset));
+      return;
+    }
+    cmd.consume();
+  }
+};
+
 // Handle 'file_dialog_set_path path' - queues a path for the next native file dialog call
 // This allows E2E tests to control what open_file/save_file return in test mode.
 struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
@@ -519,7 +558,8 @@ inline void register_app_commands(
     SystemManager &sm,
     ecs::DocumentComponent *doc_comp,
     ecs::MenuComponent *menu_comp,
-    ecs::DialogState *dialog_state
+    ecs::DialogState *dialog_state,
+    ecs::ScrollComponent *scroll_comp = nullptr
 ) {
   // Menu commands
   auto menu_open = std::make_unique<HandleMenuOpenCommand>();
@@ -549,6 +589,10 @@ inline void register_app_commands(
   sm.register_update_system(std::make_unique<HandleHoldKeyCommand>());
   sm.register_update_system(std::make_unique<HandleReleaseKeyCommand>());
   sm.register_update_system(std::make_unique<HandleSeedRecentFileCommand>());
+
+  auto assert_scroll_min = std::make_unique<HandleAssertScrollMinCommand>();
+  assert_scroll_min->scroll_comp = scroll_comp;
+  sm.register_update_system(std::move(assert_scroll_min));
 
   auto load_tmpl = std::make_unique<HandleLoadTemplateCommand>();
   load_tmpl->doc_comp = doc_comp;

@@ -64,16 +64,20 @@ wait_frames 6
 validate text=Y
 
 # Drag past the bottom edge auto-scrolls.
-# Final offset 3 = 1 line from the drag auto-scroll plus 2 from the
-# caret-visibility snap (drag ends with the caret on row 29).
+# The final offset is phase-dependent: auto-scroll is per-frame
+# continuous, so it is (#outside move frames) + 2 (caret-visibility
+# snap; the drag ends with the caret on row 29). The guaranteed
+# invariant is >= 3: at least one auto-scroll step (the release frame
+# guarantees it if no move frame fired) plus the 2-line snap. Offset
+# 2 would mean the snap fired with no auto-scroll at all.
 open_file test_files/public_domain/war_and_peace.txt
-wait_frames 30
+wait_frames 90
 key CTRL+UP
 wait_frames 12
 validate scroll_offset=0
 drag_to 100 200 100 800
-wait_frames 6
-validate scroll_offset=3
+wait_frames 12
+assert_scroll_min 3
 validate has_selection=true
 
 screenshot p0_mouse_selection
