@@ -3710,8 +3710,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // per comment, anchored to its anchor row (card top aligns
         // with the anchor row). Paged mode: the card sits fully
         // OUTSIDE the page (page right edge + 8, kept on screen),
-        // with a 1px connector tick from the page edge to the card
-        // at the anchor row's centre. Pageless: docked at the
+        // with a 1px dark leader line from the page edge to the
+        // card at the anchor row's centre. Pageless: docked at the
         // right edge of the text area (inside the margin band, left
         // of the scrollbar). Every card carries a 1px dark border
         // + raised bevel frame; Resolve is a small raised button.
@@ -3774,11 +3774,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 if (cardY > layout.textArea.y + layout.textArea.height - CARD_H) {
                     continue;
                 }
+                // The anchor row's top: the leader line sits at
+                // this row's centre when the card is not stacked.
+                const float anchorTopY = cardY;
                 // Stack cards that would overlap a placed card.
+                bool stacked = false;
                 for (const auto& prev : placed) {
                     if (cardY < prev.second + CARD_H + 4.0f &&
                         cardY + CARD_H + 4.0f > prev.second) {
                         cardY = prev.second + CARD_H + 4.0f;
+                        stacked = true;
                     }
                 }
                 if (cardY > layout.textArea.y + layout.textArea.height - CARD_H) {
@@ -3801,27 +3806,6 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                         .with_roundness(0.0f)
                         .with_render_layer(CARD_LAYER));
-                // Anchor connector (paged): a 1px tick from the
-                // page's right edge to the card's left edge at the
-                // anchor row's vertical centre. Skipped when the
-                // card was clamped (no gap left to bridge). The
-                // card top already aligns with the anchor row.
-                if (layout.pageMode == PageMode::Paged &&
-                    cardX - pageRight >= 2.0f) {
-                    div(ctx, mk(entity, baseId + 5),
-                        ComponentConfig{}
-                            .with_size(ComponentSize{
-                                pixels(cardX - pageRight), pixels(1.0f)})
-                            .with_absolute_position()
-                            .with_translate(
-                                pageRight,
-                                cardY + static_cast<float>(cardLineHeight) /
-                                              2.0f)
-                            .with_custom_background(
-                                ui_imm::win95_colors::TEXT)
-                            .with_roundness(0.0f)
-                            .with_render_layer(CARD_LAYER));
-                }
                 if (button(ctx, mk(entity, baseId + 1),
                            ComponentConfig{}
                                .with_debug_name("comment_card_" +
@@ -3909,6 +3893,39 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                .with_cursor(afterhours::ui::CursorType::Pointer)
                                .with_render_layer(CARD_LAYER + 3))) {
                     resolveClicked = static_cast<int>(ci);
+                }
+                // Anchor connector (paged): a 1px dark leader line
+                // from the page's right edge to the card, at the
+                // anchor row's centre (comments::leaderLine).
+                // Unstacked, the card top IS the anchor row top,
+                // so the line sits at the anchor row; a stacked
+                // card has moved off its anchor row, so the line
+                // sits at the card's centre and still touches the
+                // card. Skipped when the card was clamped (no gap
+                // left to bridge). Drawn last at a topmost layer
+                // so no card piece covers it. Pageless keeps its
+                // current behaviour (no line): the card is docked
+                // inside the text area, not across a page edge.
+                if (layout.pageMode == PageMode::Paged) {
+                    const float leaderTop = stacked ? cardY : anchorTopY;
+                    const comments::LeaderLine leader =
+                        comments::leaderLine(
+                            pageRight, cardX,
+                            leaderTop +
+                                static_cast<float>(cardLineHeight) / 2.0f);
+                    if (leader.present) {
+                        div(ctx, mk(entity, baseId + 5),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{
+                                    pixels(leader.width),
+                                    pixels(leader.height)})
+                                .with_absolute_position()
+                                .with_translate(leader.x, leader.y)
+                                .with_custom_background(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_roundness(0.0f)
+                                .with_render_layer(CARD_LAYER + 2));
+                    }
                 }
             }
             if (resolveClicked >= 0 &&

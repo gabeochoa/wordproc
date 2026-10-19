@@ -10,6 +10,30 @@
 
 namespace comments {
 
+// Leader line (paged mode): the 1px dark connector from the
+// page's right edge to the margin card, at the anchor row's
+// vertical centre. Pure geometry so tests pin it: `pageRight`
+// is the page's right edge in pixels, `cardX` the card's left
+// edge, `centreY` the anchor row's centre. `present` is false
+// when the card was clamped onto the page (gap < 2px — no gap
+// left to bridge) or the inputs invert. Pageless mode draws no
+// leader: the card is docked inside the text area, not across a
+// page edge.
+struct LeaderLine {
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 1.0f;
+    bool present = false;
+};
+
+inline LeaderLine leaderLine(float pageRight, float cardX,
+                             float centreY) {
+    if (cardX - pageRight < 2.0f) return LeaderLine{};
+    return LeaderLine{pageRight, centreY, cardX - pageRight, 1.0f,
+                      true};
+}
+
 // Relative date for a comment card header: "Today", "Yesterday",
 // "N days ago" (2..6), else the calendar date M/d/YYYY. Pure over
 // (createdAt, now) so tests pin it with fixed times; both args are

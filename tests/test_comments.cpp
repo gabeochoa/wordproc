@@ -44,3 +44,24 @@ TEST_CASE("Comment relative dates", "[comments]") {
                 "Today");
     }
 }
+
+TEST_CASE("Comment leader line (paged mode)", "[comments]") {
+    SECTION("spans the page edge to the card, 1px tall") {
+        auto line = comments::leaderLine(820.0f, 828.0f, 221.0f);
+        REQUIRE(line.present);
+        REQUIRE(line.x == 820.0f);
+        REQUIRE(line.y == 221.0f);
+        REQUIRE(line.width == 8.0f);
+        REQUIRE(line.height == 1.0f);
+    }
+    SECTION("no line when the card is clamped onto the page") {
+        REQUIRE_FALSE(comments::leaderLine(820.0f, 821.0f, 221.0f).present);
+        REQUIRE_FALSE(comments::leaderLine(820.0f, 820.0f, 221.0f).present);
+        REQUIRE_FALSE(comments::leaderLine(828.0f, 820.0f, 221.0f).present);
+    }
+    SECTION("a 2px gap still draws the line") {
+        auto line = comments::leaderLine(820.0f, 822.0f, 100.0f);
+        REQUIRE(line.present);
+        REQUIRE(line.width == 2.0f);
+    }
+}
