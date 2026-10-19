@@ -3,7 +3,10 @@
 # Version History... and restoring the newest snapshot brings back
 # the saved text through the command layer (one undo, marks dirty).
 
-type "original text"
+# Capital "Original": a lowercase sentence start would be
+# auto-capitalized (AutoCorrect), breaking the text= validates
+# below (pre-existing failure on the clean tree).
+type "Original text"
 wait_frames 12
 
 menu_open File
@@ -15,7 +18,7 @@ validate status_text=Saved: document.wpdoc
 
 type " plus more"
 wait_frames 12
-validate text=original text plus more
+validate text=Original text plus more
 
 menu_open File
 wait_frames 12
@@ -30,7 +33,7 @@ click_ui version_item_0
 wait_frames 12
 click_ui version_restore
 wait_frames 12
-validate text=original text
+validate text=Original text
 validate is_dirty=true
 
 click_ui version_history_close

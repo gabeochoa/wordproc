@@ -56,6 +56,22 @@ TEST_CASE("Version history naming and index", "[version_history]") {
                                            "20261019-090507.txt") ==
                 "20261019-090507 words=3 chars=14 file=20261019-090507.txt");
     }
+    SECTION("human row labels parse the local timestamp stem") {
+        REQUIRE(version_history::displayLabel("20261018-212000", 128) ==
+                "Oct 18, 2026, 9:20 PM — 128 words");
+        REQUIRE(version_history::displayLabel("20261019-000500", 1) ==
+                "Oct 19, 2026, 12:05 AM — 1 word");
+        REQUIRE(version_history::displayLabel("20260105-120000", 0) ==
+                "Jan 5, 2026, 12:00 PM — 0 words");
+        // Same-second "-1" suffix is ignored.
+        REQUIRE(version_history::displayLabel("20261018-212000-1", 3) ==
+                "Oct 18, 2026, 9:20 PM — 3 words");
+        // Malformed stems fall back to the raw stem.
+        REQUIRE(version_history::displayLabel("garbage", 2) ==
+                "garbage — 2 words");
+        REQUIRE(version_history::displayLabel("20261399-999999", 2) ==
+                "20261399-999999 — 2 words");
+    }
     SECTION("word counting matches the stats rule") {
         REQUIRE(version_history::countWords("One two three.") == 3);
         REQUIRE(version_history::countWords("") == 0);

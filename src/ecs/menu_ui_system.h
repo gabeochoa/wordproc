@@ -3539,18 +3539,30 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Version History dialog (File > Version History...): Win95
-        // shell listing the Save/Save As snapshots newest-first
-        // (time + word count). Restore replaces the buffer through
-        // the command layer (one undo) and marks dirty; the dialog
-        // stays open so the result is visible. Footer documents the
-        // flow: viewing old text = Restore + Undo.
+        // Version History dialog (File > Version History...): one
+        // sunken listbox of Save/Save As snapshots newest-first
+        // ("Oct 18, 2026, 9:20 PM — 128 words"). Restore replaces
+        // the buffer through the command layer (one undo) and
+        // marks dirty; the dialog stays open so the result is
+        // visible. Footer documents the flow: viewing old text =
+        // Restore + Undo.
         if (dialogs.showVersionHistoryDialog) {
             constexpr int VERSION_HISTORY_MODAL_ID = 50014;
+            // Height fits content (Date and Time accounting): title
+            // 20 + list (rows x 26 + 4 sunken padding, capped at 6
+            // rows / 160, at least one row) + footer 28 + buttons
+            // 44 + panel padding 8 + 12 breathing room. The old
+            // fixed 320 left a huge empty gray band below the list.
+            const int versionListH = static_cast<int>(std::min<std::size_t>(
+                160, std::max<std::size_t>(
+                          dialogs.versionHistorySnapshots.size(), 1) * 26 +
+                          4));
+            const int versionModalH = 20 + versionListH + 28 + 44 + 20;
             auto result = afterhours::modal(ctx, mk(entity, VERSION_HISTORY_MODAL_ID),
                 dialogs.showVersionHistoryDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(480), afterhours::ui::h720(320),
+                    afterhours::ui::h720(480),
+                    afterhours::ui::h720(versionModalH),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -3562,46 +3574,53 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
                                               "Version History", CONTENT_LAYER);
 
-                if (dialogs.versionHistorySnapshots.empty()) {
-                    div(ctx, mk(result.ent(), 0),
-                        ComponentConfig{}
-                            .with_label("No saved versions yet. Save the document to create one.")
-                            .with_size(ComponentSize{percent(1.0f), h720(24)})
-                            .with_render_layer(CONTENT_LAYER));
-                } else {
-                    auto listContainer = div(ctx, mk(result.ent(), 1),
-                        ComponentConfig{}
-                            .with_size(ComponentSize{percent(1.0f), h720(180)})
-                            .with_flex_direction(FlexDirection::Column)
-                            .with_overflow(afterhours::ui::Overflow::Auto)
-                            .with_render_layer(CONTENT_LAYER));
-                    if (listContainer) {
-                        for (std::size_t i = 0; i < dialogs.versionHistorySnapshots.size(); ++i) {
-                            const version_history::VersionSnapshot& snap =
-                                dialogs.versionHistorySnapshots[i];
-                            const bool selected =
-                                static_cast<int>(i) == dialogs.versionHistorySelected;
-                            const std::string rowLabel =
-                                snap.label + " — " +
-                                std::to_string(snap.words) + " words";
-                            test_input::register_visible_text(rowLabel);
-                            if (button(ctx, mk(listContainer.ent(), 1000 + static_cast<int>(i)),
-                                ComponentConfig{}
-                                    .with_debug_name("version_item_" + std::to_string(i))
-                                    .with_label(rowLabel)
-                                    .with_size(ComponentSize{percent(1.0f), h720(26)})
-                                    .with_custom_background(selected
-                                        ? ui_imm::win95_colors::HIGHLIGHT
-                                        : ui_imm::win95_colors::TEXT_AREA)
-                                    .with_custom_text_color(selected
-                                        ? ui_imm::win95_colors::TEXT_WHITE
-                                        : ui_imm::win95_colors::TEXT)
-                                    .with_alignment(afterhours::ui::TextAlignment::Left)
-                                    .with_padding(Padding{.left = pixels(4)})
-                                    .with_cursor(afterhours::ui::CursorType::Pointer)
-                                    .with_render_layer(CONTENT_LAYER))) {
-                                dialogs.versionHistorySelected = static_cast<int>(i);
-                            }
+                auto listBox = div(ctx, mk(result.ent(), 1),
+                    ah_win95::win95SunkenStyle()
+                        .with_size(ComponentSize{percent(1.0f),
+                                                 h720(versionListH)})
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_overflow(afterhours::ui::Overflow::Auto)
+                        .with_padding(Padding{.top = pixels(2),
+                                              .bottom = pixels(2)})
+                        .with_render_layer(CONTENT_LAYER));
+                if (listBox) {
+                    if (dialogs.versionHistorySnapshots.empty()) {
+                        div(ctx, mk(listBox.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("No saved versions yet. Save the document to create one.")
+                                .with_size(ComponentSize{percent(1.0f), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::TEXT_AREA)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_render_layer(CONTENT_LAYER));
+                    }
+                    for (std::size_t i = 0; i < dialogs.versionHistorySnapshots.size(); ++i) {
+                        const version_history::VersionSnapshot& snap =
+                            dialogs.versionHistorySnapshots[i];
+                        const bool selected =
+                            static_cast<int>(i) == dialogs.versionHistorySelected;
+                        const std::string rowLabel =
+                            version_history::displayLabel(snap.label,
+                                                          snap.words);
+                        test_input::register_visible_text(rowLabel);
+                        if (button(ctx, mk(listBox.ent(), 1000 + static_cast<int>(i)),
+                            ComponentConfig{}
+                                .with_debug_name("version_item_" + std::to_string(i))
+                                .with_label(rowLabel)
+                                .with_size(ComponentSize{percent(1.0f), h720(26)})
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::TEXT_AREA)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_alignment(afterhours::ui::TextAlignment::Left)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.versionHistorySelected = static_cast<int>(i);
                         }
                     }
                 }
@@ -3609,7 +3628,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 div(ctx, mk(result.ent(), 3),
                     ComponentConfig{}
                         .with_label("Restore replaces the document. Undo (Ctrl+Z) returns to the current text.")
-                        .with_size(ComponentSize{percent(1.0f), h720(40)})
+                        .with_size(ComponentSize{percent(1.0f), h720(28)})
                         .with_text_overflow(afterhours::ui::TextOverflow::Wrap)
                         .with_render_layer(CONTENT_LAYER));
 

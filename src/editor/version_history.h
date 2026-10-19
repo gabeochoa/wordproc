@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -155,6 +156,49 @@ inline std::string writeSnapshot(const std::filesystem::path& base,
         }
     }
     return path.string();
+}
+
+// Human dialog row label: "Oct 18, 2026, 9:20 PM — 128 words".
+// Parses the "YYYYmmdd-HHMMSS" stem. The timestamp is stored in
+// local time (see timestampLabel), so the parsed fields ARE the
+// local date/time — no TZ conversion. A "-1" same-second suffix
+// is ignored; a malformed stem falls back to the raw stem.
+inline std::string displayLabel(const std::string& label,
+                                std::size_t words) {
+    auto isDigit = [](char ch) { return ch >= '0' && ch <= '9'; };
+    bool ok = label.size() >= 15 && label[8] == '-';
+    for (std::size_t i = 0; ok && i < 15; ++i) {
+        if (i == 8) continue;
+        if (!isDigit(label[static_cast<std::size_t>(i)])) ok = false;
+    }
+    auto digits = [&](std::size_t at, std::size_t len) {
+        int value = 0;
+        for (std::size_t i = 0; i < len; ++i) {
+            value = value * 10 +
+                    (label[at + i] - '0');
+        }
+        return value;
+    };
+    const int month = ok ? digits(4, 2) : 0;
+    const int day = ok ? digits(6, 2) : 0;
+    const int hour = ok ? digits(9, 2) : 0;
+    const int minute = ok ? digits(11, 2) : 0;
+    const int second = ok ? digits(13, 2) : 0;
+    if (!ok || month < 1 || month > 12 || day < 1 || day > 31 ||
+        hour > 23 || minute > 59 || second > 59) {
+        return label + " — " + std::to_string(words) +
+               (words == 1 ? " word" : " words");
+    }
+    static constexpr const char* kMonths[] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    const int hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%s %d, %d, %d:%02d %s — %zu %s",
+                  kMonths[month - 1], day, digits(0, 4), hour12, minute,
+                  hour < 12 ? "AM" : "PM", words,
+                  words == 1 ? "word" : "words");
+    return buf;
 }
 
 // Read a snapshot file's full text; empty when unreadable. (An
