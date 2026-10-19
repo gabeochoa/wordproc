@@ -1,0 +1,24 @@
+# Test: Live word count in the status bar
+# The status bar's left cluster gains a "Words: N" segment after
+# the Ln/Col group, updating as you type.
+
+type "one two three"
+wait_frames 12
+expect_text "Words: 3"
+
+type " four"
+wait_frames 12
+expect_text "Words: 4"
+
+# Five Backspaces remove " four", back to three words
+key BACKSPACE
+wait_frames 6
+key BACKSPACE
+wait_frames 6
+key BACKSPACE
+wait_frames 6
+key BACKSPACE
+wait_frames 6
+key BACKSPACE
+wait_frames 12
+expect_text "Words: 3"

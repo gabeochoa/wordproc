@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 #include <ctime>
 #include <format>
+#include <limits>
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include "../ui/ah_win95_widgets.h"
@@ -31,6 +33,15 @@ using afterhours::ui::Padding;
 // Status Bar System - renders Word 6.0-style status bar using Afterhours UI
 struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
     EditorEntityCache cache_;
+
+    // Cached buffer stats (lines/words/chars). TextBuffer::stats() is
+    // O(n); the status bar renders every frame, so recompute only
+    // when the buffer version changes (any content or style edit).
+    // The cache lives on the system object, which the app constructs
+    // once, so it persists across frames.
+    std::uint64_t cachedStatsVersion_ =
+        std::numeric_limits<std::uint64_t>::max();
+    TextStats cachedStats_{};
 
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
         cache_.resolve();
@@ -65,14 +76,22 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
             rightText = "";
         } else {
             CaretPosition caretPos = doc.buffer.caret();
-            TextStats stats = doc.buffer.stats();
+            // stats() is O(n): recompute only when the buffer version
+            // changed (see cachedStatsVersion_). The "Words: N"
+            // segment below reads the same cached stats, as does the
+            // line count in the 3rd field.
+            if (cachedStatsVersion_ != doc.buffer.version()) {
+                cachedStats_ = doc.buffer.stats();
+                cachedStatsVersion_ = doc.buffer.version();
+            }
+            TextStats stats = cachedStats_;
 
             float inchPos = static_cast<float>(caretPos.column) / 72.0f;
             leftText = std::format(
-                "Page 1   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}",
+                "Page 1   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}      Words: {}",
                 caretPos.row + 1, stats.lines,
                 inchPos,
-                caretPos.row + 1, caretPos.column + 1);
+                caretPos.row + 1, caretPos.column + 1, stats.words);
 
             // Build the right-side status string
             std::time_t now = std::time(nullptr);
