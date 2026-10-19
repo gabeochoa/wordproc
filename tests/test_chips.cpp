@@ -2,6 +2,10 @@
 
 #include <ctime>
 
+#ifndef _WIN32
+#include <cstdlib>
+#endif
+
 #include "catch2/catch.hpp"
 
 namespace {
@@ -56,6 +60,66 @@ TEST_CASE("Smart chip popup filtering", "[chips]") {
                 "Tomorrow — 1/1/2027");
     }
 }
+
+#ifndef _WIN32
+namespace {
+
+// RAII TZ switch: restores the previous TZ (or unsets it) on
+// destruction, so a failing REQUIRE cannot leak the zone into
+// later test cases.
+struct ScopedTZ {
+    std::string old_;
+    bool had_ = false;
+    explicit ScopedTZ(const char* tz) {
+        const char* cur = std::getenv("TZ");
+        if (cur != nullptr) {
+            old_ = cur;
+            had_ = true;
+        }
+        setenv("TZ", tz, 1);
+        tzset();
+    }
+    ~ScopedTZ() {
+        if (had_) {
+            setenv("TZ", old_.c_str(), 1);
+        } else {
+            unsetenv("TZ");
+        }
+        tzset();
+    }
+};
+
+}  // namespace
+
+TEST_CASE("Chip date labels use LOCAL time, not UTC", "[chips]") {
+    // 2026-10-19 01:30 UTC is still 2026-10-18 21:30 in
+    // America/New_York (EDT, UTC-4). A UTC-based label would say
+    // "Today — 10/19/2026" here; the local label says 10/18.
+    // Build the instant under TZ=UTC so the epoch is unambiguous,
+    // then read the labels under TZ=America/New_York.
+    std::time_t instant = 0;
+    {
+        ScopedTZ utc("UTC");
+        std::tm tm{};
+        tm.tm_year = 2026 - 1900;
+        tm.tm_mon = 9;
+        tm.tm_mday = 19;
+        tm.tm_hour = 1;
+        tm.tm_min = 30;
+        tm.tm_isdst = 0;
+        instant = std::mktime(&tm);
+    }
+    {
+        ScopedTZ eastern("America/New_York");
+        REQUIRE(chips::todayLabel(instant) == "Today — 10/18/2026");
+        REQUIRE(chips::tomorrowLabel(instant) ==
+                "Tomorrow — 10/19/2026");
+        auto items = chips::popupItems("", instant);
+        REQUIRE(items[0].label == "Today — 10/18/2026");
+        REQUIRE(items[1].label == "Tomorrow — 10/19/2026");
+    }
+}
+#endif
 
 TEST_CASE("Smart chip insert/delete", "[chips]") {
     SECTION("insert replaces @ + filter with the label, one undo step") {

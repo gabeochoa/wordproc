@@ -56,16 +56,31 @@ inline std::string todayLabel(std::time_t now) {
     return "Today — " + date_time::formatDateTime(tm, 0);
 }
 
-// "Tomorrow — <date>" for `now` (local time).
+// "Tomorrow — <date>" for `now` (local time). Calendar
+// arithmetic (mday + 1, normalized by mktime), not now + 86400:
+// the fixed-offset version drifts an hour across a DST boundary
+// (and is wrong in exactly the "which date is it" question this
+// label answers).
 inline std::string tomorrowLabel(std::time_t now) {
-    std::time_t tomorrow = now + 24 * 60 * 60;
     std::tm tm{};
 #ifdef _WIN32
-    localtime_s(&tm, &tomorrow);
+    localtime_s(&tm, &now);
 #else
-    localtime_r(&tomorrow, &tm);
+    localtime_r(&now, &tm);
 #endif
-    return "Tomorrow — " + date_time::formatDateTime(tm, 0);
+    tm.tm_mday += 1;
+    tm.tm_isdst = -1;
+    const std::time_t tomorrow = std::mktime(&tm);
+    if (tomorrow == static_cast<std::time_t>(-1)) {
+        return "Tomorrow — " + date_time::formatDateTime(tm, 0);
+    }
+    std::tm out{};
+#ifdef _WIN32
+    localtime_s(&out, &tomorrow);
+#else
+    localtime_r(&tomorrow, &out);
+#endif
+    return "Tomorrow — " + date_time::formatDateTime(out, 0);
 }
 
 // Popup items for a filter (the text after "@", may be empty).

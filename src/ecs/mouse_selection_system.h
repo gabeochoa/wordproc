@@ -178,9 +178,15 @@ struct MouseSelectionSystem
         // the caret: a card click would land the caret on the card's
         // screen position instead of the comment's anchor, and a
         // popup click would move the caret off the chip it just
-        // inserted. Any press while the chip popup is open dismisses
-        // the popup; a press outside every shield then proceeds as
-        // a normal text click.
+        // inserted. A press OUTSIDE every shield dismisses the chip
+        // popup and then proceeds as a normal text click.
+        // The dismiss must NOT fire for inside-shield presses:
+        // UI buttons fire on release (is_mouse_click reads
+        // just_released), so dismissing on press destroys the
+        // popup item before its release can fire — clicking a
+        // popup item dismissed the popup without inserting
+        // anything (the pre-existing pass_smart_chips tail
+        // failure: click_ui chip_item_1 never inserted Tomorrow).
         if (pressed) {
             auto mousePos = input::getMousePosition();
             bool inShield = false;
@@ -193,7 +199,9 @@ struct MouseSelectionSystem
                     break;
                 }
             }
-            if (dialogs.showChipPopup) dialogs.showChipPopup = false;
+            if (dialogs.showChipPopup && !inShield) {
+                dialogs.showChipPopup = false;
+            }
             if (inShield) {
                 dragging_ = false;
                 return;

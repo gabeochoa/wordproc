@@ -743,6 +743,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     displayLine.substr(dispBegin, dispEnd - dispBegin)
                         .c_str(),
                     lineFontSize);
+                // 2px inset padding each side: the raised box hugs
+                // the label with breathing room, not edge-to-edge.
+                boxX -= 2;
+                boxW += 4;
                 afterhours::draw_rectangle(
                     Rectangle{static_cast<float>(boxX),
                               static_cast<float>(y),
@@ -1024,6 +1028,27 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         }
                     }
                     if (overlapsInsert) {
+                        ++squiggleIdx;
+                        continue;
+                    }
+                }
+                // @ chips win over squiggles, same as tracked
+                // inserts: a chip label is a structured name/date,
+                // not free text to proof ("Ochoa" is not in the
+                // dictionary, but the Gabe Ochoa chip must not
+                // carry a red squiggle).
+                if (!verifiedChips.empty()) {
+                    const std::size_t sqBegin = span.offset + sq.startCol;
+                    const std::size_t sqEnd = span.offset + sq.endCol;
+                    bool overlapsChip = false;
+                    for (const auto& range : verifiedChips) {
+                        if (sqBegin < range.second &&
+                            sqEnd > range.first) {
+                            overlapsChip = true;
+                            break;
+                        }
+                    }
+                    if (overlapsChip) {
                         ++squiggleIdx;
                         continue;
                     }

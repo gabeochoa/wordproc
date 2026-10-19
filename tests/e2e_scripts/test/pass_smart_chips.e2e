@@ -17,9 +17,32 @@ validate chip_popup_open=false
 validate chip_count=1
 validate text_contains_Today=true
 
+# Insert the person chip after the date chip: the chip_rendered
+# screenshot must show BOTH a date chip and a person chip
+type " @"
+wait_frames 12
+validate chip_popup_open=true
+key DOWN
+wait_frames 6
+key DOWN
+wait_frames 6
+key ENTER
+wait_frames 12
+validate chip_popup_open=false
+validate chip_count=2
+validate text_contains_Gabe=true
+
 screenshot chip_rendered
 
-# Backspace at the chip's end deletes the whole chip
+# Backspace at a chip's end deletes the whole chip: first the
+# person chip, then the space before "@" (the caret lands after
+# it, not at the date chip's end), then the date chip
+key BACKSPACE
+wait_frames 12
+validate chip_count=1
+key BACKSPACE
+wait_frames 12
+validate chip_count=1
 key BACKSPACE
 wait_frames 12
 validate chip_count=0
