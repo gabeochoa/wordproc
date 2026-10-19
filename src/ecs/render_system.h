@@ -236,7 +236,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              int linesPerColumn = 50,
                              int outlineShowLevel = 0,
                              const std::unordered_set<std::size_t>*
-                                 outlineCollapsedRows = nullptr) {
+                                 outlineCollapsedRows = nullptr,
+                             // Margin comments (Docs-era): the anchored
+                             // ranges highlight pale yellow; the cards
+                             // themselves are UI in MenuUISystem.
+                             const std::vector<Comment>* comments = nullptr) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
@@ -640,6 +644,42 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                           static_cast<float>(selWidth), static_cast<float>(lineHeight)},
                         theme::SELECTION_BG);
                 }
+            }
+        }
+
+        // Draw margin-comment anchor highlight: pale yellow behind
+        // the anchored range on this line (same column mapping as
+        // the selection highlight above). Zero-length anchors and
+        // anchors whose range misses this line draw nothing.
+        if (comments && !displayLine.empty()) {
+            for (const auto& comment : *comments) {
+                std::size_t lineBegin = span.offset;
+                std::size_t lineEnd = span.offset + span.length;
+                std::size_t segBegin =
+                    std::max(comment.startOffset, lineBegin);
+                std::size_t segEnd = std::min(comment.endOffset, lineEnd);
+                if (segBegin >= segEnd) continue;
+                std::size_t dispBegin = rawColumnToDisplayColumn(
+                    lineData, lineLen, segBegin - lineBegin, tabWidth);
+                std::size_t dispEnd = rawColumnToDisplayColumn(
+                    lineData, lineLen, segEnd - lineBegin, tabWidth);
+                dispBegin = std::min(dispBegin, displayLine.size());
+                dispEnd = std::min(std::max(dispEnd, dispBegin),
+                                   displayLine.size());
+                if (dispBegin >= dispEnd) continue;
+                int hlX = x + afterhours::graphics::measure_text(
+                                  displayLine.substr(0, dispBegin).c_str(),
+                                  lineFontSize);
+                int hlW = afterhours::graphics::measure_text(
+                    displayLine.substr(dispBegin, dispEnd - dispBegin)
+                        .c_str(),
+                    lineFontSize);
+                afterhours::draw_rectangle(
+                    Rectangle{static_cast<float>(hlX),
+                              static_cast<float>(y),
+                              static_cast<float>(hlW),
+                              static_cast<float>(lineHeight)},
+                    afterhours::Color{255, 255, 180, 255});
             }
         }
 
@@ -1281,7 +1321,8 @@ struct EditorRenderSystem
                              columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
                              columnsSpacingPx, columnsLinesPerPage,
                              layout.outlineShowLevel,
-                             &layout.outlineCollapsedRows);
+                             &layout.outlineCollapsedRows,
+                             layout.previewMode ? nullptr : &doc.comments);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
@@ -1291,7 +1332,8 @@ struct EditorRenderSystem
                              columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
                              columnsSpacingPx, columnsLinesPerPage,
                              layout.outlineShowLevel,
-                             &layout.outlineCollapsedRows);
+                             &layout.outlineCollapsedRows,
+                             layout.previewMode ? nullptr : &doc.comments);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1309,7 +1351,8 @@ struct EditorRenderSystem
                              columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
                              columnsSpacingPx, columnsLinesPerPage,
                              layout.outlineShowLevel,
-                             &layout.outlineCollapsedRows);
+                             &layout.outlineCollapsedRows,
+                             layout.previewMode ? nullptr : &doc.comments);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===
@@ -1401,22 +1444,9 @@ struct EditorRenderSystem
             }
         }
 
-        // Draw comment markers in the right margin (skipped in Print
-        // Preview: marker Y math uses scroll.offset, not the preview page).
-        if (!layout.previewMode && !doc.comments.empty()) {
-            for (const auto& comment : doc.comments) {
-                CaretPosition pos = doc.buffer.positionForOffset(comment.startOffset);
-                if (pos.row < static_cast<std::size_t>(scroll.offset)) continue;
-                int markerY = static_cast<int>(effectiveArea.y) + theme::layout::TEXT_PADDING +
-                              static_cast<int>(pos.row - scroll.offset) * lineHeight;
-                int markerX = static_cast<int>(effectiveArea.x + effectiveArea.width) - 8;
-                if (markerY > static_cast<int>(effectiveArea.y + effectiveArea.height)) continue;
-                afterhours::draw_rectangle(
-                    Rectangle{static_cast<float>(markerX), static_cast<float>(markerY), 6.0f, 6.0f},
-                    afterhours::Color{255, 200, 0, 255});
-            }
-        }
-
+        // Comment cards are UI in MenuUISystem (clickable, with a
+        // Resolve button); the old 6px margin marker is gone. The
+        // anchor highlight is drawn in renderTextBuffer above.
 
         // Note: About, Word Count, and Help dialogs now rendered by MenuUISystem using afterhours modal.h
     }

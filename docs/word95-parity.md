@@ -112,6 +112,16 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Title bar / menu bar / bevels | Have | P0 | Win95 theme, drop shadows, focus ring |
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
+## Docs-era (Win95-styled)
+Batch 5 (owner direction): after Word 95 parity, a few Google Docs
+features people like, dressed as Windows 95. These are NOT Word 95
+features; they live in this section so the parity counts above stay
+honest about Word 95 itself.
+
+| Feature | Status | Priority | Notes |
+|---|---|---|---|
+| Margin comments | Have | P1 | Batch 5 item 1: Insert > Comment... (author defaults to "Gabe", createdAt set) anchors a range highlighted pale yellow in the text; in Paged mode a card (white/yellow, 1px border, author + relative date + text) sits in the right margin connected to its anchor row, in Pageless it docks at the right edge of the text area; same-row cards stack; clicking a card moves the caret to the anchor start; Resolve removes the comment. Cards are UI (click_ui `comment_card_<i>` / `comment_resolve_<i>`), hidden in Print Preview and Focus mode; split view shows the top pane's cards. Honest partial: the author line requests Bold weight but the UI font has no bold variant registered, so it renders regular (same as other in-app Bold uses). Unit: relative-date labels; E2E `pass_margin_comments.e2e` (dialog add, card click -> caret 0,0, Resolve -> count 0) |
+
 ## Counts (from tables above, 2026-10-18)
 **Have 44 · Partial 14 · Missing 8** (after Batch 4 item 5, Columns) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).

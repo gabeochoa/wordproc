@@ -172,6 +172,25 @@ struct MouseSelectionSystem
             return;
         }
 
+        // Click shields (margin comment cards, @ chip popup) are UI
+        // elements over the text area whose clicks the UI already
+        // handled this frame. A press inside one must not also move
+        // the caret: a card click would land the caret on the card's
+        // screen position instead of the comment's anchor. (The chip
+        // popup's dismiss-on-outside-click lives with the popup.)
+        if (pressed) {
+            auto mousePos = input::getMousePosition();
+            for (const auto& shield : dialogs.clickShields) {
+                if (mousePos.x >= shield.x &&
+                    mousePos.x < shield.x + shield.w &&
+                    mousePos.y >= shield.y &&
+                    mousePos.y < shield.y + shield.h) {
+                    dragging_ = false;
+                    return;
+                }
+            }
+        }
+
         // Hit-testing uses the same scaled font as the renderer
         // (displayScale = fit * zoom in paged mode), so a click
         // lands on the column whose glyph is drawn at that x.

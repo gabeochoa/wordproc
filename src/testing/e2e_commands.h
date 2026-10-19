@@ -339,7 +339,7 @@ struct HandleAddCommentCommand : System<testing::PendingE2ECommand> {
 
     Comment comment;
     comment.text = text;
-    comment.author = "Test";
+    comment.author = "Gabe";
     comment.createdAt = std::time(nullptr);
     comment.startOffset = doc_comp->buffer.caret().column;
     comment.endOffset = comment.startOffset;

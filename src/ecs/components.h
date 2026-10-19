@@ -198,8 +198,25 @@ struct MenuComponent : public afterhours::BaseComponent {
     PendingDialog pendingDialog = PendingDialog::None;
 };
 
+// Click shield: a screen rect owned by an immediate-mode UI element
+// (a margin comment card, the @ chip popup) that sits over the text
+// area. MouseSelectionSystem skips presses inside a shield — the UI
+// button already handled them — instead of also moving the caret.
+// kind 0 = comment card (click is fully owned by the card);
+// kind 1 = chip popup (a press inside is owned by the popup, a press
+// outside dismisses it). Rebuilt every frame by MenuUISystem.
+struct ClickShieldRect {
+    float x = 0.0f;
+    float y = 0.0f;
+    float w = 0.0f;
+    float h = 0.0f;
+    int kind = 0;
+};
+
 // Component for all dialog visibility and state (separated from menu bar)
 struct DialogState : public afterhours::BaseComponent {
+    // Click shields for this frame (see ClickShieldRect).
+    std::vector<ClickShieldRect> clickShields;
     // Quit flow: save-changes prompt (Yes/No/Cancel) and the terminal
     // quit flag the main loop turns into request_quit.
     bool showQuitPrompt = false;

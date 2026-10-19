@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "components.h"
+#include "../editor/comments.h"
 #include "toolbar_icons.h"
 #include "editor_entity_cache.h"
 #include "scrollbar_system.h"  // anyModalDialogOpen for the no-UI focus guard
@@ -59,6 +60,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         auto& layout = *cache_.layout;
         auto& doc = *cache_.doc;
         ToolbarComponent& toolbar = *cache_.toolbar;
+
+        // Click shields are rebuilt every frame below (comment cards,
+        // chip popup). Clear first so a stale rect never eats a click
+        // after its owner stopped rendering (e.g. Focus mode).
+        dialogs.clickShields.clear();
 
         if (layout.focusMode) return;
 
@@ -1703,6 +1709,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 if (button(ctx, mk(buttonRow.ent(), 0),
                     ComponentConfig{}
+                        .with_debug_name("comment_ok")
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)
@@ -1713,7 +1720,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         Comment comment;
                         comment.startOffset = dialogs.pendingCommentStart;
                         comment.endOffset = dialogs.pendingCommentEnd;
-                        comment.author = "User";
+                        comment.author = "Gabe";
                         comment.text = dialogs.commentInputStr;
                         comment.createdAt = std::time(nullptr);
                         doc.comments.push_back(comment);
@@ -1722,9 +1729,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     dialogs.commentInputStr.clear();
                     dialogs.showCommentDialog = false;
                 }
-                
+
                 if (button(ctx, mk(buttonRow.ent(), 1),
                     ComponentConfig{}
+                        .with_debug_name("comment_cancel")
                         .with_label("Cancel")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
@@ -3377,6 +3385,178 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Margin comment cards (Docs comments, Win95 dress): one card
+        // per comment, anchored to its anchor row. Paged mode: the
+        // card sits in the page's right margin (text right + 8, kept
+        // on screen). Pageless: docked at the right edge of the text
+        // area (inside the margin band, left of the scrollbar).
+        // Cards on the same row stack below each other. The card
+        // body is a button (click -> caret to the anchor start);
+        // Resolve is a higher-layer button on top, so a click on it
+        // fires only Resolve — the UI click resolver picks the
+        // single topmost candidate. Cards are UI, not render-system
+        // rects, so E2E can click_ui them (comment_card_<i>,
+        // comment_resolve_<i>). Split view shows the top pane's
+        // cards only; Print Preview shows none (printable content).
+        if (!layout.previewMode && cache_.scroll &&
+            !doc.comments.empty() && !layout.focusMode) {
+            using namespace afterhours::ui;
+            using namespace afterhours::ui::imm;
+            constexpr float CARD_W = 180.0f;
+            constexpr float CARD_H = 72.0f;
+            constexpr int CARD_LAYER = 60;
+            const auto effective = layout::effectiveTextArea(layout);
+            const float ds = layout::displayScale(layout);
+            const int cardFontSize =
+                ruler_math::scaledFontSize(doc.buffer.textStyle().fontSize,
+                                           ds);
+            const int cardLineHeight = cardFontSize + 4;
+            const std::time_t now = std::time(nullptr);
+            std::vector<std::pair<float, float>> placed;
+            int cardClicked = -1;
+            int resolveClicked = -1;
+            for (std::size_t ci = 0; ci < doc.comments.size(); ++ci) {
+                const Comment& comment = doc.comments[ci];
+                CaretPosition pos =
+                    doc.buffer.positionForOffset(comment.startOffset);
+                if (pos.row < static_cast<std::size_t>(cache_.scroll->offset)) {
+                    continue;
+                }
+                float cardY = effective.y +
+                              static_cast<float>(theme::layout::TEXT_PADDING) +
+                              static_cast<float>(pos.row - static_cast<std::size_t>(cache_.scroll->offset)) *
+                                  static_cast<float>(cardLineHeight);
+                float cardX = 0.0f;
+                if (layout.pageMode == PageMode::Paged) {
+                    cardX = effective.x + effective.width + 8.0f;
+                    const float maxX = static_cast<float>(layout.screenWidth) -
+                                       CARD_W - 4.0f;
+                    if (cardX > maxX) cardX = maxX;
+                } else {
+                    cardX = layout.textArea.x + layout.textArea.width -
+                            scroll_math::SCROLLBAR_WIDTH - CARD_W - 4.0f;
+                }
+                if (cardY > layout.textArea.y + layout.textArea.height - CARD_H) {
+                    continue;
+                }
+                // Stack cards that would overlap a placed card.
+                for (const auto& prev : placed) {
+                    if (cardY < prev.second + CARD_H + 4.0f &&
+                        cardY + CARD_H + 4.0f > prev.second) {
+                        cardY = prev.second + CARD_H + 4.0f;
+                    }
+                }
+                if (cardY > layout.textArea.y + layout.textArea.height - CARD_H) {
+                    continue;
+                }
+                placed.emplace_back(cardX, cardY);
+                dialogs.clickShields.push_back(ClickShieldRect{
+                    cardX, cardY, CARD_W, CARD_H, 0});
+                const int baseId = 40000 + static_cast<int>(ci) * 10;
+                test_input::register_visible_text(comment.author);
+                test_input::register_visible_text(comment.text);
+                div(ctx, mk(entity, baseId),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{pixels(CARD_W),
+                                                 pixels(CARD_H)})
+                        .with_absolute_position()
+                        .with_translate(cardX, cardY)
+                        .with_custom_background(
+                            afterhours::Color{255, 255, 220, 255})
+                        .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                        .with_roundness(0.0f)
+                        .with_render_layer(CARD_LAYER));
+                if (button(ctx, mk(entity, baseId + 1),
+                           ComponentConfig{}
+                               .with_debug_name("comment_card_" +
+                                               std::to_string(ci))
+                               .with_label("")
+                               .with_size(ComponentSize{pixels(CARD_W),
+                                                        pixels(CARD_H)})
+                               .with_absolute_position()
+                               .with_translate(cardX, cardY)
+                               .with_custom_background(
+                                   afterhours::Color{255, 255, 220, 255})
+                               .with_bevel(afterhours::ui::BevelStyle::None,
+                                           ui_imm::win95_colors::BORDER_LIGHT,
+                                           ui_imm::win95_colors::BORDER_DARK,
+                                           0.0f)
+                               .with_roundness(0.0f)
+                               .with_cursor(afterhours::ui::CursorType::Pointer)
+                               .with_render_layer(CARD_LAYER + 1))) {
+                    cardClicked = static_cast<int>(ci);
+                }
+                div(ctx, mk(entity, baseId + 2),
+                    ComponentConfig{}
+                        .with_label(comment.author + " - " +
+                                    comments::relativeDateLabel(
+                                        comment.createdAt, now))
+                        .with_size(ComponentSize{pixels(CARD_W - 8.0f),
+                                                 pixels(18.0f)})
+                        .with_absolute_position()
+                        .with_translate(cardX + 4.0f, cardY + 4.0f)
+                        .with_custom_background(
+                            afterhours::Color{255, 255, 220, 255})
+                        .with_custom_text_color(
+                            ui_imm::win95_colors::TEXT)
+                        .with_font_weight(
+                            afterhours::colors::FontWeight::Bold)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_roundness(0.0f)
+                        .with_render_layer(CARD_LAYER + 2));
+                div(ctx, mk(entity, baseId + 3),
+                    ComponentConfig{}
+                        .with_label(comment.text)
+                        .with_size(ComponentSize{pixels(CARD_W - 8.0f),
+                                                 pixels(22.0f)})
+                        .with_absolute_position()
+                        .with_translate(cardX + 4.0f, cardY + 24.0f)
+                        .with_custom_background(
+                            afterhours::Color{255, 255, 220, 255})
+                        .with_custom_text_color(
+                            ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_text_overflow(
+                            afterhours::ui::TextOverflow::Ellipsis)
+                        .with_roundness(0.0f)
+                        .with_render_layer(CARD_LAYER + 2));
+                if (button(ctx, mk(entity, baseId + 4),
+                           ComponentConfig{}
+                               .with_debug_name("comment_resolve_" +
+                                               std::to_string(ci))
+                               .with_label("Resolve")
+                               .with_size(ComponentSize{pixels(64.0f),
+                                                        pixels(20.0f)})
+                               .with_absolute_position()
+                               .with_translate(cardX + CARD_W - 68.0f,
+                                               cardY + CARD_H - 24.0f)
+                               .with_custom_background(
+                                   ui_imm::win95_colors::BUTTON_FACE)
+                               .with_custom_text_color(
+                                   ui_imm::win95_colors::TEXT)
+                               .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                           ui_imm::win95_colors::BORDER_LIGHT,
+                                           ui_imm::win95_colors::BORDER_DARK,
+                                           1.0f)
+                               .with_roundness(0.0f)
+                               .with_cursor(afterhours::ui::CursorType::Pointer)
+                               .with_render_layer(CARD_LAYER + 3))) {
+                    resolveClicked = static_cast<int>(ci);
+                }
+            }
+            if (resolveClicked >= 0 &&
+                resolveClicked < static_cast<int>(doc.comments.size())) {
+                doc.comments.erase(doc.comments.begin() + resolveClicked);
+                doc.isDirty = true;
+            } else if (cardClicked >= 0 &&
+                       cardClicked < static_cast<int>(doc.comments.size())) {
+                doc.buffer.clearSelection();
+                doc.buffer.setCaret(doc.buffer.positionForOffset(
+                    doc.comments[static_cast<std::size_t>(cardClicked)]
+                        .startOffset));
+            }
+        }
+
         // Right-click detection for context menu (real input, not E2E)
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&

@@ -1,0 +1,43 @@
+# Test: Margin comments (Docs comments, Win95 dress)
+# Add a comment via Insert > Comment..., verify the margin card
+# appears in Paged mode, clicking the card moves the caret to the
+# anchor start, and Resolve removes the comment.
+
+menu_open View
+wait_frames 12
+menu_select "Paged Mode"
+wait_frames 12
+
+type "Comment here"
+wait_frames 12
+select_all
+wait_frames 12
+
+menu_open Insert
+wait_frames 12
+menu_select "Comment..."
+wait_frames 12
+
+focus_ui comment_input
+wait_frames 6
+type "Review this"
+wait_frames 12
+click_ui comment_ok
+wait_frames 12
+
+validate comment_count=1
+expect_text "Review this"
+expect_text "Gabe"
+
+screenshot comments_margin
+
+# Clicking the card moves the caret to the anchor start (0, 0)
+click_ui comment_card_0
+wait_frames 12
+validate caret_row=0
+validate caret_col=0
+
+# Resolve removes the comment
+click_ui comment_resolve_0
+wait_frames 12
+validate comment_count=0
