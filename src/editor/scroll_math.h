@@ -121,6 +121,26 @@ inline int previewPageClamp(int previewPage, int pageCount) {
     return previewPage;
 }
 
+// --- Status bar page (editing views, not Print Preview) ---
+// Word still numbers pages in Normal (pageless) view, so the editing
+// status bar shows the 1-based page of the first visible line:
+// scrollOffset / linesPerPage + 1, clamped to the page count. The
+// caller passes the EFFECTIVE lines per page: the single-column
+// lines-per-page, times the column count in the paged columns view
+// (one page holds linesPerColumn * columnCount lines there).
+// Degenerate linesPerPage (< 1) means one line per page; a negative
+// offset clamps to the first page; an offset past the end clamps to
+// the last page (a stale offset after shrinking the document).
+inline int pageFromScrollOffset(int scrollOffset, int linesPerPage,
+                                std::size_t totalLines) {
+    if (linesPerPage < 1) linesPerPage = 1;
+    if (scrollOffset < 0) scrollOffset = 0;
+    int pageCount = previewPageCount(totalLines, linesPerPage);
+    int page = scrollOffset / linesPerPage + 1;
+    if (page > pageCount) page = pageCount;
+    return page;
+}
+
 // Inverse of scrollbarGeometry: thumb top (in track coords) -> scroll offset.
 inline int offsetForThumbY(float thumbY, float trackY, float trackHeight,
                            float thumbHeight, int maxScroll) {

@@ -40,7 +40,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Zoom (in/out/reset, %) | Have | P0 | Ctrl+Alt +/-/0 |
 | Ruler (indents/tabs draggable) | Have | P0 | Word 95 ruler: gray outside margins, white between (pageless too — 1in margins inset the effective area), inch ticks at the ONE display ppi, indent markers beveled (pale face, dark edges, hourglass pair + rectangle base + right triangle, apexes toward centre) at the same scale as text indents; left/first-line/right markers drag to set indents (one undo step per drag); View > Ruler toggles; tab-stop marks at default stops (not draggable) |
 | Toolbars show/hide | Missing | P2 | Standard+Formatting always on |
-| Status bar | Partial | P0 | Word 6-style; page/sec/Ln/Col present, verify accuracy. Transient StatusComponent messages (e.g. "Normal view" / "Page Layout" after a View switch) replace the stats line for 3s — no floating toast for mode switches |
+| Status bar | Have | P0 | Word 6-style; Page is computed from the scroll offset (first visible line / effective lines-per-page, clamped to the page count — the same lines-per-page estimate Print Preview and the Normal-view break lines use, times the column count in the paged columns view), Sec stays 1 (single section), Ln/Col real. Transient StatusComponent messages (e.g. "Normal view" / "Page Layout" after a View switch) replace the stats line for 3s — no floating toast for mode switches |
 | Header/Footer view | Partial | P1 | Insert Header/Footer entries exist |
 
 ## Insert
@@ -127,7 +127,7 @@ honest about Word 95 itself.
 | Live word count | Have | P1 | Batch 5 item 5: status bar left cluster gains a "Words: N" segment after the Ln/Col group, updating as you type, from buffer stats. The O(n) `TextBuffer::stats()` is cached on the status-bar system and recomputed only when the buffer version changes, so the per-frame status render stays O(1). Bench guard: `make bench-unit` class unchanged (no benchmark touched). E2E `pass_live_word_count.e2e` (type 3 words -> "Words: 3", add a word, delete it) |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 49 · Partial 11 · Missing 6** (after Batch 6 item 4, Normal view) (66 grouped rows; several rows bundle
+**Have 50 · Partial 10 · Missing 6** (after Batch 6 item 5, status bar Page) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

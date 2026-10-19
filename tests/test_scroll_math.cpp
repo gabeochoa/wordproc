@@ -100,3 +100,36 @@ TEST_CASE("scrollbar arrow auto-repeat", "[scroll]") {
         REQUIRE(dir == -1);
     }
 }
+
+TEST_CASE("status bar page from scroll offset", "[scroll][status]") {
+    // 100 lines at 25/page: pages are [0,25), [25,50), [50,75), [75,100).
+    SECTION("first visible line decides the page") {
+        REQUIRE(scroll_math::pageFromScrollOffset(0, 25, 100) == 1);
+        REQUIRE(scroll_math::pageFromScrollOffset(24, 25, 100) == 1);
+        REQUIRE(scroll_math::pageFromScrollOffset(25, 25, 100) == 2);
+        REQUIRE(scroll_math::pageFromScrollOffset(49, 25, 100) == 2);
+        REQUIRE(scroll_math::pageFromScrollOffset(50, 25, 100) == 3);
+        REQUIRE(scroll_math::pageFromScrollOffset(99, 25, 100) == 4);
+    }
+    SECTION("offset past the end clamps to the last page") {
+        REQUIRE(scroll_math::pageFromScrollOffset(100, 25, 100) == 4);
+        REQUIRE(scroll_math::pageFromScrollOffset(100000, 25, 100) == 4);
+    }
+    SECTION("negative offset clamps to the first page") {
+        REQUIRE(scroll_math::pageFromScrollOffset(-5, 25, 100) == 1);
+    }
+    SECTION("degenerate lines-per-page means one line per page") {
+        REQUIRE(scroll_math::pageFromScrollOffset(7, 0, 100) == 8);
+        REQUIRE(scroll_math::pageFromScrollOffset(7, -3, 100) == 8);
+    }
+    SECTION("empty document is page 1") {
+        REQUIRE(scroll_math::pageFromScrollOffset(0, 25, 0) == 1);
+        REQUIRE(scroll_math::pageFromScrollOffset(50, 25, 0) == 1);
+    }
+    SECTION("columns caller passes page size, not lines per column") {
+        // 2 columns at 25 lines per column: one page holds 50 lines,
+        // so offset 40 is still page 1 (it would be page 2 at 25/page).
+        REQUIRE(scroll_math::pageFromScrollOffset(40, 50, 100) == 1);
+        REQUIRE(scroll_math::pageFromScrollOffset(50, 50, 100) == 2);
+    }
+}

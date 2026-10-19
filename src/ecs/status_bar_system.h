@@ -87,9 +87,37 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
             TextStats stats = cachedStats_;
 
             float inchPos = static_cast<float>(caretPos.column) / 72.0f;
+            // Page from the scroll offset, not the caret: the bar
+            // reports the page on screen, and the caret can sit on
+            // a later page than the first visible line (e.g. after
+            // a wheel scroll with the caret left behind). The
+            // lines-per-page is the same estimate the renderer and
+            // the Normal-view break lines use (page text height /
+            // scaled line height), times the column count in the
+            // paged columns view, so the page the bar names is the
+            // page the renderer draws. Sec stays 1: one section.
+            float ds = layout::displayScale(layout);
+            int lineHeight = ruler_math::scaledLineHeight(
+                doc.buffer.textStyle().fontSize, ds);
+            int linesPerColumn = static_cast<int>(
+                columns_math::linesPerColumnForPage(
+                    layout.pageHeight, layout.marginTop,
+                    layout.marginBottom, ds, lineHeight));
+            bool columnsActive =
+                layout.pageMode == PageMode::Paged &&
+                doc.docSettings.pageSettings.columnCount > 1;
+            int linesPerPage =
+                linesPerColumn *
+                (columnsActive
+                     ? doc.docSettings.pageSettings.columnCount
+                     : 1);
+            int scrollOffset =
+                cache_.scroll ? cache_.scroll->offset : 0;
+            int page = scroll_math::pageFromScrollOffset(
+                scrollOffset, linesPerPage, stats.lines);
             leftText = std::format(
-                "Page 1   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}      Words: {}",
-                caretPos.row + 1, stats.lines,
+                "Page {}   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}      Words: {}",
+                page, caretPos.row + 1, stats.lines,
                 inchPos,
                 caretPos.row + 1, caretPos.column + 1, stats.words);
 

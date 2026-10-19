@@ -1,0 +1,49 @@
+# Test: status bar Page follows the scroll offset in Page Layout
+# (was a hardcoded "Page 1"). 100 lines; paged lines-per-page is ~29
+# at the 1280x720 fit (page text height 648pt at the ~0.58 fit /
+# 13px line height), so scroll offset 36 sits inside page 2
+# ([29, 58)). Each scroll_wheel 0 -2 moves 6 lines down; the caret
+# stays on row 0, so the page comes from the scroll offset, not
+# the caret row.
+#
+# View > Page Layout flashes "Page Layout" in the status bar for
+# 3s of wall clock, replacing the stats line. Headless frames run
+# faster than wall clock (1500 frames still shows the flash), so
+# the wait below is 20000 frames (~8s on this machine) to outlast
+# it before asserting the stats line.
+
+fill_lines 100 Status page line
+wait_frames 12
+
+# fill_lines leaves the caret at the end (Ln 100) with the view
+# auto-scrolled to the bottom (Page 3); return to the top first
+# (CTRL+UP is the document-start binding the E2E key path handles).
+key CTRL+UP
+wait_frames 12
+validate scroll_offset=0
+
+menu_open View
+wait_frames 12
+menu_select "Page Layout"
+wait_frames 12
+validate page_mode=paged
+
+wait_frames 20000
+expect_text "Page 1"
+
+scroll_wheel 0 -2
+wait_frames 6
+scroll_wheel 0 -2
+wait_frames 6
+scroll_wheel 0 -2
+wait_frames 6
+scroll_wheel 0 -2
+wait_frames 6
+scroll_wheel 0 -2
+wait_frames 6
+scroll_wheel 0 -2
+wait_frames 6
+validate scroll_offset=36
+expect_text "Page 2"
+
+screenshot status_page2
