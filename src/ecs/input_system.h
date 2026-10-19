@@ -398,6 +398,19 @@ struct KeyboardShortcutSystem
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
 
+        // Go To (Batch 9, Ctrl+G): opens the dialog from
+        // anywhere — it exits header/footer editing and Print
+        // Preview inside openGoToDialog (the jump targets the
+        // body), so it runs before the preview / header-mode
+        // early returns below. While another modal dialog is
+        // open the modal gate in TextInputSystem owns the keys
+        // (Go To + Find together would fight over the field).
+        if (actionMap_.isActionPressed(Action::GoTo) &&
+            !ScrollbarSystem::anyModalDialogOpen(dialogs)) {
+            cmd::openGoToDialog(layout, dialogs);
+            return;
+        }
+
         // Print Preview is read-only: only zoom and Print stay live.
         // Everything else below (New/Save, formatting, clipboard,
         // undo/redo, Spelling...) is blocked while previewMode is on.

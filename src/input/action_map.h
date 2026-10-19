@@ -23,6 +23,7 @@ enum class Action {
     MoveDocumentEnd,
     PageUp,
     PageDown,
+    GoTo,
 
     // Editing
     InsertNewline,

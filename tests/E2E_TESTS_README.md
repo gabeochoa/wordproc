@@ -8,7 +8,7 @@ Tests are organized by functionality into the following categories:
 Tests for menu bar functionality, organized by top-level menu:
 
 - **`menu/file/`** - File menu operations (New, Open, Save, Save As, etc.)
-- **`menu/edit/`** - Edit menu operations (Undo, Redo, Find, Go To Bookmark, etc.)
+- **`menu/edit/`** - Edit menu operations (Undo, Redo, Find, Go To, etc.)
 - **`menu/view/`** - View menu options (Page modes, Line width, Line numbers, etc.)
 - **`menu/format/`** - Format menu operations (Styles, Fonts, Font size, Spacing, etc.)
 - **`menu/insert/`** - Insert menu operations (future expansion)
@@ -113,7 +113,7 @@ Specialized runner for the 14 comprehensive menu tests:
 
 This runs the curated set of 14 menu validation tests that cover:
 - File: New, Open, Save, Save As
-- Edit: Go To Bookmark
+- Edit: Go To (Go To...)
 - View: Page modes, Line width, Line numbers
 - Format: Styles, Fonts, Font size, Spacing
 - Table: Delete, Merge/Split

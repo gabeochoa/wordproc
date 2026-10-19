@@ -474,7 +474,12 @@ struct DialogState : public afterhours::BaseComponent {
     std::string saveAsInputStr;
 
     // Bookmark List
-    bool showBookmarkListDialog = false;
+    // Go To dialog (Batch 9, Word 95): replaces the old
+    // Go To Bookmark list dialog. goToTarget selects the
+    // listbox row; goToInputStr is the number/name field.
+    bool showGoToDialog = false;
+    int goToTarget = 0;  // 0 = Page, 1 = Line, 2 = Bookmark
+    std::string goToInputStr;
 
     // Settings
     bool showSettingsDialog = false;

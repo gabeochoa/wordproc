@@ -576,11 +576,20 @@ static void setupCallbacksEx(
             return "none";
         }
 
+        // Go To dialog state (Batch 9)
+        if (prop == "goto_target") {
+            if (dialogState.goToTarget == 1) return "Line";
+            if (dialogState.goToTarget == 2) return "Bookmark";
+            return "Page";
+        }
+        if (prop == "goto_input") return dialogState.goToInputStr;
+
         // Dialog properties
         if (prop == "dialog_open") {
             if (dialogState.showQuitPrompt) return "QuitPrompt";
             if (dialogState.showAboutDialog) return "About";
             if (dialogState.showFindDialog) return "Find";
+            if (dialogState.showGoToDialog) return "GoTo";
             if (dialogState.showPageSetup) return "PageSetup";
             if (dialogState.showSettingsDialog) return "Settings";
             if (dialogState.showWordCountDialog) return "WordCount";
@@ -1318,7 +1327,9 @@ static void setupCallbacksEx(
         dialogState.showSaveAsDialog = false;
         std::memset(dialogState.saveAsInputBuffer, 0, sizeof(dialogState.saveAsInputBuffer));
         dialogState.saveAsInputStr.clear();
-        dialogState.showBookmarkListDialog = false;
+        dialogState.showGoToDialog = false;
+        dialogState.goToTarget = 0;
+        dialogState.goToInputStr.clear();
         dialogState.showSettingsDialog = false;
         dialogState.uiScaleInputStr.clear();
         dialogState.showWordCountDialog = false;

@@ -9,6 +9,7 @@
 #include "../external.h"
 #include "../util/clipboard.h"
 #include "../editor/date_time.h"
+#include "../editor/goto.h"
 #include "../editor/document_io.h"
 #include "../editor/revisions.h"
 #include "../editor/version_history.h"
@@ -1140,6 +1141,94 @@ inline void pasteBuffer(TextBuffer& buffer, DocumentComponent& doc) {
         buffer.insertText(clipText);
         doc.isDirty = true;
     }
+}
+
+// --- Go To (Batch 9, Edit > Go To... / Ctrl+G) ---
+// Word 95's ONE Go To dialog: Page / Line / Bookmark
+// targets, a number/name field, Go To + Close. Page uses
+// the Batch 6 page math (lines-per-page estimate); Line is
+// 1-based and clamped; Bookmark jumps through
+// TextBuffer::goToBookmark and flashes when the name does
+// not exist. The dialog stays open after a jump (Word does)
+// so the user can jump again; Close / Esc dismisses it.
+// Opening exits header/footer editing (the jump targets
+// the body) and Print Preview.
+//
+// Dialog-local helpers for the number field live here so
+// the dialog (MenuUISystem) and the unit tests share the
+// one jump implementation.
+inline void openGoToDialog(LayoutComponent& layout,
+                           DialogState& dialogs) {
+    layout::exitHeaderFooterEdit(layout);
+    if (layout.previewMode) layout::exitPrintPreview(layout);
+    dialogs.goToTarget = 0;  // Page
+    dialogs.goToInputStr = "1";
+    dialogs.showGoToDialog = true;
+    flashStatusConfirmation("Go To");
+}
+
+inline bool performGoTo(DocumentComponent& doc, LayoutComponent& layout,
+                        ScrollComponent* scroll, DialogState& dialogs) {
+    TextBuffer& buffer = doc.buffer;
+    auto snapScroll = [&](int caretLine) {
+        if (scroll == nullptr) return;
+        if (caretLine < scroll->offset) {
+            scroll->offset = caretLine;
+        } else if (caretLine >= scroll->offset + scroll->visibleLines) {
+            scroll->offset = caretLine - scroll->visibleLines + 1;
+        }
+        if (scroll->offset < 0) scroll->offset = 0;
+    };
+    if (dialogs.goToTarget == 2) {  // Bookmark
+        std::string name = dialogs.goToInputStr;
+        std::size_t begin = name.find_first_not_of(" \t\r\n");
+        std::size_t end = name.find_last_not_of(" \t\r\n");
+        if (begin == std::string::npos) {
+            flashStatusConfirmation("Enter a bookmark name");
+            return false;
+        }
+        name = name.substr(begin, end - begin + 1);
+        if (buffer.goToBookmark(name)) {
+            snapScroll(static_cast<int>(buffer.caret().row));
+            flashStatusConfirmation("Go to bookmark: " + name);
+            return true;
+        }
+        flashStatusConfirmation("Bookmark not found: " + name);
+        return false;
+    }
+    int number = goto_math::parseGoToNumber(dialogs.goToInputStr);
+    if (dialogs.goToTarget == 0) {  // Page
+        if (number < 0) {
+            flashStatusConfirmation("Enter a valid page number");
+            return false;
+        }
+        float ds = layout::displayScale(layout);
+        int lineHeight = buffer.textStyle().fontSize + 4;
+        std::size_t linesPerPage = columns_math::linesPerColumnForPage(
+            layout.pageHeight, layout.marginTop, layout.marginBottom, ds,
+            lineHeight);
+        std::size_t firstLine = goto_math::firstLineOfPage(
+            buffer.lineCount(), linesPerPage, number);
+        buffer.setCaret(CaretPosition{firstLine, 0});
+        if (scroll != nullptr) {
+            scroll->offset = static_cast<int>(firstLine);
+        }
+        // The page actually landed on (after clamping), for
+        // the confirmation flash.
+        int page = static_cast<int>(firstLine / linesPerPage) + 1;
+        flashStatusConfirmation("Go to page " + std::to_string(page));
+        return true;
+    }
+    // Line (1-based, clamped).
+    if (number < 0) {
+        flashStatusConfirmation("Enter a valid line number");
+        return false;
+    }
+    std::size_t line = goto_math::clampedLine(buffer.lineCount(), number);
+    buffer.setCaret(CaretPosition{line, 0});
+    snapScroll(static_cast<int>(line));
+    flashStatusConfirmation("Go to line " + std::to_string(line + 1));
+    return true;
 }
 
 // --- Print Preview / Print (File menu, Ctrl+P) ---

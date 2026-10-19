@@ -23,7 +23,7 @@ validate bookmark_count=1
 
 screenshot bookmark_list_created
 
-# Verify Edit menu has Go To Bookmark
+# Verify Edit menu has Go To...
 menu_open Edit
 wait_frames 12
 validate menu_open=Edit

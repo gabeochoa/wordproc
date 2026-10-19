@@ -1,0 +1,141 @@
+# Test: Edit > Go To... (Batch 9, Word 95)
+# Ctrl+G opens the ONE Go To dialog (Page / Line / Bookmark
+# listbox, number/name field, Go To + Close). Line 50 -> caret
+# row 49 (0-based); Page 1 -> row 0; Page 999 clamps to the
+# last page's first line; Bookmark jumps via the listed name;
+# an unknown bookmark name flashes and leaves the caret put;
+# the dialog stays open after a jump and closes via Close.
+# (Caret moves in this test go through Go To itself: E2E
+# `key CTRL+HOME` does not move the caret — pre-existing
+# harness quirk, UP/DOWN do — so no CTRL+HOME step here.)
+
+fill_lines 100 Line
+wait_frames 12
+
+# Bookmark at the caret (end, row 99): Insert > Bookmark...
+# auto-names it bookmark_<row+1> = bookmark_100.
+menu_open Insert
+wait_frames 12
+menu_select "Bookmark..."
+wait_frames 12
+validate has_bookmark=true
+validate bookmark_count=1
+
+# Ctrl+G opens the dialog on the Page target, field "1".
+key CTRL+G
+wait_frames 12
+validate dialog_open=GoTo
+validate goto_target=Page
+validate goto_input=1
+
+screenshot goto_dialog
+
+# Line target: field clears on switch, type 1 -> row 0.
+click_ui goto_target_line
+wait_frames 12
+validate goto_target=Line
+
+focus_ui goto_input
+wait_frames 6
+type "1"
+wait_frames 12
+validate goto_input=1
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=0
+validate dialog_open=GoTo
+
+# Line 50 -> row 49 (0-based assert).
+click_ui goto_target_page
+wait_frames 6
+click_ui goto_target_line
+wait_frames 12
+
+focus_ui goto_input
+wait_frames 6
+type "50"
+wait_frames 12
+validate goto_input=50
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=49
+validate dialog_open=GoTo
+
+# Page target, Page 1 -> row 0.
+click_ui goto_target_page
+wait_frames 12
+validate goto_target=Page
+
+focus_ui goto_input
+wait_frames 6
+type "1"
+wait_frames 12
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=0
+
+# Page 999 clamps to the last page's first line (row 96:
+# 100 lines at 32 lines/page, last page starts at 96).
+click_ui goto_target_line
+wait_frames 6
+click_ui goto_target_page
+wait_frames 12
+
+focus_ui goto_input
+wait_frames 6
+type "999"
+wait_frames 12
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=96
+
+# Bookmark target: click the listed name to fill the field.
+# (Caret is 96, so move away first via Line 1.)
+click_ui goto_target_line
+wait_frames 12
+
+focus_ui goto_input
+wait_frames 6
+type "1"
+wait_frames 12
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=0
+
+click_ui goto_target_bookmark
+wait_frames 12
+validate goto_target=Bookmark
+
+click_ui goto_bookmark_0
+wait_frames 12
+validate goto_input=bookmark_100
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=99
+
+# Unknown bookmark name: flash, caret stays put.
+click_ui goto_target_page
+wait_frames 6
+click_ui goto_target_bookmark
+wait_frames 12
+
+focus_ui goto_input
+wait_frames 6
+type "nope"
+wait_frames 12
+
+click_ui goto_go_button
+wait_frames 12
+validate caret_row=99
+validate status_text=Bookmark not found: nope
+
+# Close dismisses the dialog (dialog_open reports false).
+click_ui goto_close_button
+wait_frames 12
+validate dialog_open=false

@@ -1,5 +1,9 @@
-# Test: Edit > Go To Bookmark...
-# Validates Go To Bookmark dialog functionality
+# Test: Edit > Go To... (Batch 9)
+# Word has ONE Go To dialog (Page / Line / Bookmark):
+# the old "Go To Bookmark..." entry is renamed to "Go To..."
+# and bookmark jumping lives inside it as a target. Opening
+# the dialog on a document with no bookmarks shows the Page
+# target (no "No bookmarks" gate anymore); Esc closes it.
 
 # Type some content with multiple lines
 type "Line 1 - First section"
@@ -7,25 +11,25 @@ key ENTER
 type "Line 2 - Second section"
 key ENTER
 type "Line 3 - Third section"
-wait 1
+wait_frames 12
 
 # Verify all lines exist
 validate line_count=3
 
-# Open Go To Bookmark dialog (should show "No bookmarks")
+# Open Go To dialog via the Edit menu
 menu_open Edit
-wait 1
-menu_select Go To Bookmark...
-wait 1
+wait_frames 12
+menu_select "Go To..."
+wait_frames 12
 
-# Dialog should show "No bookmarks" message since we haven't created any
+validate dialog_open=GoTo
+validate goto_target=Page
+
 # Press ESC to close
 key ESCAPE
-wait 1
+wait_frames 12
 
 # Verify document still has 3 lines
 validate line_count=3
 
 screenshot e2e_menu_edit_goto_bookmark
-
-

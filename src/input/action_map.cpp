@@ -225,6 +225,8 @@ const char* ActionMap::actionName(Action action) {
             return "Find";
         case Action::FindNext:
             return "FindNext";
+        case Action::GoTo:
+            return "GoTo";
         case Action::FindPrevious:
             return "FindPrevious";
         case Action::Replace:
@@ -403,10 +405,13 @@ static void bindWindowsPreset(ActionMap& map) {
     // Lists: Ctrl+Shift+8 for bullets, Ctrl+Shift+7 for numbers
     map.bind({afterhours::keys::EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({afterhours::keys::SEVEN, true, true, false}, Action::ToggleNumberedList);
-    
-    // Find and Replace
+
+    // Find and Replace. Ctrl+G used to be Find Next; since
+    // Batch 9 it is Go To (Word's binding) and Find Next
+    // keeps F3 (also Word's binding). Find Previous stays
+    // Ctrl+Shift+G / Shift+F3.
     map.bind({afterhours::keys::F, true, false, false}, Action::Find);
-    map.bind({afterhours::keys::G, true, false, false}, Action::FindNext);
+    map.bind({afterhours::keys::G, true, false, false}, Action::GoTo);
     map.bind({afterhours::keys::F3, false, false, false}, Action::FindNext);
     map.bind({afterhours::keys::G, true, true, false}, Action::FindPrevious);
     map.bind({afterhours::keys::F3, false, true, false}, Action::FindPrevious);
@@ -522,10 +527,13 @@ static void bindMacOSPreset(ActionMap& map) {
     // Lists: Cmd+Shift+8 for bullets, Cmd+Shift+7 for numbers
     map.bind({afterhours::keys::EIGHT, true, true, false}, Action::ToggleBulletedList);
     map.bind({afterhours::keys::SEVEN, true, true, false}, Action::ToggleNumberedList);
-    
-    // Find and Replace
+
+    // Find and Replace. Ctrl+G used to be Find Next; since
+    // Batch 9 it is Go To (Word's binding) and Find Next
+    // keeps F3 (also Word's binding). Find Previous stays
+    // Ctrl+Shift+G / Shift+F3.
     map.bind({afterhours::keys::F, true, false, false}, Action::Find);
-    map.bind({afterhours::keys::G, true, false, false}, Action::FindNext);
+    map.bind({afterhours::keys::G, true, false, false}, Action::GoTo);
     map.bind({afterhours::keys::F3, false, false, false}, Action::FindNext);
     map.bind({afterhours::keys::G, true, true, false}, Action::FindPrevious);
     map.bind({afterhours::keys::F3, false, true, false}, Action::FindPrevious);
@@ -710,6 +718,8 @@ const char* actionDisplayName(Action action) {
             return "Find";
         case Action::FindNext:
             return "Find Next";
+        case Action::GoTo:
+            return "Go To";
         case Action::FindPrevious:
             return "Find Previous";
         case Action::Replace:
@@ -1053,7 +1063,8 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     
     // Find and Replace
     addBinding(Action::Find, {afterhours::keys::F, true, false, false});
-    addBinding(Action::FindNext, {afterhours::keys::G, true, false, false});
+    addBinding(Action::GoTo, {afterhours::keys::G, true, false, false});
+    addBinding(Action::FindNext, {afterhours::keys::F3, false, false, false});
     addBinding(Action::FindPrevious, {afterhours::keys::G, true, true, false});
     addBinding(Action::Replace, {afterhours::keys::H, true, false, false});
     

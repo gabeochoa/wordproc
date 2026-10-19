@@ -4625,64 +4625,131 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
-        // Go To Bookmark dialog
-        if (dialogs.showBookmarkListDialog) {
-            constexpr int BOOKMARK_LIST_MODAL_ID = 50007;
-            auto result = afterhours::modal(ctx, mk(entity, BOOKMARK_LIST_MODAL_ID),
-                dialogs.showBookmarkListDialog,
+        // Go To dialog (Batch 9, Word 95): ONE dialog for
+        // Page / Line / Bookmark — a "Go to what:" listbox,
+        // a number/name field, Go To + Close. Bookmark
+        // jumping (the old Go To Bookmark list) lives here:
+        // the Bookmark target lists the document's bookmark
+        // names under the field; clicking a name fills the
+        // field, Go To jumps (and flashes when the name does
+        // not exist). The dialog stays open after a jump so
+        // the user can jump again; Close / Esc dismisses it.
+        if (dialogs.showGoToDialog) {
+            constexpr int GO_TO_MODAL_ID = 50007;
+            auto result = afterhours::modal(ctx, mk(entity, GO_TO_MODAL_ID),
+                dialogs.showGoToDialog,
                 afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(400), afterhours::ui::h720(300))
-                    .with_title("Go To Bookmark"));
-            
+                    .with_size(afterhours::ui::h720(460), afterhours::ui::h720(340))
+                    .with_title("Go To")
+                    .with_show_close_button(true));
+
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
-                
-                auto& docComp = doc;
-                const auto& bookmarks = docComp.buffer.bookmarks();
-                
-                if (bookmarks.empty()) {
-                    // No bookmarks message
-                    div(ctx, mk(result.ent(), 0),
+
+                // "Go to what:" label + listbox.
+                div(ctx, mk(result.ent(), 0),
+                    ComponentConfig{}
+                        .with_label("Go to what:")
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_render_layer(CONTENT_LAYER));
+                static const char* kGoToTargets[3] = {"Page", "Line",
+                                                      "Bookmark"};
+                static const char* kGoToTargetDebug[3] = {
+                    "goto_target_page", "goto_target_line",
+                    "goto_target_bookmark"};
+                for (int t = 0; t < 3; ++t) {
+                    bool selected = dialogs.goToTarget == t;
+                    test_input::register_visible_text(kGoToTargets[t]);
+                    if (button(ctx, mk(result.ent(), 10 + t),
                         ComponentConfig{}
-                            .with_label("No bookmarks in document")
-                            .with_size(ComponentSize{percent(1.0f), h720(24)})
-                            .with_render_layer(CONTENT_LAYER));
-                } else {
-                    // List of bookmarks
-                    auto listContainer = div(ctx, mk(result.ent(), 1),
-                        ComponentConfig{}
-                            .with_size(ComponentSize{percent(1.0f), h720(200)})
-                            .with_flex_direction(FlexDirection::Column)
-                            .with_overflow(afterhours::ui::Overflow::Auto)
-                            .with_render_layer(CONTENT_LAYER));
-                    
-                    int idx = 0;
-                    for (const auto& bookmark : bookmarks) {
-                        if (button(ctx, mk(listContainer.ent(), 1000 + idx),
-                            ComponentConfig{}
-                                .with_label(bookmark.name)
-                                .with_size(ComponentSize{percent(1.0f), h720(32)})
-                                .with_background(Theme::Usage::Surface)
-                                .with_text_overflow(afterhours::ui::TextOverflow::Ellipsis)
-                                .with_cursor(afterhours::ui::CursorType::Pointer)
-                                .with_margin(Margin{.bottom = DefaultSpacing::tiny()})
-                                .with_render_layer(CONTENT_LAYER))) {
-                            // Jump to bookmark
-                            if (docComp.buffer.goToBookmark(bookmark.name)) {
-                                flash("Jumped to: " + bookmark.name);
-                            } else {
-                                toast_notify::error("Bookmark not found");
-                            }
-                            dialogs.showBookmarkListDialog = false;
+                            .with_debug_name(kGoToTargetDebug[t])
+                            .with_label(kGoToTargets[t])
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_custom_background(
+                                selected ? ui_imm::win95_colors::HIGHLIGHT
+                                         : ui_imm::win95_colors::TEXT_AREA)
+                            .with_custom_text_color(
+                                selected ? ui_imm::win95_colors::TEXT_WHITE
+                                         : ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_text_inset(4.0f, 0.0f)
+                            .with_roundness(0.0f)
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        // Switching targets clears the field:
+                        // its meaning changes (page vs line vs
+                        // name), so a stale number must not
+                        // carry over and jump somewhere odd.
+                        if (dialogs.goToTarget != t) {
+                            dialogs.goToTarget = t;
+                            dialogs.goToInputStr.clear();
                         }
-                        idx++;
                     }
                 }
-                
-                // Close button at bottom
-                auto buttonRow = div(ctx, mk(result.ent(), 2),
+
+                // Number / name field, label per target.
+                const char* fieldLabel =
+                    dialogs.goToTarget == 2
+                        ? "Enter bookmark name:"
+                        : dialogs.goToTarget == 1
+                              ? "Enter line number:"
+                              : "Enter page number:";
+                div(ctx, mk(result.ent(), 20),
+                    ComponentConfig{}
+                        .with_label(fieldLabel)
+                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_margin(Margin{.top = DefaultSpacing::small()})
+                        .with_render_layer(CONTENT_LAYER));
+                afterhours::text_input::text_input(
+                    ctx, mk(result.ent(), 21), dialogs.goToInputStr,
+                    ComponentConfig{}
+                        .with_debug_name("goto_input")
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_background(Theme::Usage::Surface)
+                        .with_render_layer(CONTENT_LAYER));
+
+                // Bookmark names under the field (Bookmark
+                // target only): clicking one fills the field.
+                if (dialogs.goToTarget == 2) {
+                    const auto& bookmarks = doc.buffer.bookmarks();
+                    if (bookmarks.empty()) {
+                        div(ctx, mk(result.ent(), 30),
+                            ComponentConfig{}
+                                .with_label("No bookmarks in document")
+                                .with_size(
+                                    ComponentSize{percent(1.0f), h720(24)})
+                                .with_margin(
+                                    Margin{.top = DefaultSpacing::small()})
+                                .with_render_layer(CONTENT_LAYER));
+                    } else {
+                        for (std::size_t bi = 0;
+                             bi < bookmarks.size(); ++bi) {
+                            const std::string& name = bookmarks[bi].name;
+                            test_input::register_visible_text(name);
+                            if (button(ctx, mk(result.ent(), 1000 + static_cast<int>(bi)),
+                                ComponentConfig{}
+                                    .with_debug_name("goto_bookmark_" +
+                                                   std::to_string(bi))
+                                    .with_label(name)
+                                    .with_size(ComponentSize{percent(1.0f),
+                                                             h720(26)})
+                                    .with_background(Theme::Usage::Surface)
+                                    .with_text_overflow(
+                                        afterhours::ui::TextOverflow::Ellipsis)
+                                    .with_cursor(
+                                        afterhours::ui::CursorType::Pointer)
+                                    .with_margin(Margin{.bottom = DefaultSpacing::tiny()})
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.goToInputStr = name;
+                            }
+                        }
+                    }
+                }
+
+                // Go To + Close button row.
+                auto buttonRow = div(ctx, mk(result.ent(), 40),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(44)})
                         .with_flex_direction(FlexDirection::Row)
@@ -4691,14 +4758,28 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_gap(afterhours::ui::pixels(8))
                         .with_margin(Margin{.top = DefaultSpacing::medium()})
                         .with_render_layer(CONTENT_LAYER));
-                
-                if (button(ctx, mk(buttonRow.ent(), 0),
-                    ComponentConfig{}
-                        .with_label("Close")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_cursor(afterhours::ui::CursorType::Pointer)
-                        .with_render_layer(CONTENT_LAYER))) {
-                    dialogs.showBookmarkListDialog = false;
+
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_debug_name("goto_go_button")
+                            .with_label("Go To")
+                            .with_size(ComponentSize{h720(100), h720(32)})
+                            .with_background(Theme::Usage::Primary)
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        cmd::performGoTo(doc, layout, cache_.scroll,
+                                         dialogs);
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ComponentConfig{}
+                            .with_debug_name("goto_close_button")
+                            .with_label("Close")
+                            .with_size(ComponentSize{h720(80), h720(32)})
+                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showGoToDialog = false;
+                    }
                 }
             }
         }
@@ -5679,7 +5760,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&
             !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&
-            !dialogs.showSettingsDialog && !dialogs.showBookmarkListDialog &&
+            !dialogs.showSettingsDialog && !dialogs.showGoToDialog &&
             !dialogs.showSaveAsDialog && !dialogs.showPageSetup &&
             !dialogs.showRevisionsDialog &&
             !dialogs.showVersionHistoryDialog) {

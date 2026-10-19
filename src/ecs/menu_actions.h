@@ -67,6 +67,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     allowed = true;
                 }
             }
+            if (menuIndex == 1 && itemIndex == 18) allowed = true;
             if (menuIndex == 2 && itemIndex == 4) allowed = true;
             if (menuIndex == 3 &&
                 (itemIndex == 26 || itemIndex == 27 ||
@@ -246,7 +247,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 13:  // Find...
                     dialogs.showFindDialog = true;
                     dialogs.findReplaceMode = false;
-                    flash("Find: Ctrl+G next, Ctrl+Shift+G prev");
+                    flash("Find: F3 next, Shift+F3 prev");
                     break;
                 case 14:  // Find Next
                     if (!dialogs.lastSearchTerm.empty()) {
@@ -281,8 +282,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     dialogs.findReplaceMode = true;
                     flash("Replace mode");
                     break;
-                case 18:  // Go To Bookmark...
-                    dialogs.showBookmarkListDialog = true;
+                case 18:  // Go To... (Ctrl+G, Batch 9:
+                          // Word's ONE Go To — Page / Line /
+                          // Bookmark — replaces Go To Bookmark...)
+                    cmd::openGoToDialog(layout, dialogs);
                     break;
                 case 20:  // Repeat (F4)
                     cmd::repeatLastAction(doc);
