@@ -153,3 +153,11 @@ use ah_win95::win95DialogConfig; census found 5 older dialogs still on
 the default shell, queued), header editing 7.5, rendered header 7,
 footer/Page N 8 (same baseline, verified with both texts visible).
 **Batch 9 PASS.** Headers were literal "[HEADER]" body text before.
+
+## 2026-10-19 — Batch 10 (dialog shell migration)
+
+Find 8->8.5, Replace 6.5->7, Help 6.5->7.5, About 8. **PASS.**
+Root cause of the blue rounded focus ring: dialogs built a fresh
+default afterhours Theme instead of createWin95Theme(). All 25 modal
+sites now go through win95DialogConfig. Remaining minor: unfocused
+text fields lack the sunken inset (queued).
