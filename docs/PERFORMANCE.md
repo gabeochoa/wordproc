@@ -104,6 +104,129 @@ process) before it matters for open-time claims; (3) if a future edit
 workload (e.g. repeated edits with line-offset shifting) ever approaches
 the frame budget, that — not these numbers — is the optimization target.
 
+## Perf Lane Baseline — 2026-10-19 (headless, interaction feel)
+
+Owner priority: (1) cold first-open → first interactive frame, (2) scroll
+frame time on a 100K+ word doc, (3) menu/popover open latency (target:
+visible next frame, no layout jank).
+
+Method (this section and every fix after it): headless only
+(`./output/wordproc.exe --headless --test-mode ...`, `make test` /
+`make bench-unit`; never windowed, never `tests/run_e2e.sh`). Machine:
+Apple M1 Pro, arm64, macOS 27.0.1. Base commit `78417f1`. Each number is
+the median of 3 runs of the exact command shown. Wall time is process
+wall (`time`-style, includes process start + shutdown); "Startup" is the
+app's own `Startup time:` log (main → `app_init` done, before any frame).
+
+### (1) First-open
+
+Trivial script = one screenshot + `wait_frames 1`, `--frame-limit=30`.
+
+| Open | Command (plus `--headless --test-mode --test-script=<trivial> --frame-limit=30`) | Median wall | Median `Startup time` |
+|---|---|---|---|
+| No file | (no positional arg) | 231.1 ms (227.4, 231.1, 254.5) | 119 ms (101, 119, 124) |
+| `war_and_peace.txt` | positional `test_files/public_domain/war_and_peace.txt` (566,334 words, 66,032 lines, 3.2 MB) | 331.9 ms (296.8, 331.9, 390.3) | 105 ms (95, 105, 142) |
+
+`SCOPED_TIMER` breakdown (medians, same runs), top costs first:
+
+| Timer | No file | War and Peace |
+|---|---|---|
+| `Load fonts` | 59.2 ms | 58.4 ms |
+| `font: Gaegu-Bold / Gaegu` | 50.1 ms | 49.5 ms |
+| `font: Garamond` | 5.3 ms | 5.3 ms |
+| `font: DEFAULT_FONT (Roboto)` | 1.2 ms | 1.2 ms |
+| `font: SYMBOL_FONT (Roboto)` | 1.2 ms | 1.2 ms |
+| `font: UI_FONT (manual load)` | 1.2 ms | 1.2 ms |
+| `Settings load` | 8.1 ms (runs 3.0–14.4, noisy) | 6.1 ms (runs 0.5–9.8, noisy) |
+| `Background document preload` | — | 19.4 ms, of which `setText (plain text)` 18.2 ms, `file I/O (readFileRaw)` 1.2 ms |
+| `createMenuBar` | 0.055 ms | 0.053 ms |
+| `Register all systems` | 0.095 ms | 0.090 ms |
+| `Preload and singletons` | 60.0 ms | 59.3 ms |
+
+Reading: fonts are ~50% of `Startup time`, and Gaegu alone is ~85% of
+font time (2.8 MB `Gaegu-Bold.ttf`, loaded twice under two names —
+`Gaegu-Bold` and `Gaegu` — in one 50 ms timer). Garamond is next at
+5.3 ms. Everything else in startup is < 1 ms except noisy `Settings
+load`. War-and-Peace load itself is 19 ms of preload (`setText`
+18 ms — far above the 0.085–0.11 ms `setText` in `bench-unit` for a
+similar-size synthetic doc, so the preload-path `setText` cost is
+indicted for investigation, not assumed to be the gap buffer). The
+`Startup` timer excludes the frame loop; wall − Startup ≈ 110–225 ms
+is process start, 30 frames, screenshot, and shutdown.
+
+### (2) Scroll frame CPU, War and Peace
+
+`--fps-test` auto-scrolls 3 lines/frame. `get_fps()` is **simulated
+in headless**: `MetalPlatformAPI::get_frame_time()` returns a fixed
+`1/60` when `g_headless`, so the logged `avg_fps=60.00` (all runs) is
+not a measurement. The metric is wall/frame differentials at fixed
+frame counts, same command, no script (no E2E overhead — see caveat):
+
+| Run | Command | Median wall |
+|---|---|---|
+| fps-test, 600 frames | `--headless --fps-test --frame-limit=600 test_files/public_domain/war_and_peace.txt` | 2038.3 ms |
+| fps-test, 60 frames | `--headless --fps-test --frame-limit=60 ...` (same file) | 369.8 ms |
+
+Scroll frame CPU = (2038.3 − 369.8) / 540 = **3.09 ms/frame** while
+scrolling 3 lines/frame through War and Peace. ~5× inside the 16.7 ms
+frame budget; not the bottleneck on this machine.
+
+Caveat (measured, not assumed): script-mode frames are NOT production
+frames. A run with a `wait_frames 600` script on War and Peace took
+9418 ms vs 1330 ms for `wait_frames 60` → 14.98 ms/frame, while the
+same script on `hello.txt` took (1304 − 334) / 540 = 1.80 ms/frame.
+The ~13 ms/frame war-only surcharge in script mode is the E2E
+`DocumentTextRegistration` system (`src/testing/e2e_commands.h`):
+its `once()` runs every tick and registers **all 66,032 lines** via
+`lineString` per frame, test-only overhead that does not exist in a
+production frame. Script-mode absolutes must never be quoted as
+frame time; only same-frame-count script-mode *differentials* (menu
+open vs closed, same doc) are valid, because the registration cost
+cancels.
+
+### (3) Menu latency
+
+Same-frame-count script-mode differentials on War and Peace (the
+registration overhead cancels; see caveat above). Scripts in
+`/tmp/perf/` (not committed): `idle200.e2e` (`wait_frames 200`),
+`menu_open_idle.e2e` (`menu_open Format` + `wait_frames 200`),
+`menu_alt.e2e` (4× `menu_open Format` / `key ESCAPE`, 30 frames each
+= 240 frames), `idle240.e2e`.
+
+| Run | Median wall (3 runs) | Delta vs idle, same frames |
+|---|---|---|
+| Idle, 200 frames | 3465.2 ms | — |
+| Format menu open, idle 200 frames | 4231.4 ms | +766.2 ms → **+3.83 ms/frame** steady-state with menu open |
+| Idle, 240 frames | 3959.0 ms | — |
+| Menu open/close alternating, 240 frames | 5191.5 ms | +1232.6 ms → **+5.14 ms/frame** avg incl. open/close transitions |
+
+Reading: the menu does NOT paint free — an open Format menu costs
+~+3.8 ms/frame steady-state, and alternating open/close averages
+~+5.1 ms/frame. That is inside the frame budget but is real, recurring
+per-frame work while a menu is open (candidates: dropdown relayout /
+text re-measure per frame, not a one-frame open spike). The "visible
+next frame" half of the target is met by construction (`menu_open`
+sets `menu.open = true`, rendered next frame); the cost to attack is
+the per-frame menu-open overhead, not open latency in frames.
+
+### Typing guard (baseline, `make bench-unit`)
+
+Typing burst: **0.154 µs/keystroke** (0.077 ms / 500 keystrokes into
+a 5,000-char doc). Mid-doc edit: 9.29 µs/pair. Any fix must not
+regress the typing burst.
+
+### Vendored fmt (addendum check, 2026-10-19)
+
+Wordproc's vendored fmt is already `FMT_VERSION 110200` (11.2.0) —
+the same version mailboy bumped to in `95b6965` ("bump vendored fmt
+8.0.1 → 11.2.0 (newer-clang consteval break)"). Test-compiled a TU
+using `fmt::format` + `FMT_COMPILE` (the consteval path) with the
+system clang (Apple clang 17.0.0) and the zig-bundled clang
+(21.1.8, `zig c++`): both compile clean, no consteval errors. **No
+fmt bump needed.** (Kart-afterhours still vendors fmt 8.0.1 — that
+is kart's exposure, not wordproc's.) No PCH / `build.zig` pattern to
+copy: wordproc builds with `makefile`, no PCH.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
