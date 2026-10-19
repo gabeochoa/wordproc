@@ -168,3 +168,11 @@ TOC 4->8 (leaders measured to a right tab stop), Symbol 5.5->7
 (font picker, tabs, codepoint readout), Drop Cap 3.5->7.5 (indent
 leak into later paragraphs, then vertical-extent overlap — the cap
 paragraph now reserves the cap's full height). **Batch 11 PASS.**
+
+## 2026-10-19 — Batch 12 (color toolbar icons, per-range styles)
+
+Icons 6.5->7.5 (pitch 26->21px, Insert group colorized, shading).
+Per-range bold proof 8/10. **Batch 12 PASS.** The headline fix was
+invisible: character formatting was document-global (Bold bolded
+everything); CharStyleSpan per-range overrides now back the toolbar,
+Font dialog, Repeat and Painter, persisted in .wpdoc.
