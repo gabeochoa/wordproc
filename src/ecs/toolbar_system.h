@@ -249,18 +249,19 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             pvId += 2;
             pvX += sepWidth + sepPadding;
 
-            // Prev / Next Page (disabled at the first / last page)
-            if (previewButton(pvX, theme::layout::scale(72), "Prev Page",
+            // Prev / Next Page (disabled at the first / last page):
+            // short labels, not "Prev Page" / "Next Page".
+            if (previewButton(pvX, theme::layout::scale(48), "Prev",
                               "btn_preview_prev", layout.previewPage > 0)) {
                 layout::previewPrevPage(layout);
             }
-            pvX += theme::layout::scale(72) + buttonPadding;
-            if (previewButton(pvX, theme::layout::scale(72), "Next Page",
+            pvX += theme::layout::scale(48) + buttonPadding;
+            if (previewButton(pvX, theme::layout::scale(48), "Next",
                               "btn_preview_next",
                               layout.previewPage < layout.previewPageCount - 1)) {
                 layout::previewNextPage(layout);
             }
-            pvX += theme::layout::scale(72) + buttonPadding;
+            pvX += theme::layout::scale(48) + buttonPadding;
 
             drawEtchedSeparator(ctx, uiRoot, pvId, pvX + sepPadding / 2, pvY, buttonSize - 4);
             pvId += 2;
@@ -288,14 +289,15 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             pvId += 2;
             pvX += sepWidth + sepPadding;
 
-            // Zoom dropdown: shows the current zoom %; choices wire
-            // to layout.zoomLevel and recompute the preview
-            // pagination estimate (zoom changes lines per page).
+            // Zoom dropdown: shows the EFFECTIVE zoom % (fit *
+            // user zoom); choices are effective targets and set the
+            // user zoom so fit * user == target, then recompute the
+            // preview pagination estimate (zoom changes lines per page).
             float zoomBtnX = pvX;
             float zoomBtnW = theme::layout::scale(76);
             std::string zoomLabel =
                 std::to_string(static_cast<int>(std::lround(
-                    layout.zoomLevel * 100.0f))) + "%";
+                    layout::effectiveZoom(layout) * 100.0f))) + "%";
             test_input::register_visible_text(zoomLabel);
             bool zoomOpen = cache_.toolbar &&
                             cache_.toolbar->previewZoomDropdownOpen;
@@ -320,7 +322,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 for (int i = 0; i < 5; ++i) {
                     int pct = zoomChoices[i];
                     bool selected = static_cast<int>(std::lround(
-                        layout.zoomLevel * 100.0f)) == pct;
+                        layout::effectiveZoom(layout) * 100.0f)) == pct;
                     float itemY = listY + 2.0f + static_cast<float>(i) *
                                                  theme::layout::scale(20);
                     if (button(ctx, mk(uiRoot, pvId++),
@@ -341,10 +343,15 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_debug_name("preview_zoom_item_" +
                                             std::to_string(pct)))) {
-                        layout.zoomLevel = static_cast<float>(pct) / 100.0f;
+                        layout::setEffectiveZoom(
+                            layout, static_cast<float>(pct) / 100.0f);
                         if (cache_.toolbar) {
                             cache_.toolbar->previewZoomDropdownOpen = false;
                         }
+                        // The dropdown item dies now; a stale focus
+                        // id on it recycles to the File header (see
+                        // MenuUISystem dispatch).
+                        ctx.set_focus(ctx.ROOT);
                         layout::updateLayout(layout, layout.screenWidth,
                                              layout.screenHeight);
                         layout::refreshPreviewPagination(
@@ -358,10 +365,14 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             pvId += 2;
             pvX += sepWidth + sepPadding;
 
-            // Close Print Preview (Esc does the same; mode is restored)
-            if (previewButton(pvX, theme::layout::scale(120),
-                              "Close Print Preview", "btn_preview_close", true)) {
+            // Close (Esc does the same; mode + pre-preview zoom restored)
+            if (previewButton(pvX, theme::layout::scale(64),
+                              "Close", "btn_preview_close", true)) {
                 cmd::closePrintPreview(layout);
+                // The preview toolbar dies with preview; clear
+                // focus so its Close button's stale id cannot
+                // recycle onto the File header.
+                ctx.set_focus(ctx.ROOT);
             }
 
             // Close the zoom dropdown on a click outside it (same
@@ -474,6 +485,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         if (button(ctx, mk(uiRoot, previewBtnId),
             absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::PrintPreview).with_label("").with_debug_name("btn_print_preview"))) {
             cmd::openPrintPreview(doc, layout);
+            // Entering preview replaces this toolbar; clear focus
+            // so this button's stale id cannot recycle onto File.
+            ctx.set_focus(ctx.ROOT);
         }
         trackTooltip(curX, btnY, "Print Preview");
         curX += buttonSize + buttonPadding;

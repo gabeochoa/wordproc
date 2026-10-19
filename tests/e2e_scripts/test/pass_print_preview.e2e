@@ -9,6 +9,10 @@
 # bar is gone (text_area_y drops from 153 to 96 at ui_scale 1.2), the
 # status bar shows "Page X of Y" + zoom, and the Zoom dropdown wires
 # to the preview zoom.
+# Fix round 2: the displayed zoom is the EFFECTIVE zoom (fit * user).
+# Entering preview at user 100% shows the fit percent (< 100), not
+# 100%; choosing effective 100% renders the page at 72ppi
+# (page_display_width 612) and choosing effective 150% shows 150%.
 
 fill_lines 200 Preview page line
 wait_frames 12
@@ -24,6 +28,13 @@ validate page_mode=paged
 validate ruler_visible=false
 validate text_area_y=96
 expect_text "Page 1 of"
+# Entering at fit: user zoom is 100 but the effective (displayed)
+# zoom is the fit percent, strictly below 100. (Regression: the old
+# code showed 100% here while the page rendered at ~fit.)
+validate zoom_level=100
+# 66% = the fit at 1280x720 / ui_scale 1.2 (height-capped).
+validate effective_zoom=66
+validate menu_open=false
 
 screenshot print_preview
 
@@ -36,13 +47,26 @@ click_ui btn_preview_prev
 wait_frames 12
 validate preview_page=0
 
-# Zoom dropdown: 150% wires to the preview zoom (status bar shows
-# the new zoom; the page count estimate is recomputed from it).
+# Zoom dropdown: choices are EFFECTIVE targets. 100% effective
+# renders the page at 72ppi (page_display_width 612, larger than
+# the viewport height); 150% effective shows 150% and widens the
+# page to 918. (Regression: the old code set user zoom 150 and
+# showed 150% while the page rendered at fit*150.)
+click_ui preview_zoom_dropdown
+wait_frames 12
+click_ui preview_zoom_item_100
+wait_frames 12
+validate effective_zoom=100
+validate page_display_width=612
+validate preview_page=0
+expect_text "100%"
+
 click_ui preview_zoom_dropdown
 wait_frames 12
 click_ui preview_zoom_item_150
 wait_frames 12
-validate zoom_level=150
+validate effective_zoom=150
+validate page_display_width=918
 validate preview_page=0
 expect_text "150%"
 
@@ -52,11 +76,14 @@ wait_frames 12
 validate line_count=200
 
 # Close exits preview and restores the previous (pageless) mode,
-# the ruler, and the full chrome height.
+# the ruler, the full chrome height, and the pre-preview user zoom
+# (preview zoom is preview-local: effective 150% in preview must
+# not leave the editing view at user ~227%).
 click_ui btn_preview_close
 wait_frames 12
 validate preview_mode=false
 validate page_mode=pageless
 validate ruler_visible=true
 validate text_area_y=153
+validate zoom_level=100
 validate line_count=200

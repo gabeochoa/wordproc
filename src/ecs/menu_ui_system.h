@@ -450,6 +450,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!anyMenuOpen && layout.previewMode &&
             input::isKeyPressed(afterhours::keys::ESCAPE)) {
             cmd::closePrintPreview(layout);
+            // Preview toolbar dies with preview (stale focus id).
+            ctx.set_focus(ctx.ROOT);
         }
 
         // Close menus on click outside and consume stray clicks.
@@ -2395,6 +2397,22 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             if (menuResult >= 0) {
                 handleMenuActionImpl(menuResult, doc, menu, dialogs, layout,
                                      cache_.status);
+                // Entering Print Preview from a menu (or E2E
+                // menu_select, which does not clear
+                // activeMenuIndex): no menu may stay open or
+                // highlighted in preview.
+                if (layout.previewMode) {
+                    for (auto& m : menu.menus) m.open = false;
+                    menu.activeMenuIndex = -1;
+                }
+                // The menu just closed, so the dropdown-item entity
+                // that owned keyboard focus dies next frame — and
+                // its EntityID can be recycled to the File header,
+                // painting a pressed-looking focus border on File
+                // with no menu open (seen in Print Preview
+                // screenshots). Focus returns to the document
+                // (ROOT) instead; dialogs grab their own focus.
+                ctx.set_focus(ctx.ROOT);
             }
         }
 

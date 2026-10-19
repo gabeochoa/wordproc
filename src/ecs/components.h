@@ -383,6 +383,7 @@ struct LayoutComponent : public afterhours::BaseComponent {
     // pagination exists); see scroll_math.h for the honesty note.
     bool previewMode = false;
     PageMode previewPrevPageMode = PageMode::Pageless;
+    float previewPrevZoomLevel = 1.0f;  // User zoom restored on exit
     int previewPage = 0;          // 0-based current preview page
     int previewPageCount = 1;     // Estimated total pages
     int previewLinesPerPage = 50; // Estimated rendered lines per page

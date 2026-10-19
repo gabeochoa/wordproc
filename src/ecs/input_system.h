@@ -189,14 +189,20 @@ struct KeyboardShortcutSystem
         // Everything else below (New/Save, formatting, clipboard,
         // undo/redo, Spelling...) is blocked while previewMode is on.
         if (layout.previewMode) {
+            // Steps are in EFFECTIVE zoom (what the status bar and
+            // dropdown show): + / - 10 effective points, reset to
+            // effective 100% (page at 72ppi), not user zoom 1.0.
             if (actionMap_.isActionPressed(Action::ZoomIn)) {
-                layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
+                layout::setEffectiveZoom(
+                    layout, layout::effectiveZoom(layout) + 0.1f);
             }
             if (actionMap_.isActionPressed(Action::ZoomOut)) {
-                layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
+                layout::setEffectiveZoom(
+                    layout, std::max(0.1f,
+                                     layout::effectiveZoom(layout) - 0.1f));
             }
             if (actionMap_.isActionPressed(Action::ZoomReset)) {
-                layout.zoomLevel = 1.0f;
+                layout::setEffectiveZoom(layout, 1.0f);
             }
             if (actionMap_.isActionPressed(Action::Print)) {
                 cmd::requestPrint(doc, dialogs);

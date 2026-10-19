@@ -433,6 +433,16 @@ static void setupCallbacksEx(
             int pct = static_cast<int>(std::round(layoutComp.zoomLevel * 100.0f));
             return std::to_string(pct);
         }
+        // effective_zoom = displayed zoom (fit * user zoom, in %):
+        // in pageless this is the user zoom; in paged / Print
+        // Preview the page is fit-scaled, so entering preview at
+        // user 100% reads ~54%, and choosing effective 100% in
+        // preview renders the page at 72ppi.
+        if (prop == "effective_zoom") {
+            int pct = static_cast<int>(
+                std::round(ecs::layout::effectiveZoom(layoutComp) * 100.0f));
+            return std::to_string(pct);
+        }
         if (prop == "focus_mode") return layoutComp.focusMode ? "true" : "false";
         if (prop == "split_view") return layoutComp.splitViewEnabled ? "true" : "false";
         if (prop == "page_mode")
@@ -989,6 +999,7 @@ static void setupCallbacksEx(
         layoutComp.pageMode = PageMode::Pageless;
         layoutComp.previewMode = false;
         layoutComp.previewPrevPageMode = PageMode::Pageless;
+        layoutComp.previewPrevZoomLevel = 1.0f;
         layoutComp.previewPage = 0;
         layoutComp.previewPageCount = 1;
         layoutComp.previewLinesPerPage = 50;

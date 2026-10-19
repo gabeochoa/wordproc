@@ -54,8 +54,11 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
         std::string leftText;
         std::string rightText;
         if (layout.previewMode) {
-            int zoomPct =
-                static_cast<int>(std::lround(layout.zoomLevel * 100.0f));
+            // Displayed zoom is the EFFECTIVE zoom (fit * user),
+            // not the raw user zoom: at fit the page renders at
+            // ~54% while user zoom is 100%.
+            int zoomPct = static_cast<int>(
+                std::lround(layout::effectiveZoom(layout) * 100.0f));
             leftText = std::format("Page {} of {}      {}%",
                                     layout.previewPage + 1,
                                     layout.previewPageCount, zoomPct);

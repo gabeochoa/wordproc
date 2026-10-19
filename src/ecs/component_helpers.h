@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "../editor/ruler_math.h"
 #include "../editor/scroll_math.h"
 #include "../ui/theme.h"
@@ -168,6 +170,27 @@ inline float pixelsPerInch(const LayoutComponent& layout) {
     return ruler_math::PIXELS_PER_INCH * displayScale(layout);
 }
 
+// Effective (displayed) zoom: fit * user zoom. In pageless mode
+// fit is 1, so this is just zoomLevel; in paged / Print Preview
+// the page is fit-scaled (~54% at 1280x720) and the Zoom control
+// and status bar must show THIS, not the raw user zoom — showing
+// 100% while the page renders at ~54% is dishonest. Choosing an
+// effective zoom sets the user zoom so fit * user == target:
+// at effective 100% the page renders at 72ppi * 1.0, larger than
+// the viewport, and the existing wheel/PageUp/PageDown paging
+// (and, in the editing view, scroll) reaches the rest.
+inline float effectiveZoom(const LayoutComponent& layout) {
+    return displayScale(layout);
+}
+
+inline void setEffectiveZoom(LayoutComponent& layout, float effective) {
+    float fit = layout.pageMode == PageMode::Paged ? layout.pageScale : 1.0f;
+    if (fit <= 0.0f) fit = 1.0f;
+    // User zoom, clamped to a sane range (effective 200% at a
+    // 30% fit is a 6.7x user zoom — let the dropdown reach it).
+    layout.zoomLevel = std::clamp(effective / fit, 0.1f, 10.0f);
+}
+
 inline LayoutComponent::Rect effectiveTextArea(const LayoutComponent& layout) {
     // Margin in display pixels: pageMargin is in points (72/in), so
     // marginPx = (pageMargin/72) * pixelsPerInch =
@@ -290,6 +313,10 @@ inline void enterPrintPreview(LayoutComponent& layout, std::size_t totalLines,
                               int baseFontSize) {
     if (layout.previewMode) return;
     layout.previewPrevPageMode = layout.pageMode;
+    // Preview zoom is preview-local: choosing an effective 100%
+    // in preview must not leave the editing view at ~185% user
+    // zoom (1 / fit) when preview closes.
+    layout.previewPrevZoomLevel = layout.zoomLevel;
     layout.previewMode = true;
     layout.previewPage = 0;
     layout.pageMode = PageMode::Paged;
@@ -301,6 +328,7 @@ inline void exitPrintPreview(LayoutComponent& layout) {
     if (!layout.previewMode) return;
     layout.previewMode = false;
     layout.pageMode = layout.previewPrevPageMode;
+    layout.zoomLevel = layout.previewPrevZoomLevel;
     layout.previewPage = 0;
     layout.previewPageCount = 1;
     layout.previewLinesPerPage = 50;
