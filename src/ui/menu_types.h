@@ -149,6 +149,8 @@ inline std::vector<MenuData> createMenuBarData() {
                         {"Decrease Size", "Ctrl+-", true, false},
                         {"Reset Size", "Ctrl+0", true, false},
                         {"", "", false, true},
+                        // Alignment / spacing: Paragraph... first.
+                        {"Paragraph...", "", true, false},
                         {"Align Left", "Ctrl+L", true, false},
                         {"Align Center", "Ctrl+E", true, false},
                         {"Align Right", "Ctrl+R", true, false},

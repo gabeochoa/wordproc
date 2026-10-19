@@ -718,6 +718,41 @@ void TextBuffer::commitParagraphIndents(std::size_t row,
         row, oldIndents, newIndents));
 }
 
+ParagraphFormat TextBuffer::lineParagraphFormat(std::size_t row) const {
+    if (row >= line_spans_.size()) return {};
+    const LineSpan& span = line_spans_[row];
+    return {{span.leftIndent, span.firstLineIndent, span.rightIndent},
+            span.lineSpacing,
+            span.spaceBefore,
+            span.spaceAfter};
+}
+
+void TextBuffer::setLineParagraphFormat(std::size_t row,
+                                        ParagraphFormat format) {
+    if (row >= line_spans_.size()) return;
+    setLineIndents(row, format.indents);
+    LineSpan& span = line_spans_[row];
+    span.lineSpacing = std::max(0.5f, std::min(3.0f, format.lineSpacing));
+    span.spaceBefore = std::max(0, format.spaceBefore);
+    span.spaceAfter = std::max(0, format.spaceAfter);
+    version_++;
+}
+
+void TextBuffer::commitParagraphFormat(
+    std::vector<ParagraphFormatChange> changes) {
+    changes.erase(
+        std::remove_if(changes.begin(), changes.end(),
+                       [](const ParagraphFormatChange& c) {
+                           return c.oldFormat == c.newFormat;
+                       }),
+        changes.end());
+    if (changes.empty()) return;
+    // Already applied live; record only, so the whole dialog OK
+    // (every field, every selected paragraph) is one step.
+    history_.push(
+        std::make_unique<SetParagraphFormatCommand>(std::move(changes)));
+}
+
 void TextBuffer::commitParagraphStyle(std::size_t row,
                                       ParagraphStyle oldStyle,
                                       ParagraphStyle newStyle) {
@@ -1424,6 +1459,18 @@ void SwapAdjacentLineRangesCommand::undo(TextBuffer& buffer) {
     buffer.swapAdjacentLineRanges(firstStart_, shifted, secondEnd_);
     buffer.clearSelection();
     buffer.setCaret({oldCaretRow_, 0});
+}
+
+void SetParagraphFormatCommand::execute(TextBuffer& buffer) {
+    for (const auto& change : changes_) {
+        buffer.setLineParagraphFormat(change.row, change.newFormat);
+    }
+}
+
+void SetParagraphFormatCommand::undo(TextBuffer& buffer) {
+    for (const auto& change : changes_) {
+        buffer.setLineParagraphFormat(change.row, change.oldFormat);
+    }
 }
 
 void SetParagraphIndentsCommand::execute(TextBuffer& buffer) {

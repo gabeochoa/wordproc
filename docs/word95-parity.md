@@ -63,9 +63,9 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Font... dialog (family/size/effects) | Have | P0 | FIRST Format item: Win95 dialog with Font list (toolbar fonts vector), Font style list (Regular/Bold/Italic/Bold Italic), Size list (16 sizes + custom field), Effects (Underline/Strikethrough/Superscript/Subscript, super/sub mutually exclusive), color swatch row (existing text colors), Preview "AaBbYyZz 123" in the chosen size/bold/color. OK applies via buffer.setTextStyle, the toolbar path (buffer style is document-global). Honest partial: Times New Roman/Arial/Courier New are toolbar names with no loaded face, so the preview family falls back to the default face (size/bold/color exact); italic has no slanted UI face in the preview |
 | Bold/Italic/Underline/Strike/Super/Sub | Have | P0 | |
 | Alignment L/C/R/Justify | Have | P0 | |
-| Indents & Tabs (ruler + dialog) | Partial | P0 | ruler drag sets indents (one undo step) + indent keys + Tab Width dialog; no full Paragraph dialog |
+| Indents & Tabs (ruler + dialog) | Have | P0 | ruler drag sets indents (one undo step) + indent keys + Tab Width dialog + full Paragraph dialog (indents/spacing/line spacing, Default tab stops = document-wide tabWidth, Tabs... opens Tab Width) |
 | Bullets & Numbering | Have | P0 | multi-level list indent |
-| Paragraph... (spacing/line spacing) | Partial | P1 | menu increments, no full dialog |
+| Paragraph... (spacing/line spacing) | Have | P1 | Format menu, first item of the alignment/spacing section: Win95 dialog with Left/Right/First-line indents (inches), Spacing Before/After (pt), Line spacing dropdown (Single/1.5 lines/Double), Default tab stops (document-wide tabWidth; per-paragraph tab stops do not exist) + Tabs... button opening the Tab Width dialog. OK applies to the caret paragraph or every paragraph in the selection as one undo step through the command layer; invalid/cleared fields keep their seeded values. Unit + E2E `pass_paragraph_dialog.e2e` (indent 0.5 + after 12 + Double, one Ctrl+Z restores all) |
 | Borders and Shading... | Missing | P1 | table borders render; no dialog |
 | Columns... | Have | P1 | Format menu (last item): Win95 dialog with 1/2/3/4 presets, Equal column width fixed on, spacing field in inches (default 0.5, saved/loaded with the document in `pageLayout.columns` / `columnSpacing`). Paged renderer flows the page's lines through N columns (column width = (textWidth - (N-1)*spacing)/N, column 1 fills linesPerColumn top-to-bottom, then column 2...); caret rendering, click hit-test, and squiggles use the same column offsets (unit-tested math + E2E clicks in column 1/2). Honest partials: scrolling in columns is page-at-a-time (the page containing the scroll offset); Print Preview ignores columns (its own line stride); pageless is unchanged |
 | Styles (Normal/Title/Headings 1-6) | Have | P0 | style dropdown + Ctrl+Alt+n |
@@ -127,7 +127,7 @@ honest about Word 95 itself.
 | Live word count | Have | P1 | Batch 5 item 5: status bar left cluster gains a "Words: N" segment after the Ln/Col group, updating as you type, from buffer stats. The O(n) `TextBuffer::stats()` is cached on the status-bar system and recomputed only when the buffer version changes, so the per-frame status render stays O(1). Bench guard: `make bench-unit` class unchanged (no benchmark touched). E2E `pass_live_word_count.e2e` (type 3 words -> "Words: 3", add a word, delete it) |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 45 · Partial 13 · Missing 8** (after Batch 6 item 1, Page Setup honored) (66 grouped rows; several rows bundle
+**Have 47 · Partial 11 · Missing 8** (after Batch 6 item 2, Paragraph dialog) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

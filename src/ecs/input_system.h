@@ -15,6 +15,7 @@
 #include "../ui/ui_context.h"
 #include "component_helpers.h"
 #include "document_commands.h"
+#include "scrollbar_system.h"  // anyModalDialogOpen for the dialog typing gate
 
 namespace ecs {
 
@@ -61,6 +62,20 @@ struct TextInputSystem
         // (not just ignored): an unconsumed char would otherwise sit
         // in the queue and insert itself the frame preview exits.
         if (layout.previewMode) {
+            while (test_input::get_char_pressed() > 0) {
+            }
+            return;
+        }
+
+        // Modal dialog typing gate: while any modal dialog is open,
+        // the dialog owns the keyboard. Typed chars already went to
+        // its focused input in the UI phase, but Backspace / Delete /
+        // Enter / Tab are key state, not a consumed queue, so without
+        // this gate editing a dialog field (Backspace) also edited
+        // the document behind the modal. Same drain as the gates
+        // above. The @ chip popup is not modal (typing there edits
+        // the filter in the buffer), so it is not in this gate.
+        if (ScrollbarSystem::anyModalDialogOpen(dialogs)) {
             while (test_input::get_char_pressed() > 0) {
             }
             return;

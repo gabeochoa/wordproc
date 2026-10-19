@@ -346,6 +346,22 @@ struct DialogState : public afterhours::BaseComponent {
     int columnsSelected = 1;
     std::string columnsSpacingStr = "0.5";
 
+    // Paragraph dialog (Format > Paragraph...): field strings,
+    // seeded from the caret paragraph when the dialog opens (see
+    // menu_actions). Indents are inches, spacing is points, line
+    // spacing is the dropdown index into
+    // paragraph_dialog::kLineSpacingValues, tab stops is the
+    // document-wide default (per-paragraph tab stops do not exist).
+    bool showParagraphDialog = false;
+    bool paragraphLineSpacingDropdownOpen = false;
+    std::string paragraphLeftStr = "0";
+    std::string paragraphFirstLineStr = "0";
+    std::string paragraphRightStr = "0";
+    std::string paragraphBeforeStr = "0";
+    std::string paragraphAfterStr = "0";
+    int paragraphLineSpacingIndex = 0;
+    std::string paragraphTabStopsStr = "4";
+
     // Tab Width
     bool showTabWidthDialog = false;
     char tabWidthInputBuffer[16] = {0};

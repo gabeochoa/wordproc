@@ -6,6 +6,7 @@
 
 #include "../util/clipboard.h"
 #include "../editor/columns_math.h"
+#include "../editor/paragraph_dialog.h"
 #include "../editor/document_io.h"
 #include "../editor/export/export_html.h"
 #include "../editor/export/export_pdf.h"
@@ -497,82 +498,112 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     style.fontSize = 16;
                     doc.buffer.setTextStyle(style);
                     break;
-                case 47:  // Align Left
+                case 47:  // Paragraph...
+                    // Seed the dialog from the caret paragraph; OK
+                    // re-reads the caret/selection then, so a
+                    // multi-paragraph selection gets the same format.
+                    dialogs.showParagraphDialog = true;
+                    dialogs.paragraphLineSpacingDropdownOpen = false;
+                    {
+                        ParagraphFormat fmt =
+                            doc.buffer.lineParagraphFormat(
+                                doc.buffer.caret().row);
+                        dialogs.paragraphLeftStr =
+                            paragraph_dialog::storedToInchesString(
+                                fmt.indents.left);
+                        dialogs.paragraphFirstLineStr =
+                            paragraph_dialog::storedToInchesString(
+                                fmt.indents.firstLine);
+                        dialogs.paragraphRightStr =
+                            paragraph_dialog::storedToInchesString(
+                                fmt.indents.right);
+                        dialogs.paragraphBeforeStr =
+                            std::to_string(fmt.spaceBefore);
+                        dialogs.paragraphAfterStr =
+                            std::to_string(fmt.spaceAfter);
+                        dialogs.paragraphLineSpacingIndex =
+                            paragraph_dialog::lineSpacingIndexFor(
+                                fmt.lineSpacing);
+                        dialogs.paragraphTabStopsStr =
+                            std::to_string(doc.docSettings.tabWidth);
+                    }
+                    break;
+                case 48:  // Align Left
                     doc.buffer.setCurrentAlignment(TextAlignment::Left);
                     toast_notify::info("Align: Left");
                     break;
-                case 48:  // Align Center
+                case 49:  // Align Center
                     doc.buffer.setCurrentAlignment(TextAlignment::Center);
                     toast_notify::info("Align: Center");
                     break;
-                case 49:  // Align Right
+                case 50:  // Align Right
                     doc.buffer.setCurrentAlignment(TextAlignment::Right);
                     toast_notify::info("Align: Right");
                     break;
-                case 50:  // Justify
+                case 51:  // Justify
                     doc.buffer.setCurrentAlignment(TextAlignment::Justify);
                     toast_notify::info("Align: Justify");
                     break;
-                case 52:  // Increase Indent
+                case 53:  // Increase Indent
                     doc.buffer.increaseIndent();
                     toast_notify::info("Indent increased");
                     break;
-                case 53:  // Decrease Indent
+                case 54:  // Decrease Indent
                     doc.buffer.decreaseIndent();
                     toast_notify::info("Indent decreased");
                     break;
-                case 55:  // Single Spacing
+                case 56:  // Single Spacing
                     doc.buffer.setLineSpacingSingle();
                     toast_notify::info("Line spacing: Single");
                     break;
-                case 56:  // 1.5 Line Spacing
+                case 57:  // 1.5 Line Spacing
                     doc.buffer.setLineSpacing1_5();
                     toast_notify::info("Line spacing: 1.5");
                     break;
-                case 57:  // Double Spacing
+                case 58:  // Double Spacing
                     doc.buffer.setLineSpacingDouble();
                     toast_notify::info("Line spacing: Double");
                     break;
-                case 59:  // Bulleted List
+                case 60:  // Bulleted List
                     doc.buffer.toggleBulletedList();
                     toast_notify::info(doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
                     break;
-                case 60:  // Numbered List
+                case 61:  // Numbered List
                     doc.buffer.toggleNumberedList();
                     toast_notify::info(doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
                     break;
-                case 61:  // Increase List Level
+                case 62:  // Increase List Level
                     doc.buffer.increaseListLevel();
                     toast_notify::info("List level increased");
                     break;
-                case 62:  // Decrease List Level
+                case 63:  // Decrease List Level
                     doc.buffer.decreaseListLevel();
                     toast_notify::info("List level decreased");
                     break;
-                case 64:  // Increase Space Before
+                case 65:  // Increase Space Before
                     doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() + 6);
                     toast_notify::info("Space before increased");
                     break;
-                case 65:  // Decrease Space Before
+                case 66:  // Decrease Space Before
                     doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() - 6);
                     toast_notify::info("Space before decreased");
                     break;
-                case 66:  // Increase Space After
+                case 67:  // Increase Space After
                     doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() + 6);
                     toast_notify::info("Space after increased");
                     break;
-                case 67:  // Decrease Space After
+                case 68:  // Decrease Space After
                     doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
                     toast_notify::info("Space after decreased");
                     break;
-                case 69:  // Drop Cap
+                case 70:  // Drop Cap
                     doc.buffer.toggleCurrentLineDropCap();
                     toast_notify::info(doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
                     break;
-                case 70:  // Tab Width...
+                case 71:  // Tab Width...
                     dialogs.showTabWidthDialog = true;
                     break;
-                case 71:  // Columns...
+                case 72:  // Columns...
                     dialogs.showColumnsDialog = true;
                     dialogs.columnsSelected =
                         std::clamp(doc.docSettings.pageSettings.columnCount,

@@ -118,6 +118,47 @@ class SetParagraphIndentsCommand : public afterhours::Command<TextBuffer> {
 // One undo step for a paragraph-style change (Outline
 // Promote / Demote). Stores old + new so undo restores the
 // previous style, exactly like SetParagraphIndentsCommand.
+// Whole-paragraph format snapshot: every field the Paragraph
+// dialog edits, so one dialog OK is one undo step even across a
+// multi-paragraph selection. Indents are the stored 72-dpi units,
+// spacing is points (the stored spaceBefore/spaceAfter units).
+struct ParagraphFormat {
+    ParagraphIndents indents{};
+    float lineSpacing = 1.0f;
+    int spaceBefore = 0;
+    int spaceAfter = 0;
+    bool operator==(const ParagraphFormat& other) const {
+        return indents == other.indents &&
+               lineSpacing == other.lineSpacing &&
+               spaceBefore == other.spaceBefore &&
+               spaceAfter == other.spaceAfter;
+    }
+};
+
+// One undo step for a paragraph-format change (Paragraph dialog
+// OK). Holds one old/new pair per affected row, so a selection
+// spanning several paragraphs still undoes in a single step.
+struct ParagraphFormatChange {
+    std::size_t row = 0;
+    ParagraphFormat oldFormat{};
+    ParagraphFormat newFormat{};
+};
+
+class SetParagraphFormatCommand : public afterhours::Command<TextBuffer> {
+   public:
+    explicit SetParagraphFormatCommand(
+        std::vector<ParagraphFormatChange> changes)
+        : changes_(std::move(changes)) {}
+    void execute(TextBuffer& buffer) override;
+    void undo(TextBuffer& buffer) override;
+    std::string description() const override {
+        return "Set paragraph format";
+    }
+
+   private:
+    std::vector<ParagraphFormatChange> changes_;
+};
+
 class SetParagraphStyleCommand : public afterhours::Command<TextBuffer> {
    public:
     SetParagraphStyleCommand(std::size_t row, ParagraphStyle oldStyle,
@@ -333,6 +374,18 @@ class TextBuffer {
     void setLineIndents(std::size_t row, ParagraphIndents indents);
     void commitParagraphIndents(std::size_t row, ParagraphIndents oldIndents,
                                 ParagraphIndents newIndents);
+
+    // Whole-format access for the Paragraph dialog: read the
+    // caret paragraph's (or any row's) full format, apply one
+    // directly (no history), and record one undo step for a
+    // change already applied — the same live-apply-then-record
+    // pattern as the ruler drag. commitParagraphFormat drops
+    // unchanged rows and is a no-op when nothing changed, so a
+    // dialog OK that edits nothing adds no undo step.
+    ParagraphFormat lineParagraphFormat(std::size_t row) const;
+    void setLineParagraphFormat(std::size_t row, ParagraphFormat format);
+    void commitParagraphFormat(
+        std::vector<ParagraphFormatChange> changes);
 
     // Record one undo step for a paragraph-style change already
     // applied (the caller applies via setLineParagraphStyle, then

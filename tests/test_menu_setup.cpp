@@ -209,6 +209,36 @@ TEST_CASE("File menu has Version History... right after Save As...",
     REQUIRE(history == saveAs + 1);
 }
 
+TEST_CASE("Format menu Paragraph... is first of alignment/spacing section", "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* format = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "Format") format = &m;
+    }
+    REQUIRE(format != nullptr);
+    const auto& items = format->items;
+    // The alignment/spacing section is the second Align block:
+    // Paragraph... immediately precedes its Align Left, followed by
+    // the rest of that section's items in Word order.
+    std::size_t paragraph = items.size(), secondAlign = items.size();
+    int alignSeen = 0;
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        if (items[i].label == "Paragraph...") paragraph = i;
+        if (items[i].label == "Align Left" && ++alignSeen == 2)
+            secondAlign = i;
+    }
+    REQUIRE(paragraph < items.size());
+    REQUIRE(secondAlign == paragraph + 1);
+    REQUIRE(items[secondAlign + 1].label == "Align Center");
+    REQUIRE(items[secondAlign + 2].label == "Align Right");
+    REQUIRE(items[secondAlign + 3].label == "Justify");
+    bool hasTabWidth = false;
+    for (const auto& item : items) {
+        if (item.label == "Tab Width...") hasTabWidth = true;
+    }
+    REQUIRE(hasTabWidth);
+}
+
 TEST_CASE("Format menu ends with Columns...", "[menu]") {
     auto menus = createMenuBarData();
     const MenuData* format = nullptr;

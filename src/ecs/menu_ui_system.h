@@ -2876,6 +2876,357 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Paragraph dialog (Format > Paragraph...) - Win95 shell:
+        // Indentation (Left / First line / Right, inches), Spacing
+        // (Before / After, points), Line spacing dropdown (Single /
+        // 1.5 lines / Double), Default tab stops (the document-wide
+        // tabWidth: per-paragraph tab stops do not exist) + a
+        // Tabs... button opening the existing Tab Width dialog.
+        // OK applies to the caret paragraph, or every paragraph in
+        // the selection, as ONE undo step (commitParagraphFormat);
+        // an invalid / cleared field keeps its seeded value, like
+        // Page Setup margins. Cancel / Tabs... discard edits.
+        if (dialogs.showParagraphDialog) {
+            constexpr int PARAGRAPH_MODAL_ID = 50019;
+            float paragraphDialogH =
+                340.0f +
+                (dialogs.paragraphLineSpacingDropdownOpen ? 66.0f : 0.0f);
+            auto result = afterhours::modal(ctx, mk(entity, PARAGRAPH_MODAL_ID),
+                dialogs.showParagraphDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(460),
+                    afterhours::ui::h720(paragraphDialogH),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Paragraph", CONTENT_LAYER);
+
+                auto fieldRow = [&](int id, const char* label,
+                                    const char* debugName,
+                                    std::string& value) {
+                    auto row = div(ctx, mk(result.ent(), id),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (!row) return;
+                    test_input::register_visible_text(label);
+                    div(ctx, mk(row.ent(), 0),
+                        ComponentConfig{}
+                            .with_label(label)
+                            .with_size(ComponentSize{w1280(150), h720(24)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                    afterhours::text_input::text_input(
+                        ctx, mk(row.ent(), 1), value,
+                        ah_win95::win95SunkenStyle()
+                            .with_debug_name(debugName)
+                            .with_size(ComponentSize{w1280(80), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+                };
+
+                auto groupLabel = [&](int id, const char* label) {
+                    test_input::register_visible_text(label);
+                    div(ctx, mk(result.ent(), id),
+                        ComponentConfig{}
+                            .with_label(label)
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                };
+
+                groupLabel(901, "Indentation:");
+                fieldRow(902, "Left (inches):", "paragraph_left_input",
+                         dialogs.paragraphLeftStr);
+                fieldRow(903, "First line (inches):",
+                         "paragraph_firstline_input",
+                         dialogs.paragraphFirstLineStr);
+                fieldRow(904, "Right (inches):", "paragraph_right_input",
+                         dialogs.paragraphRightStr);
+
+                groupLabel(905, "Spacing:");
+                fieldRow(906, "Before (pt):", "paragraph_before_input",
+                         dialogs.paragraphBeforeStr);
+                fieldRow(907, "After (pt):", "paragraph_after_input",
+                         dialogs.paragraphAfterStr);
+
+                // Line spacing dropdown: button shows the pending
+                // choice; the list expands in-flow below (the dialog
+                // height grows by its height), same pattern as the
+                // Font dialog dropdowns.
+                {
+                    auto row = div(ctx, mk(result.ent(), 908),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        test_input::register_visible_text("Line spacing:");
+                        div(ctx, mk(row.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("Line spacing:")
+                                .with_size(ComponentSize{w1280(150), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        const char* currentName =
+                            paragraph_dialog::kLineSpacingNames
+                                [static_cast<std::size_t>(std::clamp(
+                                    dialogs.paragraphLineSpacingIndex, 0,
+                                    2))];
+                        test_input::register_visible_text(
+                            std::string("Line spacing: ") + currentName);
+                        if (button(ctx, mk(row.ent(), 1),
+                            ah_win95::win95DropdownButtonStyle(
+                                120.0f, 26.0f,
+                                dialogs.paragraphLineSpacingDropdownOpen)
+                                .with_debug_name(
+                                    "paragraph_linespacing_dropdown")
+                                .with_label(currentName)
+                                .with_text_inset(8.0f, 2.0f)
+                                .with_on_draw_fg([](RectangleType r) {
+                                    drawDropdownTriangle(
+                                        r.x + r.width -
+                                            theme::layout::scale(10),
+                                        r.y + r.height / 2.0f,
+                                        theme::BUTTON_TEXT);
+                                })
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.paragraphLineSpacingDropdownOpen =
+                                !dialogs.paragraphLineSpacingDropdownOpen;
+                        }
+                    }
+                }
+                if (dialogs.paragraphLineSpacingDropdownOpen) {
+                    auto list = div(ctx, mk(result.ent(), 909),
+                        ah_win95::win95SunkenStyle()
+                            .with_size(ComponentSize{percent(1.0f), h720(66)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_padding(Padding{.top = pixels(2),
+                                                 .bottom = pixels(2)})
+                            .with_render_layer(CONTENT_LAYER));
+                    if (list) {
+                        static const char* kOptionDebug[3] = {
+                            "paragraph_linespacing_single",
+                            "paragraph_linespacing_1_5",
+                            "paragraph_linespacing_double"};
+                        for (int i = 0; i < 3; ++i) {
+                            bool selected =
+                                i == dialogs.paragraphLineSpacingIndex;
+                            test_input::register_visible_text(
+                                paragraph_dialog::kLineSpacingNames[i]);
+                            if (button(ctx, mk(list.ent(), 700 + i),
+                                ComponentConfig{}
+                                    .with_debug_name(kOptionDebug[i])
+                                    .with_label(
+                                        paragraph_dialog::kLineSpacingNames[i])
+                                    .with_size(ComponentSize{percent(1.0f),
+                                                            h720(22)})
+                                    .with_roundness(0.0f)
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_alignment(
+                                        afterhours::ui::TextAlignment::Left)
+                                    .with_text_inset(8.0f, 2.0f)
+                                    .with_cursor(
+                                        afterhours::ui::CursorType::Pointer)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.paragraphLineSpacingIndex = i;
+                                dialogs.paragraphLineSpacingDropdownOpen =
+                                    false;
+                            }
+                        }
+                    }
+                }
+
+                // Default tab stops: the document-wide tabWidth, with
+                // the Tabs... button opening the existing Tab Width
+                // dialog flow (this dialog closes, discarding its
+                // unsaved edits, like Cancel).
+                {
+                    auto row = div(ctx, mk(result.ent(), 910),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        test_input::register_visible_text(
+                            "Default tab stops:");
+                        div(ctx, mk(row.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("Default tab stops:")
+                                .with_size(ComponentSize{w1280(150), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        afterhours::text_input::text_input(
+                            ctx, mk(row.ent(), 1),
+                            dialogs.paragraphTabStopsStr,
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name("paragraph_tabstops_input")
+                                .with_size(ComponentSize{w1280(80), h720(24)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (button(ctx, mk(row.ent(), 2),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("paragraph_tabs_button")
+                                .with_label("Tabs...")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.tabWidthInputStr =
+                                dialogs.paragraphTabStopsStr;
+                            dialogs.showParagraphDialog = false;
+                            dialogs.paragraphLineSpacingDropdownOpen = false;
+                            dialogs.showTabWidthDialog = true;
+                        }
+                    }
+                }
+                test_input::register_visible_text(
+                    "No per-paragraph tab stops; this sets the document default.");
+                div(ctx, mk(result.ent(), 911),
+                    ComponentConfig{}
+                        .with_label("No per-paragraph tab stops; this sets the document default.")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto buttonRow = div(ctx, mk(result.ent(), 912),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("paragraph_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        ParagraphFormat fallback =
+                            doc.buffer.lineParagraphFormat(
+                                doc.buffer.caret().row);
+                        ParagraphFormat next;
+                        next.indents.left =
+                            paragraph_dialog::inchesToStored(
+                                paragraph_dialog::parseInches(
+                                    dialogs.paragraphLeftStr,
+                                    static_cast<double>(
+                                        fallback.indents.left) /
+                                        paragraph_dialog::POINTS_PER_INCH));
+                        next.indents.firstLine =
+                            paragraph_dialog::inchesToStoredSigned(
+                                paragraph_dialog::parseInches(
+                                    dialogs.paragraphFirstLineStr,
+                                    static_cast<double>(
+                                        fallback.indents.firstLine) /
+                                        paragraph_dialog::POINTS_PER_INCH));
+                        // First line never left of the margin, like
+                        // the ruler drag.
+                        if (next.indents.firstLine < -next.indents.left)
+                            next.indents.firstLine = -next.indents.left;
+                        next.indents.right =
+                            paragraph_dialog::inchesToStored(
+                                paragraph_dialog::parseInches(
+                                    dialogs.paragraphRightStr,
+                                    static_cast<double>(
+                                        fallback.indents.right) /
+                                        paragraph_dialog::POINTS_PER_INCH));
+                        next.spaceBefore =
+                            paragraph_dialog::parsePoints(
+                                dialogs.paragraphBeforeStr,
+                                fallback.spaceBefore);
+                        next.spaceAfter =
+                            paragraph_dialog::parsePoints(
+                                dialogs.paragraphAfterStr,
+                                fallback.spaceAfter);
+                        next.lineSpacing =
+                            paragraph_dialog::lineSpacingForIndex(
+                                dialogs.paragraphLineSpacingIndex);
+                        std::size_t firstRow = doc.buffer.caret().row;
+                        std::size_t lastRow = firstRow;
+                        if (doc.buffer.hasSelection()) {
+                            firstRow = std::min(
+                                doc.buffer.selectionStart().row,
+                                doc.buffer.selectionEnd().row);
+                            lastRow = std::max(
+                                doc.buffer.selectionStart().row,
+                                doc.buffer.selectionEnd().row);
+                        }
+                        if (lastRow >= doc.buffer.lineCount() &&
+                            doc.buffer.lineCount() > 0)
+                            lastRow = doc.buffer.lineCount() - 1;
+                        std::vector<ParagraphFormatChange> changes;
+                        for (std::size_t row = firstRow; row <= lastRow;
+                             ++row) {
+                            ParagraphFormat old =
+                                doc.buffer.lineParagraphFormat(row);
+                            doc.buffer.setLineParagraphFormat(row, next);
+                            changes.push_back({row, old, next});
+                        }
+                        doc.buffer.commitParagraphFormat(
+                            std::move(changes));
+                        doc.docSettings.tabWidth =
+                            paragraph_dialog::parseTabStops(
+                                dialogs.paragraphTabStopsStr,
+                                doc.docSettings.tabWidth);
+                        doc.isDirty = true;
+                        dialogs.showParagraphDialog = false;
+                        dialogs.paragraphLineSpacingDropdownOpen = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("paragraph_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showParagraphDialog = false;
+                        dialogs.paragraphLineSpacingDropdownOpen = false;
+                    }
+                }
+            }
+        }
+
         // Page Setup dialog (File > Page Setup...) - Win95 shell:
         // paper-size presets, Portrait/Landscape, four margin
         // fields in inches. OK writes the whole block to
@@ -4352,7 +4703,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
             !dialogs.showDateTimeDialog && !dialogs.showFontDialog &&
-            !dialogs.showColumnsDialog &&
+            !dialogs.showColumnsDialog && !dialogs.showParagraphDialog &&
             !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&
             !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&

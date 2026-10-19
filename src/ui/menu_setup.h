@@ -170,7 +170,9 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Decrease Size", "Ctrl+-", true, false, nullptr},
         {"Reset Size", "Ctrl+0", true, false, nullptr},
         {"", "", false, true, nullptr},  // Separator (36)
-        // Alignment (37-40)
+        // Alignment / spacing: Paragraph... first (Word 95 order),
+        // then alignment, indents, line spacing, lists, spacing.
+        {"Paragraph...", "", true, false, nullptr},
         {"Align Left", "Ctrl+L", true, false, nullptr},
         {"Align Center", "Ctrl+E", true, false, nullptr},
         {"Align Right", "Ctrl+R", true, false, nullptr},

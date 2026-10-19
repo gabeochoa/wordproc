@@ -1,0 +1,73 @@
+# Test: Format > Paragraph... sets indent + spacing + line spacing
+# for the caret paragraph in one undo step.
+# Dialog OK writes the same per-paragraph fields the menu
+# increments and the ruler drag use (indents in 72-dpi units,
+# spaceBefore/spaceAfter in points, line-spacing multiplier):
+# Left 0.5in -> left_indent 36, After 12pt -> space_after 12,
+# Line spacing dropdown Double -> line_spacing 2.0. One Ctrl+Z
+# restores all three (single undo step). The post-OK screenshot
+# shows the ruler markers moved with the new left indent.
+
+type "Hello Paragraph"
+wait_frames 12
+
+menu_open Format
+wait_frames 12
+menu_select "Paragraph..."
+wait_frames 12
+
+validate dialog_open=Paragraph
+expect_text "Indentation:"
+expect_text "Spacing:"
+expect_text "Line spacing:"
+expect_text "Default tab stops:"
+expect_input_text paragraph_left_input "0"
+expect_input_text paragraph_after_input "0"
+
+screenshot paragraph_dialog
+
+focus_ui paragraph_left_input
+wait_frames 12
+key END
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+type "0.5"
+wait_frames 12
+expect_input_text paragraph_left_input "0.5"
+
+focus_ui paragraph_after_input
+wait_frames 12
+key END
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+type "12"
+wait_frames 12
+expect_input_text paragraph_after_input "12"
+
+click_ui paragraph_linespacing_dropdown
+wait_frames 12
+click_ui paragraph_linespacing_double
+wait_frames 12
+
+click_ui paragraph_ok
+wait_frames 12
+
+validate dialog_open=false
+validate text=Hello Paragraph
+validate left_indent=36
+validate first_line_indent=0
+validate right_indent=0
+validate space_before=0
+validate space_after=12
+validate line_spacing=2.000000
+
+screenshot paragraph_after
+
+# One undo step restores the indent, spacing, and line spacing.
+key CTRL+Z
+wait_frames 12
+validate left_indent=0
+validate space_after=0
+validate line_spacing=1.000000

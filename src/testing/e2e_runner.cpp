@@ -58,6 +58,8 @@ static void setupCallbacks(
         if (prop == "list_type") return listTypeName(buffer.currentListType());
         if (prop == "left_indent") return std::to_string(buffer.currentLeftIndent());
         if (prop == "line_spacing") return std::to_string(buffer.currentLineSpacing());
+        if (prop == "space_before") return std::to_string(buffer.currentSpaceBefore());
+        if (prop == "space_after") return std::to_string(buffer.currentSpaceAfter());
         if (prop == "hyperlink_count") return std::to_string(buffer.hyperlinks().size());
         if (prop == "bookmark_count") return std::to_string(buffer.bookmarks().size());
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
@@ -218,6 +220,8 @@ static void setupCallbacksEx(
         if (prop == "list_type") return toLower(listTypeName(buffer.currentListType()));
         if (prop == "left_indent") return std::to_string(buffer.currentLeftIndent());
         if (prop == "line_spacing") return std::to_string(buffer.currentLineSpacing());
+        if (prop == "space_before") return std::to_string(buffer.currentSpaceBefore());
+        if (prop == "space_after") return std::to_string(buffer.currentSpaceAfter());
         if (prop == "hyperlink_count") return std::to_string(buffer.hyperlinks().size());
         if (prop == "bookmark_count") return std::to_string(buffer.bookmarks().size());
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
@@ -452,6 +456,7 @@ static void setupCallbacksEx(
             if (dialogState.showTemplateDialog) return "Template";
             if (dialogState.showFontDialog) return "Font";
             if (dialogState.showColumnsDialog) return "Columns";
+            if (dialogState.showParagraphDialog) return "Paragraph";
             if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
@@ -1083,6 +1088,15 @@ static void setupCallbacksEx(
         dialogState.showColumnsDialog = false;
         dialogState.columnsSelected = 1;
         dialogState.columnsSpacingStr = "0.5";
+        dialogState.showParagraphDialog = false;
+        dialogState.paragraphLineSpacingDropdownOpen = false;
+        dialogState.paragraphLeftStr = "0";
+        dialogState.paragraphFirstLineStr = "0";
+        dialogState.paragraphRightStr = "0";
+        dialogState.paragraphBeforeStr = "0";
+        dialogState.paragraphAfterStr = "0";
+        dialogState.paragraphLineSpacingIndex = 0;
+        dialogState.paragraphTabStopsStr = "4";
         dialogState.showTabWidthDialog = false;
         dialogState.tabWidthInputBuffer[0] = '\0';
         dialogState.tabWidthInputStr.clear();
