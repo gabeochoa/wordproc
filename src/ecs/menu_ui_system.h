@@ -1862,8 +1862,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             constexpr int DATETIME_MODAL_ID = 50015;
             auto result = afterhours::modal(ctx, mk(entity, DATETIME_MODAL_ID),
                 dialogs.showDateTimeDialog,
+                // Height fits content: title 20 + label 20 + list
+                // 136 (6 x 22 + 4 padding) + checkbox 22 + buttons
+                // 44 + panel padding 8 = 250, +12 breathing room.
+                // The old fixed 300 left a large empty gray band.
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(420), afterhours::ui::h720(300),
+                    afterhours::ui::h720(420), afterhours::ui::h720(262),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
