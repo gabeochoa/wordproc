@@ -5383,8 +5383,28 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         }
                     }
                     
+                    // Replace All button (only in replace mode).
+                    // Greyed when the Find term is empty: there is
+                    // nothing to replace (thesaurus Replace pattern:
+                    // disabled style + guard inside the click).
+                    if (dialogs.findReplaceMode) {
+                        bool canReplaceAll = !dialogs.findInputStr.empty();
+                        if (button(ctx, mk(buttonRow.ent(), 2),
+                            ah_win95::win95DialogButtonStyle(canReplaceAll)
+                                .with_debug_name("find_replace_all")
+                                .with_label("Replace All")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            if (canReplaceAll) {
+                                std::size_t count =
+                                    cmd::findReplaceAll(doc, dialogs);
+                                flash("Replaced " + std::to_string(count) +
+                                      " occurrences");
+                            }
+                        }
+                    }
+
                     // Close button
-                    if (button(ctx, mk(buttonRow.ent(), 2),
+                    if (button(ctx, mk(buttonRow.ent(), 3),
                         ah_win95::win95DialogButtonStyle()
                             .with_debug_name("find_close")
                             .with_label("Close")

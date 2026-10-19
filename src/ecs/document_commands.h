@@ -1426,6 +1426,46 @@ inline void grammarChange(DocumentComponent& doc, DialogState& dialogs) {
     dialogs.grammarNoErrors = next >= dialogs.grammarErrors.size();
 }
 
+// --- Find/Replace dialog commands (Edit > Find/Replace..., Ctrl+H) ---
+
+// Replace All: every match of the dialog's Find term is swapped for the
+// Replace term as ONE undo step (replaceRanges, the spellChangeAll
+// machinery), so a single Ctrl+Z restores all of them. Returns the
+// match count; 0 when the Find term is empty or nothing matches.
+// Respects the dialog's Find options (case sensitive / whole word)
+// exactly as Find Next does. Matches are non-overlapping left-to-right
+// (the standard Replace All reading): findAll itself can return
+// overlapping matches for a repeated-character needle ("aa" in "aaa"),
+// and overlapping ranges would corrupt both the text and the undo.
+inline std::size_t findReplaceAll(DocumentComponent& doc, DialogState& dialogs) {
+    if (dialogs.findInputStr.empty()) return 0;
+    dialogs.lastSearchTerm = dialogs.findInputStr;
+    const std::string replacement = dialogs.replaceInputStr;
+    std::vector<TextReplacement> replacements;
+    std::size_t nextSearchOffset = 0;
+    for (const FindResult& match : doc.buffer.findAll(
+             dialogs.lastSearchTerm, dialogs.findOptions)) {
+        const std::size_t startOffset =
+            doc.buffer.offsetForPosition(match.start);
+        const std::size_t endOffset = doc.buffer.offsetForPosition(match.end);
+        if (startOffset < nextSearchOffset) continue;
+        nextSearchOffset = endOffset;
+        std::string oldText;
+        oldText.reserve(endOffset - startOffset);
+        for (std::size_t i = startOffset; i < endOffset; ++i) {
+            oldText.push_back(doc.buffer.charAtOffset(i));
+        }
+        recordDeleteRevision(doc, startOffset, oldText);
+        recordInsertRevision(doc, startOffset, replacement);
+        replacements.push_back({match.start, std::move(oldText), replacement});
+    }
+    if (replacements.empty()) return 0;
+    const std::size_t count = replacements.size();
+    doc.buffer.replaceRanges(std::move(replacements));
+    doc.isDirty = true;
+    return count;
+}
+
 // --- Spelling dialog commands (Tools > Spelling..., F7) ---
 // The dialog shows one error at a time; each action advances
 // spellSearchOffset and refreshes the current error from the buffer.

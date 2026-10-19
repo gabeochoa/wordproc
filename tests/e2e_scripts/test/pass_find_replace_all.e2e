@@ -1,0 +1,48 @@
+# Test: Find/Replace dialog, Replace All (Ctrl+H)
+# Doc with 3 matches of "cat": Replace All swaps all three for "dog"
+# in ONE undo step, so a single Ctrl+Z restores all three "cat"s.
+# Batch 10 fix round: the dialog gained a "Replace All" button
+# (debug name find_replace_all); without it this script fails at
+# the click_ui step.
+# Note the Replace button path is covered separately by
+# pass_find_replace_mode.e2e.
+
+type "cat cat cat"
+wait_frames 12
+
+key CTRL+H
+wait_frames 12
+
+validate dialog_open=Find
+
+focus_ui find_input
+wait_frames 12
+type "cat"
+wait_frames 12
+
+focus_ui replace_input
+wait_frames 12
+type "dog"
+wait_frames 12
+
+click_ui find_replace_all
+wait_frames 12
+
+validate text=dog dog dog
+
+# Status-bar flash reads "Replaced 3 occurrences" at this point.
+screenshot find_replace_all
+
+# One undo step restores all three matches, not just the last one.
+# "Cat" (not "cat"): AutoCorrect capitalizes the first letter of the
+# sentence while typing, and Replace All (case-insensitive) replaced
+# it too — the undo restores the AutoCorrected text, not the typed text.
+key CTRL+Z
+wait_frames 12
+
+validate text=Cat cat cat
+
+click_ui find_close
+wait_frames 12
+
+validate dialog_open=false

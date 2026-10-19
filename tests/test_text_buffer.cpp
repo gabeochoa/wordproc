@@ -1678,6 +1678,108 @@ TEST_CASE("Find and replace", "[text_buffer][find]") {
     }
 }
 
+// Replace All composition (findAll + replaceRanges), the steps
+// cmd::findReplaceAll (Find/Replace dialog > Replace All) is built
+// from. The command wrapper itself cannot compile in this binary
+// (document_commands.h pulls the graphics backend), so it is pinned
+// by pass_find_replace_all.e2e instead — the same split as
+// spellChangeAll (replaceRanges pinned here, dialog command by E2E).
+// The helper below is the command's range-building rule: non-
+// overlapping left-to-right matches, since findAll can return
+// overlapping matches for a repeated-character needle.
+namespace {
+std::vector<TextReplacement> planReplaceAll(TextBuffer& buffer,
+                                            const std::string& needle,
+                                            const std::string& replacement,
+                                            const FindOptions& options) {
+    std::vector<TextReplacement> replacements;
+    std::size_t nextSearchOffset = 0;
+    for (const FindResult& match : buffer.findAll(needle, options)) {
+        const std::size_t startOffset =
+            buffer.offsetForPosition(match.start);
+        const std::size_t endOffset = buffer.offsetForPosition(match.end);
+        if (startOffset < nextSearchOffset) continue;
+        nextSearchOffset = endOffset;
+        std::string oldText;
+        oldText.reserve(endOffset - startOffset);
+        for (std::size_t i = startOffset; i < endOffset; ++i) {
+            oldText.push_back(buffer.charAtOffset(i));
+        }
+        replacements.push_back(
+            {match.start, std::move(oldText), replacement});
+    }
+    return replacements;
+}
+
+std::size_t applyReplaceAll(TextBuffer& buffer, const std::string& needle,
+                            const std::string& replacement,
+                            const FindOptions& options) {
+    auto replacements = planReplaceAll(buffer, needle, replacement, options);
+    const std::size_t count = replacements.size();
+    buffer.replaceRanges(std::move(replacements));
+    return count;
+}
+}  // namespace
+
+TEST_CASE("Replace All composition: findAll + replaceRanges is one undo step",
+          "[text_buffer][find][replace-all]") {
+    SECTION("three matches, one undo restores all three") {
+        TextBuffer buffer;
+        buffer.setText("cat cat cat");
+        FindOptions options;
+        REQUIRE(applyReplaceAll(buffer, "cat", "dog", options) == 3);
+        REQUIRE(buffer.getText() == "dog dog dog");
+        buffer.undo();
+        REQUIRE(buffer.getText() == "cat cat cat");
+    }
+
+    SECTION("case sensitive on: only the exact-case match") {
+        TextBuffer buffer;
+        buffer.setText("Cat cat CAT");
+        FindOptions options;
+        options.caseSensitive = true;
+        REQUIRE(applyReplaceAll(buffer, "cat", "dog", options) == 1);
+        REQUIRE(buffer.getText() == "Cat dog CAT");
+    }
+
+    SECTION("case sensitive off: every case variant") {
+        TextBuffer buffer;
+        buffer.setText("Cat cat CAT");
+        FindOptions options;
+        options.caseSensitive = false;
+        REQUIRE(applyReplaceAll(buffer, "cat", "dog", options) == 3);
+        REQUIRE(buffer.getText() == "dog dog dog");
+    }
+
+    SECTION("whole word on: substrings left alone") {
+        TextBuffer buffer;
+        buffer.setText("cat cats scat cat");
+        FindOptions options;
+        options.wholeWord = true;
+        REQUIRE(applyReplaceAll(buffer, "cat", "dog", options) == 2);
+        REQUIRE(buffer.getText() == "dog cats scat dog");
+    }
+
+    SECTION("whole word off: substrings replaced too") {
+        TextBuffer buffer;
+        buffer.setText("cat cats scat");
+        FindOptions options;
+        options.wholeWord = false;
+        REQUIRE(applyReplaceAll(buffer, "cat", "dog", options) == 3);
+        REQUIRE(buffer.getText() == "dog dogs sdog");
+    }
+
+    SECTION("overlapping matches: non-overlapping left-to-right reading") {
+        TextBuffer buffer;
+        buffer.setText("aaa");
+        FindOptions options;
+        REQUIRE(applyReplaceAll(buffer, "aa", "b", options) == 1);
+        REQUIRE(buffer.getText() == "ba");
+        buffer.undo();
+        REQUIRE(buffer.getText() == "aaa");
+    }
+}
+
 TEST_CASE("Find across multiple lines", "[text_buffer][find]") {
     TextBuffer buffer;
     buffer.setText("Line one\nLine two\nLine three");
