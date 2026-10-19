@@ -1,0 +1,70 @@
+# Test: Real Header/Footer editing (Batch 9)
+# View > Header and Footer enters the mode (forces Paged),
+# typing routes to the header buffer (body untouched), the
+# strip's Switch moves to the footer, Page Number toggles the
+# footer page-number field ("Page 1" renders), Esc exits and
+# restores the prior (pageless) mode, and the header/footer
+# render in Page Layout.
+
+type "Body line"
+wait_frames 12
+validate text=Body line
+
+# Enter via View > Header and Footer (Word 95 location).
+menu_open View
+wait_frames 12
+menu_select "Header and Footer"
+wait_frames 12
+validate header_editing=true
+validate header_edit_target=header
+validate page_mode=paged
+
+# Typing goes to the header buffer, never the body.
+type "My Header"
+wait_frames 12
+validate header_text=My Header
+validate text=Body line
+expect_text "My Header"
+
+screenshot header_editing
+
+# Switch Header/Footer strip button -> footer.
+click_ui btn_header_footer_switch
+wait_frames 12
+validate header_edit_target=footer
+validate header_text=My Header
+
+type "My Footer"
+wait_frames 12
+validate footer_text=My Footer
+validate text=Body line
+
+# Page Number strip button toggles the footer field.
+# ("Page 1" itself is render-only text, proven by
+# has_page_number + the screenshots, not expect_text:
+# render-phase registration never reaches E2E checks.)
+click_ui btn_header_footer_page_number
+wait_frames 12
+validate has_page_number=true
+
+# Esc exits to the body caret and restores pageless.
+key ESCAPE
+wait_frames 12
+validate header_editing=false
+validate header_edit_target=none
+validate page_mode=pageless
+
+# Body typing after exit lands in the body.
+type "!"
+wait_frames 12
+validate text=Body line!
+
+# Header/footer render in Page Layout (Word Normal hides them).
+menu_open View
+wait_frames 12
+menu_select "Page Layout"
+wait_frames 12
+validate page_mode=paged
+expect_text "My Header"
+
+screenshot header_rendered

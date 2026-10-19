@@ -33,14 +33,24 @@ struct DocumentTextRegistration : System<> {
     if (!doc_comp || !testing::test_input::detail::test_mode)
       return;
     auto &reg = testing::VisibleTextRegistry::instance();
-    auto &buffer = doc_comp->buffer;
-    int lineCount = static_cast<int>(buffer.lineCount());
-    for (int i = 0; i < lineCount; i++) {
-      std::string line = buffer.lineString(static_cast<std::size_t>(i));
-      if (!line.empty()) {
-        reg.register_text(line);
+    auto registerBuffer = [&reg](TextBuffer &buffer) {
+      int lineCount = static_cast<int>(buffer.lineCount());
+      for (int i = 0; i < lineCount; i++) {
+        std::string line =
+            buffer.lineString(static_cast<std::size_t>(i));
+        if (!line.empty()) {
+          reg.register_text(line);
+        }
       }
-    }
+    };
+    // Body lines, then header/footer lines (Batch 9): the
+    // render pass cannot register document text — the
+    // per-frame registry clear runs before E2E checks see
+    // render-phase registrations — so document text of any
+    // buffer is registered here, in the update phase.
+    registerBuffer(doc_comp->buffer);
+    registerBuffer(doc_comp->headerBuffer);
+    registerBuffer(doc_comp->footerBuffer);
   }
 };
 
@@ -228,7 +238,7 @@ struct HandleOpenFileCommand : System<testing::PendingE2ECommand> {
     // open_file round-trip would lose cell text.
     DocumentResult result = loadDocumentWithTables(
         doc_comp->buffer, doc_comp->docSettings, doc_comp->tables,
-        file_path);
+        file_path, &doc_comp->headerBuffer, &doc_comp->footerBuffer);
     if (result.success) {
       doc_comp->filePath = file_path;
       doc_comp->isDirty = false;

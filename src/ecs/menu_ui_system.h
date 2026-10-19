@@ -122,6 +122,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     item.mark = layout.showOutline ? win95::MenuMark::Checkmark
                                                    : win95::MenuMark::None;
                 }
+                if (item.label == "Header and Footer") {
+                    item.mark = layout.headerEditTarget !=
+                                        HeaderEditTarget::None
+                                    ? win95::MenuMark::Checkmark
+                                    : win95::MenuMark::None;
+                }
                 if (item.label == "Standard Toolbar") {
                     item.mark = layout.showStandardToolbar ? win95::MenuMark::Checkmark
                                                            : win95::MenuMark::None;
@@ -5537,6 +5543,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (dialogs.showChipPopup) {
             if (!cmd::chipPopupValid(doc, dialogs) ||
                 layout.previewMode || layout.focusMode ||
+                layout.headerEditTarget != HeaderEditTarget::None ||
                 ScrollbarSystem::anyModalDialogOpen(dialogs) ||
                 !cache_.scroll) {
                 dialogs.showChipPopup = false;

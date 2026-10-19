@@ -81,6 +81,7 @@ inline std::vector<MenuData> createMenuBarData() {
                       {"Page Layout", "", true, false},
                       {"", "", false, true},  // Separator
                       {"Ruler", "", true, false},
+                      {"Header and Footer", "", true, false},
                       {"", "", false, true},  // Separator
                       {"Zoom In", "Ctrl+Alt+=", true, false},
                       {"Zoom Out", "Ctrl+Alt+-", true, false},

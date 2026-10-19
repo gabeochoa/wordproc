@@ -35,14 +35,24 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
 // Type alias for table storage (line number -> table)
 using TableList = std::vector<std::pair<std::size_t, Table>>;
 
-// Full document save/load with tables
+// Full document save/load with tables. The optional header /
+// footer buffers (Batch 9) round-trip through
+// "headerText"/"footerText"; a null pointer means "no header /
+// footer buffer on this path" (old callers keep compiling and
+// keep their old file shape). On load a non-null buffer is
+// replaced (cleared when the file carries no header/footer
+// text), mirroring the tables behaviour.
 DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                                       const DocumentSettings &settings,
                                       const TableList &tables,
-                                      const std::string &path);
-DocumentResult loadDocumentWithTables(TextBuffer &buffer, 
+                                      const std::string &path,
+                                      const TextBuffer *headerBuffer = nullptr,
+                                      const TextBuffer *footerBuffer = nullptr);
+DocumentResult loadDocumentWithTables(TextBuffer &buffer,
                                       DocumentSettings &settings,
                                       TableList &tables,
-                                      const std::string &path);
+                                      const std::string &path,
+                                      TextBuffer *headerBuffer = nullptr,
+                                      TextBuffer *footerBuffer = nullptr);
 
 #endif  // WORDPROC_EDITOR_DOCUMENT_IO_H

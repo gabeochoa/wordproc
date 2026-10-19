@@ -26,6 +26,92 @@ static PageMode pageModeFromString(const std::string &str) {
     return PageMode::Pageless;
 }
 
+// --- Header/footer (Batch 9) ---
+// The HeaderFooter config (page-number toggles, different-first-
+// page) lives in DocumentSettings and persists through the
+// "headerFooter" object in both save paths; the header/footer
+// TEXT lives in DocumentComponent's headerBuffer/footerBuffer
+// and persists through "headerText"/"footerText" in the
+// WithTables path (the path the app saves through). Config and
+// text stay separate: a settings-only save (saveDocumentEx)
+// must not drop the config just because it has no buffers.
+static nlohmann::json serializeHeaderFooterSection(
+    const HeaderFooterSection &section) {
+    return {
+        {"showPageNumber", section.showPageNumber},
+        {"format", static_cast<int>(section.format)},
+        {"showTotalPages", section.showTotalPages},
+    };
+}
+
+static void deserializeHeaderFooterSection(
+    const nlohmann::json &j, HeaderFooterSection &section) {
+    if (j.contains("showPageNumber")) {
+        section.showPageNumber = j.at("showPageNumber").get<bool>();
+    }
+    if (j.contains("format")) {
+        int format = j.at("format").get<int>();
+        if (format >= static_cast<int>(PageNumberFormat::None) &&
+            format <= static_cast<int>(PageNumberFormat::LetterUpper)) {
+            section.format = static_cast<PageNumberFormat>(format);
+        }
+    }
+    if (j.contains("showTotalPages")) {
+        section.showTotalPages = j.at("showTotalPages").get<bool>();
+    }
+}
+
+static nlohmann::json serializeHeaderFooter(const HeaderFooter &hf) {
+    return {
+        {"enabled", hf.enabled},
+        {"differentFirstPage", hf.differentFirstPage},
+        {"differentOddEven", hf.differentOddEven},
+        {"left", serializeHeaderFooterSection(hf.left)},
+        {"center", serializeHeaderFooterSection(hf.center)},
+        {"right", serializeHeaderFooterSection(hf.right)},
+    };
+}
+
+static void deserializeHeaderFooter(const nlohmann::json &j,
+                                    HeaderFooter &hf) {
+    if (j.contains("enabled")) hf.enabled = j.at("enabled").get<bool>();
+    if (j.contains("differentFirstPage")) {
+        hf.differentFirstPage = j.at("differentFirstPage").get<bool>();
+    }
+    if (j.contains("differentOddEven")) {
+        hf.differentOddEven = j.at("differentOddEven").get<bool>();
+    }
+    if (j.contains("left")) {
+        deserializeHeaderFooterSection(j.at("left"), hf.left);
+    }
+    if (j.contains("center")) {
+        deserializeHeaderFooterSection(j.at("center"), hf.center);
+    }
+    if (j.contains("right")) {
+        deserializeHeaderFooterSection(j.at("right"), hf.right);
+    }
+}
+
+static void writeHeaderFooterConfig(nlohmann::json &doc,
+                                    const DocumentSettings &settings) {
+    doc["headerFooter"] = {
+        {"header", serializeHeaderFooter(settings.header)},
+        {"footer", serializeHeaderFooter(settings.footer)},
+    };
+}
+
+static void readHeaderFooterConfig(const nlohmann::json &doc,
+                                   DocumentSettings &settings) {
+    if (!doc.contains("headerFooter")) return;
+    const auto &hf = doc.at("headerFooter");
+    if (hf.contains("header")) {
+        deserializeHeaderFooter(hf.at("header"), settings.header);
+    }
+    if (hf.contains("footer")) {
+        deserializeHeaderFooter(hf.at("footer"), settings.footer);
+    }
+}
+
 // Helper to convert BorderStyle to string
 static std::string borderStyleToString(BorderStyle style) {
     switch (style) {
@@ -325,6 +411,9 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         {"columnSpacing", page.columnSpacing},
     };
 
+    // Header/footer config (Batch 9).
+    writeHeaderFooterConfig(doc, settings);
+
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed
     if (!settings.fontRequirements.empty()) {
@@ -593,6 +682,11 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             }
         }
 
+        // Load header/footer config (Batch 9). The text itself
+        // lives in the WithTables path (headerText/footerText);
+        // a settings-only load leaves the buffers untouched.
+        readHeaderFooterConfig(doc, settings);
+
         result.success = true;
     } catch (const std::exception &e) {
         // JSON parse failed - load as plain text
@@ -610,7 +704,9 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
 DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                                       const DocumentSettings &settings,
                                       const TableList &tables,
-                                      const std::string &path) {
+                                      const std::string &path,
+                                      const TextBuffer *headerBuffer,
+                                      const TextBuffer *footerBuffer) {
     DocumentResult result;
 
     std::filesystem::path output_path(path);
@@ -709,6 +805,17 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
         doc["fontRequirements"] = fonts_array;
     }
 
+    // Header/footer config + text (Batch 9). The config is
+    // written unconditionally (same as pageLayout) so a footer
+    // page-number toggle survives even with empty footer text.
+    writeHeaderFooterConfig(doc, settings);
+    if (headerBuffer != nullptr && !headerBuffer->getText().empty()) {
+        doc["headerText"] = headerBuffer->getText();
+    }
+    if (footerBuffer != nullptr && !footerBuffer->getText().empty()) {
+        doc["footerText"] = footerBuffer->getText();
+    }
+
     // Serialize tables
     if (!tables.empty()) {
         nlohmann::json tables_array = nlohmann::json::array();
@@ -731,10 +838,12 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
     return result;
 }
 
-DocumentResult loadDocumentWithTables(TextBuffer &buffer, 
+DocumentResult loadDocumentWithTables(TextBuffer &buffer,
                                       DocumentSettings &settings,
                                       TableList &tables,
-                                      const std::string &path) {
+                                      const std::string &path,
+                                      TextBuffer *headerBuffer,
+                                      TextBuffer *footerBuffer) {
     // Read file once, reuse the raw string for both document and tables
     std::string raw = readFileRaw(path);
     if (raw.empty()) {
@@ -750,12 +859,24 @@ DocumentResult loadDocumentWithTables(TextBuffer &buffer,
         return result;
     }
     
-    // Parse tables from the same raw string — no second file read.
-    // Clear first: opening a table-less file must drop the old
-    // tables, not leave them in place.
+    // Parse tables + header/footer text from the same raw
+    // string — no second file read. Clear first: opening a
+    // table-less / header-less file must drop the old tables /
+    // header text, not leave them in place.
     tables.clear();
+    if (headerBuffer != nullptr) headerBuffer->setText("");
+    if (footerBuffer != nullptr) footerBuffer->setText("");
     try {
         nlohmann::json doc = nlohmann::json::parse(raw);
+
+        if (doc.contains("headerText") && headerBuffer != nullptr) {
+            headerBuffer->setText(
+                doc.at("headerText").get<std::string>());
+        }
+        if (doc.contains("footerText") && footerBuffer != nullptr) {
+            footerBuffer->setText(
+                doc.at("footerText").get<std::string>());
+        }
 
         if (doc.contains("tables")) {
             for (const auto &table_entry : doc["tables"]) {

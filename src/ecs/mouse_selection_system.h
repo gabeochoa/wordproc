@@ -47,6 +47,10 @@ struct MouseSelectionSystem
     // collapse); movement clamps to the current cell's bounds.
     bool cellDragging_ = false;
     std::size_t dragAnchorCellOffset_ = 0;
+    // Header/footer drag (Batch 9): same idea inside the active
+    // header/footer band — anchor offset within that buffer.
+    bool hfDragging_ = false;
+    std::size_t hfDragAnchorOffset_ = 0;
     double lastClickTime_ = -1.0;
     int clickCount_ = 0;
     float lastClickX_ = 0.0f;
@@ -237,6 +241,114 @@ struct MouseSelectionSystem
         auto mouse = input::getMousePosition();
         bool inTextArea = mouse.x >= area.x && mouse.x < sbX && mouse.y >= area.y &&
                           mouse.y < area.y + area.height;
+
+        // Header/footer editing (Batch 9): a press in the
+        // header / footer margin band places the caret in that
+        // buffer (and switches the target when the other band
+        // is clicked); a press anywhere else in the text area
+        // is swallowed — the body caret must not move, no
+        // table may enter cell editing, and no body drag may
+        // start while a header/footer is active. Dragging
+        // inside the band extends the header/footer selection.
+        // Geometry matches renderHeaderFooter: text origin
+        // band.x + TEXT_PADDING / band.y + 4, same scaled
+        // buffer font, same wrap (cell_edit::wrapCellText).
+        if (layout.headerEditTarget != HeaderEditTarget::None &&
+            !layout.previewMode) {
+            auto [hfHeaderArea, hfFooterArea] =
+                layout::headerFooterAreas(layout);
+            auto inRect = [&](const LayoutComponent::Rect& r) {
+                return mouse.x >= r.x && mouse.x < r.x + r.width &&
+                       mouse.y >= r.y && mouse.y < r.y + r.height;
+            };
+            bool inHfHeader = inRect(hfHeaderArea);
+            bool inHfFooter = inRect(hfFooterArea);
+            auto hfOffsetAtMouse = [&](const LayoutComponent::Rect& band,
+                                       TextBuffer& hf) {
+                int hfFontSize = ruler_math::scaledFontSize(
+                    hf.textStyle().fontSize, ds);
+                float textX =
+                    band.x +
+                    static_cast<float>(theme::layout::TEXT_PADDING);
+                float textY = band.y + 4.0f;
+                float wrapWidth =
+                    band.width -
+                    2.0f * static_cast<float>(theme::layout::TEXT_PADDING);
+                auto lines = cell_edit::wrapCellText(
+                    hf.getText(), wrapWidth, hfFontSize,
+                    cmd::cellMeasure());
+                return cell_edit::caretOffsetAtPoint(
+                    lines, mouse.x - textX, mouse.y - textY, hfFontSize,
+                    cmd::cellMeasure());
+            };
+            if (pressed) {
+                dragging_ = false;
+                cellDragging_ = false;
+                hfDragging_ = false;
+                if (inHfHeader || inHfFooter) {
+                    HeaderEditTarget target =
+                        inHfHeader ? HeaderEditTarget::Header
+                                   : HeaderEditTarget::Footer;
+                    layout::enterHeaderFooterEdit(layout, target);
+                    TextBuffer& hf =
+                        cmd::headerFooterBuffer(doc, layout);
+                    const LayoutComponent::Rect& band =
+                        inHfHeader ? hfHeaderArea : hfFooterArea;
+                    std::size_t off = hfOffsetAtMouse(band, hf);
+                    bool shiftDown =
+                        test_input::is_key_down(
+                            afterhours::keys::LEFT_SHIFT) ||
+                        test_input::is_key_down(
+                            afterhours::keys::RIGHT_SHIFT);
+                    if (shiftDown) {
+                        if (!hf.hasSelection()) {
+                            hf.setSelectionAnchor(hf.caret());
+                        }
+                        hf.setCaret(hf.positionForOffset(off));
+                        hf.updateSelectionToCaret();
+                    } else {
+                        hf.clearSelection();
+                        hf.setCaret(hf.positionForOffset(off));
+                    }
+                    hfDragAnchorOffset_ =
+                        hf.hasSelection()
+                            ? hf.offsetForPosition(hf.selectionStart())
+                            : off;
+                    hfDragging_ = true;
+                    caret::resetBlink(caret);
+                }
+                return;
+            }
+            if (hfDragging_) {
+                if (!down) {
+                    hfDragging_ = false;
+                    caret::resetBlink(caret);
+                    return;
+                }
+                TextBuffer& hf = cmd::headerFooterBuffer(doc, layout);
+                const LayoutComponent::Rect& band =
+                    layout.headerEditTarget == HeaderEditTarget::Footer
+                        ? hfFooterArea
+                        : hfHeaderArea;
+                if (inRect(band)) {
+                    std::size_t off = hfOffsetAtMouse(band, hf);
+                    hf.setCaret(hf.positionForOffset(hfDragAnchorOffset_));
+                    hf.setSelectionAnchor(hf.caret());
+                    hf.setCaret(hf.positionForOffset(off));
+                    hf.updateSelectionToCaret();
+                    caret::resetBlink(caret);
+                }
+                return;
+            }
+            // A body / cell drag that started before the mode
+            // was entered dies here instead of mutating the
+            // body or a cell from behind the mode.
+            if (dragging_ || cellDragging_) {
+                dragging_ = false;
+                cellDragging_ = false;
+                return;
+            }
+        }
 
         // Table cells (Batch 8): same origin geometry as
         // renderDocumentTables (effective area + TEXT_PADDING,

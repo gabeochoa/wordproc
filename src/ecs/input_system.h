@@ -157,6 +157,87 @@ struct TextInputSystem
             return;
         }
 
+        // Header/footer editing (Batch 9): ALL text keys route
+        // to the active header/footer buffer — typing, Enter
+        // (newline), Backspace / Delete, Tab — and NOTHING
+        // below may touch the body buffer. Esc exits back to
+        // the body caret. No smart quotes, AutoCorrect, or @
+        // chips in headers/footers (same documented limit as
+        // table cells).
+        if (layout.headerEditTarget != HeaderEditTarget::None) {
+            TextBuffer& hfBuffer = cmd::headerFooterBuffer(doc, layout);
+            if (input::isKeyPressed(afterhours::keys::ESCAPE)) {
+                cmd::exitHeaderFooterEdit(layout);
+                caret::resetBlink(caret);
+                return;
+            }
+            if (input::isKeyPressed(afterhours::keys::TAB)) {
+                int width = std::max(1, doc.docSettings.tabWidth);
+                hfBuffer.insertText(
+                    std::string(static_cast<std::size_t>(width), ' '));
+                doc.isDirty = true;
+                caret::resetBlink(caret);
+                return;
+            }
+            int hfCodepoint = test_input::get_char_pressed();
+            while (hfCodepoint > 0) {
+                if (hfCodepoint >= 32) {
+                    // Encode the full codepoint as UTF-8 (the
+                    // body path truncates to char; header/footer
+                    // text keeps multi-byte input intact, like cells).
+                    std::string utf8;
+                    if (hfCodepoint < 0x80) {
+                        utf8.push_back(
+                            static_cast<char>(hfCodepoint));
+                    } else if (hfCodepoint < 0x800) {
+                        utf8.push_back(static_cast<char>(
+                            0xC0 | (hfCodepoint >> 6)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | (hfCodepoint & 0x3F)));
+                    } else if (hfCodepoint < 0x10000) {
+                        utf8.push_back(static_cast<char>(
+                            0xE0 | (hfCodepoint >> 12)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | ((hfCodepoint >> 6) & 0x3F)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | (hfCodepoint & 0x3F)));
+                    } else {
+                        utf8.push_back(static_cast<char>(
+                            0xF0 | (hfCodepoint >> 18)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | ((hfCodepoint >> 12) & 0x3F)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | ((hfCodepoint >> 6) & 0x3F)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | (hfCodepoint & 0x3F)));
+                    }
+                    hfBuffer.insertText(utf8);
+                    doc.isDirty = true;
+                    cmd::clearStatusFlash();
+                    caret::resetBlink(caret);
+                }
+                hfCodepoint = test_input::get_char_pressed();
+            }
+            if (actionMap_.isActionPressed(Action::InsertNewline)) {
+                hfBuffer.insertText("\n");
+                doc.isDirty = true;
+                caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressedRepeat(Action::Backspace)) {
+                repeat::clear(doc.repeatRecord);
+                hfBuffer.backspace();
+                doc.isDirty = true;
+                caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressedRepeat(Action::Delete)) {
+                repeat::clear(doc.repeatRecord);
+                hfBuffer.del();
+                doc.isDirty = true;
+                caret::resetBlink(caret);
+            }
+            return;
+        }
+
         // @ chip popup owns Enter (select) and Escape (dismiss)
         // while open. Typing / Backspace fall through below: they
         // edit the filter text in the buffer. Up/Down are owned by
@@ -338,6 +419,44 @@ struct KeyboardShortcutSystem
             }
             if (actionMap_.isActionPressed(Action::Print)) {
                 cmd::requestPrint(doc, dialogs);
+            }
+            return;
+        }
+
+        // Header/footer editing: only Save / Save As / Undo /
+        // Redo / clipboard / Select All stay live, routed to
+        // the active header/footer buffer. Everything else
+        // below (formatting, styles, alignment, Repeat,
+        // Print, ...) acts on the body buffer and is skipped
+        // while a header/footer is active — a Ctrl+B in a
+        // header must not bold body text.
+        if (layout.headerEditTarget != HeaderEditTarget::None) {
+            TextBuffer& hfBuffer = cmd::headerFooterBuffer(doc, layout);
+            if (actionMap_.isActionPressed(Action::Save)) {
+                cmd::saveDocument(doc, layout, menu);
+            }
+            if (actionMap_.isActionPressed(Action::SaveAs)) {
+                menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
+            }
+            if (actionMap_.isActionPressed(Action::Copy)) {
+                cmd::copyBuffer(hfBuffer);
+            }
+            if (actionMap_.isActionPressed(Action::Cut)) {
+                cmd::cutBuffer(hfBuffer, doc);
+            }
+            if (actionMap_.isActionPressed(Action::Paste)) {
+                cmd::pasteBuffer(hfBuffer, doc);
+            }
+            if (actionMap_.isActionPressed(Action::SelectAll)) {
+                hfBuffer.selectAll();
+            }
+            if (actionMap_.isActionPressed(Action::Undo)) {
+                hfBuffer.undo();
+                caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressed(Action::Redo)) {
+                hfBuffer.redo();
+                caret::resetBlink(caret);
             }
             return;
         }
@@ -732,6 +851,73 @@ struct NavigationSystem
             return;
         }
 
+        // Header/footer editing: arrows / Home / End / word
+        // moves route to the active header/footer buffer,
+        // never the body buffer. PageUp / PageDown move
+        // within the header/footer buffer. Wheel scrolling
+        // still scrolls the body behind the mode (the page
+        // number the header renders derives from it).
+        if (layout.headerEditTarget != HeaderEditTarget::None) {
+            TextBuffer& hfBuffer = cmd::headerFooterBuffer(doc, layout);
+            auto navigateHf = [&](auto moveFunc) {
+                CaretPosition before = hfBuffer.caret();
+                if (shift_down && !hfBuffer.hasSelection()) {
+                    hfBuffer.setSelectionAnchor(before);
+                }
+                if (!shift_down) {
+                    hfBuffer.clearSelection();
+                }
+                moveFunc();
+                if (shift_down) {
+                    hfBuffer.updateSelectionToCaret();
+                }
+                caret::resetBlink(caret);
+            };
+            if (actionMap_.isActionPressedRepeat(Action::MoveWordLeft)) {
+                navigateHf([&]() { hfBuffer.moveWordLeft(); });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveLeft)) {
+                navigateHf([&]() { hfBuffer.moveLeft(); });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveWordRight)) {
+                navigateHf([&]() { hfBuffer.moveWordRight(); });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveRight)) {
+                navigateHf([&]() { hfBuffer.moveRight(); });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveUp)) {
+                navigateHf([&]() { hfBuffer.moveUp(); });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveDown)) {
+                navigateHf([&]() { hfBuffer.moveDown(); });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveDocumentStart)) {
+                navigateHf([&]() { hfBuffer.moveToDocumentStart(); });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveLineStart)) {
+                navigateHf([&]() { hfBuffer.moveToLineStart(); });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveDocumentEnd)) {
+                navigateHf([&]() { hfBuffer.moveToDocumentEnd(); });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveLineEnd)) {
+                navigateHf([&]() { hfBuffer.moveToLineEnd(); });
+            }
+            constexpr std::size_t HF_LINES_PER_PAGE = 20;
+            if (actionMap_.isActionPressed(Action::PageUp)) {
+                navigateHf(
+                    [&]() { hfBuffer.movePageUp(HF_LINES_PER_PAGE); });
+            }
+            if (actionMap_.isActionPressed(Action::PageDown)) {
+                navigateHf(
+                    [&]() { hfBuffer.movePageDown(HF_LINES_PER_PAGE); });
+            }
+            float wheelMove = input::getMouseWheelMove();
+            if (wheelMove != 0.0f) {
+                int wheelLines = scroll_math::accumulateWheel(
+                    scroll.wheelRemainder, wheelMove);
+                scroll.offset += wheelLines;
+            }
+            scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
+            return;
+        }
+
         // @ chip popup owns Up/Down (it moves the popup selection,
         // not the caret). Any other navigation key pressed while the
         // popup is open dismisses it and then moves the caret
@@ -901,7 +1087,9 @@ struct AutoSaveSystem
 
         cmd::syncLayoutToSettings(doc, layout);
         auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
-                                             doc.tables, doc.autoSavePath);
+                                             doc.tables, doc.autoSavePath,
+                                             &doc.headerBuffer,
+                                             &doc.footerBuffer);
         if (result.success) {
             doc.lastAutoSaveTime = now;
             cmd::flashStatusConfirmation("[saved] Auto-saved", 2.0);

@@ -1,0 +1,65 @@
+# Test: Header/Footer save/reload round-trip (Batch 9)
+# Insert > Header enters header editing; the strip's Close
+# exits; Insert > Footer + Page Number sets the footer field;
+# File > Save persists header text + the page-number toggle;
+# open_file reloads both.
+
+type "Body"
+wait_frames 12
+
+# Enter via Insert > Header (the old "[HEADER]" placeholder
+# insert is gone: this must NOT put "[HEADER]" in the body).
+menu_open Insert
+wait_frames 12
+menu_select Header
+wait_frames 12
+validate header_editing=true
+validate text=Body
+
+type "Saved Header"
+wait_frames 12
+validate header_text=Saved Header
+validate text=Body
+
+click_ui btn_header_footer_close
+wait_frames 12
+validate header_editing=false
+
+# Footer: enter via Insert > Footer, toggle Page Number.
+menu_open Insert
+wait_frames 12
+menu_select Footer
+wait_frames 12
+validate header_edit_target=footer
+
+click_ui btn_header_footer_page_number
+wait_frames 12
+validate has_page_number=true
+
+click_ui btn_header_footer_close
+wait_frames 12
+validate header_editing=false
+
+# Save (File > Save, default output/document.wpdoc), reopen.
+menu_open File
+wait_frames 12
+menu_select Save
+wait_frames 12
+open_file output/document.wpdoc
+wait_frames 12
+validate header_text=Saved Header
+validate has_page_number=true
+validate text=Body
+
+# Reloaded footer renders "Page 1" in Page Layout.
+menu_open View
+wait_frames 12
+menu_select "Page Layout"
+wait_frames 12
+validate page_mode=paged
+expect_text "Saved Header"
+# "Page 1" is visible in this screenshot (footer field),
+# asserted as has_page_number above; render-phase text
+# is not expect_text-visible (see the editing test).
+
+screenshot footer_pagenum

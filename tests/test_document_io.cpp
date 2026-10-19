@@ -298,3 +298,82 @@ TEST_CASE("Text boundaries are off by default", "[document_io]") {
     DocumentSettings fresh;
     REQUIRE_FALSE(fresh.showTextBoundaries);
 }
+
+TEST_CASE("Header/footer text + config round-trip (Batch 9)", "[document_io]") {
+    TestDirGuard guard;
+    std::string path = (guard.dir / "header_footer.wpdoc").string();
+
+    SECTION("header/footer text and page-number config persist") {
+        TextBuffer body;
+        body.setText("Body text");
+        TextBuffer header;
+        header.setText("My Header");
+        TextBuffer footer;
+        footer.setText("My Footer");
+        DocumentSettings settings;
+        settings.footer.center.showPageNumber = true;
+        settings.footer.center.format = PageNumberFormat::Arabic;
+        settings.header.differentFirstPage = true;
+        TableList tables;
+        REQUIRE(saveDocumentWithTables(body, settings, tables, path,
+                                       &header, &footer)
+                    .success);
+
+        TextBuffer loadedBody;
+        TextBuffer loadedHeader;
+        TextBuffer loadedFooter;
+        DocumentSettings loadedSettings;
+        TableList loadedTables;
+        REQUIRE(loadDocumentWithTables(loadedBody, loadedSettings,
+                                       loadedTables, path, &loadedHeader,
+                                       &loadedFooter)
+                    .success);
+        REQUIRE(loadedBody.getText() == "Body text");
+        REQUIRE(loadedHeader.getText() == "My Header");
+        REQUIRE(loadedFooter.getText() == "My Footer");
+        REQUIRE(loadedSettings.footer.center.showPageNumber);
+        REQUIRE(loadedSettings.footer.center.format ==
+                PageNumberFormat::Arabic);
+        REQUIRE(loadedSettings.header.differentFirstPage);
+    }
+
+    SECTION("loading a header-less file clears stale header text") {
+        TextBuffer body;
+        body.setText("Plain body");
+        DocumentSettings settings;
+        TableList tables;
+        REQUIRE(saveDocumentWithTables(body, settings, tables, path)
+                    .success);
+
+        TextBuffer loadedBody;
+        TextBuffer loadedHeader;
+        loadedHeader.setText("Stale header");
+        TextBuffer loadedFooter;
+        loadedFooter.setText("Stale footer");
+        DocumentSettings loadedSettings;
+        TableList loadedTables;
+        REQUIRE(loadDocumentWithTables(loadedBody, loadedSettings,
+                                       loadedTables, path, &loadedHeader,
+                                       &loadedFooter)
+                    .success);
+        REQUIRE(loadedHeader.getText().empty());
+        REQUIRE(loadedFooter.getText().empty());
+    }
+
+    SECTION("header/footer config persists through saveDocumentEx") {
+        TextBuffer body;
+        body.setText("Config only");
+        DocumentSettings settings;
+        settings.footer.center.showPageNumber = true;
+        settings.footer.center.showTotalPages = true;
+        settings.header.differentFirstPage = true;
+        REQUIRE(saveDocumentEx(body, settings, path).success);
+
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path).success);
+        REQUIRE(loadedSettings.footer.center.showPageNumber);
+        REQUIRE(loadedSettings.footer.center.showTotalPages);
+        REQUIRE(loadedSettings.header.differentFirstPage);
+    }
+}

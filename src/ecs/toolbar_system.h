@@ -463,6 +463,17 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 .with_roundness(0.0f)
                 .with_debug_name("std_toolbar"));
         
+        // Header/footer editing (Batch 9): the Standard bar
+        // stays, but its body-mutating buttons are disabled
+        // (grayed, like Word's unavailable commands) and
+        // Undo/Redo route to the active header/footer buffer.
+        bool headerEditing =
+            layout.headerEditTarget != HeaderEditTarget::None;
+        TextBuffer* hfBuffer =
+            headerEditing
+                ? &cmd::headerFooterBuffer(doc, layout)
+                : nullptr;
+
         // Track X position for horizontal button layout
         float curX = buttonPadding;
         float btnY = toolbarY + buttonPadding;
@@ -476,7 +487,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // === File Operations ===
         int newBtnId = btnId++;
         if (button(ctx, mk(uiRoot, newBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::New).with_label("").with_debug_name("btn_new"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::New).with_label("").with_debug_name("btn_new"))) {
             cmd::newDocument(doc);
         }
         trackTooltip(curX, btnY, "New (Ctrl+N)");
@@ -528,7 +539,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Spelling (Tools > Spelling..., F7)
         int spellingBtnId = btnId++;
         if (button(ctx, mk(uiRoot, spellingBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Spelling).with_label("").with_debug_name("btn_spelling"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Spelling).with_label("").with_debug_name("btn_spelling"))) {
             if (cache_.dialogs) cmd::openSpellingDialog(doc, *cache_.dialogs);
         }
         trackTooltip(curX, btnY, "Spelling (F7)");
@@ -539,13 +550,17 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         btnId += 2;
         curX += sepWidth + sepPadding;
         
-        // Cut/Copy/Paste
-        bool hasSelection = doc.buffer.hasSelection();
-        
+        // Cut/Copy/Paste (stubs: no clipboard action, Cut only
+        // marks dirty on a selection — never the header edit's
+        // selection, which belongs to the header buffer).
+        bool hasSelection = headerEditing && hfBuffer != nullptr
+                                ? hfBuffer->hasSelection()
+                                : doc.buffer.hasSelection();
+
         int cutBtnId = btnId++;
         if (button(ctx, mk(uiRoot, cutBtnId),
-            absToolbarButton(curX, btnY, buttonSize, hasSelection, false, isMouseOver(curX, btnY), ToolbarIcon::Cut).with_label("").with_debug_name("btn_cut"))) {
-            if (hasSelection) {
+            absToolbarButton(curX, btnY, buttonSize, hasSelection && !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Cut).with_label("").with_debug_name("btn_cut"))) {
+            if (hasSelection && !headerEditing) {
                 doc.isDirty = true;
             }
         }
@@ -554,7 +569,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int copyBtnId = btnId++;
         if (button(ctx, mk(uiRoot, copyBtnId),
-            absToolbarButton(curX, btnY, buttonSize, hasSelection, false, isMouseOver(curX, btnY), ToolbarIcon::Copy).with_label("").with_debug_name("btn_copy"))) {
+            absToolbarButton(curX, btnY, buttonSize, hasSelection && !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Copy).with_label("").with_debug_name("btn_copy"))) {
             // Copy operation
         }
         trackTooltip(curX, btnY, "Copy (Ctrl+C)");
@@ -562,7 +577,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int pasteBtnId = btnId++;
         if (button(ctx, mk(uiRoot, pasteBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Paste).with_label("").with_debug_name("btn_paste"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Paste).with_label("").with_debug_name("btn_paste"))) {
             // Paste operation
         }
         trackTooltip(curX, btnY, "Paste (Ctrl+V)");
@@ -574,7 +589,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Cut/Copy/Paste, Format Painter, then Undo/Redo.
         int painterBtnId = btnId++;
         if (button(ctx, mk(uiRoot, painterBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, toolbar.formatPainter.armed, isMouseOver(curX, btnY), ToolbarIcon::FormatPainter).with_label("").with_debug_name("btn_format_painter"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, toolbar.formatPainter.armed, isMouseOver(curX, btnY), ToolbarIcon::FormatPainter).with_label("").with_debug_name("btn_format_painter"))) {
             cmd::toggleFormatPainter(doc, toolbar);
         }
         trackTooltip(curX, btnY, "Format Painter");
@@ -585,21 +600,33 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         btnId += 2;
         curX += sepWidth + sepPadding;
 
-        // Undo/Redo
-        bool canUndo = doc.buffer.canUndo();
+        // Undo/Redo (header/footer buffer while editing one)
+        bool canUndo = headerEditing && hfBuffer != nullptr
+                           ? hfBuffer->canUndo()
+                           : doc.buffer.canUndo();
         int undoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, undoBtnId),
             absToolbarButton(curX, btnY, buttonSize, canUndo, false, isMouseOver(curX, btnY), ToolbarIcon::Undo).with_label("").with_debug_name("btn_undo"))) {
-            cmd::undo(doc);
+            if (headerEditing && hfBuffer != nullptr) {
+                hfBuffer->undo();
+            } else {
+                cmd::undo(doc);
+            }
         }
         trackTooltip(curX, btnY, "Undo (Ctrl+Z)");
         curX += buttonSize + buttonPadding;
 
-        bool canRedo = doc.buffer.canRedo();
+        bool canRedo = headerEditing && hfBuffer != nullptr
+                           ? hfBuffer->canRedo()
+                           : doc.buffer.canRedo();
         int redoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, redoBtnId),
             absToolbarButton(curX, btnY, buttonSize, canRedo, false, isMouseOver(curX, btnY), ToolbarIcon::Redo).with_label("").with_debug_name("btn_redo"))) {
-            cmd::redo(doc);
+            if (headerEditing && hfBuffer != nullptr) {
+                hfBuffer->redo();
+            } else {
+                cmd::redo(doc);
+            }
         }
         trackTooltip(curX, btnY, "Redo (Ctrl+Y)");
         curX += buttonSize + buttonPadding;
@@ -690,7 +717,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // dropdown for whichever menu has open=true).
         int hyperlinkBtnId = btnId++;
         if (button(ctx, mk(uiRoot, hyperlinkBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Hyperlink).with_label("").with_debug_name("btn_insert_hyperlink"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Hyperlink).with_label("").with_debug_name("btn_insert_hyperlink"))) {
             cmd::insertHyperlink(doc);
         }
         trackTooltip(curX, btnY, "Insert Hyperlink (Ctrl+K)");
@@ -698,7 +725,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
         int imageBtnId = btnId++;
         if (button(ctx, mk(uiRoot, imageBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Image).with_label("").with_debug_name("btn_insert_image"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Image).with_label("").with_debug_name("btn_insert_image"))) {
             cmd::insertImagePlaceholder(doc);
         }
         trackTooltip(curX, btnY, "Insert Image");
@@ -706,7 +733,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
         int tableBtnId = btnId++;
         if (button(ctx, mk(uiRoot, tableBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::InsertTable).with_label("").with_debug_name("btn_insert_table"))) {
+            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::InsertTable).with_label("").with_debug_name("btn_insert_table"))) {
             // Toggle the Table menu dropdown (same mechanism as
             // clicking the Table header / E2E menu_open Table).
             if (cache_.menu) {
@@ -935,8 +962,118 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             }
         }
 
+        // === Header/Footer Toolbar (replaces the Formatting toolbar) ===
+        // While a header/footer is being edited, this strip
+        // occupies the Formatting slot (formattingBarY,
+        // formattingBarHeight): the target label, a Page Number
+        // toggle for the active target's center field, Switch
+        // Header/Footer, and Close. The Standard toolbar above
+        // stays (its body-mutating buttons are disabled while
+        // the mode is active). Like the Outlining bar, hiding
+        // the Formatting toolbar hides this strip too.
+        if (layout.headerEditTarget != HeaderEditTarget::None &&
+            layout.showFormattingToolbar) {
+            toolbar.styleDropdownOpen = false;
+            toolbar.fontDropdownOpen = false;
+            toolbar.fontSizeDropdownOpen = false;
+
+            div(ctx, mk(uiRoot, 2000),
+                ComponentConfig{}
+                    .with_size(ComponentSize{pixels(screenWidth), pixels(formattingBarHeight)})
+                    .with_absolute_position()
+                    .with_translate(0, formattingBarY)
+                    .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                    .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                    .with_roundness(0.0f)
+                    .with_debug_name("header_footer_toolbar"));
+
+            float hfX = buttonPadding;
+            float hfBtnY = formattingBarY + buttonPadding;
+            float hfBtnH = theme::layout::scale(22);
+            int hfBtnId = 2600;
+            auto hfButton = [&](float x, float w, const std::string& label,
+                                const std::string& debug, bool pressed = false) {
+                return button(ctx, mk(uiRoot, hfBtnId++),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{pixels(w), pixels(hfBtnH)})
+                        .with_absolute_position()
+                        .with_translate(x, hfBtnY)
+                        .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_bevel(pressed ? afterhours::ui::BevelStyle::Sunken
+                                            : afterhours::ui::BevelStyle::Raised,
+                                    ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                        .with_roundness(0.0f)
+                        .with_alignment(afterhours::ui::TextAlignment::Center)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                        .with_label(label)
+                        .with_debug_name(debug));
+            };
+
+            bool editingFooter =
+                layout.headerEditTarget == HeaderEditTarget::Footer;
+            std::string hfLabel = editingFooter ? "Footer" : "Header";
+            test_input::register_visible_text(hfLabel);
+            div(ctx, mk(uiRoot, hfBtnId++),
+                ComponentConfig{}
+                    .with_label(hfLabel)
+                    .with_size(ComponentSize{pixels(theme::layout::scale(70)), pixels(hfBtnH)})
+                    .with_absolute_position()
+                    .with_translate(hfX, hfBtnY)
+                    .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                    .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                    .with_alignment(afterhours::ui::TextAlignment::Center)
+                    .with_roundness(0.0f)
+                    .with_debug_name("header_footer_label"));
+            hfX += theme::layout::scale(70) + buttonPadding;
+
+            drawEtchedSeparator(ctx, uiRoot, hfBtnId, hfX + sepPadding / 2, hfBtnY, hfBtnH - 4);
+            hfBtnId += 2;
+            hfX += sepWidth + sepPadding;
+
+            const HeaderFooter& hfConfig =
+                editingFooter ? doc.docSettings.footer
+                              : doc.docSettings.header;
+            test_input::register_visible_text("Page Number");
+            if (hfButton(hfX, theme::layout::scale(110), "Page Number",
+                         "btn_header_footer_page_number",
+                         hfConfig.center.showPageNumber)) {
+                cmd::toggleHeaderFooterPageNumber(doc, layout);
+            }
+            trackTooltip(hfX, hfBtnY, "Insert page number field");
+            hfX += theme::layout::scale(110) + buttonPadding;
+
+            test_input::register_visible_text("Switch Header/Footer");
+            if (hfButton(hfX, theme::layout::scale(150),
+                         "Switch Header/Footer",
+                         "btn_header_footer_switch")) {
+                layout::enterHeaderFooterEdit(
+                    layout,
+                    editingFooter ? HeaderEditTarget::Header
+                                  : HeaderEditTarget::Footer);
+            }
+            trackTooltip(hfX, hfBtnY, "Switch between header and footer");
+            hfX += theme::layout::scale(150) + buttonPadding;
+
+            drawEtchedSeparator(ctx, uiRoot, hfBtnId, hfX + sepPadding / 2, hfBtnY, hfBtnH - 4);
+            hfBtnId += 2;
+            hfX += sepWidth + sepPadding;
+
+            test_input::register_visible_text("Close");
+            if (hfButton(hfX, theme::layout::scale(64), "Close",
+                         "btn_header_footer_close")) {
+                cmd::exitHeaderFooterEdit(layout);
+                ctx.set_focus(ctx.ROOT);
+            }
+            trackTooltip(hfX, hfBtnY, "Close header/footer, back to body");
+        }
+
         // === Formatting Toolbar Background ===
-        if (!layout.showOutline && layout.showFormattingToolbar) {
+        if (!layout.showOutline && layout.showFormattingToolbar &&
+            layout.headerEditTarget == HeaderEditTarget::None) {
         div(ctx, mk(uiRoot, 2000),
             ComponentConfig{}
                 .with_size(ComponentSize{pixels(screenWidth), pixels(formattingBarHeight)})

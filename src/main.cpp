@@ -55,7 +55,10 @@ struct PreloadedDocument {
     DocumentSettings docSettings;
     // Tables load with the document (Batch 8): the old
     // buffer-only preload silently dropped them on startup.
+    // Header/footer text rides the same path (Batch 9).
     TableList tables;
+    TextBuffer headerBuffer;
+    TextBuffer footerBuffer;
     bool loaded = false;
     std::string error;
 };
@@ -164,6 +167,8 @@ static void app_init() {
             docComp.buffer = std::move(preloaded.buffer);
             docComp.docSettings = std::move(preloaded.docSettings);
             docComp.tables = std::move(preloaded.tables);
+            docComp.headerBuffer = std::move(preloaded.headerBuffer);
+            docComp.footerBuffer = std::move(preloaded.footerBuffer);
         } else if (!preloaded.error.empty()) {
             LOG_WARNING("Failed to load file: %s", preloaded.error.c_str());
         }
@@ -173,7 +178,9 @@ static void app_init() {
         auto result = loadDocumentWithTables(docComp.buffer,
                                              docComp.docSettings,
                                              docComp.tables,
-                                             app_state::loadFile);
+                                             app_state::loadFile,
+                                             &docComp.headerBuffer,
+                                             &docComp.footerBuffer);
         if (!result.success) {
             LOG_WARNING("Failed to load file: %s", result.error.c_str());
         }
@@ -218,7 +225,9 @@ static void app_init() {
         auto result = loadDocumentWithTables(docComp.buffer,
                                             docComp.docSettings,
                                             docComp.tables,
-                                            docComp.autoSavePath);
+                                            docComp.autoSavePath,
+                                            &docComp.headerBuffer,
+                                            &docComp.footerBuffer);
         if (result.success) {
             docComp.isDirty = true;
             recoveredAutoSave = true;
@@ -685,7 +694,9 @@ int main(int argc, char* argv[]) {
             SCOPED_TIMER("Background document preload");
             auto result = loadDocumentWithTables(data.buffer,
                                                  data.docSettings,
-                                                 data.tables, filePath);
+                                                 data.tables, filePath,
+                                                 &data.headerBuffer,
+                                                 &data.footerBuffer);
             data.loaded = result.success;
             data.error = result.error;
             return data;

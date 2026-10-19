@@ -48,6 +48,37 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
         };
 
+        // Header/footer editing (Batch 9): the body is not
+        // editable while the mode is active, so menu actions
+        // that would mutate the body are refused (Close the
+        // strip first). Allowed through: File > Save / Save As /
+        // Exit, View > Header and Footer (toggle), Insert >
+        // Header / Footer (switch target) / Page Number
+        // (toggle the field) / Document Body (exit). Everything
+        // else — formatting, tables, clipboard, view switches —
+        // would act on the body buffer behind the mode.
+        if (layout.headerEditTarget != HeaderEditTarget::None) {
+            bool allowed = false;
+            if (menuIndex == 0 && itemIndex >= 0 &&
+                itemIndex < static_cast<int>(menu.menus[0].items.size())) {
+                const std::string& label =
+                    menu.menus[0].items[itemIndex].label;
+                if (itemIndex == 3 || itemIndex == 4 || label == "Exit") {
+                    allowed = true;
+                }
+            }
+            if (menuIndex == 2 && itemIndex == 4) allowed = true;
+            if (menuIndex == 3 &&
+                (itemIndex == 26 || itemIndex == 27 ||
+                 itemIndex == 28 || itemIndex == 29)) {
+                allowed = true;
+            }
+            if (!allowed) {
+                flash("Close the header/footer first");
+                return;
+            }
+        }
+
         if (menuIndex == 0) {  // File menu
             if (itemIndex >= 0 &&
                 itemIndex < static_cast<int>(menu.menus[0].items.size())) {
@@ -305,49 +336,59 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                                          : win95::MenuMark::None;
                     flash(layout.showRuler ? "Ruler: On" : "Ruler: Off");
                     break;
-                case 5:  // Zoom In
+                case 4:  // Header and Footer (toggle: enter on
+                         // Header, or exit when already editing)
+                    if (layout.headerEditTarget !=
+                        HeaderEditTarget::None) {
+                        cmd::exitHeaderFooterEdit(layout);
+                    } else {
+                        cmd::enterHeaderFooterEdit(
+                            doc, layout, scroll, HeaderEditTarget::Header);
+                    }
+                    break;
+                case 6:  // Zoom In
                     layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
                     flash("Zoom in");
                     break;
-                case 6:  // Zoom Out
+                case 7:  // Zoom Out
                     layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
                     flash("Zoom out");
                     break;
-                case 7:  // Zoom Reset
+                case 8:  // Zoom Reset
                     layout.zoomLevel = 1.0f;
                     flash("Zoom reset");
                     break;
-                case 9:  // Focus Mode
+                case 10:  // Focus Mode
                     layout.focusMode = !layout.focusMode;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
                     flash(layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
                     break;
-                case 10:  // Split View
+                case 11:  // Split View
                     layout.splitViewEnabled = !layout.splitViewEnabled;
                     flash(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
                     break;
-                case 11:  // Dark Mode
+                case 12:  // Dark Mode
                     theme::applyDarkMode(!theme::DARK_MODE_ENABLED);
                     flash(theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
                     break;
-                case 13:  // Line Width: Normal (no limit)
+                case 14:  // Line Width: Normal (no limit)
                     layout::setLineWidthLimit(layout, 0.0f);
                     flash("Line width: Normal");
                     break;
-                case 14:  // Line Width: Narrow (60 chars)
+                case 15:  // Line Width: Narrow (60 chars)
                     layout::setLineWidthLimit(layout, 60.0f);
                     flash("Line width: Narrow (60 chars)");
                     break;
-                case 15:  // Line Width: Wide (100 chars)
+                case 16:  // Line Width: Wide (100 chars)
                     layout::setLineWidthLimit(layout, 100.0f);
                     flash("Line width: Wide (100 chars)");
                     break;
-                case 17:  // Show Line Numbers
+                case 18:  // Show Line Numbers
                     layout.showLineNumbers = !layout.showLineNumbers;
                     flash(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     break;
-                case 18:  // Outline
+                case 19:  // Outline
                     cmd::toggleOutlineMode(doc, layout, scroll);
                     // Transient status-bar flash, not a floating
                     // toast (same pattern as Normal/Page Layout above).
@@ -357,25 +398,25 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                                                          : "Outline off",
                                       afterhours::graphics::get_time());
                     break;
-                case 20:  // Standard Toolbar
+                case 21:  // Standard Toolbar
                     layout.showStandardToolbar = !layout.showStandardToolbar;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    menu.menus[2].items[20].mark =
+                    menu.menus[2].items[21].mark =
                         layout.showStandardToolbar ? win95::MenuMark::Checkmark
                                                    : win95::MenuMark::None;
                     flash(layout.showStandardToolbar ? "Standard Toolbar: On" : "Standard Toolbar: Off");
                     break;
-                case 21:  // Formatting Toolbar
+                case 22:  // Formatting Toolbar
                     layout.showFormattingToolbar = !layout.showFormattingToolbar;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    menu.menus[2].items[21].mark =
+                    menu.menus[2].items[22].mark =
                         layout.showFormattingToolbar ? win95::MenuMark::Checkmark
                                                      : win95::MenuMark::None;
                     flash(layout.showFormattingToolbar ? "Formatting Toolbar: On" : "Formatting Toolbar: Off");
                     break;
-                case 23:  // UI Scale... (moved from Tools)
+                case 24:  // UI Scale... (moved from Tools)
                     dialogs.showSettingsDialog = true;
                     {
                         int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);
@@ -791,27 +832,36 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     dialogs.dateTimeSelected = 0;
                     dialogs.dateTimeUpdateAutomatically = false;
                     break;
-                case 26:  // Header
-                {
-                    doc.buffer.insertText("[HEADER]");
-                    doc.isDirty = true;
-                    flash("Header placeholder inserted");
+                case 26:  // Header — enter header editing
+                    // (the "[HEADER]" body-text placeholder is gone:
+                    // headers are a real buffer now, Batch 9).
+                    cmd::enterHeaderFooterEdit(doc, layout, scroll,
+                                               HeaderEditTarget::Header);
                     break;
-                }
-                case 27:  // Footer
-                {
-                    doc.buffer.insertText("[FOOTER]");
-                    doc.isDirty = true;
-                    flash("Footer placeholder inserted");
+                case 27:  // Footer — enter footer editing
+                    cmd::enterHeaderFooterEdit(doc, layout, scroll,
+                                               HeaderEditTarget::Footer);
                     break;
-                }
-                case 28:  // Page Number
-                {
-                    doc.buffer.insertText("[PAGE #]");
-                    doc.isDirty = true;
-                    flash("Page number placeholder inserted");
+                case 28:  // Page Number — in header/footer editing
+                          // toggles the page-number field of the
+                          // active target; in the body it still
+                          // inserts the "[PAGE #]" placeholder.
+                    if (layout.headerEditTarget !=
+                        HeaderEditTarget::None) {
+                        cmd::toggleHeaderFooterPageNumber(doc, layout);
+                    } else {
+                        doc.buffer.insertText("[PAGE #]");
+                        doc.isDirty = true;
+                        flash("Page number placeholder inserted");
+                    }
                     break;
-                }
+                case 29:  // Document Body — exit header/footer
+                          // editing back to the body caret.
+                    if (layout.headerEditTarget !=
+                        HeaderEditTarget::None) {
+                        cmd::exitHeaderFooterEdit(layout);
+                    }
+                    break;
                 case 31:  // Table of Contents
                 {
                     doc.buffer.insertTableOfContents();

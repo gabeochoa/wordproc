@@ -384,6 +384,57 @@ inline void previewPrevPage(LayoutComponent& layout) {
         layout.previewPage - 1, layout.previewPageCount);
 }
 
+// --- Header/footer editing (Batch 9) ---
+// Enters the mode on `target`: remembers the current page mode,
+// forces Paged so the margins (where the header/footer live)
+// exist. Idempotent: entering twice (e.g. Header -> Footer via
+// the strip's Switch button) only changes the target, it must
+// not overwrite headerPrevPageMode with Paged. Exiting restores
+// the remembered mode. Both are layout-only (like preview /
+// outline switches): docSettings.pageSettings.mode is untouched.
+inline void enterHeaderFooterEdit(LayoutComponent& layout,
+                                  HeaderEditTarget target) {
+    if (target == HeaderEditTarget::None) return;
+    if (layout.headerEditTarget == HeaderEditTarget::None) {
+        layout.headerPrevPageMode = layout.pageMode;
+    }
+    layout.headerEditTarget = target;
+    layout.pageMode = PageMode::Paged;
+    updateLayout(layout, layout.screenWidth, layout.screenHeight);
+}
+
+inline void exitHeaderFooterEdit(LayoutComponent& layout) {
+    if (layout.headerEditTarget == HeaderEditTarget::None) return;
+    layout.headerEditTarget = HeaderEditTarget::None;
+    layout.pageMode = layout.headerPrevPageMode;
+    updateLayout(layout, layout.screenWidth, layout.screenHeight);
+}
+
+// Screen rects of the header / footer margin bands for the
+// (single) page the paged renderer draws: page top at
+// textArea.y + 10 (the same origin drawPageBackground uses),
+// header band = top margin, footer band = bottom margin, both
+// inset by the left/right margins. Only meaningful when
+// pageMode == Paged (header editing forces Paged; preview
+// forces Paged too). The render pass and the mouse hit-test
+// share this so a click lands where the text is drawn.
+inline std::pair<LayoutComponent::Rect, LayoutComponent::Rect>
+headerFooterAreas(const LayoutComponent& layout) {
+    float ds = displayScale(layout);
+    float leftPx = layout.marginLeft * ds;
+    float rightPx = layout.marginRight * ds;
+    float topPx = layout.marginTop * ds;
+    float bottomPx = layout.marginBottom * ds;
+    float pageY = layout.textArea.y + 10.0f;
+    float x = layout.pageOffsetX + leftPx;
+    float w = layout.pageDisplayWidth - leftPx - rightPx;
+    if (w < 0.0f) w = 0.0f;
+    LayoutComponent::Rect header{x, pageY, w, topPx};
+    LayoutComponent::Rect footer{
+        x, pageY + layout.pageDisplayHeight - bottomPx, w, bottomPx};
+    return {header, footer};
+}
+
 }  // namespace layout
 
 }  // namespace ecs

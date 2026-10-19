@@ -58,6 +58,13 @@ struct ScrollComponent : public afterhours::BaseComponent {
 // Component for document state
 struct DocumentComponent : public afterhours::BaseComponent {
     TextBuffer buffer;
+    // Header / footer bodies (Batch 9): real TextBuffers, edited in
+    // the header/footer mode (LayoutComponent::headerEditTarget)
+    // and drawn in the page margins. The toggle state for the
+    // page-number field / different-first-page lives in
+    // docSettings.header / .footer (HeaderFooter), not here.
+    TextBuffer headerBuffer;
+    TextBuffer footerBuffer;
     std::string filePath;
     bool isDirty = false;
 
@@ -486,6 +493,14 @@ struct DialogState : public afterhours::BaseComponent {
     bool printPdfExists = false;
 };
 
+// Header/footer editing target (Batch 9): None = body editing,
+// Header / Footer = text input routes to that buffer, the body
+// is not editable, and the Header/Footer strip replaces the
+// Formatting toolbar. Entering forces Paged mode (the header /
+// footer live in the page margins); headerPrevPageMode is the
+// mode restored on exit.
+enum class HeaderEditTarget { None, Header, Footer };
+
 // PageMode is defined in document_settings.h
 
 // Component for window layout calculations (logic in component_helpers.h)
@@ -596,6 +611,13 @@ struct LayoutComponent : public afterhours::BaseComponent {
     int previewPage = 0;          // 0-based current preview page
     int previewPageCount = 1;     // Estimated total pages
     int previewLinesPerPage = 50; // Estimated rendered lines per page
+
+    // Header/footer editing (Batch 9, see HeaderEditTarget).
+    // headerPrevPageMode is the page mode restored on exit
+    // (entering forces Paged; entering twice, e.g. to switch
+    // Header <-> Footer, must not overwrite it with Paged).
+    HeaderEditTarget headerEditTarget = HeaderEditTarget::None;
+    PageMode headerPrevPageMode = PageMode::Pageless;
 };
 
 // Component for test mode configuration

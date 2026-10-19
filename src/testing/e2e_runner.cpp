@@ -1017,14 +1017,39 @@ static void setupCallbacksEx(
             return std::to_string(outline.size());
         }
         
-        // Header/footer properties
-        if (prop == "header_content") {
-            // Return header center text (most common location)
+        // Header/footer properties (Batch 9): the text lives
+        // in the header/footer buffers now; the settings
+        // center/left/right text is the legacy location and
+        // only a fallback for old files.
+        if (prop == "header_content" || prop == "header_text") {
+            if (!docComp.headerBuffer.getText().empty()) {
+                return docComp.headerBuffer.getText();
+            }
             const auto& header = docComp.docSettings.header;
             if (!header.center.text.empty()) return header.center.text;
             if (!header.left.text.empty()) return header.left.text;
             if (!header.right.text.empty()) return header.right.text;
             return "";
+        }
+        if (prop == "footer_text") {
+            return docComp.footerBuffer.getText();
+        }
+        if (prop == "header_editing") {
+            return layoutComp.headerEditTarget !=
+                           ecs::HeaderEditTarget::None
+                       ? "true"
+                       : "false";
+        }
+        if (prop == "header_edit_target") {
+            if (layoutComp.headerEditTarget ==
+                ecs::HeaderEditTarget::Header) {
+                return "header";
+            }
+            if (layoutComp.headerEditTarget ==
+                ecs::HeaderEditTarget::Footer) {
+                return "footer";
+            }
+            return "none";
         }
         if (prop == "has_page_number") {
             const auto& header = docComp.docSettings.header;
@@ -1198,6 +1223,10 @@ static void setupCallbacksEx(
     runner.set_reset_callback([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp, &scrollComp]() {
         // Reset document state
         docComp.buffer.setText("");
+        docComp.headerBuffer.setText("");
+        docComp.footerBuffer.setText("");
+        docComp.headerBuffer.clearHistory();
+        docComp.footerBuffer.clearHistory();
         docComp.buffer.clearSelection();
         docComp.buffer.clearBookmarks();
         docComp.buffer.clearFootnotes();
@@ -1369,6 +1398,8 @@ static void setupCallbacksEx(
         layoutComp.showLineNumbers = false;
         layoutComp.showParagraphMarks = false;
         layoutComp.showOutline = false;
+        layoutComp.headerEditTarget = ecs::HeaderEditTarget::None;
+        layoutComp.headerPrevPageMode = PageMode::Pageless;
         layoutComp.outlinePrevPageMode = PageMode::Pageless;
         layoutComp.outlinePrevScroll = 0;
         layoutComp.outlineShowLevel = 0;

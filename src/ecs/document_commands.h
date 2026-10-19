@@ -365,6 +365,8 @@ inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
 }
 
 inline void newDocument(DocumentComponent& doc);
+inline void exitOutlineMode(LayoutComponent& layout,
+                            ScrollComponent* scroll);
 
 // File > New from Template...: open a shipped .wpdoc template as a
 // NEW Untitled document — filePath cleared, dirty, template content
@@ -406,6 +408,10 @@ inline bool openTemplateAsNew(DocumentComponent& doc, MenuComponent& menu,
 
 inline void newDocument(DocumentComponent& doc) {
     doc.buffer.setText("");
+    doc.headerBuffer.setText("");
+    doc.footerBuffer.setText("");
+    doc.headerBuffer.clearHistory();
+    doc.footerBuffer.clearHistory();
     doc.filePath.clear();
     doc.isDirty = false;
     doc.comments.clear();
@@ -425,8 +431,11 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
     syncLayoutToSettings(doc, layout);
     // WithTables: saveDocumentEx drops tables (its serializeTable
     // helpers were dead code) — a saved table must round-trip.
+    // Header/footer text rides the same path (Batch 9).
     auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
-                                         doc.tables, savePath);
+                                         doc.tables, savePath,
+                                         &doc.headerBuffer,
+                                         &doc.footerBuffer);
     if (result.success) {
         doc.isDirty = false;
         doc.filePath = savePath;
@@ -448,7 +457,9 @@ inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
                            MenuComponent& menu, const std::string& path) {
     syncLayoutToSettings(doc, layout);
     auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
-                                         doc.tables, path);
+                                         doc.tables, path,
+                                         &doc.headerBuffer,
+                                         &doc.footerBuffer);
     if (result.success) {
         doc.isDirty = false;
         doc.filePath = path;
@@ -470,9 +481,14 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
                          MenuComponent& menu, const std::string& path) {
     // WithTables: loadDocumentEx drops tables (and leaves the old
     // ones in place); loadDocumentWithTables replaces them, or
-    // clears them when the file has none.
+    // clears them when the file has none. Header/footer text
+    // rides the same path (Batch 9); opening another document
+    // ends any header/footer edit on the old one.
+    layout::exitHeaderFooterEdit(layout);
     auto result = loadDocumentWithTables(doc.buffer, doc.docSettings,
-                                         doc.tables, path);
+                                         doc.tables, path,
+                                         &doc.headerBuffer,
+                                         &doc.footerBuffer);
     if (result.success) {
         doc.filePath = path;
         doc.isDirty = false;
@@ -1028,12 +1044,113 @@ inline void insertImagePlaceholder(DocumentComponent& doc) {
     flashStatusConfirmation("Image placeholder inserted");
 }
 
+// --- Header / footer editing (Batch 9) ---
+// The buffer for the active header/footer target (or the body
+// buffer when not editing one — callers that need "header only"
+// check layout.headerEditTarget first).
+inline TextBuffer& headerFooterBuffer(DocumentComponent& doc,
+                                      LayoutComponent& layout) {
+    if (layout.headerEditTarget == HeaderEditTarget::Footer) {
+        return doc.footerBuffer;
+    }
+    return doc.headerBuffer;
+}
+
+inline const TextBuffer& headerFooterBuffer(
+    const DocumentComponent& doc, const LayoutComponent& layout) {
+    if (layout.headerEditTarget == HeaderEditTarget::Footer) {
+        return doc.footerBuffer;
+    }
+    return doc.headerBuffer;
+}
+
+// Enter header/footer editing on `target`: a cell edit ends
+// first (one editing mode at a time), Outline ends (it forces
+// Pageless, header editing forces Paged), and entering while
+// already editing just switches the target (layout::enter*
+// keeps headerPrevPageMode). Preview ends too: the preview
+// toolbar replaces the Formatting bar the strip needs.
+inline void enterHeaderFooterEdit(DocumentComponent& doc,
+                                  LayoutComponent& layout,
+                                  ScrollComponent* scroll,
+                                  HeaderEditTarget target) {
+    endCellEdit(doc);
+    if (layout.previewMode) layout::exitPrintPreview(layout);
+    if (layout.showOutline) exitOutlineMode(layout, scroll);
+    layout::enterHeaderFooterEdit(layout, target);
+    flashStatusConfirmation(target == HeaderEditTarget::Footer
+                                ? "Footer"
+                                : "Header");
+}
+
+// Exit back to the body caret (toolbar Close, Esc, Insert >
+// Document Body, View > Header and Footer toggle).
+inline void exitHeaderFooterEdit(LayoutComponent& layout) {
+    layout::exitHeaderFooterEdit(layout);
+    flashStatusConfirmation("Document body");
+}
+
+// The Header/Footer strip's "Page Number": toggles the
+// page-number field in the ACTIVE target's center section
+// (HeaderFooter::center.showPageNumber). The render pass draws
+// "Page N" centered from that flag; the config persists with
+// the document. Enabling the field also marks the section
+// enabled so a header with only a page number still renders.
+inline void toggleHeaderFooterPageNumber(DocumentComponent& doc,
+                                         LayoutComponent& layout) {
+    if (layout.headerEditTarget == HeaderEditTarget::None) return;
+    HeaderFooter& config =
+        layout.headerEditTarget == HeaderEditTarget::Footer
+            ? doc.docSettings.footer
+            : doc.docSettings.header;
+    config.center.showPageNumber = !config.center.showPageNumber;
+    if (config.center.showPageNumber) config.enabled = true;
+    doc.isDirty = true;
+    flashStatusConfirmation(config.center.showPageNumber
+                                ? "Page number: On"
+                                : "Page number: Off");
+}
+
+// Clipboard / Select All on an arbitrary TextBuffer (the
+// header/footer buffers): the body commands above hard-code
+// doc.buffer, these take the buffer so the header-mode
+// keyboard shortcuts route to the active header/footer buffer.
+inline void copyBuffer(TextBuffer& buffer) {
+    if (buffer.hasSelection()) {
+        std::string selected = buffer.getSelectedText();
+        if (!selected.empty()) app::clipboard::set_text(selected);
+    }
+}
+
+inline void cutBuffer(TextBuffer& buffer, DocumentComponent& doc) {
+    repeat::clear(doc.repeatRecord);
+    if (buffer.hasSelection()) {
+        std::string selected = buffer.getSelectedText();
+        if (!selected.empty()) {
+            app::clipboard::set_text(selected);
+            buffer.deleteSelection();
+            doc.isDirty = true;
+        }
+    }
+}
+
+inline void pasteBuffer(TextBuffer& buffer, DocumentComponent& doc) {
+    if (app::clipboard::has_text()) {
+        std::string clipText = app::clipboard::get_text();
+        buffer.insertText(clipText);
+        doc.isDirty = true;
+    }
+}
+
 // --- Print Preview / Print (File menu, Ctrl+P) ---
 
 inline void openPrintPreview(DocumentComponent& doc, LayoutComponent& layout) {
     // Preview is read-only: a cell edit ends on entry (its
     // typing run commits; the snapshot entry stays undoable).
+    // A header/footer edit ends too (its toolbar strip is
+    // replaced by the preview toolbar).
     endCellEdit(doc);
+    layout::exitHeaderFooterEdit(layout);
     layout::enterPrintPreview(layout, doc.buffer.lineCount(),
                               doc.buffer.textStyle().fontSize);
 }

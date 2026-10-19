@@ -47,6 +47,8 @@ Wordproc documents use JSON for structured storage with backward compatibility t
 | fontRequirements[].fontId | string | Yes | Font identifier (e.g., "NotoSansKR") |
 | fontRequirements[].scripts | array | Yes | Script identifiers this font provides |
 | paragraphStyles | array of strings | No | One paragraph-style name per line ("Title", "Heading 1", ..., "Normal"); written only when some line is not Normal. Templates rely on this to carry styled headings. Unknown names load as Normal; a shorter array leaves the rest Normal |
+| headerText / footerText | string | No | Header / footer body text (the `DocumentComponent` header/footer buffers). Written only when non-empty; loading a file without them clears the buffers |
+| headerFooter | object | No | Header/footer config: `header` / `footer` each carry `enabled`, `differentFirstPage`, `differentOddEven`, and `left` / `center` / `right` sections with `showPageNumber`, `format` (0=None, 1=Arabic, 2=RomanLower, 3=RomanUpper, 4=LetterLower, 5=LetterUpper), `showTotalPages`. The strip's Page Number button toggles `center.showPageNumber` of the active target |
 
 ### Script Identifiers
 

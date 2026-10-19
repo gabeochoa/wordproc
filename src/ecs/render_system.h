@@ -38,8 +38,13 @@
 namespace ecs {
 
 // Helper to draw text and register it for E2E testing
-// Uses the UI font for consistent rendering across all UI elements
-inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize, 
+// Uses the UI font for consistent rendering across all UI elements.
+// NOTE: render-phase registrations are cleared at the start of
+// the next frame, before E2E checks read the registry, so
+// expect_text CANNOT see text registered only here — document
+// text must also go through DocumentTextRegistration (update
+// phase, e2e_commands.h). This registration is best-effort.
+inline void drawTextWithRegistry(const char* text, int x, int y, int fontSize,
                                   afterhours::Color color) {
     theme::DrawUIText(text, x, y, fontSize, color);
     test_input::register_visible_text(text);
@@ -121,6 +126,165 @@ inline void drawPageBackground(const LayoutComponent& layout,
         static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth),
         static_cast<int>(pageY + layout.pageDisplayHeight - bottomScaled),
         marginColor);
+}
+
+// Draw one header / footer band (Batch 9): the buffer's text,
+// wrapped at the band width (cell_edit::wrapCellText, the same
+// wrap the mouse hit-test uses), left-aligned in the margin
+// band from layout::headerFooterAreas; a page-number field
+// (HeaderFooter::center.showPageNumber) draws "Page N" (real
+// per-page index, HeaderFooter::formatPageNumber) centered on
+// its own line after the text. differentFirstPage skips the
+// band on page 1 — except the ACTIVE band while editing it
+// (typing into an invisible band would be unusable). While
+// editing, the active band gets a gray outline, the selection
+// highlight, and the blinking caret. Pageless / Normal never
+// reach here (the caller gates on pageMode == Paged): Word
+// Normal shows headers/footers only in Page Layout.
+inline void renderHeaderFooter(const DocumentComponent& doc,
+                               const LayoutComponent& layout, int page,
+                               int totalPages, bool caretVisible) {
+    if (layout.pageMode != PageMode::Paged) return;
+    float ds = layout::displayScale(layout);
+    auto [headerArea, footerArea] = layout::headerFooterAreas(layout);
+    auto measure = [](const std::string& text, int fontSize) {
+        return static_cast<float>(
+            afterhours::graphics::measure_text(text.c_str(), fontSize));
+    };
+    const afterhours::Color textColor{0, 0, 0, 255};
+    for (int target = 0; target < 2; ++target) {
+        bool isFooter = target == 1;
+        HeaderEditTarget bandTarget = isFooter ? HeaderEditTarget::Footer
+                                               : HeaderEditTarget::Header;
+        const TextBuffer& hfBuffer =
+            isFooter ? doc.footerBuffer : doc.headerBuffer;
+        const HeaderFooter& config = isFooter ? doc.docSettings.footer
+                                              : doc.docSettings.header;
+        const LayoutComponent::Rect& band =
+            isFooter ? footerArea : headerArea;
+        bool editing = layout.headerEditTarget == bandTarget;
+        if (page == 1 && config.differentFirstPage && !editing) {
+            continue;
+        }
+        int fontSize = ruler_math::scaledFontSize(
+            hfBuffer.textStyle().fontSize, ds);
+        int lineHeight = fontSize + 4;
+        float textX = band.x +
+                      static_cast<float>(theme::layout::TEXT_PADDING);
+        float textY = band.y + 4.0f;
+        float wrapWidth =
+            band.width -
+            2.0f * static_cast<float>(theme::layout::TEXT_PADDING);
+        auto lines = cell_edit::wrapCellText(hfBuffer.getText(), wrapWidth,
+                                             fontSize, measure);
+        std::size_t selStartOff = 0;
+        std::size_t selEndOff = 0;
+        if (editing && hfBuffer.hasSelection()) {
+            selStartOff = hfBuffer.offsetForPosition(
+                hfBuffer.selectionStart());
+            selEndOff =
+                hfBuffer.offsetForPosition(hfBuffer.selectionEnd());
+        }
+        float y = textY;
+        for (const auto& line : lines) {
+            if (y + static_cast<float>(lineHeight) >
+                band.y + band.height) {
+                break;
+            }
+            if (editing && hfBuffer.hasSelection() &&
+                line.endOffset > selStartOff &&
+                line.startOffset < selEndOff) {
+                std::size_t segBegin =
+                    std::max(line.startOffset, selStartOff);
+                std::size_t segEnd =
+                    std::min(line.endOffset, selEndOff);
+                if (segEnd > segBegin) {
+                    std::string beforeSeg = line.text.substr(
+                        0, std::min(segBegin - line.startOffset,
+                                    line.text.size()));
+                    std::string segText = line.text.substr(
+                        std::min(segBegin - line.startOffset,
+                                 line.text.size()),
+                        std::min(segEnd - segBegin,
+                                 line.text.size() -
+                                     std::min(segBegin - line.startOffset,
+                                              line.text.size())));
+                    float selX =
+                        textX + measure(beforeSeg, fontSize);
+                    float selW = measure(segText, fontSize);
+                    afterhours::draw_rectangle(
+                        Rectangle{selX, y, selW,
+                                  static_cast<float>(lineHeight)},
+                        theme::SELECTION_BG);
+                }
+            }
+            if (!line.text.empty()) {
+                drawTextWithRegistry(line.text.c_str(),
+                                     static_cast<int>(textX),
+                                     static_cast<int>(y), fontSize,
+                                     textColor);
+            }
+            y += static_cast<float>(lineHeight);
+        }
+        if (config.center.showPageNumber &&
+            y + static_cast<float>(lineHeight) <=
+                band.y + band.height) {
+            std::string pageText =
+                "Page " +
+                HeaderFooter::formatPageNumber(page,
+                                               config.center.format);
+            if (config.center.showTotalPages) {
+                pageText += " of " + std::to_string(totalPages);
+            }
+            float pageW = measure(pageText, fontSize);
+            float pageX =
+                band.x + (band.width - pageW) / 2.0f;
+            drawTextWithRegistry(pageText.c_str(),
+                                 static_cast<int>(pageX),
+                                 static_cast<int>(y), fontSize,
+                                 textColor);
+            y += static_cast<float>(lineHeight);
+        }
+        if (editing) {
+            afterhours::draw_rectangle_outline(
+                Rectangle{band.x, band.y, band.width, band.height},
+                afterhours::Color{128, 128, 128, 255}, 1.0f);
+        }
+        if (editing && caretVisible) {
+            std::size_t caretOff = hfBuffer.caretOffset();
+            std::size_t lineIdx =
+                lines.empty() ? 0 : lines.size() - 1;
+            for (std::size_t li = 0; li < lines.size(); ++li) {
+                if (caretOff < lines[li].endOffset) {
+                    lineIdx = li;
+                    break;
+                }
+                if (caretOff == lines[li].endOffset &&
+                    (li + 1 >= lines.size() ||
+                     lines[li + 1].startOffset > caretOff)) {
+                    lineIdx = li;
+                    break;
+                }
+            }
+            const auto& caretLine = lines[lineIdx];
+            std::size_t inLine = caretOff >= caretLine.startOffset
+                                     ? caretOff - caretLine.startOffset
+                                     : 0;
+            if (inLine > caretLine.text.size()) {
+                inLine = caretLine.text.size();
+            }
+            float caretX =
+                textX + measure(caretLine.text.substr(0, inLine),
+                                fontSize);
+            float caretY =
+                textY + static_cast<float>(lineIdx) *
+                            static_cast<float>(lineHeight);
+            afterhours::draw_rectangle(
+                Rectangle{caretX, caretY, 2.0f,
+                          static_cast<float>(lineHeight)},
+                theme::CARET_COLOR);
+        }
+    }
 }
 
 // Draw a single border edge between two points using the given style
@@ -1920,6 +2084,11 @@ struct EditorRenderSystem
                 ? &doc.cellEdit
                 : nullptr;
         if (doc.cellEdit.active) caretVisible = false;
+        // The body caret hides while a header/footer is active
+        // — the header/footer caret is the caret.
+        if (layout.headerEditTarget != HeaderEditTarget::None) {
+            caretVisible = false;
+        }
         auto drawTables = [&](const LayoutComponent::Rect& area,
                               int scrollOffset) {
             renderDocumentTables(doc.tables, area, lineHeight,
@@ -1988,6 +2157,28 @@ struct EditorRenderSystem
                              normalMode, columnsLinesPerPage,
                              layout.pageMode == PageMode::Paged);
             drawTables(effectiveArea, renderScrollOffset);
+        }
+
+        // Header / footer (Batch 9): paged editing + Print
+        // Preview only, one page (the page the renderer drew).
+        // Page number from the same lines-per-page estimate
+        // the status bar / preview use; in preview the current
+        // preview page, in editing the page of the first
+        // rendered line.
+        if (layout.pageMode == PageMode::Paged && !layout.showOutline) {
+            int hfTotalPages =
+                layout.previewMode
+                    ? layout.previewPageCount
+                    : scroll_math::previewPageCount(
+                          doc.buffer.lineCount(), columnsLinesPerPage);
+            int hfPage = layout.previewMode
+                             ? layout.previewPage + 1
+                             : scroll_math::pageFromScrollOffset(
+                                   renderScrollOffset,
+                                   columnsLinesPerPage,
+                                   doc.buffer.lineCount());
+            renderHeaderFooter(doc, layout, hfPage, hfTotalPages,
+                               caret.visible && !layout.previewMode);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===
