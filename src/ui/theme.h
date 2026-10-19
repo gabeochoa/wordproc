@@ -104,6 +104,19 @@ constexpr int TOOLBAR_BUTTON_SIZE = 24;  // Square icon buttons
 constexpr int TOOLBAR_BUTTON_PADDING = 2;
 constexpr int TOOLBAR_SEPARATOR_WIDTH = 2;
 
+// Standard toolbar row ONLY (Batch 12): tighter pitch than the
+// shared row above — 20px buttons + 1px gaps = 21px pitch at
+// scale 1.0 (25.2px in screenshots at the default 1.2 scale),
+// down from 24 + 2 = 26 (31.2px in screenshots). The Formatting
+// bar, Outlining bar, Header/Footer strip, and Print Preview bar
+// keep TOOLBAR_BUTTON_SIZE / TOOLBAR_BUTTON_PADDING; only the
+// Standard row reads these. 20px is still a sane hit target
+// (24px at the default scale), and the 16x16 icon maps are
+// drawn at 0.8x the button (16px at scale 1.0) so the glyphs
+// do not shrink with the buttons.
+constexpr int STD_TOOLBAR_BUTTON_SIZE = 20;
+constexpr int STD_TOOLBAR_BUTTON_PADDING = 1;
+
 // Minimum window dimensions — ensures all menu headers, toolbar buttons,
 // and formatting bar controls remain accessible (not clipped off-screen).
 // Derived from: 8 menu headers ≈ 360px + padding, toolbar row ≈ 300px.

@@ -1,0 +1,26 @@
+# Test: Standard toolbar pitch (Batch 12).
+# - The Standard row is tight: btn_new -> btn_open center distance,
+#   in unscaled px, is 21 (20px buttons + 1px gaps), down from 26.
+#   Measured from rendered rects (std_toolbar_pitch), not constants.
+# - The whole Standard row still fits, the Formatting bar still
+#   works (Bold toggles), and the Insert Table button still opens
+#   the Table menu: the pitch change is Standard-row only.
+# Regression: on pre-fix bytes std_toolbar_pitch reads 26.
+
+wait_frames 30
+validate std_toolbar_pitch=21
+validate toolbar_fits=true
+
+screenshot toolbar_pitch
+
+click_ui btn_bold
+wait_frames 12
+validate bold=true
+
+click_ui btn_bold
+wait_frames 12
+validate bold=false
+
+click_ui btn_insert_table
+wait_frames 12
+validate menu_open=Table

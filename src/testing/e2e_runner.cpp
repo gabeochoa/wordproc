@@ -1252,22 +1252,52 @@ static void setupCallbacksEx(
             return "false"; // Menu not found
         }
         
+        // std_toolbar_pitch — center-to-center distance between
+        // the first two Standard buttons (btn_new, btn_open),
+        // divided by ui_scale: the unscaled pitch. Batch 12
+        // tightened the Standard row from 26 to 21 (20px buttons
+        // + 1px gaps); the Formatting bar keeps the shared 24+2
+        // row. Measured from rendered rects, not from the
+        // constants, so a layout that ignores the constants
+        // fails. "missing" when either button is not rendered
+        // (Standard bar hidden).
+        if (prop == "std_toolbar_pitch") {
+            auto newC =
+                afterhours::testing::ui_commands::find_component_center<
+                    InputAction>("btn_new");
+            auto openC =
+                afterhours::testing::ui_commands::find_component_center<
+                    InputAction>("btn_open");
+            if (!newC || !openC) return "missing";
+            float pitch = (openC->x - newC->x) /
+                          Settings::get().get_ui_scale();
+            return std::to_string(
+                static_cast<int>(std::lround(pitch)));
+        }
+
         // toolbar_fits — check if all toolbar buttons fit within window width
         if (prop == "toolbar_fits") {
             auto* pcr = afterhours::EntityHelper::get_singleton_cmp<
                 afterhours::window_manager::ProvidesCurrentResolution>();
             if (!pcr) return "false";
             int winW = pcr->current_resolution.width;
-            // Calculate toolbar width: buttons + separators + formatting bar dropdowns
-            // New, Open, Save, Print, Print Preview, Spelling, Cut,
-            // Copy, Paste, Format Painter, Undo, Redo, Show/Hide ¶.
-            int buttonCount = 13;
-            int separatorCount = 4; // Between groups
-            float toolbarWidth = static_cast<float>(
-                buttonCount * theme::layout::scaleInt(theme::layout::TOOLBAR_BUTTON_SIZE +
-                    theme::layout::TOOLBAR_BUTTON_PADDING * 2) +
-                separatorCount * theme::layout::scaleInt(theme::layout::TOOLBAR_SEPARATOR_WIDTH + 8) +
-                theme::layout::scaleInt(76));  // Zoom dropdown at right end
+            // Standard row width, matching toolbar_system.h: 16
+            // buttons (New..¶ plus Hyperlink/Image/Table) at the
+            // Standard pitch, 5 etched separators (after Save,
+            // Spelling, Format Painter, Redo, and before the Insert
+            // group), the 76px Zoom dropdown, and 3px of 1px pads
+            // (leading, after Zoom, trailing).
+            int buttonCount = 16;
+            int separatorCount = 5;
+            // Float scale(): per-term scaleInt() truncation
+            // underestimated the row by ~5px.
+            float toolbarWidth =
+                static_cast<float>(buttonCount) * theme::layout::scale(
+                    static_cast<float>(theme::layout::STD_TOOLBAR_BUTTON_SIZE +
+                                       theme::layout::STD_TOOLBAR_BUTTON_PADDING)) +
+                static_cast<float>(separatorCount) * theme::layout::scale(
+                    static_cast<float>(theme::layout::TOOLBAR_SEPARATOR_WIDTH + 4)) +
+                theme::layout::scale(76.0f + 3.0f);
             return toolbarWidth <= static_cast<float>(winW) ? "true" : "false";
         }
         

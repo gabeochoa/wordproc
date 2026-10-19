@@ -4,8 +4,7 @@
 //
 // The Standard icons are 16x16 COLOR pixel art (palette maps of
 // palette keys, drawn as per-pixel rects) rather than textures.
-// The remaining icons (Formatting B/I/U-adjacent glyphs, ¶,
-// alignment, hyperlink/image/table) are geometric primitives
+// The remaining icons (¶, alignment) are geometric primitives
 // (lines, rectangles, triangles). Each function takes the rect it
 // should draw inside, so it can be handed to afterhours as a
 // component's on_draw_fg callback and run inside the normal
@@ -31,10 +30,23 @@ namespace ecs {
 //   '.' transparent · W white · K black (outline) · G dark gray
 //   g light gray · D (unused) · Y folder yellow #FFD83D ·
 //   y dark yellow · O orange · o brown · B blue · b light blue
-//   R red · r (unused) · S steel · T tan (clipboard)
+//   R red · r (unused) · S steel · T tan (clipboard) ·
+//   N green · n dark green (hyperlink globe continents,
+//   Insert Image mountains)
 // Disabled: every palette color is swapped for a flat gray in
 // the same luminance band (96..192), so a disabled icon reads
 // grayed-out instead of colorful.
+//
+// 3D shading (Batch 12 follow-up): light edge top/left, dark
+// edge bottom/right, as palette swaps only — applied to Save
+// (light-blue left edge), Undo/Redo (light-blue top edge),
+// Copy (gray bottom edge on the front page), and built into
+// Hyperlink/Image/InsertTable. Skipped where it would muddy
+// the glyph: New (fold already shades), Open (dark-yellow
+// bottom already), Print (gray contrast already),
+// PrintPreview (magnifier + page contrast), Spelling
+// (letterforms), FormatPainter/Cut (thin diagonals), Paste
+// (no lighter/darker tan in the palette).
 namespace toolbar_icons_detail {
 
 struct IconPixel {
@@ -56,6 +68,8 @@ inline constexpr IconPixel kIconPalette[] = {
     {'R', afterhours::Color{255, 0, 0, 255}},
     {'S', afterhours::Color{88, 98, 112, 255}},
     {'T', afterhours::Color{210, 180, 120, 255}},
+    {'N', afterhours::Color{34, 160, 60, 255}},
+    {'n', afterhours::Color{16, 110, 40, 255}},
 };
 
 inline afterhours::Color iconPixelColor(char key, bool enabled) {
@@ -101,13 +115,31 @@ inline void drawPixelMap(const char* const rows[16], float x0, float y0,
 }  // namespace toolbar_icons_detail
 
 // Draw a toolbar icon at (cx, cy) center position. Standard
-// icons are 16x16 color pixel maps; the rest are geometric
-// primitives (lines, rectangles, triangles).
+// icons are 16x16 color pixel maps; ¶ and alignment are
+// geometric primitives (lines, rectangles, triangles).
 inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bool enabled) {
     afterhours::Color fg = enabled ? theme::BUTTON_TEXT : theme::MENU_DISABLED;
 
-    // Scale icon to fit within button (leaving 4px padding)
-    float pad = size * 0.2f;
+    // Palette maps draw at 0.8x the button (a 16px glyph in a
+    // 20px Standard button at scale 1.0), so the glyphs do not
+    // shrink with the tighter Standard row. Geometric icons
+    // (¶, alignment) keep 0.6x.
+    bool paletteMap = icon == ToolbarIcon::New ||
+                      icon == ToolbarIcon::Open ||
+                      icon == ToolbarIcon::Save ||
+                      icon == ToolbarIcon::Print ||
+                      icon == ToolbarIcon::PrintPreview ||
+                      icon == ToolbarIcon::Spelling ||
+                      icon == ToolbarIcon::FormatPainter ||
+                      icon == ToolbarIcon::Cut ||
+                      icon == ToolbarIcon::Copy ||
+                      icon == ToolbarIcon::Paste ||
+                      icon == ToolbarIcon::Undo ||
+                      icon == ToolbarIcon::Redo ||
+                      icon == ToolbarIcon::Hyperlink ||
+                      icon == ToolbarIcon::Image ||
+                      icon == ToolbarIcon::InsertTable;
+    float pad = size * (paletteMap ? 0.1f : 0.2f);
     float x0 = cx + pad;
     float y0 = cy + pad;
     float iw = size - pad * 2.0f;  // icon width
@@ -171,14 +203,14 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
                 "..KBKggggggKBK..",
                 "..KBKggggggKBK..",
                 "..KBKKKKKKKKBK..",
-                "..KBBBBBBBBBBK..",
-                "..KBBBBBBBBBBK..",
+                "..KbBBBBBBBBBK..",
+                "..KbBBBBBBBBBK..",
                 "..KKKKKKKKKKKK..",
                 "..KKWWWWWWWWKK..",
                 "..KKGGGGGGGGKK..",
                 "..KKWWWWWWWWKK..",
                 "..KKKKKKKKKKKK..",
-                "..KBBBBBBBBBBK..",
+                "..KbBBBBBBBBBK..",
                 "..KKKKKKKKKKKK..",
                 "................",
             };
@@ -318,7 +350,7 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
                 ".KWWWWWWWWKWWWK.",
                 ".KKKKKKKKKKWWWK.",
                 ".....KWWWWWWWWK.",
-                ".....KWWWWWWWWK.",
+                ".....KggggggggK.",
                 ".....KKKKKKKKKK.",
                 "................",
             };
@@ -354,7 +386,7 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
                 "................",
                 "................",
                 "................",
-                "...........BBBB.",
+                "...........bbbb.",
                 "...........BBBB.",
                 ".........BBBB...",
                 ".......BBBB.....",
@@ -377,7 +409,7 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
                 "................",
                 "................",
                 "................",
-                ".BBBB...........",
+                ".bbbb...........",
                 ".BBBB...........",
                 "...BBBB.........",
                 ".....BBBB.......",
@@ -447,54 +479,76 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             break;
         }
         case ToolbarIcon::Hyperlink: {
-            // Chain-link: two interlocking loops + a diagonal link.
-            afterhours::draw_circle_lines(static_cast<int>(x0 + iw * 0.28f),
-                                          static_cast<int>(y0 + ih * 0.5f),
-                                          iw * 0.22f, fg);
-            afterhours::draw_circle_lines(static_cast<int>(x0 + iw * 0.72f),
-                                          static_cast<int>(y0 + ih * 0.5f),
-                                          iw * 0.22f, fg);
-            afterhours::draw_line(static_cast<int>(x0 + iw * 0.38f),
-                                  static_cast<int>(y0 + ih * 0.5f),
-                                  static_cast<int>(x0 + iw * 0.62f),
-                                  static_cast<int>(y0 + ih * 0.5f), fg);
+            // Globe (blue, green continent hints, white glint,
+            // dark-blue meridian + equator) over two interlocking
+            // blue chain links with light-blue top-arc highlights.
+            static constexpr const char* rows[16] = {
+                "................",
+                "....KKKKKK......",
+                "...KWbBBbbK.....",
+                "...KNNBBbbK.....",
+                "...KBBBBBBK.....",
+                "...KbbBBbbK.....",
+                "...KbbBBNNK.....",
+                "....KKKKKK......",
+                "....bbB.........",
+                "...B...BBbbB....",
+                "..BB...BB..BB...",
+                "..BB...BB...B...",
+                "...B...B....B...",
+                "....BBBBB..BB...",
+                "........BBBB....",
+                "................",
+            };
+            drawPixelMap(rows, x0, y0, iw, ih, enabled);
             break;
         }
         case ToolbarIcon::Image: {
-            // Picture: frame, mountain, sun (classic picture icon).
-            afterhours::draw_rectangle(
-                Rectangle{x0, y0, iw, ih},
-                afterhours::Color{255, 255, 255, 255});
-            afterhours::draw_rectangle_outline(
-                Rectangle{x0, y0, iw, ih}, fg);
-            afterhours::draw_circle(static_cast<int>(x0 + iw * 0.28f),
-                                    static_cast<int>(y0 + ih * 0.3f),
-                                    iw * 0.1f, fg);
-            afterhours::draw_line(static_cast<int>(x0 + 1),
-                                  static_cast<int>(y0 + ih - 2),
-                                  static_cast<int>(x0 + iw * 0.5f),
-                                  static_cast<int>(y0 + ih * 0.45f), fg);
-            afterhours::draw_line(static_cast<int>(x0 + iw * 0.5f),
-                                  static_cast<int>(y0 + ih * 0.45f),
-                                  static_cast<int>(x0 + iw - 1),
-                                  static_cast<int>(y0 + ih - 2), fg);
+            // Classic bitmap: white page, blue sky, yellow sun,
+            // green mountains with dark-green right slopes.
+            static constexpr const char* rows[16] = {
+                "................",
+                ".KKKKKKKKKKKKKK.",
+                ".KWWWWWWWWWWWWK.",
+                ".KWbbbbbbbYYYWK.",
+                ".KWbbbbbbbYYYWK.",
+                ".KWbbbbbbbYyyWK.",
+                ".KWbbbbbbbbbbWK.",
+                ".KWbbbbbbbbbbWK.",
+                ".KWbbbnbbbbbbWK.",
+                ".KWbbNNnbbnbbWK.",
+                ".KWbNNNNnNNnbWK.",
+                ".KWNNNNNNnNNnWK.",
+                ".KWNNNNNNNnNNWK.",
+                ".KWWWWWWWWWWWWK.",
+                ".KKKKKKKKKKKKKK.",
+                "................",
+            };
+            drawPixelMap(rows, x0, y0, iw, ih, enabled);
             break;
         }
         case ToolbarIcon::InsertTable: {
-            // Grid: outer frame + one vertical + one horizontal rule.
-            afterhours::draw_rectangle(
-                Rectangle{x0, y0, iw, ih},
-                afterhours::Color{255, 255, 255, 255});
-            afterhours::draw_rectangle_outline(
-                Rectangle{x0, y0, iw, ih}, fg);
-            afterhours::draw_line(static_cast<int>(x0 + iw * 0.5f),
-                                  static_cast<int>(y0),
-                                  static_cast<int>(x0 + iw * 0.5f),
-                                  static_cast<int>(y0 + ih), fg);
-            afterhours::draw_line(static_cast<int>(x0),
-                                  static_cast<int>(y0 + ih * 0.5f),
-                                  static_cast<int>(x0 + iw),
-                                  static_cast<int>(y0 + ih * 0.5f), fg);
+            // Grid with a blue top header row (light-blue top
+            // edge) over white cells.
+            static constexpr const char* rows[16] = {
+                "................",
+                ".KKKKKKKKKKKKKK.",
+                ".KbbbKbbbbKbbbK.",
+                ".KBBBKBBBBKBBBK.",
+                ".KBBBKBBBBKBBBK.",
+                ".KKKKKKKKKKKKKK.",
+                ".KWWWKWWWWKWWWK.",
+                ".KWWWKWWWWKWWWK.",
+                ".KWWWKWWWWKWWWK.",
+                ".KKKKKKKKKKKKKK.",
+                ".KWWWKWWWWKWWWK.",
+                ".KWWWKWWWWKWWWK.",
+                ".KWWWKWWWWKWWWK.",
+                ".KKKKKKKKKKKKKK.",
+                "................",
+                "................",
+            };
+            drawPixelMap(rows, x0, y0, iw, ih, enabled);
             break;
         }
         case ToolbarIcon::None:

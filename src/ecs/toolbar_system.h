@@ -191,6 +191,12 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Button dimensions
         float buttonSize = theme::layout::scale(theme::layout::TOOLBAR_BUTTON_SIZE);
         float buttonPadding = theme::layout::scale(theme::layout::TOOLBAR_BUTTON_PADDING);
+        // Standard-row dimensions (Batch 12): only the Standard bar
+        // and its zoom close-dropdown pass read these. Everything
+        // else (Formatting, Outlining, Header/Footer, Preview)
+        // keeps buttonSize / buttonPadding above.
+        float stdButtonSize = theme::layout::scale(theme::layout::STD_TOOLBAR_BUTTON_SIZE);
+        float stdButtonPadding = theme::layout::scale(theme::layout::STD_TOOLBAR_BUTTON_PADDING);
         float sepWidth = theme::layout::scale(theme::layout::TOOLBAR_SEPARATOR_WIDTH);
         float sepPadding = theme::layout::scale(4); // padding around separators
         
@@ -475,9 +481,25 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 : nullptr;
 
         // Track X position for horizontal button layout
-        float curX = buttonPadding;
-        float btnY = toolbarY + buttonPadding;
+        float curX = stdButtonPadding;
+        // Vertically centered in the 28px bar (was top + padding).
+        float btnY = toolbarY + (toolbarHeight - stdButtonSize) / 2.0f;
         int btnId = 1100; // ID range for standard toolbar buttons
+
+        // Standard-row hover / tooltip helpers: the shared
+        // isMouseOver / trackTooltip above use the shared buttonSize
+        // rect, which is 4px too big for the Standard row now.
+        // (Distinct names, not shadowing: -Wshadow is on.)
+        auto stdIsMouseOver = [&](float bx, float by) -> bool {
+            if (menuOpen) return false;
+            return afterhours::ui::is_mouse_inside(
+                ctx.mouse.pos, {bx, by, stdButtonSize, stdButtonSize});
+        };
+        auto stdTrackTooltip = [&](float bx, float by, const std::string& tip) {
+            if (stdIsMouseOver(bx, by)) {
+                tooltips.push_back({bx, by + stdButtonSize + 2.0f, tip});
+            }
+        };
         
         // Tooltip helper: track which button is hovered and for how long
         // We'll draw tooltips at the end after all buttons.
@@ -487,69 +509,69 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // === File Operations ===
         int newBtnId = btnId++;
         if (button(ctx, mk(uiRoot, newBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::New).with_label("").with_debug_name("btn_new"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::New).with_label("").with_debug_name("btn_new"))) {
             cmd::newDocument(doc);
         }
-        trackTooltip(curX, btnY, "New (Ctrl+N)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "New (Ctrl+N)");
+        curX += stdButtonSize + stdButtonPadding;
         
         int openBtnId = btnId++;
         if (button(ctx, mk(uiRoot, openBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Open).with_label("").with_debug_name("btn_open"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Open).with_label("").with_debug_name("btn_open"))) {
             // Open document (would trigger file dialog)
         }
-        trackTooltip(curX, btnY, "Open (Ctrl+O)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Open (Ctrl+O)");
+        curX += stdButtonSize + stdButtonPadding;
         
         int saveBtnId = btnId++;
         if (button(ctx, mk(uiRoot, saveBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Save).with_label("").with_debug_name("btn_save"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Save).with_label("").with_debug_name("btn_save"))) {
             cmd::saveDocument(doc, layout, *cache_.menu);
         }
-        trackTooltip(curX, btnY, "Save (Ctrl+S)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Save (Ctrl+S)");
+        curX += stdButtonSize + stdButtonPadding;
         
         // Separator (etched)
-        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, stdButtonSize - 4);
         btnId += 2;
         curX += sepWidth + sepPadding;
-        
+
         // Print (File > Print... / Ctrl+P)
         int printBtnId = btnId++;
         if (button(ctx, mk(uiRoot, printBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Print).with_label("").with_debug_name("btn_print"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Print).with_label("").with_debug_name("btn_print"))) {
             if (cache_.dialogs) cmd::requestPrint(doc, *cache_.dialogs);
         }
-        trackTooltip(curX, btnY, "Print (Ctrl+P)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Print (Ctrl+P)");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Print Preview (File > Print Preview) — Word 95 Standard order:
         // Print, Print Preview, Spelling, then Cut/Copy/Paste.
         int previewBtnId = btnId++;
         if (button(ctx, mk(uiRoot, previewBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::PrintPreview).with_label("").with_debug_name("btn_print_preview"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::PrintPreview).with_label("").with_debug_name("btn_print_preview"))) {
             cmd::openPrintPreview(doc, layout);
             // Entering preview replaces this toolbar; clear focus
             // so this button's stale id cannot recycle onto File.
             ctx.set_focus(ctx.ROOT);
         }
-        trackTooltip(curX, btnY, "Print Preview");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Print Preview");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Spelling (Tools > Spelling..., F7)
         int spellingBtnId = btnId++;
         if (button(ctx, mk(uiRoot, spellingBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Spelling).with_label("").with_debug_name("btn_spelling"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Spelling).with_label("").with_debug_name("btn_spelling"))) {
             if (cache_.dialogs) cmd::openSpellingDialog(doc, *cache_.dialogs);
         }
-        trackTooltip(curX, btnY, "Spelling (F7)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Spelling (F7)");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Separator (etched)
-        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, stdButtonSize - 4);
         btnId += 2;
         curX += sepWidth + sepPadding;
-        
+
         // Cut/Copy/Paste (stubs: no clipboard action, Cut only
         // marks dirty on a selection — never the header edit's
         // selection, which belongs to the header buffer).
@@ -559,29 +581,29 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
         int cutBtnId = btnId++;
         if (button(ctx, mk(uiRoot, cutBtnId),
-            absToolbarButton(curX, btnY, buttonSize, hasSelection && !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Cut).with_label("").with_debug_name("btn_cut"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, hasSelection && !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Cut).with_label("").with_debug_name("btn_cut"))) {
             if (hasSelection && !headerEditing) {
                 doc.isDirty = true;
             }
         }
-        trackTooltip(curX, btnY, "Cut (Ctrl+X)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Cut (Ctrl+X)");
+        curX += stdButtonSize + stdButtonPadding;
         
         int copyBtnId = btnId++;
         if (button(ctx, mk(uiRoot, copyBtnId),
-            absToolbarButton(curX, btnY, buttonSize, hasSelection && !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Copy).with_label("").with_debug_name("btn_copy"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, hasSelection && !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Copy).with_label("").with_debug_name("btn_copy"))) {
             // Copy operation
         }
-        trackTooltip(curX, btnY, "Copy (Ctrl+C)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Copy (Ctrl+C)");
+        curX += stdButtonSize + stdButtonPadding;
         
         int pasteBtnId = btnId++;
         if (button(ctx, mk(uiRoot, pasteBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Paste).with_label("").with_debug_name("btn_paste"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Paste).with_label("").with_debug_name("btn_paste"))) {
             // Paste operation
         }
-        trackTooltip(curX, btnY, "Paste (Ctrl+V)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Paste (Ctrl+V)");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Format Painter: copy the current style and arm; the next
         // click in the text applies it and disarms (MouseSelection-
@@ -589,14 +611,14 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Cut/Copy/Paste, Format Painter, then Undo/Redo.
         int painterBtnId = btnId++;
         if (button(ctx, mk(uiRoot, painterBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, toolbar.formatPainter.armed, isMouseOver(curX, btnY), ToolbarIcon::FormatPainter).with_label("").with_debug_name("btn_format_painter"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, toolbar.formatPainter.armed, stdIsMouseOver(curX, btnY), ToolbarIcon::FormatPainter).with_label("").with_debug_name("btn_format_painter"))) {
             cmd::toggleFormatPainter(doc, toolbar);
         }
-        trackTooltip(curX, btnY, "Format Painter");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Format Painter");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Separator (etched)
-        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, stdButtonSize - 4);
         btnId += 2;
         curX += sepWidth + sepPadding;
 
@@ -606,33 +628,33 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                            : doc.buffer.canUndo();
         int undoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, undoBtnId),
-            absToolbarButton(curX, btnY, buttonSize, canUndo, false, isMouseOver(curX, btnY), ToolbarIcon::Undo).with_label("").with_debug_name("btn_undo"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, canUndo, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Undo).with_label("").with_debug_name("btn_undo"))) {
             if (headerEditing && hfBuffer != nullptr) {
                 hfBuffer->undo();
             } else {
                 cmd::undo(doc);
             }
         }
-        trackTooltip(curX, btnY, "Undo (Ctrl+Z)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Undo (Ctrl+Z)");
+        curX += stdButtonSize + stdButtonPadding;
 
         bool canRedo = headerEditing && hfBuffer != nullptr
                            ? hfBuffer->canRedo()
                            : doc.buffer.canRedo();
         int redoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, redoBtnId),
-            absToolbarButton(curX, btnY, buttonSize, canRedo, false, isMouseOver(curX, btnY), ToolbarIcon::Redo).with_label("").with_debug_name("btn_redo"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, canRedo, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Redo).with_label("").with_debug_name("btn_redo"))) {
             if (headerEditing && hfBuffer != nullptr) {
                 hfBuffer->redo();
             } else {
                 cmd::redo(doc);
             }
         }
-        trackTooltip(curX, btnY, "Redo (Ctrl+Y)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Redo (Ctrl+Y)");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Separator (etched)
-        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, stdButtonSize - 4);
         btnId += 2;
         curX += sepWidth + sepPadding;
 
@@ -640,11 +662,11 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // (¶ glyph at each line end). Sunken while on.
         int pilcrowBtnId = btnId++;
         if (button(ctx, mk(uiRoot, pilcrowBtnId),
-            absToolbarButton(curX, btnY, buttonSize, true, layout.showParagraphMarks, isMouseOver(curX, btnY), ToolbarIcon::ShowParagraph).with_label("").with_debug_name("btn_show_paragraph"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, layout.showParagraphMarks, stdIsMouseOver(curX, btnY), ToolbarIcon::ShowParagraph).with_label("").with_debug_name("btn_show_paragraph"))) {
             layout.showParagraphMarks = !layout.showParagraphMarks;
         }
-        trackTooltip(curX, btnY, "Show/Hide Paragraph Marks");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Show/Hide Paragraph Marks");
+        curX += stdButtonSize + stdButtonPadding;
 
         // Zoom control immediately after the last Standard group
         // (¶), NOT pinned to the window's right edge: dropdown
@@ -652,13 +674,13 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         zoomBtnW = theme::layout::scale(76);
         zoomBtnX = curX;
         zoomBtnY = btnY;
-        curX += zoomBtnW + buttonPadding;
+        curX += zoomBtnW + stdButtonPadding;
         std::string zoomLabel =
             std::to_string(static_cast<int>(std::lround(
                 layout.zoomLevel * 100.0f))) + "%";
         test_input::register_visible_text(zoomLabel);
         if (button(ctx, mk(uiRoot, btnId++),
-            absDropdownButton(zoomBtnX, zoomBtnY, zoomBtnW, theme::layout::scale(22), toolbar.zoomDropdownOpen)
+            absDropdownButton(zoomBtnX, zoomBtnY, zoomBtnW, stdButtonSize, toolbar.zoomDropdownOpen)
                 .with_label(zoomLabel)
                 .with_debug_name("dropdown_zoom"))) {
             toolbar.zoomDropdownOpen = !toolbar.zoomDropdownOpen;
@@ -668,7 +690,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         if (toolbar.zoomDropdownOpen) {
             const int zoomChoices[] = {50, 75, 100, 125, 150, 200};
-            float zoomListY = zoomBtnY + buttonSize + 2.0f;
+            float zoomListY = zoomBtnY + stdButtonSize + 2.0f;
             div(ctx, mk(uiRoot, 3300),
                 ah_win95::win95DropdownListStyle(zoomBtnW, 6)
                     .with_translate(zoomBtnX, zoomListY)
@@ -705,7 +727,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
 
         // Separator (etched) before the Insert group.
-        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, stdButtonSize - 4);
         btnId += 2;
         curX += sepWidth + sepPadding;
 
@@ -717,23 +739,23 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // dropdown for whichever menu has open=true).
         int hyperlinkBtnId = btnId++;
         if (button(ctx, mk(uiRoot, hyperlinkBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Hyperlink).with_label("").with_debug_name("btn_insert_hyperlink"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Hyperlink).with_label("").with_debug_name("btn_insert_hyperlink"))) {
             cmd::insertHyperlink(doc);
         }
-        trackTooltip(curX, btnY, "Insert Hyperlink (Ctrl+K)");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Insert Hyperlink (Ctrl+K)");
+        curX += stdButtonSize + stdButtonPadding;
 
         int imageBtnId = btnId++;
         if (button(ctx, mk(uiRoot, imageBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::Image).with_label("").with_debug_name("btn_insert_image"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Image).with_label("").with_debug_name("btn_insert_image"))) {
             cmd::insertImagePlaceholder(doc);
         }
-        trackTooltip(curX, btnY, "Insert Image");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Insert Image");
+        curX += stdButtonSize + stdButtonPadding;
 
         int tableBtnId = btnId++;
         if (button(ctx, mk(uiRoot, tableBtnId),
-            absToolbarButton(curX, btnY, buttonSize, !headerEditing, false, isMouseOver(curX, btnY), ToolbarIcon::InsertTable).with_label("").with_debug_name("btn_insert_table"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::InsertTable).with_label("").with_debug_name("btn_insert_table"))) {
             // Toggle the Table menu dropdown (same mechanism as
             // clicking the Table header / E2E menu_open Table).
             if (cache_.menu) {
@@ -754,8 +776,8 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 }
             }
         }
-        trackTooltip(curX, btnY, "Insert Table");
-        curX += buttonSize + buttonPadding;
+        stdTrackTooltip(curX, btnY, "Insert Table");
+        curX += stdButtonSize + stdButtonPadding;
         }  // if (layout.showStandardToolbar)
 
         // === Outlining Toolbar (replaces the Formatting toolbar) ===
@@ -1437,10 +1459,10 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             // is forced closed).
             if (toolbar.zoomDropdownOpen) {
                 if (mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
-                    my >= zoomBtnY && my <= zoomBtnY + theme::layout::scale(22)) {
+                    my >= zoomBtnY && my <= zoomBtnY + stdButtonSize) {
                     insideDropdown = true;
                 }
-                float zoomListY = zoomBtnY + buttonSize + 2.0f;
+                float zoomListY = zoomBtnY + stdButtonSize + 2.0f;
                 float zoomListBottom = zoomListY + 6.0f * theme::layout::scale(20) +
                                        theme::layout::scale(4);
                 if (mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
