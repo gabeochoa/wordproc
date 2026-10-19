@@ -27,6 +27,26 @@ TEST_CASE("SpellChecker - Basic word checking", "[spellcheck]") {
         REQUIRE(checker.isCorrect("family"));
     }
 
+    SECTION("Top-1000 g-z delta (Batch 3 fix round 2)") {
+        // Pinned: "sat" earned a squiggle in the Grammar screenshot.
+        REQUIRE(checker.isCorrect("sat"));
+        REQUIRE(checker.isCorrect("preview"));
+        REQUIRE(checker.isCorrect("table"));
+        REQUIRE(checker.isCorrect("view"));
+        REQUIRE(checker.isCorrect("tools"));
+        REQUIRE(checker.isCorrect("lines"));
+        REQUIRE(checker.isCorrect("words"));
+        REQUIRE(checker.isCorrect("buttons"));
+        REQUIRE(checker.isCorrect("toolbar"));
+        REQUIRE(checker.isCorrect("zoom"));
+        REQUIRE(checker.isCorrect("hyperlink"));
+        REQUIRE(checker.isCorrect("sit"));
+        REQUIRE(checker.isCorrect("sitting"));
+        REQUIRE(checker.isCorrect("stood"));
+        // No squiggle for "The cat sat." as a whole.
+        REQUIRE(checker.checkText("The cat sat.").empty());
+    }
+
     SECTION("Case insensitive checking") {
         REQUIRE(checker.isCorrect("The"));
         REQUIRE(checker.isCorrect("THE"));
