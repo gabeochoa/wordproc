@@ -202,3 +202,21 @@ TEST_CASE("View menu lists Ruler", "[menu][ruler]") {
     }
     REQUIRE(hasRuler);
 }
+
+TEST_CASE("Ruler column white spans", "[ruler]") {
+    // Effective text area x 435, width 650: origin 443, span 634.
+    // 2 columns, spacing 36: col width (634 - 36) / 2 = 299; spans
+    // [443, 742] and [778, 1077]; the 36px gutter [742, 778] stays gray.
+    auto g = ruler_math::geometry(123.0f, 20.0f, 435.0f, 650.0f, 0.0f);
+    auto spans = ruler_math::columnWhiteSpans(g, 2, 36.0f);
+    REQUIRE(spans.size() == 2);
+    REQUIRE(spans[0].first == 443.0f);
+    REQUIRE(spans[0].second == 742.0f);
+    REQUIRE(spans[1].first == 778.0f);
+    REQUIRE(spans[1].second == 1077.0f);
+    // Single column: one span, the whole white band.
+    auto single = ruler_math::columnWhiteSpans(g, 1, 36.0f);
+    REQUIRE(single.size() == 1);
+    REQUIRE(single[0].first == 435.0f);
+    REQUIRE(single[0].second == 1085.0f);
+}

@@ -338,13 +338,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
         LineSpan span = buffer.lineSpan(row);
-        int baseX = static_cast<int>(textArea.x) +
-                    theme::layout::TEXT_PADDING + gutterOffset +
-                    (columnsActive
-                         ? static_cast<int>(columns_math::columnXOffset(
-                               column, static_cast<float>(columnWidthPx),
-                               columnSpacingPx))
-                         : 0);
+        // One origin for text and squiggles, through the columns
+        // math (see columns_math::columnLineOriginX): a squiggle
+        // from a single-column x would land under the wrong
+        // column's word.
+        int baseX = static_cast<int>(columns_math::columnLineOriginX(
+            static_cast<float>(textArea.x), theme::layout::TEXT_PADDING,
+            static_cast<float>(gutterOffset), columnsActive ? column : 0,
+            static_cast<float>(columnWidthPx), columnSpacingPx));
         int availableWidth =
             columnsActive ? columnWidthPx : availableWidthBase;
 
@@ -511,6 +512,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 x = indentedBaseX;
                 break;
         }
+        // The line's layout x (column origin + indents + alignment).
+        // Squiggles below use this, not the drawing cursor `x`,
+        // which the drop-cap block below mutates.
+        const int layoutTextX = x;
         
         // Draw list marker (bullet or number) before text
         if (listType != ListType::None) {
@@ -725,10 +730,15 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     lineData, lineLen, sq.endCol, tabWidth);
                 dispStart = std::min(dispStart, displayLine.size());
                 dispEnd = std::min(std::max(dispEnd, dispStart), displayLine.size());
-                float x1 = static_cast<float>(x) +
+                // Squiggle x from the line's layout x (column
+                // origin via columnLineOriginX + indents +
+                // alignment) plus the word's offset in the line:
+                // the same origin text rendering used, so the
+                // underline sits under its word in every column.
+                float x1 = static_cast<float>(layoutTextX) +
                            static_cast<float>(afterhours::graphics::measure_text(
                                displayLine.substr(0, dispStart).c_str(), lineFontSize));
-                float x2 = static_cast<float>(x) +
+                float x2 = static_cast<float>(layoutTextX) +
                            static_cast<float>(afterhours::graphics::measure_text(
                                displayLine.substr(0, dispEnd).c_str(), lineFontSize));
                 if (x2 > x1) drawSpellSquiggle(x1, x2, waveY);
@@ -912,10 +922,48 @@ struct EditorRenderSystem
             // Gray outside the margins, white between left/right margins.
             afterhours::draw_rectangle(
                 rulerRect, afterhours::Color{192, 192, 192, 255});
-            afterhours::draw_rectangle(
-                Rectangle{g.whiteLeft, rulerY, g.whiteRight - g.whiteLeft,
-                          rulerH},
-                theme::RULER_BG);
+            // Columns mode: per-column white spans with the gray
+            // gutter between them (the ruler margin shading uses
+            // the column boxes, not one 6.5in span). The padding
+            // zones outside the first/last column stay white.
+            // The tick loop below also uses these spans to keep
+            // inch numbers off the gray gutters.
+            const bool columnsRuler =
+                layout.pageMode == PageMode::Paged &&
+                !layout.previewMode &&
+                doc.docSettings.pageSettings.columnCount > 1;
+            const float columnsSpacingPx =
+                columnsRuler ? doc.docSettings.pageSettings.columnSpacing *
+                                   layout::displayScale(layout)
+                             : 0.0f;
+            const auto columnsSpans = ruler_math::columnWhiteSpans(
+                g,
+                columnsRuler ? doc.docSettings.pageSettings.columnCount : 1,
+                columnsSpacingPx);
+            if (columnsRuler) {
+                afterhours::draw_rectangle(
+                    Rectangle{g.whiteLeft, rulerY, g.originX - g.whiteLeft,
+                              rulerH},
+                    theme::RULER_BG);
+                for (const auto& span : columnsSpans) {
+                    afterhours::draw_rectangle(
+                        Rectangle{span.first, rulerY, span.second - span.first,
+                                  rulerH},
+                        theme::RULER_BG);
+                }
+                if (!columnsSpans.empty()) {
+                    afterhours::draw_rectangle(
+                        Rectangle{columnsSpans.back().second, rulerY,
+                                  g.whiteRight - columnsSpans.back().second,
+                                  rulerH},
+                        theme::RULER_BG);
+                }
+            } else {
+                afterhours::draw_rectangle(
+                    Rectangle{g.whiteLeft, rulerY, g.whiteRight - g.whiteLeft,
+                              rulerH},
+                    theme::RULER_BG);
+            }
             util::drawSunkenBorder(rulerRect);
 
             // Ticks every quarter inch from the left margin (inch 0),
@@ -944,8 +992,20 @@ struct EditorRenderSystem
                                          g.pixelsPerInch / 4.0f;
                 if (x > static_cast<float>(layout.screenWidth)) break;
                 drawTick(x, q);
-                if (q % 4 == 0 && q > 0 && x >= g.whiteLeft &&
-                    x <= g.whiteRight) {
+                // Inch numbers sit on white only: in columns mode
+                // a tick in a gray gutter gets no number. The
+                // padding zones count as white (same as the spans
+                // above).
+                bool onWhite = x >= g.whiteLeft && x <= g.whiteRight;
+                if (columnsRuler) {
+                    onWhite = x < g.originX || x > columnsSpans.back().second;
+                    for (const auto& span : columnsSpans) {
+                        if (x >= span.first && x <= span.second) {
+                            onWhite = true;
+                        }
+                    }
+                }
+                if (q % 4 == 0 && q > 0 && onWhite) {
                     std::string inchStr = std::to_string(q / 4);
                     int textWidth = theme::MeasureUIText(inchStr.c_str(), 10);
                     theme::DrawUIText(inchStr.c_str(),
@@ -1050,6 +1110,21 @@ struct EditorRenderSystem
             caretVisible = false;
         }
 
+        // Columns (Format > Columns...): paged editing view only,
+        // never Print Preview (which uses its own line stride).
+        // Computed here because the squiggle cache below needs the
+        // page size, and the render calls below reuse all three.
+        bool columnsActive =
+            layout.pageMode == PageMode::Paged && !layout.previewMode &&
+            doc.docSettings.pageSettings.columnCount > 1;
+        int columnsLinesPerPage = static_cast<int>(
+            columns_math::linesPerColumnForPage(
+                layout.pageHeight, layout.pageMargin, ds, lineHeight));
+        float columnsSpacingPx =
+            columnsActive
+                ? doc.docSettings.pageSettings.columnSpacing * ds
+                : 0.0f;
+
         // Refresh the spell-squiggle cache for the visible rows (union of
         // both panes in split view). No-op when the buffer version and the
         // visible range are unchanged, so this costs nothing per frame.
@@ -1073,6 +1148,35 @@ struct EditorRenderSystem
                 lastRow = std::max(lastRow,
                                    secondFirst + static_cast<std::size_t>(visible) + 1);
             }
+            // Columns: the rendered page holds pageSize rows ACROSS
+            // all columns (pageFirst..pageFirst+pageSize), not the
+            // single-column visible window [scrollOffset,
+            // +visible). The cache must cover the whole page or the
+            // squiggles for rows outside that window silently
+            // vanish: in the batch screenshot column 1 was clean
+            // and column 2 was squiggled from mid-page, because
+            // the cache only held the scrolled window.
+            if (columnsActive) {
+                std::size_t pageSize =
+                    static_cast<std::size_t>(columnsLinesPerPage) *
+                    static_cast<std::size_t>(
+                        doc.docSettings.pageSettings.columnCount);
+                if (pageSize > 0) {
+                    auto pageRange = [&](int offset) {
+                        std::size_t off = offset > 0 ? static_cast<std::size_t>(offset) : 0;
+                        std::size_t pageFirst = (off / pageSize) * pageSize;
+                        return std::pair{pageFirst, pageFirst + pageSize};
+                    };
+                    auto range = pageRange(renderScrollOffset);
+                    firstRow = range.first;
+                    lastRow = range.second;
+                    if (layout.splitViewEnabled) {
+                        auto second = pageRange(scroll.secondaryOffset);
+                        firstRow = std::min(firstRow, second.first);
+                        lastRow = std::max(lastRow, second.second);
+                    }
+                }
+            }
             doc.spellSquiggles.update(doc.buffer, doc.spellChecker, firstRow, lastRow);
         }
         const SpellSquiggleCache* squiggleCache =
@@ -1086,18 +1190,8 @@ struct EditorRenderSystem
         // Outline mode: heading rows only (not in Print Preview:
         // preview shows printable content, not the outline).
         bool outlineMode = layout.showOutline && !layout.previewMode;
-        // Columns (Format > Columns...): paged editing view only,
-        // never Print Preview (which uses its own line stride).
-        bool columnsActive =
-            layout.pageMode == PageMode::Paged && !layout.previewMode &&
-            doc.docSettings.pageSettings.columnCount > 1;
-        int columnsLinesPerPage = static_cast<int>(
-            columns_math::linesPerColumnForPage(
-                layout.pageHeight, layout.pageMargin, ds, lineHeight));
-        float columnsSpacingPx =
-            columnsActive
-                ? doc.docSettings.pageSettings.columnSpacing * ds
-                : 0.0f;
+        // columnsActive / columnsLinesPerPage / columnsSpacingPx
+        // were computed above (the squiggle cache needs them).
 
         if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;

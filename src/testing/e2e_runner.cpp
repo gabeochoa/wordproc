@@ -357,6 +357,23 @@ static void setupCallbacksEx(
             }
             return std::to_string(count);
         }
+        // Squiggle-cache state: what the render pass will actually
+        // draw (unlike spell_error_count, which rescans the text).
+        // squiggle_count = cached squiggles; squiggle_rows = their
+        // comma-separated buffer rows. A columns-mode regression
+        // (cache window too narrow for the page) shows up here as
+        // a row dropping out after a scroll.
+        if (prop == "squiggle_count") {
+            return std::to_string(docComp.spellSquiggles.squiggles.size());
+        }
+        if (prop == "squiggle_rows") {
+            std::string rows;
+            for (const auto& sq : docComp.spellSquiggles.squiggles) {
+                if (!rows.empty()) rows += ",";
+                rows += std::to_string(sq.row);
+            }
+            return rows;
+        }
 
         // Print Preview / Print properties
         if (prop == "preview_mode") return layoutComp.previewMode ? "true" : "false";

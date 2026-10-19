@@ -1,0 +1,64 @@
+# Test: spell squiggles in 2-column paged mode.
+# 60 clean "Line text" lines (both words are in the dictionary).
+# One typo "wrold" on row 5 (column 1) and one ONLY in column 2's
+# text (row 30). The squiggle cache must cover the whole rendered
+# page: after scrolling the caret to the last row, both squiggles
+# must still be cached (RED-ON-REVERT: the old single-column
+# [scrollOffset, +visible) cache window dropped row 5 after the
+# scroll, so squiggle_rows lost "5"). The screenshot must show the
+# column-2 underline under "wrold" at the column-2 x, not under
+# column 1's word (squiggle x comes from the column origin via
+# columns_math, the same origin text rendering uses).
+
+fill_lines 60 Line text
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select "Paged Mode"
+wait_frames 12
+validate page_mode=paged
+
+menu_open Format
+wait_frames 12
+menu_select "Columns..."
+wait_frames 12
+
+click_ui columns_preset_2
+wait_frames 12
+click_ui columns_ok
+wait_frames 12
+
+validate column_count=2
+
+# Typo on row 5 (column 1): click row 5, append " wrold".
+mouse_down 550 280
+wait_frames 2
+mouse_up
+wait_frames 6
+type " wrold"
+wait_frames 12
+
+# Typo ONLY in column 2's text: click column 2 row 30, append " wrold".
+mouse_down 700 228
+wait_frames 2
+mouse_up
+wait_frames 6
+type " wrold"
+wait_frames 12
+
+validate squiggle_count=2
+validate squiggle_rows=5,30
+
+screenshot columns_squiggle
+
+# Scroll the caret to a late row (column 2, y=500 is inside the
+# page text area; y=590 would be below it and the click ignored).
+# The page-wide cache must keep both squiggles.
+mouse_down 700 500
+wait_frames 2
+mouse_up
+wait_frames 12
+
+validate squiggle_count=2
+validate squiggle_rows=5,30

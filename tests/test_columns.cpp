@@ -77,6 +77,24 @@ TEST_CASE("Columns widths and offsets", "[columns]") {
     }
 }
 
+TEST_CASE("Squiggle x in column 2 uses the column origin", "[columns]") {
+    using namespace columns_math;
+    // Text area x 435, padding 8, no gutter. Column width 282,
+    // spacing 36: column 2 (index 1) starts at 435 + 8 + 318.
+    // A squiggle for a word whose prefix measures 40px must start
+    // at 761 + 40 = 801 -- NOT at the single-column x (443 + 40).
+    // This is the composition the renderer uses: columnLineOriginX
+    // (text + squiggle origin) + measured prefix width.
+    float originCol1 = columnLineOriginX(435.0f, 8.0f, 0.0f, 0, 282.0f, 36.0f);
+    float originCol2 = columnLineOriginX(435.0f, 8.0f, 0.0f, 1, 282.0f, 36.0f);
+    REQUIRE(originCol1 == 443.0f);
+    REQUIRE(originCol2 == 761.0f);
+    REQUIRE(originCol2 + 40.0f == 801.0f);
+    // Column 0 is the same origin with or without columns active.
+    REQUIRE(columnLineOriginX(435.0f, 8.0f, 0.0f, 0, 282.0f, 36.0f) ==
+            435.0f + 8.0f);
+}
+
 TEST_CASE("Columns settings survive a save/load roundtrip", "[columns]") {
     auto dir = std::filesystem::temp_directory_path() / "wordproc_columns_test";
     std::filesystem::create_directories(dir);

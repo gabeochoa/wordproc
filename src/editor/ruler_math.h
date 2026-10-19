@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <vector>
+
+#include "columns_math.h"
 
 // Pure ruler geometry: no backend, no ECS. The render pass, the drag
 // system, and the unit tests share these so a marker drawn at X is the
@@ -88,6 +91,26 @@ inline Geometry geometry(float textAreaY, float rulerHeight, float effectiveX,
     g.whiteRight = effectiveX + effectiveWidth;
     g.pixelsPerInch = pixelsPerInch;
     return g;
+}
+
+// White spans of the ruler in columns mode: one per column, from
+// the same column math the text renderer uses (columnWidth over
+// the text span, columnXOffset for starts). The gutters between
+// them stay gray, and the padding zones outside the first/last
+// column stay white (they are part of the text area). Returns
+// the single [whiteLeft, whiteRight] span when columnCount < 2.
+inline std::vector<std::pair<float, float>> columnWhiteSpans(
+    const Geometry& g, int columnCount, float spacingPx) {
+    if (columnCount < 2) return {{g.whiteLeft, g.whiteRight}};
+    float colWidth = columns_math::columnWidth(g.textSpanWidth, columnCount,
+                                               spacingPx);
+    std::vector<std::pair<float, float>> spans;
+    for (int col = 0; col < columnCount; ++col) {
+        float start = g.originX + columns_math::columnXOffset(
+                                     col, colWidth, spacingPx);
+        spans.emplace_back(start, start + colWidth);
+    }
+    return spans;
 }
 
 inline float leftMarkerX(const Geometry& g, int leftIndent) {

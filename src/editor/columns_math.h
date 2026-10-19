@@ -54,6 +54,17 @@ inline float columnXOffset(int column, float colWidth, float spacing) {
     return static_cast<float>(column) * (colWidth + spacing);
 }
 
+// Text origin x of a line in a column: text-area x + padding +
+// gutter + the column's offset. Text rendering AND squiggle
+// drawing must both start from this value: a squiggle computed
+// from a single-column text x lands under the wrong column's word.
+inline float columnLineOriginX(float textAreaX, float textPadding,
+                               float gutterOffset, int column,
+                               float colWidth, float spacing) {
+    return textAreaX + textPadding + gutterOffset +
+           columnXOffset(column, colWidth, spacing);
+}
+
 // Lines per column on one page: the page's text height (page
 // height minus top/bottom margins, in points, converted to display
 // px) divided by the line height, at least one. The renderer and
