@@ -13,6 +13,7 @@
 
 #include "components.h"
 #include "../editor/comments.h"
+#include "../editor/drop_cap.h"
 #include "../editor/symbol.h"
 #include "toolbar_icons.h"
 #include "editor_entity_cache.h"
@@ -4478,6 +4479,188 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_label("Cancel")
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.showBordersShadingDialog = false;
+                    }
+                }
+            }
+        }
+
+        // Drop Cap dialog (Format > Drop Cap): Win95 shell,
+        // compact — Position (None / Dropped) + Lines (2-4,
+        // - / + buttons). OK applies to the caret paragraph or
+        // every paragraph in the selection, as one undo step
+        // through commitParagraphFormat (the Borders-dialog
+        // pattern). The dialog's dropCapLines stays 2-4 even
+        // with Position None, so switching back to Dropped
+        // restores the last span.
+        if (dialogs.showDropCapDialog) {
+            constexpr int DROPCAP_MODAL_ID = 50023;
+            auto result = afterhours::modal(ctx, mk(entity, DROPCAP_MODAL_ID),
+                dialogs.showDropCapDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(320), afterhours::ui::h720(208),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Drop Cap", CONTENT_LAYER);
+
+                test_input::register_visible_text("Position:");
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Position:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto positionRow = div(ctx, mk(result.ent(), 902),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(30)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (positionRow) {
+                    static const char* kPositionLabels[2] = {"None",
+                                                             "Dropped"};
+                    static const char* kPositionDebug[2] = {
+                        "dropcap_none", "dropcap_dropped"};
+                    for (int i = 0; i < 2; ++i) {
+                        bool selected = dialogs.dropCapPosition == i;
+                        std::string label =
+                            std::string(selected ? "(o) " : "( ) ") +
+                            kPositionLabels[i];
+                        test_input::register_visible_text(label);
+                        if (button(ctx, mk(positionRow.ent(), i),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name(kPositionDebug[i])
+                                .with_label(label)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.dropCapPosition = i;
+                        }
+                    }
+                }
+
+                test_input::register_visible_text("Lines:");
+                div(ctx, mk(result.ent(), 903),
+                    ComponentConfig{}
+                        .with_label("Lines:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto linesRow = div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(30)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (linesRow) {
+                    if (button(ctx, mk(linesRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("dropcap_lines_minus")
+                            .with_label("-")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.dropCapLines = std::max(
+                            drop_cap::kMinLines,
+                            dialogs.dropCapLines - 1);
+                    }
+                    std::string linesLabel =
+                        "Lines: " +
+                        std::to_string(dialogs.dropCapLines);
+                    test_input::register_visible_text(linesLabel);
+                    div(ctx, mk(linesRow.ent(), 1),
+                        ComponentConfig{}
+                            .with_label(linesLabel)
+                            .with_size(ComponentSize{pixels(80), h720(28)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::TEXT_AREA)
+                            .with_custom_text_color(
+                                ui_imm::win95_colors::TEXT)
+                            .with_alignment(
+                                afterhours::ui::TextAlignment::Center)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (button(ctx, mk(linesRow.ent(), 2),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("dropcap_lines_plus")
+                            .with_label("+")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.dropCapLines = std::min(
+                            drop_cap::kMaxLines,
+                            dialogs.dropCapLines + 1);
+                    }
+                }
+
+                auto buttonRow = div(ctx, mk(result.ent(), 905),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("dropcap_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        std::size_t firstRow = doc.buffer.caret().row;
+                        std::size_t lastRow = firstRow;
+                        if (doc.buffer.hasSelection()) {
+                            firstRow = std::min(
+                                doc.buffer.selectionStart().row,
+                                doc.buffer.selectionEnd().row);
+                            lastRow = std::max(
+                                doc.buffer.selectionStart().row,
+                                doc.buffer.selectionEnd().row);
+                        }
+                        if (lastRow >= doc.buffer.lineCount() &&
+                            doc.buffer.lineCount() > 0)
+                            lastRow = doc.buffer.lineCount() - 1;
+                        int appliedLines =
+                            dialogs.dropCapPosition == 1
+                                ? dialogs.dropCapLines
+                                : 0;
+                        std::vector<ParagraphFormatChange> changes;
+                        for (std::size_t row = firstRow; row <= lastRow;
+                             ++row) {
+                            ParagraphFormat old =
+                                doc.buffer.lineParagraphFormat(row);
+                            ParagraphFormat next = old;
+                            next.dropCapLines = appliedLines;
+                            doc.buffer.setLineParagraphFormat(row, next);
+                            changes.push_back({row, old, next});
+                        }
+                        doc.buffer.commitParagraphFormat(
+                            std::move(changes));
+                        doc.isDirty = true;
+                        dialogs.showDropCapDialog = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("dropcap_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showDropCapDialog = false;
                     }
                 }
             }

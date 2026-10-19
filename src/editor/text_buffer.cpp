@@ -754,6 +754,7 @@ ParagraphFormat TextBuffer::lineParagraphFormat(std::size_t row) const {
     format.alignment = span.alignment;
     format.pageBreakBefore = span.pageBreakBefore;
     format.keepWithNext = span.keepWithNext;
+    format.dropCapLines = span.hasDropCap ? span.dropCapLines : 0;
     return format;
 }
 
@@ -775,6 +776,15 @@ void TextBuffer::setLineParagraphFormat(std::size_t row,
     span.alignment = format.alignment;
     span.pageBreakBefore = format.pageBreakBefore;
     span.keepWithNext = format.keepWithNext;
+    // Drop cap: 0 = off (the last span is kept, so re-enabling
+    // restores it); 2-4 = on with that span.
+    if (format.dropCapLines >= drop_cap::kMinLines) {
+        span.hasDropCap = true;
+        span.dropCapLines =
+            drop_cap::clampLines(format.dropCapLines);
+    } else {
+        span.hasDropCap = false;
+    }
     version_++;
 }
 
@@ -1120,9 +1130,23 @@ void TextBuffer::setCurrentLineDropCap(bool enabled, int spanLines) {
     ensureNonEmpty();
     if (caret_.row < line_spans_.size()) {
         line_spans_[caret_.row].hasDropCap = enabled;
-        line_spans_[caret_.row].dropCapLines = std::max(2, spanLines);
+        if (enabled) {
+            line_spans_[caret_.row].dropCapLines =
+                drop_cap::clampLines(spanLines);
+        }
         version_++;  // Invalidate render cache
     }
+}
+
+int TextBuffer::lineDropCapLines(std::size_t row) const {
+    if (row < line_spans_.size() && line_spans_[row].hasDropCap) {
+        return drop_cap::clampLines(line_spans_[row].dropCapLines);
+    }
+    return 0;
+}
+
+int TextBuffer::currentDropCapLines() const {
+    return lineDropCapLines(caret_.row);
 }
 
 void TextBuffer::toggleCurrentLineDropCap() {

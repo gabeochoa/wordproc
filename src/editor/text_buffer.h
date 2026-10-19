@@ -10,6 +10,7 @@
 #include "../vendor/afterhours/src/plugins/command_history.h"
 #include "borders_shading.h"
 #include "document_settings.h"
+#include "drop_cap.h"
 #include "gap_buffer.h"
 #include "toc.h"
 
@@ -147,6 +148,9 @@ struct ParagraphFormat {
     TextAlignment alignment = TextAlignment::Left;
     bool pageBreakBefore = false;
     bool keepWithNext = false;
+    // Drop Cap (Format > Drop Cap): 0 = off, 2-4 = first glyph
+    // spans that many lines. See drop_cap.h.
+    int dropCapLines = 0;
     bool operator==(const ParagraphFormat& other) const {
         return indents == other.indents &&
                lineSpacing == other.lineSpacing &&
@@ -157,7 +161,8 @@ struct ParagraphFormat {
                shadingColorIndex == other.shadingColorIndex &&
                alignment == other.alignment &&
                pageBreakBefore == other.pageBreakBefore &&
-               keepWithNext == other.keepWithNext;
+               keepWithNext == other.keepWithNext &&
+               dropCapLines == other.dropCapLines;
     }
 };
 
@@ -561,6 +566,10 @@ class TextBuffer {
     bool currentLineHasDropCap() const;
     void setCurrentLineDropCap(bool enabled, int spanLines = 2);
     void toggleCurrentLineDropCap();
+    // Drop-cap span of one line / the caret line: 0 = off, else
+    // 2-4 (drop_cap::clampLines).
+    int lineDropCapLines(std::size_t row) const;
+    int currentDropCapLines() const;
     
     void backspace();
     void del();

@@ -367,6 +367,25 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         }
     }
 
+    // Per-line drop-cap spans (Format > Drop Cap). Same shape as
+    // paragraphStyles, written only when some line has a drop cap.
+    {
+        bool anyDropCap = false;
+        for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+            if (buffer.lineDropCapLines(i) > 0) {
+                anyDropCap = true;
+                break;
+            }
+        }
+        if (anyDropCap) {
+            nlohmann::json spans = nlohmann::json::array();
+            for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+                spans.push_back(buffer.lineDropCapLines(i));
+            }
+            doc["dropCapLines"] = std::move(spans);
+        }
+    }
+
     // Style settings (document-specific, saved with file)
     doc["style"] = {
         {"bold", style.bold},
@@ -589,6 +608,27 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             }
         }
 
+        // Load per-line drop-cap spans (written by saveDocumentEx
+        // when any line has a drop cap; absent in old files ->
+        // all off). Out-of-range values load as off.
+        if (doc.contains("dropCapLines")) {
+            const nlohmann::json& spans = doc.at("dropCapLines");
+            std::size_t count =
+                std::min<std::size_t>(spans.size(), buffer.lineCount());
+            for (std::size_t i = 0; i < count; ++i) {
+                if (spans[i].is_number_integer()) {
+                    ParagraphFormat fmt =
+                        buffer.lineParagraphFormat(i);
+                    fmt.dropCapLines =
+                        spans[i].get<int>() >= drop_cap::kMinLines &&
+                                spans[i].get<int>() <= drop_cap::kMaxLines
+                            ? spans[i].get<int>()
+                            : 0;
+                    buffer.setLineParagraphFormat(i, fmt);
+                }
+            }
+        }
+
         // Load text options
         if (doc.contains("options")) {
             const nlohmann::json &opts = doc.at("options");
@@ -766,6 +806,24 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                     paragraphStyleName(buffer.lineParagraphStyle(i)));
             }
             doc["paragraphStyles"] = std::move(styles);
+        }
+    }
+
+    // Per-line drop-cap spans (see saveDocumentEx above).
+    {
+        bool anyDropCap = false;
+        for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+            if (buffer.lineDropCapLines(i) > 0) {
+                anyDropCap = true;
+                break;
+            }
+        }
+        if (anyDropCap) {
+            nlohmann::json spans = nlohmann::json::array();
+            for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+                spans.push_back(buffer.lineDropCapLines(i));
+            }
+            doc["dropCapLines"] = std::move(spans);
         }
     }
 

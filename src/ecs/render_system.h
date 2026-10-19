@@ -1072,6 +1072,48 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             std::max(0, availableWidth - totalIndent - listIndent -
                             rightIndent - outlineIndent -
                             outlineCollapseShift);
+        // Drop Cap wrap indent (Format > Drop Cap): when an
+        // earlier paragraph's dropped glyph spans this row, indent
+        // this row past the glyph's width — the text wraps around
+        // the drop cap. Part of indentedBaseX, like the outline
+        // collapse shift, so caret, selection, and squiggles
+        // follow it. Skipped in Outline (only headings draw
+        // there). The covering row is the nearest drop-cap row
+        // whose span reaches this row (drop_cap.h); the width is
+        // the covering row's first glyph at its dropped size.
+        int dropCapWrapIndent = 0;
+        if (!outlineMode && row > 0) {
+            for (std::size_t cap = row;
+                 cap-- > 0 && row - cap <= 3;) {
+                LineSpan capSpan = buffer.lineSpan(cap);
+                if (!capSpan.hasDropCap) continue;
+                if (row - cap >=
+                    static_cast<std::size_t>(capSpan.dropCapLines)) {
+                    continue;  // Does not reach this row; an
+                               // earlier span still might.
+                }
+                std::string capLine = buffer.lineString(cap);
+                std::string dropChar = capLine.substr(0, 1);
+                ParagraphStyle capStyle =
+                    buffer.lineParagraphStyle(cap);
+                int capFontSize =
+                    ruler_math::scaledParagraphFontSize(
+                        paragraphStyleFontSize(capStyle), displayScale);
+                if (capFontSize < baseFontSize &&
+                    capStyle == ParagraphStyle::Normal) {
+                    capFontSize = baseFontSize;
+                }
+                int dropFontSize = capFontSize * capSpan.dropCapLines;
+                dropCapWrapIndent =
+                    afterhours::graphics::measure_text(
+                        dropChar.c_str(), dropFontSize) +
+                    4;
+                break;
+            }
+        }
+        indentedBaseX += dropCapWrapIndent;
+        indentedWidth =
+            std::max(0, indentedWidth - dropCapWrapIndent);
         // Draw the +/- collapse box (before the text, at the
         // pre-shift indented start). Collapsed shows '+'
         // (subordinates hidden), expanded shows '-'.

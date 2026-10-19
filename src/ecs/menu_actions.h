@@ -676,9 +676,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() - 6);
                     flash("Space after decreased");
                     break;
-                case 70:  // Drop Cap
-                    doc.buffer.toggleCurrentLineDropCap();
-                    flash(doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
+                case 70:  // Drop Cap... (dialog)
+                    dialogs.showDropCapDialog = true;
+                    dialogs.dropCapPosition =
+                        doc.buffer.currentLineHasDropCap() ? 1 : 0;
+                    dialogs.dropCapLines =
+                        std::max(2, doc.buffer.currentDropCapLines());
                     break;
                 case 71:  // Tab Width...
                     dialogs.showTabWidthDialog = true;

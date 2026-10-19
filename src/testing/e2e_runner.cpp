@@ -759,6 +759,7 @@ static void setupCallbacksEx(
         if (prop == "revision_count") return std::to_string(docComp.revisions.size());
         if (prop == "tab_width") return std::to_string(docComp.docSettings.tabWidth);
         if (prop == "drop_cap") return buffer.currentLineHasDropCap() ? "true" : "false";
+        if (prop == "drop_cap_lines") return std::to_string(buffer.currentDropCapLines());
         if (prop == "smart_quotes_enabled") {
             return docComp.docSettings.smartQuotesEnabled ? "true" : "false";
         }
