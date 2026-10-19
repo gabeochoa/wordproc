@@ -1,0 +1,34 @@
+type "Edge selection"
+key CTRL+A
+wait_frames 6
+right_click 99% 99%
+wait_frames 12
+expect_text "Select All"
+dump_ui context_menu_bottom_right
+screenshot context_menu_bottom_right
+escape
+wait_frames 6
+right_click 1% 99%
+wait_frames 12
+expect_text "Copy"
+dump_ui context_menu_bottom_left
+screenshot context_menu_bottom_left
+escape
+wait_frames 6
+right_click 99% 1%
+wait_frames 12
+expect_text "Cut"
+dump_ui context_menu_top_right
+screenshot context_menu_top_right
+escape
+wait_frames 6
+right_click 1% 1%
+wait_frames 12
+expect_text "Select All"
+dump_ui context_menu_top_left
+screenshot context_menu_top_left
+escape
+wait_frames 6
+key END
+type " resumed"
+validate text=Edge selection resumed

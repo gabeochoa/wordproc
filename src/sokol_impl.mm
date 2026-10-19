@@ -105,3 +105,7 @@ extern "C" void metal_take_screenshot(const char* filename) {
         }
     }
 }
+
+#include <afterhours/src/backends/sokol/capture_impl.h>
+
+#include <afterhours/src/backends/sokol/image_decode.h>

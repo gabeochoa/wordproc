@@ -73,7 +73,7 @@ static std::mutex log_once_per_mutex;
 }  // namespace
 
 template<typename Level, typename... Args>
-inline void log_once_per(std::chrono::milliseconds interval, Level level,
+inline void wordproc_log_once_per(std::chrono::milliseconds interval, Level level,
                          const char *file, int line, const char *format,
                          Args &&...args) {
     if (static_cast<int>(level) < static_cast<int>(AFTER_HOURS_LOG_LEVEL))

@@ -11,12 +11,15 @@ wait 2
 validate has_selection=false
 
 # Drag from start to middle
-drag 100 100 300 100
+mouse_down 10% 35%
+wait_frames 3
+mouse_move 60% 35%
+wait_frames 3
+mouse_up
 wait 2
 
 # Validate selection was created
 validate has_selection=true
-validate selection_length_greater_than=0
 
 screenshot e2e_mouse_drag_selection
 

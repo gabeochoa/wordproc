@@ -89,3 +89,6 @@ emsdk/
 tests/screenshots/
 *.png
 !resources/**/*.png
+
+.zig-cache/
+zig-out/

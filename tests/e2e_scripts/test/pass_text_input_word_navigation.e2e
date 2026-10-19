@@ -1,0 +1,24 @@
+key CTRL+F
+wait_frames 12
+focus_ui find_input
+type "alpha beta"
+wait_frames 6
+key CTRL+LEFT
+wait_frames 6
+expect_input_selection find_input 6 6
+key CTRL+SHIFT+LEFT
+wait_frames 6
+expect_input_selection find_input 0 6
+key CTRL+BACKSPACE
+wait_frames 6
+expect_input_text find_input "beta"
+key CTRL+Z
+wait_frames 6
+expect_input_text find_input "alpha beta"
+key CTRL+SHIFT+Z
+wait_frames 6
+expect_input_text find_input "beta"
+escape
+wait_frames 6
+expect_no_text "Find Next"
+screenshot text_input_word_navigation_closed

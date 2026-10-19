@@ -21,15 +21,15 @@ wait_frames 3
 action WidgetLeft
 wait_frames 3
 
-action TextSelectLeft
+key SHIFT+LEFT
 wait_frames 6
 
 expect_input_selection find_input 5 6
 screenshot text_input_shift_select_02_one_char
 
-action TextSelectLeft
+key SHIFT+LEFT
 wait_frames 3
-action TextSelectLeft
+key SHIFT+LEFT
 wait_frames 3
 
 expect_input_selection find_input 3 6

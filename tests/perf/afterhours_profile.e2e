@@ -1,0 +1,6 @@
+wait_frames 60
+type "Profiling the document reader"
+wait_frames 60
+dump_profile 10
+expect_fps_above 1
+expect_p99_below 1000

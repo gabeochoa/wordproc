@@ -87,11 +87,6 @@ inline void registerModalSystems(afterhours::SystemManager& manager) {
     afterhours::modal::register_update_systems<InputAction>(manager);
 }
 
-// Register modal render systems (call after other render systems)
-inline void registerModalRenderSystems(afterhours::SystemManager& manager) {
-    afterhours::modal::register_render_systems<InputAction>(manager);
-}
-
 // Get the UI context for immediate-mode widget calls
 inline UIContextType& getUIContext() {
     auto* ctx = afterhours::EntityHelper::get_singleton_cmp<UIContextType>();
