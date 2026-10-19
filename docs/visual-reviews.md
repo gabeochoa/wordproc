@@ -130,3 +130,11 @@ owner PT — format judged, zone not penalized.
 Page Setup 8, Paragraph 4.5->7.5, Borders 7->7.5, Normal 4.5->8,
 Status 6->8.5. **Batch 6 PASS.** Dictionary grew +403 words mined by
 frequency from the public-domain test books.
+
+## 2026-10-19 — Batch 7 (Thesaurus, Repeat, toolbar toggles, tables)
+
+Thesaurus 6->7.5, Formatting-toggle 8.5, table render/sort 6->7.5.
+**Batch 7 PASS.** Big find: table RENDERING was dead code (tables were
+invisible) — now wired. All 98 info toasts swept to status-bar flashes;
+only error toasts remain. Typing into table cells is still
+unimplemented (cells seeded via test hooks only) — Batch 8.
