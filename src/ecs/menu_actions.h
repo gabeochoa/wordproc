@@ -35,6 +35,19 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
         int menuIndex = menuResult / 100;
         int itemIndex = menuResult % 100;
 
+        // Confirmations to the transient status-bar flash, not a
+        // floating toast (rounded modern toasts are not Word 95).
+        // Falls back to the EntityQuery lookup when the caller did
+        // not pass a status handle. Errors keep toast_notify::error.
+        auto flash = [&](const std::string& msg, double duration = 3.0) {
+            if (statusComp) {
+                status::flash(*statusComp, msg,
+                              afterhours::graphics::get_time(), duration);
+            } else {
+                cmd::flashStatusConfirmation(msg, duration);
+            }
+        };
+
         if (menuIndex == 0) {  // File menu
             if (itemIndex >= 0 &&
                 itemIndex < static_cast<int>(menu.menus[0].items.size())) {
@@ -88,7 +101,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     auto result = exportDocumentPdf(doc.buffer, doc.docSettings,
                                                     basePath.string());
                     if (result.success) {
-                        toast_notify::success(
+                        flash(
                             "Exported PDF: " + basePath.filename().string());
                     } else {
                         toast_notify::error("Export PDF failed: " + result.error);
@@ -102,7 +115,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     auto result = exportDocumentHtml(doc.buffer, doc.docSettings,
                                                      basePath.string());
                     if (result.success) {
-                        toast_notify::success(
+                        flash(
                             "Exported HTML: " + basePath.filename().string());
                     } else {
                         toast_notify::error("Export HTML failed: " + result.error);
@@ -116,7 +129,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     auto result = exportDocumentRtf(doc.buffer, doc.docSettings,
                                                     basePath.string());
                     if (result.success) {
-                        toast_notify::success(
+                        flash(
                             "Exported RTF: " + basePath.filename().string());
                     } else {
                         toast_notify::error("Export RTF failed: " + result.error);
@@ -202,7 +215,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 13:  // Find...
                     dialogs.showFindDialog = true;
                     dialogs.findReplaceMode = false;
-                    toast_notify::info("Find: Ctrl+G next, Ctrl+Shift+G prev");
+                    flash("Find: Ctrl+G next, Ctrl+Shift+G prev");
                     break;
                 case 14:  // Find Next
                     if (!dialogs.lastSearchTerm.empty()) {
@@ -212,9 +225,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             doc.buffer.setSelectionAnchor(result.start);
                             doc.buffer.setCaret(result.end);
                             doc.buffer.updateSelectionToCaret();
-                            toast_notify::info("Found", 2.0f);
+                            flash("Found", 2.0f);
                         } else {
-                            toast_notify::warning("Not found");
+                            flash("Not found");
                         }
                     }
                     break;
@@ -226,16 +239,16 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                             doc.buffer.setSelectionAnchor(result.start);
                             doc.buffer.setCaret(result.end);
                             doc.buffer.updateSelectionToCaret();
-                            toast_notify::info("Found", 2.0f);
+                            flash("Found", 2.0f);
                         } else {
-                            toast_notify::warning("Not found");
+                            flash("Not found");
                         }
                     }
                     break;
                 case 16:  // Replace...
                     dialogs.showFindDialog = true;
                     dialogs.findReplaceMode = true;
-                    toast_notify::info("Replace mode");
+                    flash("Replace mode");
                     break;
                 case 18:  // Go To Bookmark...
                     dialogs.showBookmarkListDialog = true;
@@ -290,49 +303,49 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     menu.menus[2].items[3].mark =
                         layout.showRuler ? win95::MenuMark::Checkmark
                                          : win95::MenuMark::None;
-                    toast_notify::info(layout.showRuler ? "Ruler: On" : "Ruler: Off");
+                    flash(layout.showRuler ? "Ruler: On" : "Ruler: Off");
                     break;
                 case 5:  // Zoom In
                     layout.zoomLevel = std::min(4.0f, layout.zoomLevel + 0.1f);
-                    toast_notify::info("Zoom in");
+                    flash("Zoom in");
                     break;
                 case 6:  // Zoom Out
                     layout.zoomLevel = std::max(0.5f, layout.zoomLevel - 0.1f);
-                    toast_notify::info("Zoom out");
+                    flash("Zoom out");
                     break;
                 case 7:  // Zoom Reset
                     layout.zoomLevel = 1.0f;
-                    toast_notify::info("Zoom reset");
+                    flash("Zoom reset");
                     break;
                 case 9:  // Focus Mode
                     layout.focusMode = !layout.focusMode;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
-                    toast_notify::info(layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
+                    flash(layout.focusMode ? "Focus mode: On" : "Focus mode: Off");
                     break;
                 case 10:  // Split View
                     layout.splitViewEnabled = !layout.splitViewEnabled;
-                    toast_notify::info(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
+                    flash(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
                     break;
                 case 11:  // Dark Mode
                     theme::applyDarkMode(!theme::DARK_MODE_ENABLED);
-                    toast_notify::info(theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
+                    flash(theme::DARK_MODE_ENABLED ? "Dark mode: On" : "Dark mode: Off");
                     break;
                 case 13:  // Line Width: Normal (no limit)
                     layout::setLineWidthLimit(layout, 0.0f);
-                    toast_notify::info("Line width: Normal");
+                    flash("Line width: Normal");
                     break;
                 case 14:  // Line Width: Narrow (60 chars)
                     layout::setLineWidthLimit(layout, 60.0f);
-                    toast_notify::info("Line width: Narrow (60 chars)");
+                    flash("Line width: Narrow (60 chars)");
                     break;
                 case 15:  // Line Width: Wide (100 chars)
                     layout::setLineWidthLimit(layout, 100.0f);
-                    toast_notify::info("Line width: Wide (100 chars)");
+                    flash("Line width: Wide (100 chars)");
                     break;
                 case 17:  // Show Line Numbers
                     layout.showLineNumbers = !layout.showLineNumbers;
-                    toast_notify::info(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
+                    flash(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     break;
                 case 18:  // Outline
                     cmd::toggleOutlineMode(doc, layout, scroll);
@@ -351,7 +364,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     menu.menus[2].items[20].mark =
                         layout.showStandardToolbar ? win95::MenuMark::Checkmark
                                                    : win95::MenuMark::None;
-                    toast_notify::info(layout.showStandardToolbar ? "Standard Toolbar: On" : "Standard Toolbar: Off");
+                    flash(layout.showStandardToolbar ? "Standard Toolbar: On" : "Standard Toolbar: Off");
                     break;
                 case 21:  // Formatting Toolbar
                     layout.showFormattingToolbar = !layout.showFormattingToolbar;
@@ -360,7 +373,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     menu.menus[2].items[21].mark =
                         layout.showFormattingToolbar ? win95::MenuMark::Checkmark
                                                      : win95::MenuMark::None;
-                    toast_notify::info(layout.showFormattingToolbar ? "Formatting Toolbar: On" : "Formatting Toolbar: Off");
+                    flash(layout.showFormattingToolbar ? "Formatting Toolbar: On" : "Formatting Toolbar: Off");
                     break;
                 case 23:  // UI Scale... (moved from Tools)
                     dialogs.showSettingsDialog = true;
@@ -383,39 +396,39 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             } else switch (itemIndex - 1) {
                 case 0:  // Normal
                     cmd::setParagraphStyle(doc, ParagraphStyle::Normal);
-                    toast_notify::info("Style: Normal");
+                    flash("Style: Normal");
                     break;
                 case 1:  // Title
                     cmd::setParagraphStyle(doc, ParagraphStyle::Title);
-                    toast_notify::info("Style: Title");
+                    flash("Style: Title");
                     break;
                 case 2:  // Subtitle
                     cmd::setParagraphStyle(doc, ParagraphStyle::Subtitle);
-                    toast_notify::info("Style: Subtitle");
+                    flash("Style: Subtitle");
                     break;
                 case 3:  // Heading 1
                     cmd::setParagraphStyle(doc, ParagraphStyle::Heading1);
-                    toast_notify::info("Style: Heading 1");
+                    flash("Style: Heading 1");
                     break;
                 case 4:  // Heading 2
                     cmd::setParagraphStyle(doc, ParagraphStyle::Heading2);
-                    toast_notify::info("Style: Heading 2");
+                    flash("Style: Heading 2");
                     break;
                 case 5:  // Heading 3
                     cmd::setParagraphStyle(doc, ParagraphStyle::Heading3);
-                    toast_notify::info("Style: Heading 3");
+                    flash("Style: Heading 3");
                     break;
                 case 6:  // Heading 4
                     cmd::setParagraphStyle(doc, ParagraphStyle::Heading4);
-                    toast_notify::info("Style: Heading 4");
+                    flash("Style: Heading 4");
                     break;
                 case 7:  // Heading 5
                     cmd::setParagraphStyle(doc, ParagraphStyle::Heading5);
-                    toast_notify::info("Style: Heading 5");
+                    flash("Style: Heading 5");
                     break;
                 case 8:  // Heading 6
                     cmd::setParagraphStyle(doc, ParagraphStyle::Heading6);
-                    toast_notify::info("Style: Heading 6");
+                    flash("Style: Heading 6");
                     break;
                 case 10:  // Bold
                     cmd::toggleBold(doc);
@@ -437,19 +450,19 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 20:  // Align Left
                     cmd::setAlignment(doc, TextAlignment::Left);
-                    toast_notify::info("Align: Left");
+                    flash("Align: Left");
                     break;
                 case 21:  // Align Center
                     cmd::setAlignment(doc, TextAlignment::Center);
-                    toast_notify::info("Align: Center");
+                    flash("Align: Center");
                     break;
                 case 22:  // Align Right
                     cmd::setAlignment(doc, TextAlignment::Right);
-                    toast_notify::info("Align: Right");
+                    flash("Align: Right");
                     break;
                 case 23:  // Justify
                     cmd::setAlignment(doc, TextAlignment::Justify);
-                    toast_notify::info("Align: Justify");
+                    flash("Align: Justify");
                     break;
                 case 25:  // Text: Black
                     cmd::setTextColor(doc, TextColors::Black);
@@ -553,75 +566,75 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 48:  // Align Left
                     cmd::setAlignment(doc, TextAlignment::Left);
-                    toast_notify::info("Align: Left");
+                    flash("Align: Left");
                     break;
                 case 49:  // Align Center
                     cmd::setAlignment(doc, TextAlignment::Center);
-                    toast_notify::info("Align: Center");
+                    flash("Align: Center");
                     break;
                 case 50:  // Align Right
                     cmd::setAlignment(doc, TextAlignment::Right);
-                    toast_notify::info("Align: Right");
+                    flash("Align: Right");
                     break;
                 case 51:  // Justify
                     cmd::setAlignment(doc, TextAlignment::Justify);
-                    toast_notify::info("Align: Justify");
+                    flash("Align: Justify");
                     break;
                 case 53:  // Increase Indent
                     cmd::increaseIndent(doc);
-                    toast_notify::info("Indent increased");
+                    flash("Indent increased");
                     break;
                 case 54:  // Decrease Indent
                     cmd::decreaseIndent(doc);
-                    toast_notify::info("Indent decreased");
+                    flash("Indent decreased");
                     break;
                 case 56:  // Single Spacing
                     cmd::setLineSpacing(doc, 100);
-                    toast_notify::info("Line spacing: Single");
+                    flash("Line spacing: Single");
                     break;
                 case 57:  // 1.5 Line Spacing
                     cmd::setLineSpacing(doc, 150);
-                    toast_notify::info("Line spacing: 1.5");
+                    flash("Line spacing: 1.5");
                     break;
                 case 58:  // Double Spacing
                     cmd::setLineSpacing(doc, 200);
-                    toast_notify::info("Line spacing: Double");
+                    flash("Line spacing: Double");
                     break;
                 case 60:  // Bulleted List
                     cmd::toggleBulletedList(doc);
-                    toast_notify::info(doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
+                    flash(doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
                     break;
                 case 61:  // Numbered List
                     cmd::toggleNumberedList(doc);
-                    toast_notify::info(doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
+                    flash(doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
                     break;
                 case 62:  // Increase List Level
                     doc.buffer.increaseListLevel();
-                    toast_notify::info("List level increased");
+                    flash("List level increased");
                     break;
                 case 63:  // Decrease List Level
                     doc.buffer.decreaseListLevel();
-                    toast_notify::info("List level decreased");
+                    flash("List level decreased");
                     break;
                 case 65:  // Increase Space Before
                     cmd::setSpaceBefore(doc, doc.buffer.currentSpaceBefore() + 6);
-                    toast_notify::info("Space before increased");
+                    flash("Space before increased");
                     break;
                 case 66:  // Decrease Space Before
                     cmd::setSpaceBefore(doc, doc.buffer.currentSpaceBefore() - 6);
-                    toast_notify::info("Space before decreased");
+                    flash("Space before decreased");
                     break;
                 case 67:  // Increase Space After
                     cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() + 6);
-                    toast_notify::info("Space after increased");
+                    flash("Space after increased");
                     break;
                 case 68:  // Decrease Space After
                     cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() - 6);
-                    toast_notify::info("Space after decreased");
+                    flash("Space after decreased");
                     break;
                 case 70:  // Drop Cap
                     doc.buffer.toggleCurrentLineDropCap();
-                    toast_notify::info(doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
+                    flash(doc.buffer.currentLineHasDropCap() ? "Drop cap: On" : "Drop cap: Off");
                     break;
                 case 71:  // Tab Width...
                     dialogs.showTabWidthDialog = true;
@@ -658,12 +671,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 0:  // Page Break
                     doc.buffer.insertPageBreak();
                     doc.isDirty = true;
-                    toast_notify::info("Page break inserted");
+                    flash("Page break inserted");
                     break;
                 case 1:  // Section Break
                     doc.buffer.insertSectionBreak();
                     doc.isDirty = true;
-                    toast_notify::info("Section break inserted");
+                    flash("Section break inserted");
                     break;
                 case 3:  // Hyperlink...
                     cmd::insertHyperlink(doc);
@@ -673,7 +686,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         std::size_t caretOffset = doc.buffer.caretOffset();
                         if (doc.buffer.removeHyperlink(caretOffset)) {
                             doc.isDirty = true;
-                            toast_notify::success("Hyperlink removed");
+                            flash("Hyperlink removed");
                         }
                     } else {
                         toast_notify::error("No hyperlink at cursor");
@@ -684,7 +697,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     std::string name =
                         std::format("bookmark_{}", doc.buffer.caret().row + 1);
                     if (doc.buffer.addBookmark(name)) {
-                        toast_notify::success("Bookmark added");
+                        flash("Bookmark added");
                     } else {
                         toast_notify::error("Bookmark not added");
                     }
@@ -707,7 +720,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     std::size_t currentLine = doc.buffer.caret().row;
                     doc.insertTable(currentLine, 3, 3);
                     doc.isDirty = true;
-                    toast_notify::info("Inserted 3x3 table");
+                    flash("Inserted 3x3 table");
                     break;
                 }
                 case 9:  // Image...
@@ -746,7 +759,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     
                     doc.drawings.addDrawing(drawing);
                     doc.isDirty = true;
-                    toast_notify::info(std::format("{} inserted", shapeTypeName(drawing.shapeType)));
+                    flash(std::format("{} inserted", shapeTypeName(drawing.shapeType)));
                     break;
                 }
                 case 21:  // Equation...
@@ -758,14 +771,14 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     eq.style = EquationStyle::Inline;
                     doc.equations.addEquation(eq);
                     doc.isDirty = true;
-                    toast_notify::info("Equation inserted");
+                    flash("Equation inserted");
                     break;
                 }
                 case 22:  // Footnote
                 {
                     if (doc.buffer.addFootnote("")) {
                         doc.isDirty = true;
-                        toast_notify::info("Footnote inserted");
+                        flash("Footnote inserted");
                     } else {
                         toast_notify::error("Failed to insert footnote");
                     }
@@ -782,28 +795,28 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 {
                     doc.buffer.insertText("[HEADER]");
                     doc.isDirty = true;
-                    toast_notify::info("Header placeholder inserted");
+                    flash("Header placeholder inserted");
                     break;
                 }
                 case 27:  // Footer
                 {
                     doc.buffer.insertText("[FOOTER]");
                     doc.isDirty = true;
-                    toast_notify::info("Footer placeholder inserted");
+                    flash("Footer placeholder inserted");
                     break;
                 }
                 case 28:  // Page Number
                 {
                     doc.buffer.insertText("[PAGE #]");
                     doc.isDirty = true;
-                    toast_notify::info("Page number placeholder inserted");
+                    flash("Page number placeholder inserted");
                     break;
                 }
                 case 31:  // Table of Contents
                 {
                     doc.buffer.insertTableOfContents();
                     doc.isDirty = true;
-                    toast_notify::info("Table of Contents inserted");
+                    flash("Table of Contents inserted");
                     break;
                 }
                 default:
@@ -815,7 +828,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     std::size_t currentLine = doc.buffer.caret().row;
                     doc.insertTable(currentLine, 3, 3);
                     doc.isDirty = true;
-                    toast_notify::info("Inserted 3x3 table");
+                    flash("Inserted 3x3 table");
                     break;
                 }
                 case 2: {  // Insert Row Above
@@ -824,7 +837,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertRowAbove(table->currentCell().row);
                         doc.isDirty = true;
-                        toast_notify::info("Row inserted above");
+                        flash("Row inserted above");
                     } else {
                         toast_notify::error("No table at cursor");
                     }
@@ -836,7 +849,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertRowBelow(table->currentCell().row);
                         doc.isDirty = true;
-                        toast_notify::info("Row inserted below");
+                        flash("Row inserted below");
                     } else {
                         toast_notify::error("No table at cursor");
                     }
@@ -848,7 +861,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertColumnLeft(table->currentCell().col);
                         doc.isDirty = true;
-                        toast_notify::info("Column inserted left");
+                        flash("Column inserted left");
                     } else {
                         toast_notify::error("No table at cursor");
                     }
@@ -860,7 +873,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->insertColumnRight(table->currentCell().col);
                         doc.isDirty = true;
-                        toast_notify::info("Column inserted right");
+                        flash("Column inserted right");
                     } else {
                         toast_notify::error("No table at cursor");
                     }
@@ -872,7 +885,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->deleteRow(table->currentCell().row);
                         doc.isDirty = true;
-                        toast_notify::info("Row deleted");
+                        flash("Row deleted");
                     } else {
                         toast_notify::error("No table at cursor");
                     }
@@ -884,7 +897,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         table->deleteColumn(table->currentCell().col);
                         doc.isDirty = true;
-                        toast_notify::info("Column deleted");
+                        flash("Column deleted");
                     } else {
                         toast_notify::error("No table at cursor");
                     }
@@ -900,7 +913,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         CellPosition bottomRight = {std::max(start.row, end.row), std::max(start.col, end.col)};
                         if (table->mergeCells(topLeft, bottomRight)) {
                             doc.isDirty = true;
-                            toast_notify::success("Cells merged");
+                            flash("Cells merged");
                         } else {
                             toast_notify::error("Cannot merge cells");
                         }
@@ -915,7 +928,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     if (table) {
                         if (table->splitCell(table->currentCell())) {
                             doc.isDirty = true;
-                            toast_notify::success("Cell split");
+                            flash("Cell split");
                         } else {
                             toast_notify::error("Cell is not merged");
                         }
@@ -951,7 +964,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 }
                 case 2:  // Split (same as View > Split View)
                     layout.splitViewEnabled = !layout.splitViewEnabled;
-                    toast_notify::info(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
+                    flash(layout.splitViewEnabled ? "Split view: On" : "Split view: Off");
                     break;
                 case 1:  // Arrange All — disabled: never dispatched
                 case 4:  // "1 <current document>" — checked, enabled:
@@ -987,9 +1000,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                            // one undo step.
                     std::size_t corrected = cmd::autoFormatDocument(doc);
                     if (corrected == 0) {
-                        toast_notify::info("AutoFormat: no corrections");
+                        flash("AutoFormat: no corrections");
                     } else {
-                        toast_notify::info(
+                        flash(
                             "AutoFormat: " + std::to_string(corrected) +
                             (corrected == 1 ? " correction" : " corrections"));
                     }

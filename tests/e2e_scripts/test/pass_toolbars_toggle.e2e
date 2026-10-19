@@ -26,6 +26,7 @@ wait_frames 12
 menu_select "Formatting Toolbar"
 wait_frames 12
 
+validate status_text=Formatting Toolbar: Off
 validate formatting_toolbar_visible=false
 validate standard_toolbar_visible=true
 validate menu_item_checked_Formatting Toolbar=false
@@ -41,6 +42,7 @@ wait_frames 12
 menu_select "Standard Toolbar"
 wait_frames 12
 
+validate status_text=Standard Toolbar: Off
 validate standard_toolbar_visible=false
 validate formatting_toolbar_visible=false
 validate menu_item_checked_Standard Toolbar=false

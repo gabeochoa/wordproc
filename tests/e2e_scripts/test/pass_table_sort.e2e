@@ -24,6 +24,7 @@ wait_frames 12
 menu_select "Sort Ascending"
 wait_frames 12
 
+validate status_text=Table sorted ascending
 validate cell_content_0_0=5
 validate cell_content_0_1=row1
 validate cell_content_1_0=20
@@ -47,6 +48,7 @@ wait_frames 12
 menu_select "Sort Descending"
 wait_frames 12
 
+validate status_text=Table sorted descending
 validate cell_content_0_0=30
 validate cell_content_1_0=20
 validate cell_content_2_0=5

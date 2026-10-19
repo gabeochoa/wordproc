@@ -61,6 +61,15 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         auto& doc = *cache_.doc;
         ToolbarComponent& toolbar = *cache_.toolbar;
 
+        // Confirmations to the transient status-bar flash, not a
+        // floating toast. Errors keep toast_notify::error.
+        auto flash = [&](const std::string& msg, double duration = 3.0) {
+            if (cache_.status) {
+                status::flash(*cache_.status, msg,
+                              afterhours::graphics::get_time(), duration);
+            }
+        };
+
         // Click shields are rebuilt every frame below (comment cards,
         // chip popup). Clear first so a stale rect never eats a click
         // after its owner stopped rendering (e.g. Focus mode).
@@ -939,7 +948,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_render_layer(CONTENT_LAYER))) {
                             std::string added = dialogs.spellCurrentWord;
                             cmd::spellAddToDictionary(doc, dialogs);
-                            toast_notify::success("Added to dictionary: " + added);
+                            flash("Added to dictionary: " + added);
                         }
                         if (button(ctx, mk(rightCol.ent(), 3),
                             ah_win95::win95DialogButtonStyle()
@@ -4505,7 +4514,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         int width = std::atoi(dialogs.tabWidthInputStr.c_str());
                         if (width >= 1 && width <= 16) {
                             doc.docSettings.tabWidth = width;
-                            toast_notify::success("Tab width set to " + std::to_string(width));
+                            flash("Tab width set to " + std::to_string(width));
                         } else {
                             toast_notify::error("Tab width must be 1-16");
                         }
@@ -4579,7 +4588,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         if (percentage >= 50 && percentage <= 200) {
                             float scale = static_cast<float>(percentage) / 100.0f;
                             Settings::get().set_ui_scale(scale);
-                            toast_notify::success("UI scale set to " + std::to_string(percentage) + "%");
+                            flash("UI scale set to " + std::to_string(percentage) + "%");
                         } else {
                             toast_notify::error("UI scale must be 50-200%");
                         }
@@ -4605,7 +4614,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_render_layer(CONTENT_LAYER))) {
                     Settings::get().set_ui_scale(1.0f);
                     dialogs.uiScaleInputStr = "100";
-                    toast_notify::success("UI scale reset to 100%");
+                    flash("UI scale reset to 100%");
                 }
             }
         }
@@ -4656,7 +4665,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_render_layer(CONTENT_LAYER))) {
                             // Jump to bookmark
                             if (docComp.buffer.goToBookmark(bookmark.name)) {
-                                toast_notify::success("Jumped to: " + bookmark.name);
+                                flash("Jumped to: " + bookmark.name);
                             } else {
                                 toast_notify::error("Bookmark not found");
                             }
@@ -4895,9 +4904,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 doc.buffer.setSelectionAnchor(findResult.start);
                                 doc.buffer.setCaret(findResult.end);
                                 doc.buffer.updateSelectionToCaret();
-                                toast_notify::info("Found", 2.0f);
+                                flash("Found", 2.0f);
                             } else {
-                                toast_notify::warning("Not found");
+                                flash("Not found");
                             }
                         }
                     }
@@ -4932,7 +4941,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                         doc.buffer.deleteSelection();
                                         doc.buffer.insertText(dialogs.replaceTerm);
                                         doc.isDirty = true;
-                                        toast_notify::success("Replaced");
+                                        flash("Replaced");
                                         
                                         // Find next occurrence
                                         FindResult findResult = doc.buffer.findNext(dialogs.lastSearchTerm, dialogs.findOptions);
@@ -4943,10 +4952,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                             doc.buffer.updateSelectionToCaret();
                                         }
                                     } else {
-                                        toast_notify::warning("Selection doesn't match search term");
+                                        flash("Selection doesn't match search term");
                                     }
                                 } else {
-                                    toast_notify::warning("No selection");
+                                    flash("No selection");
                                 }
                             }
                         }
@@ -5269,7 +5278,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             } else {
                                 cmd::restoreVersion(
                                     doc, version_history::readSnapshot(snap.path));
-                                toast_notify::success("Restored version: " + snap.label);
+                                flash("Restored version: " + snap.label);
                             }
                         }
                     }

@@ -47,13 +47,14 @@ inline void requestQuit(DocumentComponent& doc, DialogState& dialogs) {
 // lookup. In contexts without one (unit tests) it is a no-op.
 // Errors keep their toast_notify::error calls.
 // Mirrors the e2e_runner status_text lookup.
-inline void flashStatusConfirmation(const std::string& msg) {
+inline void flashStatusConfirmation(const std::string& msg,
+                                    double duration = 3.0) {
     auto entities = afterhours::EntityQuery({.force_merge = true})
                         .whereHasComponent<StatusComponent>()
                         .gen();
     if (entities.empty()) return;
     auto& status = entities[0].get().get<StatusComponent>();
-    status::flash(status, msg, afterhours::graphics::get_time());
+    status::flash(status, msg, afterhours::graphics::get_time(), duration);
 }
 
 // --- Revision tracking helpers (moved here as single source of truth) ---
@@ -131,7 +132,7 @@ inline bool rejectRevisionGroup(DocumentComponent& doc,
 inline void acceptAllRevisions(DocumentComponent& doc) {
     revisions::acceptAllRevisions(doc.buffer, doc.revisions);
     doc.trackChangesBaseline = doc.buffer.getText();
-    toast_notify::success("All changes accepted");
+    flashStatusConfirmation("All changes accepted");
 }
 
 inline void rejectAllRevisions(DocumentComponent& doc) {
@@ -142,7 +143,7 @@ inline void rejectAllRevisions(DocumentComponent& doc) {
     revisions::rejectAllRevisions(doc.buffer, doc.revisions);
     doc.trackChangesBaseline = doc.buffer.getText();
     doc.isDirty = true;
-    toast_notify::success("All changes rejected");
+    flashStatusConfirmation("All changes rejected");
 }
 
 // --- @ smart chips ---
@@ -382,7 +383,7 @@ inline bool openTemplateAsNew(DocumentComponent& doc, MenuComponent& menu,
     doc.filePath.clear();
     doc.isDirty = true;
     refreshMenuBar(menu, doc, "", false);
-    toast_notify::success("Template loaded: " + name);
+    flashStatusConfirmation("Template loaded: " + name);
     return true;
 }
 
@@ -455,7 +456,7 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
         doc.repeatRecord = ActionRecord{};
         syncSettingsToLayout(doc, layout);
         refreshMenuBar(menu, doc, path);
-        toast_notify::success(
+        flashStatusConfirmation(
             "Opened: " +
             std::filesystem::path(path).filename().string());
         return true;
@@ -601,7 +602,7 @@ inline bool sortTable(DocumentComponent& doc, bool ascending) {
     doc.tableUndo = DocumentComponent::TableUndoEntry{
         line, before, *table, doc.buffer.version()};
     doc.isDirty = true;
-    toast_notify::info(ascending ? "Table sorted ascending"
+    flashStatusConfirmation(ascending ? "Table sorted ascending"
                                  : "Table sorted descending");
     return true;
 }
@@ -678,7 +679,7 @@ inline void insertHyperlink(DocumentComponent& doc) {
     if (doc.buffer.hasSelection()) {
         if (doc.buffer.addHyperlink("https://example.com")) {
             doc.isDirty = true;
-            toast_notify::info("Hyperlink added (edit URL)");
+            flashStatusConfirmation("Hyperlink added (edit URL)");
         }
     } else {
         toast_notify::error("Select text first");
@@ -700,7 +701,7 @@ inline void insertImagePlaceholder(DocumentComponent& doc) {
     img.filename = "placeholder.png";
     doc.images.addImage(img);
     doc.isDirty = true;
-    toast_notify::info("Image placeholder inserted");
+    flashStatusConfirmation("Image placeholder inserted");
 }
 
 // --- Print Preview / Print (File menu, Ctrl+P) ---

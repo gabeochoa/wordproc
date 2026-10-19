@@ -392,10 +392,11 @@ static void app_init() {
         return;
     }
 
-    // Send deferred toast notification for auto-save recovery
-    // (must happen after toast systems are registered)
+    // Send deferred status-bar flash for auto-save recovery
+    // (must happen after the editor entity / StatusComponent exist)
     if (recoveredAutoSave) {
-        toast_notify::info("[recovered] Restored from auto-save", 5.0f);
+        ecs::cmd::flashStatusConfirmation("[recovered] Restored from auto-save",
+                                          5.0);
     }
 
     app_state::e2eActive = !app_state::testScriptPath.empty() || !app_state::testScriptDir.empty();
