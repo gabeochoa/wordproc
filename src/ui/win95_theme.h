@@ -54,7 +54,15 @@ inline afterhours::ui::Theme createWin95Theme() {
     // UI element colors
     theme.primary = win95_colors::TITLE_BAR;
     theme.secondary = win95_colors::BUTTON_FACE;
-    theme.accent = win95_colors::HIGHLIGHT;
+    // Accent is the only app-side knob for the text_input / text_area
+    // focused border: afterhours hardcodes it as
+    // Border::all(theme.accent, 2px) while focused (see feature request
+    // #17). Black is the closest Win95 reading — the real control is a
+    // dark sunken inset, not a coloured outline — and wordproc uses
+    // no upstream radio / switch / tab widget that would also read
+    // accent. Do not set it back to HIGHLIGHT: that is the navy ring
+    // the Batch 10 review flagged on every focused field.
+    theme.accent = win95_colors::TEXT;
     theme.error = win95_colors::ERROR_COLOR;
 
     // Keyboard focus indicator (WCAG 2.4.7)
@@ -66,6 +74,12 @@ inline afterhours::ui::Theme createWin95Theme() {
     theme.rounded_corners = std::bitset<4>();
     theme.roundness = 0.0f;
     theme.segments = 0;
+    // The library default is 8px, and it is NOT covered by rounded_corners
+    // / roundness: any widget that sets corner bits without its own
+    // radius (and the upstream tooltip, which reads this field directly)
+    // would still draw rounded. Zero it so square is the theme-wide
+    // default, not just the common case.
+    theme.corner_radius = 0.0f;
 
     return theme;
 }

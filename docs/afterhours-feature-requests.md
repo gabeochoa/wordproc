@@ -550,12 +550,42 @@ catch this. wordproc does not install the handler, so no workaround is
 needed — just do not call `afterhours::crash::install_handler()` until
 upstream reports through a non-aborting path (e.g. the `log_sink_fn`).
 
+## 17. Text-input focused border is not themeable
+
+**STILL OPEN (found in Batch 10 visual review, 2026-10-19)** — `text_input`
+(`src/plugins/ui/text_input/component.h`) and `text_area`
+(`text_input/text_area.h`) draw their focused border as a hardcoded
+`Border::all(ctx.theme.accent, pixels(2.0f))` on the field entity, with no
+per-widget or theme-level config for colour, thickness, style (solid /
+dotted / sunken), or corner radius. There is no way to say "Win95: dark
+sunken inset + dotted focus rect, square corners", and no way to turn the
+focused border off while keeping the `visual_focus_id` focus ring (feature
+request #5). Worse, the border reuses `theme.accent`, so an app that themes
+accent for radio / switch / tab widgets themes its text fields as a
+side effect, and vice versa.
+
+**Workaround (in place):** wordproc sets `theme.accent` to black in
+`src/ui/win95_theme.h` — the closest app-side override — and derives its
+menu/dialog theme from `createWin95Theme()` instead of a fresh `Theme`
+(the fresh default had `rounded_corners` all set, which is what made the
+border rounded). The border is still a 2px solid outline rather than the
+Win95 sunken inset + dotted rect; only an upstream config can fix that.
+
+**Desired API:**
+```cpp
+// Theme-level, e.g.
+theme.text_input_focus_border = Border::all(color, pixels(1.f));
+theme.text_input_focus_border_style = BorderStyle::Dotted;  // or Sunken
+// Or per-component
+.with_focus_border(Border::all(color, pixels(1.f)))
+```
+
 ## Priority
 
 Updated after the 2026-10-17 bump: 1, 4, 5, 9, 10, 14 and 15 are done; 6 is
 available (under a replaced API) but not adopted; 8 is resolved upstream but
 not adopted (needs eyes — see its new-gap note); 12 and 13 are partial; 2, 3,
-11 and 16 are untouched upstream.
+11, 16 and 17 are untouched upstream.
 
 
 | # | Feature | Impact | Effort | Notes |
@@ -576,6 +606,7 @@ not adopted (needs eyes — see its new-gap note); 12 and 13 are partial; 2, 3,
 | 7 | ~~Sans-serif font~~ | ~~Resolved~~ | — | Done |
 | 6 | Animation/motion | Minor — polish | High | Old API replaced by Track/Timeline at `d1d7f0e` |
 | 16 | Crash handler vs asserting log_error | Minor — latent | Low | Do not install handler until upstream fixes |
+| 17 | Text-input focused border not themeable | Major — visual | Low | Upstream needs a focus-border config; accent=black is the closest override |
 
 
 ## 2026-10-18 — Metal: graphics::run() ignores DisplayMode::Headless; capture_frame deadlocks mid-frame

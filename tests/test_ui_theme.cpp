@@ -26,6 +26,11 @@ TEST_CASE("Win95 theme colors", "[ui][theme]") {
     SECTION("corners are sharp") {
         REQUIRE(theme.roundness == 0.0f);
         REQUIRE(theme.rounded_corners.none());
+        // The library default is 8px and is NOT covered by
+        // rounded_corners / roundness: a widget that sets corner bits
+        // without its own radius would still draw rounded.
+        REQUIRE(theme.corner_radius.has_value());
+        REQUIRE(*theme.corner_radius == 0.0f);
     }
 }
 
@@ -48,6 +53,26 @@ TEST_CASE("Win95 theme has a visible keyboard focus ring", "[ui][theme][focus]")
     REQUIRE(same(theme.focus, ui_imm::WIN95_FOCUS_RING_COLOR));
     REQUIRE_FALSE(same(theme.focus, theme.font));
     REQUIRE_FALSE(same(theme.focus, theme.background));
+}
+
+// Feature request #17: afterhours hardcodes the text_input / text_area
+// focused border as Border::all(theme.accent, 2px) with no per-widget or
+// theme-level config for it. Accent is therefore the only app-side knob,
+// and it must be black (dark), not the navy HIGHLIGHT: the navy 2px
+// outline is the "blue rounded outline" the Batch 10 review flagged on
+// every focused field. The menu/dialog theme must derive from this
+// theme (MenuUISystem) rather than a fresh Theme, whose library-default
+// rounded_corners (all set) made the border rounded even with accent
+// fixed. Pin both here so a later theme edit cannot silently regress it.
+TEST_CASE("Win95 theme text-input focus border is dark and square",
+          "[ui][theme][focus]") {
+    const auto theme = createWin95Theme();
+
+    REQUIRE(same(theme.accent, c::TEXT));
+    REQUIRE_FALSE(same(theme.accent, c::HIGHLIGHT));
+    REQUIRE(theme.rounded_corners.none());
+    REQUIRE(theme.corner_radius.has_value());
+    REQUIRE(*theme.corner_radius == 0.0f);
 }
 
 // Feature request #10: popups cast a hard 2px shadow (afterhours ShadowStyle::

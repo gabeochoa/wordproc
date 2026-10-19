@@ -145,8 +145,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // Save the global theme so we can restore it after menu rendering
         Theme savedTheme = ctx.theme;
         
-        // Set up Win95 menu theme (only for this system's components)
-        Theme menuTheme;
+        // Set up Win95 menu theme (only for this system's components).
+        // Derive it from the app theme, NOT a fresh Theme: a fresh
+        // Theme re-introduces the library defaults (rounded_corners
+        // all set, 8px corner radius, light-blue 3px focus ring at 4px
+        // offset), and every dialog built in this system — Find,
+        // Replace, Help, Settings, all of them — rendered under those
+        // defaults. That is where the Batch 10 "blue rounded outline"
+        // on focused text fields came from: text_input draws its
+        // focused border from theme.accent, and the fresh theme's
+        // rounded corners made it rounded. The menu overrides below
+        // are the menu's own colours; accent is deliberately NOT
+        // overridden, so the dialogs keep the Win95 accent.
+        Theme menuTheme = ui_imm::createWin95Theme();
         menuTheme.font = toAhColor(theme::MENU_TEXT_HOVER);
         menuTheme.darkfont = toAhColor(theme::MENU_TEXT);
         menuTheme.font_muted = toAhColor(theme::MENU_DISABLED);
@@ -154,9 +165,6 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         menuTheme.surface = toAhColor(theme::MENU_BG);
         menuTheme.primary = toAhColor(theme::MENU_HOVER);
         menuTheme.secondary = toAhColor(theme::MENU_BG);
-        menuTheme.accent = toAhColor(theme::MENU_HOVER);
-        menuTheme.roundness = 0.0f;
-        menuTheme.segments = 0;
         ctx.theme = menuTheme;
 
         float screenWidth = static_cast<float>(layout.screenWidth);
