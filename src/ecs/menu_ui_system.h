@@ -113,6 +113,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     item.mark = layout.showOutline ? win95::MenuMark::Checkmark
                                                    : win95::MenuMark::None;
                 }
+                if (item.label == "Standard Toolbar") {
+                    item.mark = layout.showStandardToolbar ? win95::MenuMark::Checkmark
+                                                           : win95::MenuMark::None;
+                }
+                if (item.label == "Formatting Toolbar") {
+                    item.mark = layout.showFormattingToolbar ? win95::MenuMark::Checkmark
+                                                             : win95::MenuMark::None;
+                }
             }
         }
         

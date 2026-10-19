@@ -95,14 +95,22 @@ inline void updateLayout(LayoutComponent& layout, int w, int h) {
         layout.focusMode ? 0.0f : theme::layout::scale(layout.titleBarHeight);
     float menuHeight =
         layout.focusMode ? 0.0f : theme::layout::scale(layout.menuBarHeight);
+    // Hidden toolbars reclaim their height (View > Standard /
+    // Formatting Toolbar). In Print Preview the single preview bar
+    // replaces BOTH toolbars, so it still counts one row
+    // regardless of the flags.
     float toolbarHeight =
-        layout.focusMode ? 0.0f : theme::layout::scale(layout.toolbarHeight);
+        (layout.focusMode ||
+         (!layout.previewMode && !layout.showStandardToolbar))
+            ? 0.0f
+            : theme::layout::scale(layout.toolbarHeight);
     // Print Preview shows ONE compact toolbar row: the Formatting
     // toolbar is gone in preview, and the ruler is hidden in preview
     // (Word shows a ruler in preview only via its toggle; default
     // off), so both heights are reclaimed by the text area.
     float formattingBarHeight =
-        (layout.focusMode || layout.previewMode)
+        (layout.focusMode || layout.previewMode ||
+         !layout.showFormattingToolbar)
             ? 0.0f
             : theme::layout::scale(layout.formattingBarHeight);
     float rulerHeight = (layout.focusMode || !layout.showRuler ||

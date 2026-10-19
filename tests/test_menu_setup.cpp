@@ -335,7 +335,8 @@ TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
         REQUIRE(item.label != "Preferences...");
     }
 
-    // View: UI Scale... is the last item, after Outline.
+    // View: UI Scale... is the last item, after Outline and the
+    // two toolbar toggles (Standard / Formatting Toolbar, checkable).
     REQUIRE(!view->items.empty());
     REQUIRE(view->items.back().label == "UI Scale...");
     std::size_t outline = view->items.size();
@@ -344,8 +345,11 @@ TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
     }
     REQUIRE(outline < view->items.size());
     REQUIRE(view->items.back().label == "UI Scale...");
-    REQUIRE(outline + 2 == view->items.size() - 1);  // sep between
+    REQUIRE(outline + 5 == view->items.size() - 1);
     REQUIRE(view->items[outline + 1].isSeparator);
+    REQUIRE(view->items[outline + 2].label == "Standard Toolbar");
+    REQUIRE(view->items[outline + 3].label == "Formatting Toolbar");
+    REQUIRE(view->items[outline + 4].isSeparator);
 }
 
 TEST_CASE("Window menu sits between Table and Help", "[menu]") {

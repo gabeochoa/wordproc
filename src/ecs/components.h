@@ -473,6 +473,11 @@ struct LayoutComponent : public afterhours::BaseComponent {
     // Print Preview.
     bool showParagraphMarks = false;
     bool showRuler = true;  // View > Ruler; hidden reclaims rulerHeight
+    // View > Standard Toolbar / Formatting Toolbar (both start
+    // shown); hidden bars reclaim their height in updateLayout,
+    // and ToolbarRenderSystem skips drawing them.
+    bool showStandardToolbar = true;
+    bool showFormattingToolbar = true;
     bool splitViewEnabled = false;
     bool splitViewHorizontal = true;
 

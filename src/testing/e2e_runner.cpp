@@ -721,6 +721,15 @@ static void setupCallbacksEx(
                 static_cast<int>(std::lround(layoutComp.textArea.width)));
         if (prop == "text_area_y")
             return std::to_string(static_cast<int>(layoutComp.textArea.y));
+        if (prop == "text_area_height")
+            return std::to_string(
+                static_cast<int>(std::lround(layoutComp.textArea.height)));
+        // View > Toolbars toggles: the layout flags (the render pass
+        // skips the bar when its flag is off).
+        if (prop == "standard_toolbar_visible")
+            return layoutComp.showStandardToolbar ? "true" : "false";
+        if (prop == "formatting_toolbar_visible")
+            return layoutComp.showFormattingToolbar ? "true" : "false";
         if (prop == "first_line_indent")
             return std::to_string(buffer.currentFirstLineIndent());
         if (prop == "right_indent")
@@ -1265,6 +1274,8 @@ static void setupCallbacksEx(
         layoutComp.zoomLevel = 1.0f;
         layoutComp.focusMode = false;
         layoutComp.showRuler = true;
+        layoutComp.showStandardToolbar = true;
+        layoutComp.showFormattingToolbar = true;
         layoutComp.pageMode = PageMode::Pageless;
         // Page Setup state must not leak: a landscape test would
         // otherwise leave the next test's page landscape (the

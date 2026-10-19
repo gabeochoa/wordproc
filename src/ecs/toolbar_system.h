@@ -159,12 +159,29 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         if (layout.focusMode) {
             return;
         }
-        
+
+        // A hidden bar's dropdowns close with it: the list would
+        // otherwise reappear from stale open state when re-shown.
+        if (!layout.showStandardToolbar) {
+            toolbar.zoomDropdownOpen = false;
+        }
+        if (!layout.showFormattingToolbar) {
+            toolbar.styleDropdownOpen = false;
+            toolbar.fontDropdownOpen = false;
+            toolbar.fontSizeDropdownOpen = false;
+            toolbar.outlineShowLevelDropdownOpen = false;
+        }
+
         float screenWidth = static_cast<float>(layout.screenWidth);
-        
-        // Calculate toolbar positions
+
+        // Calculate toolbar positions. The Formatting bar sits
+        // directly under the Standard bar when shown, else directly
+        // under the menu bar (updateLayout reclaims the same height
+        // from the text area, so the two stay in sync).
         float toolbarY = theme::layout::scale(theme::layout::TITLE_BAR_HEIGHT + theme::layout::MENU_BAR_HEIGHT);
-        float formattingBarY = toolbarY + theme::layout::scale(theme::layout::TOOLBAR_HEIGHT);
+        float formattingBarY = toolbarY + (layout.showStandardToolbar
+            ? theme::layout::scale(theme::layout::TOOLBAR_HEIGHT)
+            : 0.0f);
         float toolbarHeight = theme::layout::scale(theme::layout::TOOLBAR_HEIGHT);
         float formattingBarHeight = theme::layout::scale(theme::layout::FORMATTING_BAR_HEIGHT);
         
@@ -394,31 +411,17 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             return;
         }
 
-        // === Standard Toolbar Background ===
-        div(ctx, mk(uiRoot, 1000),
-            ComponentConfig{}
-                .with_size(ComponentSize{pixels(screenWidth), pixels(toolbarHeight)})
-                .with_absolute_position()
-                .with_translate(0, toolbarY)
-                .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
-                .with_bevel(afterhours::ui::BevelStyle::Raised,
-                            ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
-                .with_roundness(0.0f)
-                .with_debug_name("std_toolbar"));
-        
-        // Track X position for horizontal button layout
-        float curX = buttonPadding;
-        float btnY = toolbarY + buttonPadding;
-        int btnId = 1100; // ID range for standard toolbar buttons
-        
-        // Tooltip helper: track which button is hovered and for how long
-        // We'll draw tooltips at the end after all buttons
+        // Tooltip records (declared here: the Draw Tooltips pass
+        // below reads them even when the Standard bar is hidden).
         struct TooltipInfo { float x; float y; std::string text; };
         std::vector<TooltipInfo> tooltips;
-        
+
         // A menu is open: the menu is modal. No toolbar hover, bevel, or
         // tooltip until it closes (clicks are already gated by the
         // menu_dropdown input gate on render_layer).
+        // (Declared here: the Outlining/Formatting bars below, and
+        // the Draw Tooltips pass, use these even when the Standard
+        // bar is hidden.)
         bool menuOpen = false;
         if (cache_.menu) {
             for (const auto& m : cache_.menu->menus) {
@@ -439,7 +442,37 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 tooltips.push_back({bx, by + buttonSize + 2.0f, tip});
             }
         };
+
+        // Zoom button geometry: assigned inside the Standard bar
+        // block; the close-dropdowns pass below reads it, so it
+        // lives here (zeroed when the bar is hidden).
+        float zoomBtnX = 0.0f;
+        float zoomBtnY = 0.0f;
+        float zoomBtnW = 0.0f;
+
+        // === Standard Toolbar Background ===
+        if (layout.showStandardToolbar) {
+        div(ctx, mk(uiRoot, 1000),
+            ComponentConfig{}
+                .with_size(ComponentSize{pixels(screenWidth), pixels(toolbarHeight)})
+                .with_absolute_position()
+                .with_translate(0, toolbarY)
+                .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                .with_bevel(afterhours::ui::BevelStyle::Raised,
+                            ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                .with_roundness(0.0f)
+                .with_debug_name("std_toolbar"));
         
+        // Track X position for horizontal button layout
+        float curX = buttonPadding;
+        float btnY = toolbarY + buttonPadding;
+        int btnId = 1100; // ID range for standard toolbar buttons
+        
+        // Tooltip helper: track which button is hovered and for how long
+        // We'll draw tooltips at the end after all buttons.
+        // (tooltips / isMouseOver / trackTooltip are declared above
+        // the Standard bar gate.)
+
         // === File Operations ===
         int newBtnId = btnId++;
         if (button(ctx, mk(uiRoot, newBtnId),
@@ -589,9 +622,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Zoom control immediately after the last Standard group
         // (¶), NOT pinned to the window's right edge: dropdown
         // showing the current zoom %, wired to zoomLevel.
-        float zoomBtnW = theme::layout::scale(76);
-        float zoomBtnX = curX;
-        float zoomBtnY = btnY;
+        zoomBtnW = theme::layout::scale(76);
+        zoomBtnX = curX;
+        zoomBtnY = btnY;
         curX += zoomBtnW + buttonPadding;
         std::string zoomLabel =
             std::to_string(static_cast<int>(std::lround(
@@ -696,6 +729,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         trackTooltip(curX, btnY, "Insert Table");
         curX += buttonSize + buttonPadding;
+        }  // if (layout.showStandardToolbar)
 
         // === Outlining Toolbar (replaces the Formatting toolbar) ===
         // In Outline mode the Formatting toolbar's controls (style /
@@ -707,7 +741,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Formatting toolbar is not rendered in Outline mode (the
         // else below), and its dropdowns are closed when this bar
         // draws, so no formatting dropdown can leak into Outline.
-        if (layout.showOutline) {
+        // The Outlining bar occupies the Formatting slot, so hiding
+        // the Formatting toolbar hides it too.
+        if (layout.showOutline && layout.showFormattingToolbar) {
             toolbar.styleDropdownOpen = false;
             toolbar.fontDropdownOpen = false;
             toolbar.fontSizeDropdownOpen = false;
@@ -900,7 +936,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
 
         // === Formatting Toolbar Background ===
-        if (!layout.showOutline) {
+        if (!layout.showOutline && layout.showFormattingToolbar) {
         div(ctx, mk(uiRoot, 2000),
             ComponentConfig{}
                 .with_size(ComponentSize{pixels(screenWidth), pixels(formattingBarHeight)})
@@ -1241,6 +1277,9 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                 if (toolbar.fontSizeDropdownOpen && mx >= fsdx && mx <= fsdx + fsdw) insideDropdown = true;
             }
             // Standard toolbar Zoom dropdown button + list (right end).
+            // zoomBtnX/Y/W are declared above the Standard bar gate
+            // (zeroed when the bar is hidden, where the Zoom dropdown
+            // is forced closed).
             if (toolbar.zoomDropdownOpen) {
                 if (mx >= zoomBtnX && mx <= zoomBtnX + zoomBtnW &&
                     my >= zoomBtnY && my <= zoomBtnY + theme::layout::scale(22)) {

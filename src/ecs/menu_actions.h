@@ -344,7 +344,25 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                                                          : "Outline off",
                                       afterhours::graphics::get_time());
                     break;
-                case 20:  // UI Scale... (moved from Tools)
+                case 20:  // Standard Toolbar
+                    layout.showStandardToolbar = !layout.showStandardToolbar;
+                    layout::updateLayout(layout, layout.screenWidth,
+                                         layout.screenHeight);
+                    menu.menus[2].items[20].mark =
+                        layout.showStandardToolbar ? win95::MenuMark::Checkmark
+                                                   : win95::MenuMark::None;
+                    toast_notify::info(layout.showStandardToolbar ? "Standard Toolbar: On" : "Standard Toolbar: Off");
+                    break;
+                case 21:  // Formatting Toolbar
+                    layout.showFormattingToolbar = !layout.showFormattingToolbar;
+                    layout::updateLayout(layout, layout.screenWidth,
+                                         layout.screenHeight);
+                    menu.menus[2].items[21].mark =
+                        layout.showFormattingToolbar ? win95::MenuMark::Checkmark
+                                                     : win95::MenuMark::None;
+                    toast_notify::info(layout.showFormattingToolbar ? "Formatting Toolbar: On" : "Formatting Toolbar: Off");
+                    break;
+                case 23:  // UI Scale... (moved from Tools)
                     dialogs.showSettingsDialog = true;
                     {
                         int currentPercentage = static_cast<int>(Settings::get().get_ui_scale() * 100.0f);

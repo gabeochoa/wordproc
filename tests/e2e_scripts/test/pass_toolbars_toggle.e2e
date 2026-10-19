@@ -1,0 +1,68 @@
+# Test: View > Standard Toolbar / Formatting Toolbar toggles
+# Both start checked. Hiding reclaims layout height: the text area
+# moves up and grows (1280x720, ui_scale 1.2: baseline y=153 h=539, one bar = 33.6px).
+# The Formatting bar hides first (ruler lands directly under the
+# Standard bar), then the Standard bar, then both come back.
+# The two typed lines stay visible throughout (expect_text);
+# text_area_height growing is the extra visible-text room.
+
+type "Line one"
+key ENTER
+type "Line two"
+wait_frames 12
+
+validate standard_toolbar_visible=true
+validate formatting_toolbar_visible=true
+validate menu_item_checked_Standard Toolbar=true
+validate menu_item_checked_Formatting Toolbar=true
+validate text_area_y=153
+validate text_area_height=539
+expect_text "Line one"
+expect_text "Line two"
+
+# Hide the Formatting toolbar only.
+menu_open View
+wait_frames 12
+menu_select "Formatting Toolbar"
+wait_frames 12
+
+validate formatting_toolbar_visible=false
+validate standard_toolbar_visible=true
+validate menu_item_checked_Formatting Toolbar=false
+validate menu_item_checked_Standard Toolbar=true
+validate text_area_y=120
+validate text_area_height=572
+expect_text "Line one"
+expect_text "Line two"
+
+# Hide the Standard toolbar too (Formatting still hidden).
+menu_open View
+wait_frames 12
+menu_select "Standard Toolbar"
+wait_frames 12
+
+validate standard_toolbar_visible=false
+validate formatting_toolbar_visible=false
+validate menu_item_checked_Standard Toolbar=false
+validate text_area_y=86
+validate text_area_height=606
+
+screenshot toolbars_hidden
+
+# Restore both, one at a time.
+menu_open View
+wait_frames 12
+menu_select "Standard Toolbar"
+wait_frames 12
+validate standard_toolbar_visible=true
+validate text_area_y=120
+validate text_area_height=572
+
+menu_open View
+wait_frames 12
+menu_select "Formatting Toolbar"
+wait_frames 12
+validate formatting_toolbar_visible=true
+validate menu_item_checked_Formatting Toolbar=true
+validate text_area_y=153
+validate text_area_height=539
