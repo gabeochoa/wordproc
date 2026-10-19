@@ -379,6 +379,32 @@ static void setupCallbacksEx(
             return std::to_string(ctx.highlightStart) + ":" +
                    std::to_string(ctx.highlightLength);
         }
+        // visual_focus — debug name of the widget the afterhours
+        // focus ring is drawn on this frame ("none" when no widget
+        // holds visual focus). The ring is the framed look on a
+        // menu header: File reads "menu_header_File" while every
+        // other header reads flat. A menu that is actually open, or
+        // a hover, does not use this (open/highlight is menu state,
+        // not focus) — this pins only the stray ring with no menu
+        // open and no hover intended.
+        if (prop == "visual_focus") {
+            auto* uiCtx = afterhours::EntityHelper::get_singleton_cmp<
+                afterhours::ui::UIContext<InputAction>>();
+            if (!uiCtx) return "none";
+            if (uiCtx->visual_focus_id == uiCtx->ROOT ||
+                uiCtx->visual_focus_id == uiCtx->FAKE) {
+                return "none";
+            }
+            auto opt = afterhours::ui::UICollectionHolder::getEntityForID(
+                uiCtx->visual_focus_id);
+            if (!opt.has_value()) return "none";
+            auto& ent = opt.asE();
+            if (ent.has<afterhours::ui::UIComponentDebug>()) {
+                return ent.get<afterhours::ui::UIComponentDebug>()
+                    .name_value;
+            }
+            return "none";
+        }
 
         // Dialog properties
         if (prop == "dialog_open") {

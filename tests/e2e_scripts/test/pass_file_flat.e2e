@@ -1,0 +1,64 @@
+# Test: the File menu header stays FLAT (no framed/focus
+# rectangle) with no menu open and no hover intended.
+#
+# Cause (fix round 3): the framed look is the afterhours focus
+# ring, not hover and not an open menu. Any mouse click sets
+# has_interacted, and afterhours' try_to_grab then re-grabs the
+# first focusable widget — the File header — whenever UI focus
+# sits on ROOT, including after a plain click in the document,
+# after a menu action that cleared focus to ROOT, and after a
+# toolbar dropdown item (a dying widget) cleared focus to ROOT.
+# Clearing to FAKE instead (the afterhours "no widget" sentinel,
+# which try_to_grab skips) and parking focus on FAKE whenever no
+# menu/dialog is open keeps the ring off. (a) is ruled out:
+# mouse_move alone never produced the ring, and moving the mouse
+# into the document did not remove it; (b)+(c) are the cause.
+# Real hover/open states are menu state, not focus, and are
+# unchanged (see pass_menu_hover_interaction / pass_file_menu_dropdown).
+#
+# RED on pre-fix bytes: visual_focus reads menu_header_File after
+# each step below.
+
+type "Hello"
+wait_frames 12
+
+# A plain click in the document must not leave a ring on File.
+mouse_down 400 300
+wait_frames 2
+mouse_up
+wait_frames 12
+validate menu_open=false
+validate visual_focus=none
+
+# A menu action (File > Print Preview) must not leave a ring.
+menu_open File
+wait_frames 12
+menu_select "Print Preview"
+wait_frames 12
+validate preview_mode=true
+validate menu_open=false
+validate visual_focus=none
+
+click_ui btn_preview_close
+wait_frames 12
+validate preview_mode=false
+validate visual_focus=none
+
+# A toolbar dropdown choice (a dying widget) must not leave a ring.
+click_ui dropdown_zoom
+wait_frames 12
+click_ui zoom_item_150
+wait_frames 12
+validate zoom_level=150
+validate visual_focus=none
+
+# And the fix must not swallow the NEXT click: parking focus on
+# FAKE during a click frame froze active_id and ate the following
+# click, so a Bold click after the dropdown choice must land.
+select_all
+wait_frames 12
+click_ui btn_bold
+wait_frames 12
+validate bold=true
+validate zoom_level=150
+validate visual_focus=none

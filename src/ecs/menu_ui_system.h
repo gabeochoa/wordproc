@@ -13,6 +13,7 @@
 
 #include "components.h"
 #include "editor_entity_cache.h"
+#include "scrollbar_system.h"  // anyModalDialogOpen for the no-UI focus guard
 #include "menu_actions.h"
 #include "../input_mapping.h"  // For InputAction enum
 #include "../ui/ah_win95_widgets.h"
@@ -2410,8 +2411,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 // its EntityID can be recycled to the File header,
                 // painting a pressed-looking focus border on File
                 // with no menu open (seen in Print Preview
-                // screenshots). Focus returns to the document
-                // (ROOT) instead; dialogs grab their own focus.
+                // screenshots). Clearing to ROOT alone does not
+                // hold — HandleTabbing's try_to_grab re-grabs the
+                // File header from ROOT on the next frame — but
+                // this dispatch runs on a click frame, where FAKE
+                // is poisonous (see the guard below), so it stays
+                // ROOT and the idle guard parks FAKE right after.
+                // Dialogs grab their own focus.
                 ctx.set_focus(ctx.ROOT);
             }
         }
@@ -2420,6 +2426,51 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (input::isKeyPressed(afterhours::keys::F1)) {
             dialogs.showHelpWindow = !dialogs.showHelpWindow;
             dialogs.helpScrollOffset = 0;
+        }
+
+        // No menu and no modal dialog is open, so no UI widget
+        // should hold focus: focus is in the document. Park it on
+        // FAKE, the afterhours "no widget" sentinel, on idle
+        // frames only (mouse up, no press/release edge). Clearing
+        // to ROOT does not hold — HandleTabbing's try_to_grab
+        // re-grabs the first focusable widget, the File header,
+        // from ROOT on the next frame, and with has_interacted
+        // set by any click the focus ring is painted on File with
+        // no menu open and no hover intended (the framed look in
+        // headless screenshots). FAKE is skipped by try_to_grab
+        // and draws no ring. FAKE must ONLY be set here, on an
+        // idle frame: on a click frame it is poisonous.
+        // EndUIContextManager early-returns when focus is FAKE
+        // and skips resetting active_id to ROOT on the release
+        // frame, so active_id stays stuck on the dismissed widget
+        // and ResolveHitTarget hot-locks every later click to that
+        // dead widget (a preview Close followed by a toolbar
+        // dropdown click never landed). Click-frame clears (menu
+        // dispatch, preview Close, dropdown items) stay ROOT for
+        // exactly that reason; this guard parks FAKE on the next
+        // idle frame, before any screenshot or steady-state
+        // render. This also covers the two menu-close paths that
+        // never cleared focus at all — Esc closing a menu, and a
+        // click outside a menu closing it: both leave no menu or
+        // dialog open, so the guard parks focus here. It skips
+        // while a menu or dialog is open, so menu/dialog keyboard
+        // focus keeps working. Hover/open highlight is menu
+        // state, untouched by this.
+        {
+            bool anyMenuStillOpen = false;
+            for (const auto& m : menu.menus) {
+                if (m.open) {
+                    anyMenuStillOpen = true;
+                    break;
+                }
+            }
+            if (!anyMenuStillOpen &&
+                !ScrollbarSystem::anyModalDialogOpen(dialogs) &&
+                !dialogs.showQuitPrompt &&
+                !ctx.mouse.just_pressed && !ctx.mouse.just_released &&
+                !ctx.mouse.left_down) {
+                ctx.set_focus(ctx.FAKE);
+            }
         }
 
         // Restore the global theme so subsequent systems (toolbar, etc.) use the correct theme
