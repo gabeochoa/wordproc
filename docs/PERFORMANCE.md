@@ -633,6 +633,218 @@ the least noisy signal for the small fixes.
   lane's red-check: had to `rm` the test object to force a rebuild.)
   App objects do track headers.
 
+## Perf Round 4 — 2026-10-19 (headless, distributions)
+
+Base: `0095fe6` plus nothing (Round 4 starts from a clean tree).
+Machine: Apple M1 Pro, macOS 27.0.1, load average ~80 during the
+lane (other lanes active), so cross-process wall times are noisy —
+the in-app timers and the in-process sampler below are the signal,
+not wall medians. No behavior change ships in this round: every
+suspect measured at or near floor, and the two real costs found
+(one-time menu/tooltip warm-up, pathological-doc squiggle measure)
+are cheaper to leave than to fix. What does ship is the sampler
+(commit 1), a tooltip-test coordinate fix (commit 2), and this
+section (commit 3).
+
+### Method: the frame-time sampler
+
+Wall-time differentials between processes are unusable on a loaded
+box: 60-frame bucket differentials went NEGATIVE (spawn/scheduling
+jitter swamps sub-ms frame costs). New in `src/main.cpp`,
+headless only, off by default:
+
+- `--frame-time-log`: times each `app_frame()` with `steady_clock`
+  in the headless loop, skips the first 5 warmup frames, and at
+  exit prints `n / mean / p50 / p95 / p99 / max` plus the 5
+  slowest frames with their loop indices (so a spike can be
+  attributed to the script step on that frame).
+- `WORDPROC_FRAME_TIMES=1`: logs every frame's ms, for exact
+  single-frame reads (e.g. the first frame after `menu_open`).
+- New `SCOPED_TIMER`s: `graphics::init`, `Frame loop`,
+  `Cleanup + shutdown`, `E2E runner init + tail`.
+
+Caveat: the sampler's `max` includes a finish-frame artifact —
+on script finish, `printResults` + `Settings::write_save_file`
+run inside the last `app_frame`; on `--frame-limit` runs the FPS
+summary prints in the last frame. Treat `p95`/`p99` as the jank
+figures and `max` as an upper bound with that caveat. All
+distributions below are medians across runs unless stated.
+
+### (1) Cold open — breakdown, no fix
+
+Final-binary cold open, trivial script (screenshot + `wait_frames 1`),
+medians of 5:
+
+| Open | Wall | `Startup` |
+|---|---|---|
+| No file | 100.0 ms (83–114) | 41 ms (35–47) |
+| War and Peace | 155.9 ms (149–178) | 41 ms (38–45) |
+
+Same ballpark as the prior round's 130/133 ms wall; the difference
+is box load, not code (no behavior change this round). Breakdown
+(medians, no-file; War in parentheses where different):
+
+| Piece | Median |
+|---|---|
+| `graphics::init` (Metal device + sokol_gfx + fontstash atlas + offscreen texture) | 30.4 ms (War 33.6) |
+| Frame loop (screenshot PNG ≈ 25 ms + ~2 frames) | 34.3 ms (War 78.0, incl. ~45 ms script-mode registration) |
+| `Settings load` | 2.9 ms (War 3.2; min 2.3 — the rest is scheduler noise) |
+| `Load fonts` (Gaegu ~1.5, Garamond ~0.4, Roboto ~0.2) | 2.2 ms (War 2.1) |
+| `Preload and singletons` | 2.4 ms |
+| `Cleanup + shutdown` | 3.9 ms (War 2.2) |
+| `Entity + component setup` (incl. dictionary constructor) | 0.5 ms |
+| `createMenuBar` / `Register all systems` / `E2E runner init + tail` | ~0 / ~0 / 0.1 ms |
+| `Background document preload` (War; `setText` ~3 + I/O ~1) | 5.9 ms, overlapped; `Collect` 0.0 ms |
+| Spawn / dyld / exit residual (wall − Startup − Frame loop − Cleanup) | ~15 ms; benchmark-mode in-process time is 0.004 ms, so the floor is spawn + scheduling, not app code |
+
+Candidates evaluated, all left alone:
+
+- `AFTER_HOURS_ENABLE_E2E_TESTING` IS compiled in
+  (`build.zig` `-D` flag — the brief's "compiled in always" is
+  correct, my first grep missed it via a literal-mode search).
+  Cost ≈ 0: E2E systems register only when the runner has
+  commands (`main.cpp`), so production frames pay only a branch
+  per input call. Cannot gate it out — E2E needs it.
+- Template / dictionary / spell init at startup: none exists.
+  Templates load on demand; the dictionary constructor runs
+  inside the 0.5 ms entity setup; spell check is windowed per
+  frame. Nothing to defer.
+- Fonts: `FontLoader::loadStartupFonts` is 0.0 ms (bookkeeping
+  only). Gaegu (default document font, ~1.5 ms) cannot be
+  deferred — the first frame needs the default face. Garamond
+  0.4 ms stays, per the prior round's decision.
+- Validation registration: already test-gated (registered only
+  when `!testModeEnabled`). Nothing to change.
+- `graphics::init` (~30 ms) is vendored Metal setup, required
+  for the first frame. At floor; not app-side.
+- Test-only overhead inside the wall number: the startup
+  screenshot + the script's screenshot + `DocumentTextRegistration`
+  (~45 ms on War). Production first-open is ~50–70 ms below
+  the test-mode wall.
+
+Conclusion: no app-side cold-open fix with a measurable win —
+the wall is infra + harness + scheduler noise.
+
+### (2) Scroll smoothness — no spike on War and Peace
+
+Sampler, War and Peace, `--fps-test` (3 lines/frame), 300 frames,
+medians of 5 runs:
+
+| Run | Mean | p50 | p95 | p99 | Max |
+|---|---|---|---|---|---|
+| Pageless, production frames | 0.44 | 0.44 | 0.77 | 1.21 | 1.38 |
+| Paged, script-mode | 5.16 | 5.11 | 5.73 | 6.16 | 6.65 |
+| Pageless, script-mode control | 5.23 | 5.18 | 5.67 | 6.17 | 6.42 |
+
+Paged ≈ pageless in script mode (both dominated by the ~5 ms
+test-only registration) — no paged penalty. A final-binary
+single run gave mean 0.48 / p50 0.46 / p95 0.93 / p99 1.26 /
+max 3.49 (max includes the finish-frame artifact). Interleaved
+idle/scroll pairs both drifted upward with wall-clock time, so
+no idle-vs-scroll delta is claimed.
+
+Suspects, all hunted:
+
+- Squiggle recheck bursts on page jump — DEAD. Five `PAGEDOWN`
+  jumps (script-mode): p50 5.59 / p95 5.85, within 0.2 ms of
+  the script-mode steady control — no spike. Fix 3's
+  incremental rows already hold.
+- Status-bar string formatting — DEAD. `StatusBarSystem`
+  0.01 ms mean in the profiling build (War scroll and
+  misspelled runs alike) — the per-frame `std::format` +
+  `localtime`/`strftime` is ~10 µs. Caching the left/right
+  strings would save ~nothing. Left alone.
+- Layout / UI tree rebuild — DEAD. `LayoutUpdateSystem`
+  0.00 ms; the whole production frame is 0.44 ms, so the imm
+  UI rebuild is inside that. Retaining UI across frames means
+  retained entities in vendored code — rejected in prior
+  rounds for the same reason. Left alone.
+- Squiggle RENDER on all-misspelled docs — REAL but
+  pathological, steady (not a spike), and inside budget.
+  Synthetic doc (5,000 lines, every word flagged):
+  idle mean 4.68 / scroll mean 4.98 vs War 0.44. Profiling:
+  `EditorRenderSystem` 4.22 ms of the ~4.8 ms total.
+  Attribution via a temporary env-gated probe (removed):
+  full squiggles 4.55 ms mean; skipping only the
+  `draw_line` calls 4.39 ms (draw ≈ 0.16 ms); skipping
+  measures + draw 0.80 ms (measure ≈ 3.6 ms). So the cost
+  is the 2× uncached fontstash prefix `measure_text` per
+  squiggle, not the wavy-line drawing. Left alone: it bites
+  only docs where nearly every word is flagged, the total
+  is still 3.5× inside the 16.7 ms budget, and the fix
+  (segmented/incremental measurement, or a squiggle-position
+  cache) is approximate or needs the invalidation key Round 2
+  rejected (zoom, resize, columns, indents). The attribution
+  is now precise for a future round.
+
+### (3) Menu / tooltip latency
+
+Per-frame log (`WORDPROC_FRAME_TIMES=1`), War and Peace,
+script-mode (steady frame ≈ 5.4 ms, of which ~5 ms is
+test-only registration):
+
+- Format menu, first open: steady frames ~5.4; open frame
+  (#23, three runs) 7.41 / 7.33 / 7.45 → **+2.0 ms over
+  steady**; next frame 5.7–6.0 (settling); steady-open p50
+  5.75 vs closed 5.42 → +0.33 ms steady, matching prior
+  rounds. Production-equivalent open frame ≈ 2.4 ms absolute.
+- Scaling: Help (small menu) open frame +1.4 ms — the bulk
+  is a fixed one-time warm-up; Format adds only +0.6 ms for
+  ~30 extra items (~20 µs/item).
+- Reopen: a second Format open (after `ESCAPE`) shows NO
+  spike (≈ steady) — the cost is one-time (measure-cache
+  fill + glyph rasterization + first dropdown build), not
+  per-open.
+- Decision: no fix. At the ≤ ~2 ms-over-steady target, and
+  2.4 ms absolute is 7× inside the frame budget. Startup
+  warm-up of menu labels would tax cold open (owner
+  priority #1) to save a one-time 2 ms frame; retained
+  dropdown UI is vendored retained UI (rejected). The
+  ">2× steady" reading is not the binding one: against a
+  0.44 ms production steady frame, any absolute +2 ms
+  spike is >2× — the absolute budget is what matters.
+- Tooltip first paint: hover at (110, 76), empty doc,
+  production-ish frames (~0.35 ms steady): first-paint
+  frame (#32, the 0.5 s delay expiring) 1.50 / 1.46 ms vs
+  steady ~0.35–0.45 → **+1.0–1.1 ms, one frame,
+  absolute ~1.5 ms**. A/B with a dead coordinate (80, 76)
+  shows frame 32 at 0.49 / 0.45 ms — the spike is the
+  tooltip paint, not the frame number. One-time per tooltip
+  string (measure cache + glyph raster persist). No fix,
+  same reasoning as menu. The 0.5 s delay itself is
+  intentional (`tooltip_math::HOVER_DELAY_SECONDS`).
+- Test fix: `pass_p0_tooltip.e2e` hovered (79, 76), which
+  lands in the 1px gap between toolbar buttons — its
+  after-delay screenshot never showed a tooltip (0
+  pale-yellow pixels). A hover sweep proved it: x=80 →
+  0 px; x=110 ("Print Preview") → ~590 px. Coordinate
+  fixed to (110, 76); the after-delay screenshot now shows
+  the tooltip (verified visually). With the old coordinate
+  the screenshot is tooltip-less (red-on-revert in the
+  screenshot sense: the test is screenshot-based, it does
+  not assert pixels).
+
+### Vendored fmt (addendum recheck, 2026-10-19)
+
+Still `FMT_VERSION 110200` (11.2.0). An app-shaped TU
+(`log.h` + `FMT_COMPILE` consteval path) compiles clean
+under Apple clang 17.0.0 and the zig-bundled clang. **No
+fmt bump needed.**
+
+### Guards
+
+`make test` green (9858 assertions, 333 cases). `make
+bench-unit` green; typing burst 0.160 µs/keystroke
+(6.26M chars/s — no regression vs 0.154–0.183 in prior
+rounds). Zero new clang warnings (forced recompile of
+`src/main.cpp`, grep clean). `scripts/check_e2e.py` and
+`scripts/check_no_raylib.sh` ok on the changed test.
+Headless E2E spot (direct binary, never `run_e2e.sh`), all
+exit 0: `e2e_large_doc_scroll`, `e2e_large_doc_menus`,
+`e2e_basic_typing`, `e2e_menu_format_fonts`,
+`pass_status_bar_words_catch_up`, `pass_live_word_count`,
+`pass_spelling_dialog`, `pass_p0_tooltip`.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
