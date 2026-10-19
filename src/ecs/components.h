@@ -85,20 +85,44 @@ struct DocumentComponent : public afterhours::BaseComponent {
     // Each table is associated with a line number where it appears
     std::vector<std::pair<std::size_t, Table>> tables;
 
-    // One-step table undo (Table > Sort / Formula...): the table
-    // has no entry in the buffer's history, so a Sort/Formula
-    // snapshots before/after here. cmd::undo restores `before`
-    // only when the buffer is untouched since the op (bufferVersion
-    // match) and the table still equals `after` (no intervening
-    // table edit) — otherwise the entry is dropped and the buffer
-    // undo runs. Redo for a table undo is not supported.
+    // Table undo STACK (Table > Sort / Formula..., cell edits):
+    // the table has no entry in the buffer's history, so each
+    // table op snapshots before/after here — one entry per op
+    // (one per coalesced cell-typing run). cmd::undo pops the
+    // top entry and restores `before` only when the buffer is
+    // untouched since that op (bufferVersion match) and the
+    // table still equals `after` (no intervening table edit);
+    // otherwise the entry is stale, dropped, and the next entry
+    // is tried (a buffer edit after older entries makes them
+    // stale too, so the loop ends at the buffer undo). Redo for
+    // a table undo is not supported.
     struct TableUndoEntry {
         std::size_t line = 0;
+        // Index into tables at push time (line alone is not a
+        // key: two tables can sit on one line). Undo prefers
+        // this index when its line still matches, else falls
+        // back to the first table on the line.
+        std::size_t tableIndex = 0;
         Table before;
         Table after;
         std::uint64_t bufferVersion = 0;
+        // True when this entry is one coalesced cell-typing run
+        // (created by cmd::insertCellText, updated in place while
+        // the run continues). Sort / Formula / Tab entries are
+        // false.
+        bool cellEditRun = false;
     };
-    std::optional<TableUndoEntry> tableUndo;
+    std::vector<TableUndoEntry> tableUndo;
+
+    // Active cell edit (Batch 8): one cell caret, stored here
+    // (like tableUndo) so every system that already takes
+    // DocumentComponent — input, navigation, mouse, render —
+    // sees it without a new component on the entity. While
+    // active, typing / arrows / Tab / Backspace / Delete route
+    // to the cell, never the body buffer; the body caret hides.
+    // cellEdit.tableIndex indexes tables (above); the table's
+    // line is tables[tableIndex].first.
+    CellEditState cellEdit;
 
     // For default doc path when saving without a name
     std::string defaultPath = "output/document.wpdoc";
@@ -185,16 +209,6 @@ struct DocumentComponent : public afterhours::BaseComponent {
     void removeDrawing(std::size_t id) {
         drawings.removeDrawing(id);
     }
-};
-
-// Component for table editing state
-struct TableEditComponent : public afterhours::BaseComponent {
-    bool isEditingTable = false;
-    std::size_t editingTableLine = 0;  // Line number of the table being edited
-    CellPosition currentCell{0, 0};     // Current cell being edited
-    bool hasSelection = false;
-    CellPosition selectionStart{0, 0};
-    CellPosition selectionEnd{0, 0};
 };
 
 // Component for status messages (pure data - logic in component_helpers.h)

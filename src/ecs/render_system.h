@@ -159,11 +159,19 @@ inline void drawTableGridlineEdge(float x1, float y1, float x2, float y2) {
     }
 }
 
-// Render a table at a specific position
-inline void renderTable(const Table& table, float tableX, float tableY, 
-                        CellPosition currentCell, bool isEditing) {
+// Render a table at a specific position. cellEdit is the
+// active cell caret for THIS table (nullptr for the others);
+// caretVisible is the blink state — the cell caret blinks
+// with the same timer as the body caret.
+inline void renderTable(const Table& table, float tableX, float tableY,
+                        const CellEditState* cellEdit,
+                        bool caretVisible) {
     if (table.isEmpty()) return;
-    
+    auto measure = [](const std::string& text, int fontSize) {
+        return static_cast<float>(
+            afterhours::graphics::measure_text(text.c_str(), fontSize));
+    };
+
     // Draw table cells
     for (std::size_t row = 0; row < table.rowCount(); ++row) {
         for (std::size_t col = 0; col < table.colCount(); ++col) {
@@ -204,19 +212,102 @@ inline void renderTable(const Table& table, float tableX, float tableY,
             drawTableBorder(cellX, cellY, cellX, cellY + cellH, cell.borders.left);
             drawTableBorder(cellX + cellW, cellY, cellX + cellW, cellY + cellH, cell.borders.right);
             
-            // Draw cell content
-            if (!cell.content.empty()) {
-                int textX = static_cast<int>(cellX) + cell.paddingLeft;
-                int textY = static_cast<int>(cellY) + cell.paddingTop;
-                int fontSize = cell.textStyle.fontSize;
-                afterhours::Color textColor = {cell.textStyle.textColor.r, cell.textStyle.textColor.g,
-                                          cell.textStyle.textColor.b, cell.textStyle.textColor.a};
-                afterhours::draw_text(cell.content.c_str(), textX, textY, fontSize, textColor);
+            // Draw cell content, wrapped inside the cell (the
+            // row height was recomputed from these same wrapped
+            // lines at edit time, so the text fits its row).
+            int textX = static_cast<int>(cellX) + cell.paddingLeft;
+            int textY = static_cast<int>(cellY) + cell.paddingTop;
+            int fontSize = cell.textStyle.fontSize;
+            int lineHeight = cellLineHeight(fontSize);
+            afterhours::Color textColor = {cell.textStyle.textColor.r, cell.textStyle.textColor.g,
+                                      cell.textStyle.textColor.b, cell.textStyle.textColor.a};
+            auto lines = cell_edit::wrapCellText(
+                cell.content, cell_edit::textWidth(table, {row, col}),
+                fontSize, measure);
+            for (std::size_t li = 0; li < lines.size(); ++li) {
+                if (lines[li].text.empty()) continue;
+                afterhours::draw_text(
+                    lines[li].text.c_str(), textX,
+                    textY + static_cast<int>(li) * lineHeight, fontSize,
+                    textColor);
             }
-            
-            // Highlight current cell if editing: navy #000080,
+
+            // Active cell: within-cell selection (navy bg + white
+            // glyphs, like the body's inverse selection) and the
+            // blinking caret bar at the caret offset.
+            bool isActiveCell =
+                cellEdit != nullptr && cellEdit->active &&
+                cellEdit->cell.row == row && cellEdit->cell.col == col;
+            if (isActiveCell && cellEdit->hasSelection) {
+                std::size_t selStart = cellEdit->selectionStart();
+                std::size_t selEnd = cellEdit->selectionEnd();
+                for (std::size_t li = 0; li < lines.size(); ++li) {
+                    std::size_t ovStart =
+                        std::max(selStart, lines[li].startOffset);
+                    std::size_t ovEnd =
+                        std::min(selEnd, lines[li].endOffset);
+                    if (ovStart >= ovEnd) continue;
+                    std::string before =
+                        lines[li].text.substr(
+                            0, ovStart - lines[li].startOffset);
+                    std::string selected =
+                        lines[li].text.substr(
+                            ovStart - lines[li].startOffset,
+                            ovEnd - ovStart);
+                    float selX = static_cast<float>(textX) +
+                                 measure(before, fontSize);
+                    float selW = measure(selected, fontSize);
+                    float selY = static_cast<float>(textY) +
+                                 static_cast<float>(li) *
+                                     static_cast<float>(lineHeight);
+                    afterhours::draw_rectangle(
+                        Rectangle{selX, selY, selW,
+                                  static_cast<float>(lineHeight)},
+                        theme::SELECTION_BG);
+                    afterhours::draw_text(
+                        selected.c_str(), static_cast<int>(selX),
+                        static_cast<int>(selY), fontSize,
+                        theme::SELECTION_TEXT);
+                }
+            }
+            if (isActiveCell && caretVisible) {
+                // Visual line holding the caret (same boundary
+                // rule as cell_edit::moveUp/Down).
+                std::size_t lineIdx = lines.size() - 1;
+                for (std::size_t li = 0; li < lines.size(); ++li) {
+                    if (cellEdit->caretOffset < lines[li].endOffset) {
+                        lineIdx = li;
+                        break;
+                    }
+                    if (cellEdit->caretOffset == lines[li].endOffset &&
+                        (li + 1 >= lines.size() ||
+                         lines[li + 1].startOffset >
+                             cellEdit->caretOffset)) {
+                        lineIdx = li;
+                        break;
+                    }
+                }
+                std::size_t caretInLine =
+                    cellEdit->caretOffset < lines[lineIdx].startOffset
+                        ? 0
+                        : cellEdit->caretOffset -
+                              lines[lineIdx].startOffset;
+                std::string beforeCaret = cell.content.substr(
+                    lines[lineIdx].startOffset, caretInLine);
+                float caretX = static_cast<float>(textX) +
+                               measure(beforeCaret, fontSize);
+                float caretY = static_cast<float>(textY) +
+                               static_cast<float>(lineIdx) *
+                                   static_cast<float>(lineHeight);
+                afterhours::draw_rectangle(
+                    Rectangle{caretX, caretY, 2.0f,
+                              static_cast<float>(lineHeight)},
+                    theme::CARET_COLOR);
+            }
+
+            // Highlight the active editing cell: navy #000080,
             // 1px — the Word 95 selection colour, not electric blue.
-            if (isEditing && row == currentCell.row && col == currentCell.col) {
+            if (isActiveCell) {
                 afterhours::draw_rectangle_outline(
                     Rectangle{cellX, cellY, cellW, cellH},
                     afterhours::Color{0, 0, 128, 255}, 1.0f);
@@ -225,25 +316,33 @@ inline void renderTable(const Table& table, float tableX, float tableY,
     }
 }
 
-// Render all tables in a document at their line positions
-inline void renderDocumentTables(const std::vector<std::pair<std::size_t, Table>>& tables,
-                                 const LayoutComponent::Rect& textArea,
-                                 int baseLineHeight, int scrollOffset,
-                                 std::size_t editingLine = std::numeric_limits<std::size_t>::max(),
-                                 CellPosition currentCell = {0, 0}) {
-    for (const auto& [lineNum, table] : tables) {
+// Render all tables in a document at their line positions.
+// cellEdit is the active cell caret (drawn only in its own
+// table); caretVisible is the blink state.
+inline void renderDocumentTables(
+    const std::vector<std::pair<std::size_t, Table>>& tables,
+    const LayoutComponent::Rect& textArea, int baseLineHeight,
+    int scrollOffset, const CellEditState* cellEdit = nullptr,
+    bool caretVisible = true) {
+    for (std::size_t ti = 0; ti < tables.size(); ++ti) {
+        const auto& [lineNum, table] = tables[ti];
         // Calculate Y position based on line number
         if (lineNum < static_cast<std::size_t>(scrollOffset)) continue;
-        
+
         int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING +
                 static_cast<int>(lineNum - scrollOffset) * baseLineHeight;
         int x = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
-        
+
         // Check if table is visible
         if (y > static_cast<int>(textArea.y + textArea.height)) continue;
-        
-        bool isEditing = (lineNum == editingLine);
-        renderTable(table, static_cast<float>(x), static_cast<float>(y), currentCell, isEditing);
+
+        const CellEditState* thisTableEdit =
+            (cellEdit != nullptr && cellEdit->active &&
+             cellEdit->tableIndex == ti)
+                ? cellEdit
+                : nullptr;
+        renderTable(table, static_cast<float>(x), static_cast<float>(y),
+                    thisTableEdit, caretVisible);
     }
 }
 
@@ -1796,27 +1895,22 @@ struct EditorRenderSystem
         // columnsActive / columnsLinesPerPage / columnsSpacingPx
         // were computed above (the squiggle cache needs them).
 
-        // Tables (Table menu): renderDocumentTables was dead code
-        // (no call site) until Batch 7, so inserted tables were
-        // data-only and invisible. Tables draw on the (empty) text
-        // line they sit on, after the text, with the caret cell
-        // highlighted in the editing view only. Positions are the
-        // helper's naive line offsets: exact for a fresh document's
-        // line 0; paged multi-page alignment is approximate.
-        std::size_t editingLine = std::numeric_limits<std::size_t>::max();
-        CellPosition tableCell{0, 0};
-        if (!layout.previewMode) {
-            Table* caretTable =
-                doc.tableAtLine(doc.buffer.caret().row);
-            if (caretTable != nullptr) {
-                editingLine = doc.buffer.caret().row;
-                tableCell = caretTable->currentCell();
-            }
-        }
+        // Tables: draw on the (empty) text line they sit on,
+        // after the text. The active cell caret (Batch 8) draws
+        // in its table, and the body caret hides while a cell
+        // edit is active — the cell caret is the caret.
+        // Positions are the helper's naive line offsets: exact
+        // for a fresh document's line 0; paged multi-page
+        // alignment is approximate.
+        const CellEditState* cellEdit =
+            (doc.cellEdit.active && !layout.previewMode)
+                ? &doc.cellEdit
+                : nullptr;
+        if (doc.cellEdit.active) caretVisible = false;
         auto drawTables = [&](const LayoutComponent::Rect& area,
                               int scrollOffset) {
-            renderDocumentTables(doc.tables, area, lineHeight, scrollOffset,
-                                 editingLine, tableCell);
+            renderDocumentTables(doc.tables, area, lineHeight,
+                                 scrollOffset, cellEdit, caret.visible);
         };
 
         if (!layout.previewMode && layout.splitViewEnabled) {

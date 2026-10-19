@@ -1,0 +1,196 @@
+# Test: Table cell editing (Batch 8)
+# Click a cell to place a CELL caret, type, Tab / Shift+Tab,
+# Left/Right across cells, shift+arrow selection replace,
+# Backspace, Enter (newline in a cell), per-run undo, Tab in
+# the last cell appends a row (undone), Esc exits, body typing
+# after the table lands in the body, and save + reopen
+# persists the cell text.
+# Geometry (1280x720, ui_scale 1.2): table at line 0 starts
+# near x=84,y=162; columns are 100px, rows 24px. Cell (0,0)
+# centre (130,173), cell (0,1) centre (230,173); (180,173) is
+# the right edge of cell (0,0); y=400 is body text below the
+# table. Table menu inserts a 3x3 table (no size dialog).
+
+type "Before"
+wait_frames 12
+validate text=Before
+
+menu_open Table
+wait_frames 12
+menu_select "Insert Table..."
+wait_frames 12
+validate has_table=true
+validate table_rows=3
+validate table_cols=3
+
+# Click cell (0,0): CELL caret, body untouched.
+mouse_down 130 173
+wait_frames 2
+mouse_up
+wait_frames 6
+validate cell_editing=true
+validate cell_current=0,0
+validate cell_caret_offset=0
+validate text=Before
+
+# Type + Backspace in the cell (never leaks to the body).
+type "Alpha"
+wait_frames 12
+key BACKSPACE
+wait_frames 6
+validate cell_content_0_0=Alph
+type "a"
+wait_frames 12
+validate cell_content_0_0=Alpha
+validate cell_caret_offset=5
+validate text=Before
+
+# Tab to (0,1), type, Enter for a newline inside the cell.
+key TAB
+wait_frames 12
+validate cell_current=0,1
+validate cell_caret_offset=0
+type "Beta"
+wait_frames 12
+key ENTER
+wait_frames 6
+type "Two"
+wait_frames 12
+validate cell_caret_offset=8
+
+# Shift+Tab back to (0,0).
+key SHIFT+TAB
+wait_frames 12
+validate cell_current=0,0
+validate cell_caret_offset=0
+
+# Click the right edge of (0,0) -> caret at the end (5),
+# Right crosses to (0,1) at 0, Left crosses back to the end.
+mouse_down 180 173
+wait_frames 2
+mouse_up
+wait_frames 6
+validate cell_caret_offset=5
+key RIGHT
+wait_frames 6
+validate cell_current=0,1
+validate cell_caret_offset=0
+key LEFT
+wait_frames 6
+validate cell_current=0,0
+validate cell_caret_offset=5
+
+# Shift+Left x2 selects "ha"; typing replaces the selection.
+hold_key SHIFT
+wait_frames 3
+key LEFT
+wait_frames 3
+key LEFT
+wait_frames 3
+release_key SHIFT
+wait_frames 6
+validate cell_has_selection=true
+validate cell_selected_text=ha
+type "X"
+wait_frames 12
+validate cell_content_0_0=AlpX
+
+# Undo: one step undoes the "X" replace run (Beta kept),
+# next undoes the Beta+Enter+Two run, next undoes Alpha.
+key CTRL+Z
+wait_frames 12
+validate cell_content_0_0=Alpha
+validate cell_caret_offset=4
+key CTRL+Z
+wait_frames 12
+validate cell_content_0_1=
+validate cell_content_0_0=Alpha
+key CTRL+Z
+wait_frames 12
+validate cell_content_0_0=
+validate cell_content_0_1=
+
+# Re-type for the save round-trip (click (0,0), type, Tab,
+# type + Enter + type in (0,1)).
+mouse_down 130 173
+wait_frames 2
+mouse_up
+wait_frames 6
+type "Alpha"
+wait_frames 12
+key TAB
+wait_frames 12
+type "Beta"
+wait_frames 12
+key ENTER
+wait_frames 6
+type "Two"
+wait_frames 12
+validate cell_content_0_0=Alpha
+validate cell_caret_offset=8
+
+# Tab to the last cell (2,2), then Tab appends a row.
+key TAB
+wait_frames 6
+key TAB
+wait_frames 6
+key TAB
+wait_frames 6
+key TAB
+wait_frames 6
+key TAB
+wait_frames 6
+key TAB
+wait_frames 6
+key TAB
+wait_frames 6
+validate cell_current=2,2
+key TAB
+wait_frames 12
+validate table_rows=4
+validate cell_current=3,0
+# Undo pops the Tab-append entry: row count back to 3.
+key CTRL+Z
+wait_frames 12
+validate table_rows=3
+validate cell_current=2,2
+
+# Esc exits cell editing; body typing below the table lands
+# in the body (After + Before) and leaves the cells alone.
+key ESCAPE
+wait_frames 6
+validate cell_editing=false
+# x=84 is the calibrated column-0 click (pass_p0_mouse_selection).
+mouse_down 84 400
+wait_frames 2
+mouse_up
+wait_frames 6
+type "After"
+wait_frames 12
+validate text=AfterBefore
+validate cell_content_0_0=Alpha
+validate cell_caret_offset=0
+
+# Save (File > Save, default output/document.wpdoc), reopen,
+# cells + body persist. Reopen resets the cell edit; click
+# (0,1) + Ctrl+Down (MoveDocumentEnd on the macOS preset)
+# proves the stored newline (Beta\nTwo = 8).
+menu_open File
+wait_frames 12
+menu_select Save
+wait_frames 12
+open_file output/document.wpdoc
+wait_frames 12
+validate cell_editing=false
+validate cell_content_0_0=Alpha
+validate text=AfterBefore
+mouse_down 230 173
+wait_frames 2
+mouse_up
+wait_frames 6
+validate cell_current=0,1
+key CTRL+DOWN
+wait_frames 6
+validate cell_caret_offset=8
+
+screenshot cell_editing

@@ -398,6 +398,9 @@ inline void newDocument(DocumentComponent& doc) {
     doc.chips.clear();
     doc.repeatRecord = ActionRecord{};
     doc.trackChangesBaseline.clear();
+    doc.tables.clear();
+    doc.cellEdit = CellEditState{};
+    doc.tableUndo.clear();
 }
 
 inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
@@ -405,7 +408,10 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
     std::string savePath =
         doc.filePath.empty() ? doc.defaultPath : doc.filePath;
     syncLayoutToSettings(doc, layout);
-    auto result = saveDocumentEx(doc.buffer, doc.docSettings, savePath);
+    // WithTables: saveDocumentEx drops tables (its serializeTable
+    // helpers were dead code) — a saved table must round-trip.
+    auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
+                                         doc.tables, savePath);
     if (result.success) {
         doc.isDirty = false;
         doc.filePath = savePath;
@@ -426,7 +432,8 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
 inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
                            MenuComponent& menu, const std::string& path) {
     syncLayoutToSettings(doc, layout);
-    auto result = saveDocumentEx(doc.buffer, doc.docSettings, path);
+    auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
+                                         doc.tables, path);
     if (result.success) {
         doc.isDirty = false;
         doc.filePath = path;
@@ -446,7 +453,11 @@ inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
 
 inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
                          MenuComponent& menu, const std::string& path) {
-    auto result = loadDocumentEx(doc.buffer, doc.docSettings, path);
+    // WithTables: loadDocumentEx drops tables (and leaves the old
+    // ones in place); loadDocumentWithTables replaces them, or
+    // clears them when the file has none.
+    auto result = loadDocumentWithTables(doc.buffer, doc.docSettings,
+                                         doc.tables, path);
     if (result.success) {
         doc.filePath = path;
         doc.isDirty = false;
@@ -454,6 +465,8 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
         doc.revisions.clear();
         doc.chips.clear();
         doc.repeatRecord = ActionRecord{};
+        doc.cellEdit = CellEditState{};
+        doc.tableUndo.clear();
         syncSettingsToLayout(doc, layout);
         refreshMenuBar(menu, doc, path);
         flashStatusConfirmation(
@@ -489,17 +502,39 @@ inline bool tablesEqualForUndo(const Table& a, const Table& b) {
 }
 
 inline bool undo(DocumentComponent& doc) {
-    // A pending table undo (Sort / Formula...) wins only when it is
-    // still the latest action: buffer untouched since the op and the
-    // table still exactly as the op left it. Otherwise the entry is
-    // stale (a later edit superseded it) and the buffer undo runs.
-    if (doc.tableUndo) {
-        DocumentComponent::TableUndoEntry entry = *doc.tableUndo;
-        doc.tableUndo.reset();
-        Table* table = doc.tableAtLine(entry.line);
+    // Table undo stack: pop the top entry and restore `before`
+    // only when it is still the latest action for its table
+    // (buffer untouched since that op, table still exactly as
+    // the op left it). A stale top entry is dropped and the
+    // next entry tried — a buffer edit after it makes older
+    // entries stale too, so the loop ends at the buffer undo.
+    // Any pop ends a coalescing typing run: a later keystroke
+    // starts a new one.
+    while (!doc.tableUndo.empty()) {
+        DocumentComponent::TableUndoEntry entry = doc.tableUndo.back();
+        doc.tableUndo.pop_back();
+        doc.cellEdit.undoPending = false;
+        Table* table = nullptr;
+        if (entry.tableIndex < doc.tables.size() &&
+            doc.tables[entry.tableIndex].first == entry.line) {
+            table = &doc.tables[entry.tableIndex].second;
+        } else {
+            table = doc.tableAtLine(entry.line);
+        }
         if (table && doc.buffer.version() == entry.bufferVersion &&
             tablesEqualForUndo(*table, entry.after)) {
             *table = entry.before;
+            // The restored table may be shorter than the live
+            // cell caret (e.g. undoing a typing run), and its
+            // currentCell may differ (undoing a Tab): sync the
+            // cell caret to the restored table, then clamp it.
+            if (doc.cellEdit.active &&
+                doc.cellEdit.tableIndex < doc.tables.size() &&
+                doc.tables[doc.cellEdit.tableIndex].first ==
+                    entry.line) {
+                doc.cellEdit.cell = table->currentCell();
+                cell_edit::clampState(*table, doc.cellEdit);
+            }
             doc.isDirty = true;
             return true;
         }
@@ -578,6 +613,256 @@ inline void selectAll(DocumentComponent& doc) {
     doc.buffer.selectAll();
 }
 
+// --- Cell editing commands (Batch 8) ---
+// The table at the caret: the cell-edit table while a cell edit
+// is active, else the table on the body caret's line. Sort /
+// Formula / the Table menu all use this, so they target the
+// table being edited even when the body caret sits elsewhere.
+inline Table* tableAtCaret(DocumentComponent& doc) {
+    if (doc.cellEdit.active &&
+        doc.cellEdit.tableIndex < doc.tables.size()) {
+        return &doc.tables[doc.cellEdit.tableIndex].second;
+    }
+    return doc.tableAtLine(doc.buffer.caret().row);
+}
+
+inline std::size_t tableLineAtCaret(DocumentComponent& doc) {
+    if (doc.cellEdit.active &&
+        doc.cellEdit.tableIndex < doc.tables.size()) {
+        return doc.tables[doc.cellEdit.tableIndex].first;
+    }
+    return doc.buffer.caret().row;
+}
+
+// The real font measure for cell wrapping / row heights: the
+// same measure_text the render pass uses, so a row grows to
+// exactly the height its wrapped lines draw at.
+inline CellMeasureFn cellMeasure() {
+    return [](const std::string& text, int fontSize) {
+        return static_cast<float>(
+            afterhours::graphics::measure_text(text.c_str(), fontSize));
+    };
+}
+
+// Enter cell editing: place the cell caret at caretOffset in
+// cell (merged-covered cells resolve to their parent). Ends
+// any in-progress typing run in the previous cell. Does not
+// mark dirty (entering is not a modification); clears the body
+// selection (a click into a table deselects body text).
+inline bool beginCellEdit(DocumentComponent& doc,
+                          std::size_t tableIndex, CellPosition cell,
+                          std::size_t caretOffset) {
+    if (tableIndex >= doc.tables.size()) return false;
+    doc.cellEdit.undoPending = false;
+    doc.cellEdit.active = true;
+    doc.cellEdit.tableIndex = tableIndex;
+    doc.cellEdit.cell = cell;
+    doc.cellEdit.caretOffset = caretOffset;
+    doc.cellEdit.anchorOffset = caretOffset;
+    doc.cellEdit.hasSelection = false;
+    Table& table = doc.tables[tableIndex].second;
+    cell_edit::clampState(table, doc.cellEdit);
+    doc.buffer.clearSelection();
+    return true;
+}
+
+// Exit cell editing back to the body caret (click outside any
+// table, or Esc). Ends the typing run; the snapshot entry stays
+// live until cmd::undo consumes or drops it.
+inline void endCellEdit(DocumentComponent& doc) {
+    doc.cellEdit.active = false;
+    doc.cellEdit.undoPending = false;
+    doc.cellEdit.hasSelection = false;
+}
+
+// End the current typing run without leaving the cell
+// (navigation, Tab, clipboard ops): the next text edit starts
+// a fresh snapshot entry.
+inline void commitCellEditRun(DocumentComponent& doc) {
+    doc.cellEdit.undoPending = false;
+}
+
+// Record a cell mutation as one undo step. When a typing run
+// is already coalescing into the stack's top entry (same
+// table, cellEditRun), update its `after` in place; otherwise
+// push before/after as a new entry. Callers capture `before`
+// BEFORE mutating, and pass the mutated table. No-op entries
+// (mutation changed nothing) are never created by callers.
+inline void recordCellEdit(DocumentComponent& doc,
+                           std::size_t tableIndex, std::size_t line,
+                           const Table& before, const Table& after,
+                           bool coalesce) {
+    if (coalesce && doc.cellEdit.undoPending &&
+        !doc.tableUndo.empty() && doc.tableUndo.back().cellEditRun &&
+        doc.tableUndo.back().line == line &&
+        doc.tableUndo.back().tableIndex == tableIndex) {
+        doc.tableUndo.back().after = after;
+        return;
+    }
+    doc.tableUndo.push_back(DocumentComponent::TableUndoEntry{
+        line, tableIndex, before, after, doc.buffer.version(),
+        coalesce});
+    doc.cellEdit.undoPending = coalesce;
+    doc.isDirty = true;
+}
+
+// Index of a table pointer in doc.tables (for undo entries).
+inline std::size_t tableIndexOf(DocumentComponent& doc,
+                                const Table* table) {
+    for (std::size_t i = 0; i < doc.tables.size(); ++i) {
+        if (&doc.tables[i].second == table) return i;
+    }
+    return 0;
+}
+
+// Insert text into the active cell (typing, newline, paste):
+// one undo step per typing run, coalesced while the run
+// continues. Replaces a selection. Returns false when no cell
+// edit is active or nothing changed.
+inline bool insertCellText(DocumentComponent& doc,
+                           const std::string& text) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    Table before = table;
+    if (!cell_edit::insertText(table, doc.cellEdit, text)) return false;
+    // Recompute heights for the edited row (and any row a
+    // pasted newline / selection delete could have affected —
+    // recompute is cheap for table-sized grids).
+    cell_edit::recomputeRowHeights(table, cellMeasure());
+    recordCellEdit(doc, doc.cellEdit.tableIndex,
+                   doc.tables[doc.cellEdit.tableIndex].first,
+                   before, table, true);
+    return true;
+}
+
+inline bool backspaceCell(DocumentComponent& doc) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    Table before = table;
+    if (!cell_edit::backspace(table, doc.cellEdit)) return false;
+    cell_edit::recomputeRowHeights(table, cellMeasure());
+    recordCellEdit(doc, doc.cellEdit.tableIndex,
+                   doc.tables[doc.cellEdit.tableIndex].first,
+                   before, table, true);
+    return true;
+}
+
+inline bool deleteCell(DocumentComponent& doc) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    Table before = table;
+    if (!cell_edit::del(table, doc.cellEdit)) return false;
+    cell_edit::recomputeRowHeights(table, cellMeasure());
+    recordCellEdit(doc, doc.cellEdit.tableIndex,
+                   doc.tables[doc.cellEdit.tableIndex].first,
+                   before, table, true);
+    return true;
+}
+
+// Tab / Shift+Tab in a cell: ends the typing run first.
+// Navigation itself is NOT an undo step (like arrow keys):
+// only Tab in the last cell appending a row records one,
+// because that mutates the document.
+inline bool tabCell(DocumentComponent& doc, bool shift) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    commitCellEditRun(doc);
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    std::size_t rowsBefore = table.rowCount();
+    Table before = table;
+    bool moved = shift ? cell_edit::tabBackward(table, doc.cellEdit)
+                       : cell_edit::tabForward(table, doc.cellEdit);
+    if (!moved) return false;
+    if (table.rowCount() != rowsBefore) {
+        cell_edit::recomputeRowHeights(table, cellMeasure());
+        recordCellEdit(doc, doc.cellEdit.tableIndex,
+                       doc.tables[doc.cellEdit.tableIndex].first,
+                       before, table, false);
+    }
+    return true;
+}
+
+// Clipboard in a cell (KeyboardShortcutSystem routes Copy /
+// Cut / Paste / Select All here while a cell edit is active,
+// so they never touch the body buffer). Cut and Paste are each
+// one undo step, ending the typing run.
+inline bool copyCell(DocumentComponent& doc) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    const Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    std::string selected = doc.cellEdit.selectedText(
+        table.cell(doc.cellEdit.cell).content);
+    if (selected.empty()) return false;
+    app::clipboard::set_text(selected);
+    return true;
+}
+
+inline bool cutCell(DocumentComponent& doc) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    if (!doc.cellEdit.hasSelection) return false;
+    std::string selected = doc.cellEdit.selectedText(
+        table.cell(doc.cellEdit.cell).content);
+    if (selected.empty()) return false;
+    commitCellEditRun(doc);
+    repeat::clear(doc.repeatRecord);
+    Table before = table;
+    app::clipboard::set_text(selected);
+    if (!cell_edit::insertText(table, doc.cellEdit, "")) return false;
+    cell_edit::recomputeRowHeights(table, cellMeasure());
+    recordCellEdit(doc, doc.cellEdit.tableIndex,
+                   doc.tables[doc.cellEdit.tableIndex].first,
+                   before, table, false);
+    return true;
+}
+
+inline bool pasteCell(DocumentComponent& doc) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return false;
+    }
+    if (!app::clipboard::has_text()) return false;
+    std::string clipText = app::clipboard::get_text();
+    if (clipText.empty()) return false;
+    commitCellEditRun(doc);
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    Table before = table;
+    if (!cell_edit::insertText(table, doc.cellEdit, clipText)) {
+        return false;
+    }
+    cell_edit::recomputeRowHeights(table, cellMeasure());
+    recordCellEdit(doc, doc.cellEdit.tableIndex,
+                   doc.tables[doc.cellEdit.tableIndex].first,
+                   before, table, false);
+    doc.repeatRecord = repeat::setText(RepeatKind::Paste, clipText);
+    return true;
+}
+
+inline void selectAllCell(DocumentComponent& doc) {
+    if (!doc.cellEdit.active ||
+        doc.cellEdit.tableIndex >= doc.tables.size()) {
+        return;
+    }
+    Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+    cell_edit::selectAllInCell(table, doc.cellEdit);
+}
+
 // --- Table commands (Table menu) ---
 // Sort: sorts the table at the caret's line by the caret cell's
 // column, all rows (no header concept in the model), as one undo
@@ -588,8 +873,8 @@ inline void selectAll(DocumentComponent& doc) {
 // evaluation leaves the dialog open with the error message.
 
 inline bool sortTable(DocumentComponent& doc, bool ascending) {
-    std::size_t line = doc.buffer.caret().row;
-    Table* table = doc.tableAtLine(line);
+    std::size_t line = tableLineAtCaret(doc);
+    Table* table = tableAtCaret(doc);
     if (table == nullptr) {
         toast_notify::error("No table at cursor");
         return false;
@@ -599,8 +884,18 @@ inline bool sortTable(DocumentComponent& doc, bool ascending) {
         toast_notify::error("Cannot sort table with merged cells");
         return false;
     }
-    doc.tableUndo = DocumentComponent::TableUndoEntry{
-        line, before, *table, doc.buffer.version()};
+    doc.tableUndo.push_back(DocumentComponent::TableUndoEntry{
+        line, tableIndexOf(doc, table), before, *table,
+        doc.buffer.version(), false});
+    // A Sort supersedes any in-progress typing run (it pushes
+    // above the run's entry) and the caret cell follows its
+    // row (sortRows moved Table::currentCell): sync the cell
+    // caret to it.
+    doc.cellEdit.undoPending = false;
+    if (doc.cellEdit.active) {
+        doc.cellEdit.cell = table->currentCell();
+        cell_edit::clampState(*table, doc.cellEdit);
+    }
     doc.isDirty = true;
     flashStatusConfirmation(ascending ? "Table sorted ascending"
                                  : "Table sorted descending");
@@ -609,7 +904,7 @@ inline bool sortTable(DocumentComponent& doc, bool ascending) {
 
 inline bool openTableFormulaDialog(DocumentComponent& doc,
                                    DialogState& dialogs) {
-    Table* table = doc.tableAtLine(doc.buffer.caret().row);
+    Table* table = tableAtCaret(doc);
     if (table == nullptr) {
         toast_notify::error("No table at cursor");
         return false;
@@ -621,8 +916,8 @@ inline bool openTableFormulaDialog(DocumentComponent& doc,
 }
 
 inline bool applyTableFormula(DocumentComponent& doc, DialogState& dialogs) {
-    std::size_t line = doc.buffer.caret().row;
-    Table* table = doc.tableAtLine(line);
+    std::size_t line = tableLineAtCaret(doc);
+    Table* table = tableAtCaret(doc);
     if (table == nullptr) {
         dialogs.tableFormulaError = "No table at cursor";
         return false;
@@ -636,8 +931,15 @@ inline bool applyTableFormula(DocumentComponent& doc, DialogState& dialogs) {
     }
     Table before = *table;
     table->setCellContent(cell.row, cell.col, result.value);
-    doc.tableUndo = DocumentComponent::TableUndoEntry{
-        line, before, *table, doc.buffer.version()};
+    doc.tableUndo.push_back(DocumentComponent::TableUndoEntry{
+        line, tableIndexOf(doc, table), before, *table,
+        doc.buffer.version(), false});
+    // A Formula supersedes any in-progress typing run; clamp
+    // the cell caret to the rewritten cell.
+    doc.cellEdit.undoPending = false;
+    if (doc.cellEdit.active) {
+        cell_edit::clampState(*table, doc.cellEdit);
+    }
     doc.isDirty = true;
     dialogs.tableFormulaError.clear();
     dialogs.showTableFormulaDialog = false;
@@ -707,6 +1009,9 @@ inline void insertImagePlaceholder(DocumentComponent& doc) {
 // --- Print Preview / Print (File menu, Ctrl+P) ---
 
 inline void openPrintPreview(DocumentComponent& doc, LayoutComponent& layout) {
+    // Preview is read-only: a cell edit ends on entry (its
+    // typing run commits; the snapshot entry stays undoable).
+    endCellEdit(doc);
     layout::enterPrintPreview(layout, doc.buffer.lineCount(),
                               doc.buffer.textStyle().fontSize);
 }
@@ -1399,6 +1704,9 @@ inline void exitOutlineMode(LayoutComponent& layout,
 // --- Format toggles ---
 
 inline void toggleBold(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.bold = !style.bold;
     doc.buffer.setTextStyle(style);
@@ -1406,6 +1714,9 @@ inline void toggleBold(DocumentComponent& doc) {
 }
 
 inline void toggleItalic(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.italic = !style.italic;
     doc.buffer.setTextStyle(style);
@@ -1413,6 +1724,9 @@ inline void toggleItalic(DocumentComponent& doc) {
 }
 
 inline void toggleUnderline(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.underline = !style.underline;
     doc.buffer.setTextStyle(style);
@@ -1421,6 +1735,9 @@ inline void toggleUnderline(DocumentComponent& doc) {
 }
 
 inline void toggleStrikethrough(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.strikethrough = !style.strikethrough;
     doc.buffer.setTextStyle(style);
@@ -1429,6 +1746,9 @@ inline void toggleStrikethrough(DocumentComponent& doc) {
 }
 
 inline void toggleSuperscript(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.superscript = !style.superscript;
     if (style.superscript) style.subscript = false;
@@ -1438,6 +1758,9 @@ inline void toggleSuperscript(DocumentComponent& doc) {
 }
 
 inline void toggleSubscript(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.subscript = !style.subscript;
     if (style.subscript) style.superscript = false;
@@ -1451,12 +1774,18 @@ inline void toggleSubscript(DocumentComponent& doc) {
 // records the RESULTING value for Edit > Repeat (F4).
 
 inline void setParagraphStyle(DocumentComponent& doc, ParagraphStyle style) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.setCurrentParagraphStyle(style);
     doc.repeatRecord = repeat::setInt(RepeatKind::SetParagraphStyle,
                                       static_cast<int>(style));
 }
 
 inline void setAlignment(DocumentComponent& doc, TextAlignment align) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.setCurrentAlignment(align);
     doc.repeatRecord = repeat::setInt(RepeatKind::SetAlignment,
                                       static_cast<int>(align));
@@ -1464,6 +1793,9 @@ inline void setAlignment(DocumentComponent& doc, TextAlignment align) {
 }
 
 inline void setFontSize(DocumentComponent& doc, int size) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.fontSize = size;
     doc.buffer.setTextStyle(style);
@@ -1471,6 +1803,9 @@ inline void setFontSize(DocumentComponent& doc, int size) {
 }
 
 inline void setFont(DocumentComponent& doc, const std::string& font) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.font = font;
     doc.buffer.setTextStyle(style);
@@ -1478,6 +1813,9 @@ inline void setFont(DocumentComponent& doc, const std::string& font) {
 }
 
 inline void setTextColor(DocumentComponent& doc, TextColor color) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.textColor = color;
     doc.buffer.setTextStyle(style);
@@ -1485,6 +1823,9 @@ inline void setTextColor(DocumentComponent& doc, TextColor color) {
 }
 
 inline void setHighlightColor(DocumentComponent& doc, TextColor color) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     TextStyle style = doc.buffer.textStyle();
     style.highlightColor = color;
     doc.buffer.setTextStyle(style);
@@ -1493,18 +1834,27 @@ inline void setHighlightColor(DocumentComponent& doc, TextColor color) {
 }
 
 inline void increaseIndent(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.increaseIndent();
     doc.repeatRecord = repeat::setInt(RepeatKind::SetLeftIndent,
                                       doc.buffer.currentLeftIndent());
 }
 
 inline void decreaseIndent(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.decreaseIndent();
     doc.repeatRecord = repeat::setInt(RepeatKind::SetLeftIndent,
                                       doc.buffer.currentLeftIndent());
 }
 
 inline void setLineSpacing(DocumentComponent& doc, int spacingTimes100) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     if (spacingTimes100 == 100) {
         doc.buffer.setLineSpacingSingle();
     } else if (spacingTimes100 == 150) {
@@ -1519,6 +1869,9 @@ inline void setLineSpacing(DocumentComponent& doc, int spacingTimes100) {
 }
 
 inline void toggleBulletedList(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.toggleBulletedList();
     doc.repeatRecord = repeat::setInt(
         RepeatKind::SetListType,
@@ -1526,6 +1879,9 @@ inline void toggleBulletedList(DocumentComponent& doc) {
 }
 
 inline void toggleNumberedList(DocumentComponent& doc) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.toggleNumberedList();
     doc.repeatRecord = repeat::setInt(
         RepeatKind::SetListType,
@@ -1533,11 +1889,17 @@ inline void toggleNumberedList(DocumentComponent& doc) {
 }
 
 inline void setSpaceBefore(DocumentComponent& doc, int pixels) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.setCurrentSpaceBefore(pixels);
     doc.repeatRecord = repeat::setInt(RepeatKind::SetSpaceBefore, pixels);
 }
 
 inline void setSpaceAfter(DocumentComponent& doc, int pixels) {
+    // Cells have no formatting model yet: formatting
+    // commands never act on the body buffer from a cell.
+    if (doc.cellEdit.active) return;
     doc.buffer.setCurrentSpaceAfter(pixels);
     doc.repeatRecord = repeat::setInt(RepeatKind::SetSpaceAfter, pixels);
 }
@@ -1549,6 +1911,9 @@ inline void setSpaceAfter(DocumentComponent& doc, int pixels) {
 // repeat::apply. Repeat never records itself. Empty history is a
 // no-op with a status-bar flash ("Nothing to repeat").
 inline bool repeatLastAction(DocumentComponent& doc) {
+    // Repeat in a cell would re-apply a body action at the
+    // body caret; skip it while a cell is active.
+    if (doc.cellEdit.active) return false;
     if (!repeat::hasAction(doc.repeatRecord)) {
         flashStatusConfirmation("Nothing to repeat");
         return false;

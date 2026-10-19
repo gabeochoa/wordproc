@@ -650,18 +650,30 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
         }
     }
 
-    // Style settings
+    // Style settings (same fields as saveDocumentEx: a save
+    // must not drop superscript / subscript or the options
+    // block just because the document has a table).
     doc["style"] = {
         {"bold", style.bold},
         {"italic", style.italic},
         {"underline", style.underline},
         {"strikethrough", style.strikethrough},
+        {"superscript", style.superscript},
+        {"subscript", style.subscript},
         {"font", style.font},
         {"fontSize", style.fontSize},
         {"textColor", {{"r", style.textColor.r}, {"g", style.textColor.g},
                        {"b", style.textColor.b}, {"a", style.textColor.a}}},
         {"highlightColor", {{"r", style.highlightColor.r}, {"g", style.highlightColor.g},
                             {"b", style.highlightColor.b}, {"a", style.highlightColor.a}}},
+    };
+
+    // Text options (same as saveDocumentEx).
+    doc["options"] = {
+        {"smartQuotesEnabled", settings.smartQuotesEnabled},
+        {"tabWidth", settings.tabWidth},
+        {"showTextBoundaries", settings.showTextBoundaries},
+        {"spellCheckAsYouType", settings.spellCheckAsYouType}
     };
 
     // Page layout settings (see saveDocumentEx above).
@@ -738,12 +750,14 @@ DocumentResult loadDocumentWithTables(TextBuffer &buffer,
         return result;
     }
     
-    // Parse tables from the same raw string — no second file read
+    // Parse tables from the same raw string — no second file read.
+    // Clear first: opening a table-less file must drop the old
+    // tables, not leave them in place.
+    tables.clear();
     try {
         nlohmann::json doc = nlohmann::json::parse(raw);
-        
+
         if (doc.contains("tables")) {
-            tables.clear();
             for (const auto &table_entry : doc["tables"]) {
                 std::size_t lineNum = table_entry.value("line", 0);
                 if (table_entry.contains("table")) {

@@ -125,12 +125,13 @@ static void setupCallbacks(
         // Reset text style to defaults
         docComp.buffer.setTextStyle(TextStyle{});
         docComp.tables.clear();
+        docComp.cellEdit = CellEditState{};
         docComp.images.clear();
         docComp.drawings.clear();
         docComp.equations.clear();
         docComp.comments.clear();
         docComp.repeatRecord = ActionRecord{};
-        docComp.tableUndo.reset();
+        docComp.tableUndo.clear();
         docComp.isDirty = false;
         docComp.filePath.clear();
         docComp.spellChecker.clearIgnoreList();
@@ -380,6 +381,37 @@ static void setupCallbacksEx(
                        std::to_string(cell.col);
             }
             return "";
+        }
+        // Cell editing (Batch 8): active flag, caret cell +
+        // offset, selection, row height (wrap growth).
+        if (prop == "cell_editing") {
+            return docComp.cellEdit.active ? "true" : "false";
+        }
+        if (prop == "cell_current") {
+            if (!docComp.cellEdit.active) return "";
+            return std::to_string(docComp.cellEdit.cell.row) + "," +
+                   std::to_string(docComp.cellEdit.cell.col);
+        }
+        if (prop == "cell_caret_offset") {
+            return std::to_string(docComp.cellEdit.caretOffset);
+        }
+        if (prop == "cell_has_selection") {
+            return docComp.cellEdit.hasSelection ? "true" : "false";
+        }
+        if (prop == "cell_selected_text") {
+            if (!docComp.cellEdit.active ||
+                docComp.cellEdit.tableIndex >= docComp.tables.size()) {
+                return "";
+            }
+            const Table& table =
+                docComp.tables[docComp.cellEdit.tableIndex].second;
+            return docComp.cellEdit.selectedText(
+                table.cell(docComp.cellEdit.cell).content);
+        }
+        if (prop == "table_row_height_0") {
+            if (docComp.tables.empty()) return "0";
+            return std::to_string(static_cast<int>(
+                docComp.tables[0].second.rowHeight(0)));
         }
         // Table Formula dialog: the formula field + last error.
         if (prop == "table_formula_field") return dialogState.tableFormulaStr;
@@ -1176,11 +1208,12 @@ static void setupCallbacksEx(
         docComp.revisions.clear();
         docComp.chips.clear();
         docComp.repeatRecord = ActionRecord{};
-        docComp.tableUndo.reset();
+        docComp.tableUndo.clear();
         docComp.trackChangesEnabled = false;
         docComp.trackChangesBaseline.clear();
         docComp.docSettings = DocumentSettings{};
         docComp.tables.clear();
+        docComp.cellEdit = CellEditState{};
         docComp.images.clear();
         docComp.drawings.clear();
         docComp.equations.clear();

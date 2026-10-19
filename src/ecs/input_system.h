@@ -81,6 +81,82 @@ struct TextInputSystem
             return;
         }
 
+        // Cell editing (Batch 8): while a cell edit is active,
+        // ALL text keys route to the cell — typing, Enter
+        // (newline in the cell), Backspace / Delete, Tab — and
+        // NOTHING below may touch the body buffer. Esc exits
+        // cell editing back to the body caret. No smart quotes,
+        // AutoCorrect, or @ chips in cells (documented limit).
+        if (doc.cellEdit.active) {
+            if (input::isKeyPressed(afterhours::keys::ESCAPE)) {
+                cmd::endCellEdit(doc);
+                caret::resetBlink(caret);
+                return;
+            }
+            if (input::isKeyPressed(afterhours::keys::TAB)) {
+                bool shiftDown =
+                    test_input::is_key_down(
+                        afterhours::keys::LEFT_SHIFT) ||
+                    test_input::is_key_down(
+                        afterhours::keys::RIGHT_SHIFT);
+                cmd::tabCell(doc, shiftDown);
+                caret::resetBlink(caret);
+                return;
+            }
+            int codepoint = test_input::get_char_pressed();
+            while (codepoint > 0) {
+                if (codepoint >= 32) {
+                    // Encode the full codepoint as UTF-8 (the
+                    // body path truncates to char; cells keep
+                    // multi-byte input intact).
+                    std::string utf8;
+                    if (codepoint < 0x80) {
+                        utf8.push_back(
+                            static_cast<char>(codepoint));
+                    } else if (codepoint < 0x800) {
+                        utf8.push_back(static_cast<char>(
+                            0xC0 | (codepoint >> 6)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | (codepoint & 0x3F)));
+                    } else if (codepoint < 0x10000) {
+                        utf8.push_back(static_cast<char>(
+                            0xE0 | (codepoint >> 12)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | ((codepoint >> 6) & 0x3F)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | (codepoint & 0x3F)));
+                    } else {
+                        utf8.push_back(static_cast<char>(
+                            0xF0 | (codepoint >> 18)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | ((codepoint >> 12) & 0x3F)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | ((codepoint >> 6) & 0x3F)));
+                        utf8.push_back(static_cast<char>(
+                            0x80 | (codepoint & 0x3F)));
+                    }
+                    cmd::insertCellText(doc, utf8);
+                    caret::resetBlink(caret);
+                }
+                codepoint = test_input::get_char_pressed();
+            }
+            if (actionMap_.isActionPressed(Action::InsertNewline)) {
+                cmd::insertCellText(doc, "\n");
+                caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressedRepeat(Action::Backspace)) {
+                repeat::clear(doc.repeatRecord);
+                cmd::backspaceCell(doc);
+                caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressedRepeat(Action::Delete)) {
+                repeat::clear(doc.repeatRecord);
+                cmd::deleteCell(doc);
+                caret::resetBlink(caret);
+            }
+            return;
+        }
+
         // @ chip popup owns Enter (select) and Escape (dismiss)
         // while open. Typing / Backspace fall through below: they
         // edit the filter text in the buffer. Up/Down are owned by
@@ -262,6 +338,32 @@ struct KeyboardShortcutSystem
             }
             if (actionMap_.isActionPressed(Action::Print)) {
                 cmd::requestPrint(doc, dialogs);
+            }
+            return;
+        }
+
+        // Cell editing: only Save / Save As / Undo / Redo /
+        // clipboard / Select All stay live, routed to the
+        // cell. Everything else below (formatting, styles,
+        // alignment, Repeat, Print, ...) acts on the body
+        // buffer and is skipped while a cell is active — a
+        // Ctrl+B in a cell must not bold body text.
+        if (doc.cellEdit.active) {
+            if (actionMap_.isActionPressed(Action::Save)) {
+                cmd::saveDocument(doc, layout, menu);
+            }
+            if (actionMap_.isActionPressed(Action::SaveAs)) {
+                menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
+            }
+            if (actionMap_.isActionPressed(Action::Copy)) cmd::copyCell(doc);
+            if (actionMap_.isActionPressed(Action::Cut)) cmd::cutCell(doc);
+            if (actionMap_.isActionPressed(Action::Paste)) cmd::pasteCell(doc);
+            if (actionMap_.isActionPressed(Action::SelectAll)) cmd::selectAllCell(doc);
+            if (actionMap_.isActionPressed(Action::Undo)) {
+                if (cmd::undo(doc)) caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressed(Action::Redo)) {
+                if (cmd::redo(doc)) caret::resetBlink(caret);
             }
             return;
         }
@@ -516,6 +618,120 @@ struct NavigationSystem
             return;
         }
 
+        // Cell editing: arrows (and Home / End / word moves)
+        // route to the cell, never the body buffer. Shift
+        // extends the within-cell selection; crossing to
+        // another cell collapses it (a selection cannot span
+        // cells). PageUp / PageDown do nothing in a cell.
+        // Wheel scrolling still works (same math as below).
+        if (doc.cellEdit.active &&
+            doc.cellEdit.tableIndex < doc.tables.size()) {
+            Table& table = doc.tables[doc.cellEdit.tableIndex].second;
+            auto navigateCell = [&](auto moveFunc) {
+                CellPosition beforeCell = doc.cellEdit.cell;
+                if (shift_down && !doc.cellEdit.hasSelection) {
+                    doc.cellEdit.anchorOffset =
+                        doc.cellEdit.caretOffset;
+                }
+                if (!shift_down) {
+                    doc.cellEdit.clearSelection();
+                }
+                cmd::commitCellEditRun(doc);
+                moveFunc();
+                if (shift_down) {
+                    if (doc.cellEdit.cell != beforeCell) {
+                        doc.cellEdit.clearSelection();
+                    } else {
+                        doc.cellEdit.hasSelection =
+                            doc.cellEdit.anchorOffset !=
+                            doc.cellEdit.caretOffset;
+                    }
+                } else {
+                    doc.cellEdit.clearSelection();
+                }
+                caret::resetBlink(caret);
+            };
+            auto cellWidthAndFont = [&]() {
+                const TableCell& cell =
+                    table.cell(doc.cellEdit.cell);
+                return std::pair{
+                    cell_edit::textWidth(table, doc.cellEdit.cell),
+                    cell.textStyle.fontSize};
+            };
+            if (actionMap_.isActionPressedRepeat(Action::MoveWordLeft)) {
+                navigateCell([&]() {
+                    cell_edit::moveWordLeft(table, doc.cellEdit);
+                });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveLeft)) {
+                navigateCell([&]() {
+                    cell_edit::moveLeft(table, doc.cellEdit);
+                });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveWordRight)) {
+                navigateCell([&]() {
+                    cell_edit::moveWordRight(table, doc.cellEdit);
+                });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveRight)) {
+                navigateCell([&]() {
+                    cell_edit::moveRight(table, doc.cellEdit);
+                });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveUp)) {
+                navigateCell([&]() {
+                    auto [w, fs] = cellWidthAndFont();
+                    cell_edit::moveUp(table, doc.cellEdit, w, fs,
+                                     cmd::cellMeasure());
+                });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveDown)) {
+                navigateCell([&]() {
+                    auto [w, fs] = cellWidthAndFont();
+                    cell_edit::moveDown(table, doc.cellEdit, w, fs,
+                                        cmd::cellMeasure());
+                });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveDocumentStart)) {
+                navigateCell([&]() {
+                    cell_edit::moveToCellStart(table, doc.cellEdit);
+                });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveLineStart)) {
+                navigateCell([&]() {
+                    auto [w, fs] = cellWidthAndFont();
+                    cell_edit::moveToLineStart(table, doc.cellEdit, w,
+                                               fs, cmd::cellMeasure());
+                });
+            }
+            if (actionMap_.isActionPressedRepeat(Action::MoveDocumentEnd)) {
+                navigateCell([&]() {
+                    cell_edit::moveToCellEnd(table, doc.cellEdit);
+                });
+            } else if (actionMap_.isActionPressedRepeat(Action::MoveLineEnd)) {
+                navigateCell([&]() {
+                    auto [w, fs] = cellWidthAndFont();
+                    cell_edit::moveToLineEnd(table, doc.cellEdit, w,
+                                             fs, cmd::cellMeasure());
+                });
+            }
+            float wheelMove = input::getMouseWheelMove();
+            if (wheelMove != 0.0f) {
+                int wheelLines = scroll_math::accumulateWheel(
+                    scroll.wheelRemainder, wheelMove);
+                if (layout.splitViewEnabled && shift_down) {
+                    scroll.secondaryOffset += wheelLines;
+                    int lineCount =
+                        static_cast<int>(doc.buffer.lineCount());
+                    int maxScroll =
+                        std::max(0, lineCount - scroll.visibleLines);
+                    scroll.secondaryOffset = std::clamp(
+                        scroll.secondaryOffset, 0, maxScroll);
+                } else {
+                    scroll.offset += wheelLines;
+                }
+            }
+            scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
+            return;
+        }
+
         // @ chip popup owns Up/Down (it moves the popup selection,
         // not the caret). Any other navigation key pressed while the
         // popup is open dismisses it and then moves the caret
@@ -684,7 +900,8 @@ struct AutoSaveSystem
             std::filesystem::path(doc.autoSavePath).parent_path());
 
         cmd::syncLayoutToSettings(doc, layout);
-        auto result = saveDocumentEx(doc.buffer, doc.docSettings, doc.autoSavePath);
+        auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
+                                             doc.tables, doc.autoSavePath);
         if (result.success) {
             doc.lastAutoSaveTime = now;
             cmd::flashStatusConfirmation("[saved] Auto-saved", 2.0);

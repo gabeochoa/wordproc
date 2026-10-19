@@ -90,7 +90,8 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Insert/Delete rows & columns | Have | P0 | |
 | Merge / Split cells | Have | P1 | |
 | Table borders rendering | Have | P1 | test_border_rendering |
-| Sort / Formula / AutoFormat | Partial | P2 | Batch 7: Table > Sort Ascending/Descending sorts ALL rows by the caret's column (no header concept in the model, so no row pinned) — numeric-aware, numbers before text, case-insensitive text, stable, merged tables refuse. Table > Formula... opens a dialog prefilled =SUM(ABOVE), supports SUM/AVERAGE/COUNT over ABOVE/LEFT, skipping gaps and non-numeric cells, writing the result into the caret cell. Each is one undo step (before/after snapshot, consumed only while still the latest action; no table redo). Tables now render in the document (renderDocumentTables was dead code). Not covered: typing into cells (pre-existing; E2E seeds cells with test-only set_cell_content / set_table_cell), MIN/MAX, cell references, multi-column sort, header pinning |
+| Sort / Formula / AutoFormat | Partial | P2 | Batch 7: Table > Sort Ascending/Descending sorts ALL rows by the caret's column (no header concept in the model, so no row pinned) — numeric-aware, numbers before text, case-insensitive text, stable, merged tables refuse. Table > Formula... opens a dialog prefilled =SUM(ABOVE), supports SUM/AVERAGE/COUNT over ABOVE/LEFT, skipping gaps and non-numeric cells, writing the result into the caret cell. Batch 8: the table undo is a stack now (one entry per op), so Sort/Formula/cell runs undo in order instead of only the latest op. Not covered: MIN/MAX, cell references, multi-column sort, header pinning; no table redo |
+| Cell editing | Have | P0 | Batch 8: click in a cell places a cell caret (body caret hides); typing / Backspace / Delete / Enter (newline) edit the cell through the command layer, one undo step per typing run (coalesced, stacked with Tab-append/Sort/Formula entries). Tab / Shift+Tab move cells, Tab in the last cell appends a row; Left/Right cross cells at edges, Up/Down cross rows on the first/last visual line (single-line cells always cross). Cell text wraps inside the cell and the row grows from the wrapped lines; the cell caret is a blinking bar, shift+arrows / drag select within the cell (navy, typing replaces). Save/load round-trips tables (saveDocumentEx used to drop them entirely — fixed by routing save/load/autosave/startup through the WithTables variants). Word count excludes cell text (buffer stats only). E2E `pass_table_cell_editing.e2e`, `pass_table_cell_wrap.e2e`; unit tests in `test_table.cpp` `[cell-edit]`. Not covered: no AutoCorrect / smart quotes / @ chips in cells; formatting commands (shortcuts, toolbar, Format menu, Repeat) are no-ops while a cell is active — cells have no formatting model yet; selections cannot span cells; merged masters spanning rows count toward their first row's height only |
 
 ## Window
 | Feature | Status | Priority | Notes |
@@ -127,9 +128,9 @@ honest about Word 95 itself.
 | Live word count | Have | P1 | Batch 5 item 5: status bar left cluster gains a "Words: N" segment after the Ln/Col group, updating as you type, from buffer stats. The O(n) `TextBuffer::stats()` is cached on the status-bar system and recomputed only when the buffer version changes, so the per-frame status render stays O(1). Bench guard: `make bench-unit` class unchanged (no benchmark touched). E2E `pass_live_word_count.e2e` (type 3 words -> "Words: 3", add a word, delete it) |
 
 ## Counts (from tables above, 2026-10-19)
-**Have 50 · Partial 14 · Missing 2** (after Batch 7, P2 sweep: Thesaurus,
-Repeat, Toolbars show/hide, Table Sort/Formula all move Missing ->
-Partial) (66 grouped rows; several rows bundle e.g. Cut/Copy/Paste).
+**Have 51 · Partial 14 · Missing 2** (after Batch 8: Table cell editing
+moves Missing -> Have) (67 grouped rows; several rows bundle e.g.
+Cut/Copy/Paste).
 Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

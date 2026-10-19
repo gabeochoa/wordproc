@@ -224,15 +224,19 @@ struct HandleOpenFileCommand : System<testing::PendingE2ECommand> {
     }
 
     const auto &file_path = cmd.arg(0);
-    DocumentResult result = loadDocumentEx(doc_comp->buffer,
-                                           doc_comp->docSettings,
-                                           file_path);
+    // WithTables: loadDocumentEx drops tables, so a save +
+    // open_file round-trip would lose cell text.
+    DocumentResult result = loadDocumentWithTables(
+        doc_comp->buffer, doc_comp->docSettings, doc_comp->tables,
+        file_path);
     if (result.success) {
       doc_comp->filePath = file_path;
       doc_comp->isDirty = false;
       doc_comp->comments.clear();
       doc_comp->revisions.clear();
       doc_comp->chips.clear();
+      doc_comp->cellEdit = CellEditState{};
+      doc_comp->tableUndo.clear();
       cmd.consume();
     } else {
       cmd.fail("Failed to open file: " + file_path +
@@ -354,10 +358,11 @@ struct HandleAddCommentCommand : System<testing::PendingE2ECommand> {
 };
 
 // Handle 'set_cell_content ROW COL TEXT' - sets one cell of the first
-// table. Test-only seeding: typing into table cells is not
-// implemented in the app (TableEditComponent is unused), so sort /
-// formula E2E need a way to build a table with contents. Like
+// table. Test-only seeding: sort / formula E2E need a way to
+// build a table with contents without typing. Like
 // set_tab_width / add_comment, this pokes app state directly.
+// (Typing into cells IS implemented now — see pass_table_cell_editing
+// — but seeding keeps sort/formula tests independent of typing.)
 struct HandleSetCellContentCommand : System<testing::PendingE2ECommand> {
   ecs::DocumentComponent *doc_comp = nullptr;
 

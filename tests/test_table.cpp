@@ -622,3 +622,325 @@ TEST_CASE("Table sortRows - merged cells refuse, table untouched",
     REQUIRE(table.getCellContent(0, 0) == "b");
     REQUIRE(table.getCellContent(1, 0) == "a");
 }
+
+namespace {
+// Fixed-width stand-in measure: 10px per byte (ASCII tests).
+float fixedMeasure(const std::string& text, int /*fontSize*/) {
+    return static_cast<float>(text.size()) * 10.0f;
+}
+}  // namespace
+
+TEST_CASE("Cell editing: wrapCellText word-wraps, hard-breaks, newlines",
+          "[table][cell-edit]") {
+    SECTION("Word wrap breaks before the overflowing word") {
+        auto lines = cell_edit::wrapCellText("aaa bbb ccc", 50.0f, 16,
+                                             fixedMeasure);
+        REQUIRE(lines.size() == 3);
+        REQUIRE(lines[0].text == "aaa");
+        REQUIRE(lines[1].text == "bbb");
+        REQUIRE(lines[2].text == "ccc");
+        REQUIRE(lines[0].startOffset == 0);
+        REQUIRE(lines[0].endOffset == 3);
+        REQUIRE(lines[1].startOffset == 4);
+        REQUIRE(lines[2].startOffset == 8);
+    }
+    SECTION("A single word wider than the cell hard-breaks") {
+        auto lines = cell_edit::wrapCellText("123456", 25.0f, 16,
+                                             fixedMeasure);
+        REQUIRE(lines.size() == 3);
+        REQUIRE(lines[0].text == "12");
+        REQUIRE(lines[1].text == "34");
+        REQUIRE(lines[2].text == "56");
+    }
+    SECTION("Newlines split lines, including a trailing empty line") {
+        auto lines = cell_edit::wrapCellText("ab\ncd", 1000.0f, 16,
+                                             fixedMeasure);
+        REQUIRE(lines.size() == 2);
+        REQUIRE(lines[0].text == "ab");
+        REQUIRE(lines[1].text == "cd");
+        REQUIRE(lines[1].startOffset == 3);
+        auto trailing = cell_edit::wrapCellText("ab\n", 1000.0f, 16,
+                                                fixedMeasure);
+        REQUIRE(trailing.size() == 2);
+        REQUIRE(trailing[1].text.empty());
+        REQUIRE(trailing[1].startOffset == 3);
+    }
+    SECTION("Fitting text stays one line; empty content is one empty line") {
+        auto lines = cell_edit::wrapCellText("hi", 1000.0f, 16,
+                                             fixedMeasure);
+        REQUIRE(lines.size() == 1);
+        auto empty = cell_edit::wrapCellText("", 1000.0f, 16,
+                                             fixedMeasure);
+        REQUIRE(empty.size() == 1);
+        REQUIRE(empty[0].text.empty());
+    }
+}
+
+TEST_CASE("Cell editing: caretOffsetAtPoint snaps to nearest boundary",
+          "[table][cell-edit]") {
+    auto lines = cell_edit::wrapCellText("abcdef", 1000.0f, 16,
+                                         fixedMeasure);
+    SECTION("Click near the start lands at 0, past the end clamps") {
+        REQUIRE(cell_edit::caretOffsetAtPoint(lines, 2.0f, 5.0f, 16,
+                                              fixedMeasure) == 0);
+        REQUIRE(cell_edit::caretOffsetAtPoint(lines, 1000.0f, 5.0f, 16,
+                                              fixedMeasure) == 6);
+    }
+    SECTION("Midpoint rule matches the body hit test") {
+        // 10px/char: x=24 is inside char 2's second half (15..25
+        // midpoint 20) -> boundary 2; x=26 -> boundary 3.
+        REQUIRE(cell_edit::caretOffsetAtPoint(lines, 24.0f, 5.0f, 16,
+                                              fixedMeasure) == 2);
+        REQUIRE(cell_edit::caretOffsetAtPoint(lines, 26.0f, 5.0f, 16,
+                                              fixedMeasure) == 3);
+    }
+}
+
+TEST_CASE("Cell editing: insert / backspace / delete / selection replace",
+          "[table][cell-edit]") {
+    Table table(2, 2);
+    CellEditState state;
+    state.active = true;
+    state.cell = {0, 0};
+
+    SECTION("Insert appends at the caret and moves it") {
+        REQUIRE(cell_edit::insertText(table, state, "Hi"));
+        REQUIRE(table.getCellContent(0, 0) == "Hi");
+        REQUIRE(state.caretOffset == 2);
+        REQUIRE(cell_edit::insertText(table, state, "!"));
+        REQUIRE(table.getCellContent(0, 0) == "Hi!");
+        REQUIRE(state.caretOffset == 3);
+    }
+    SECTION("Backspace deletes one codepoint, Delete forward") {
+        cell_edit::insertText(table, state, "ab");
+        REQUIRE(cell_edit::backspace(table, state));
+        REQUIRE(table.getCellContent(0, 0) == "a");
+        state.caretOffset = 0;
+        REQUIRE(cell_edit::del(table, state));
+        REQUIRE(table.getCellContent(0, 0).empty());
+    }
+    SECTION("Backspace at 0 and Delete at end are no-ops") {
+        cell_edit::insertText(table, state, "x");
+        state.caretOffset = 0;
+        REQUIRE_FALSE(cell_edit::backspace(table, state));
+        state.caretOffset = 1;
+        REQUIRE_FALSE(cell_edit::del(table, state));
+    }
+    SECTION("Typing replaces a selection") {
+        cell_edit::insertText(table, state, "hello");
+        state.anchorOffset = 1;
+        state.caretOffset = 4;
+        state.hasSelection = true;
+        REQUIRE(cell_edit::insertText(table, state, "X"));
+        REQUIRE(table.getCellContent(0, 0) == "hXo");
+        REQUIRE(state.caretOffset == 2);
+        REQUIRE_FALSE(state.hasSelection);
+    }
+    SECTION("Backspace with a selection deletes the selection") {
+        cell_edit::insertText(table, state, "hello");
+        state.anchorOffset = 0;
+        state.caretOffset = 2;
+        state.hasSelection = true;
+        REQUIRE(cell_edit::backspace(table, state));
+        REQUIRE(table.getCellContent(0, 0) == "llo");
+        REQUIRE(state.caretOffset == 0);
+    }
+    SECTION("Multi-byte backspace deletes a whole codepoint") {
+        cell_edit::insertText(table, state, "a\xC3\xA9");  // a + é
+        REQUIRE(state.caretOffset == 3);
+        REQUIRE(cell_edit::backspace(table, state));
+        REQUIRE(table.getCellContent(0, 0) == "a");
+        REQUIRE(state.caretOffset == 1);
+    }
+    SECTION("Enter inserts a newline the wrapper renders") {
+        cell_edit::insertText(table, state, "a\nb");
+        REQUIRE(table.getCellContent(0, 0) == "a\nb");
+        auto lines = cell_edit::wrapCellText(
+            table.getCellContent(0, 0), 1000.0f, 16, fixedMeasure);
+        REQUIRE(lines.size() == 2);
+    }
+}
+
+TEST_CASE("Cell editing: Left/Right cross cells at edges",
+          "[table][cell-edit]") {
+    Table table(2, 2);
+    table.setCellContent(0, 0, "ab");
+    table.setCellContent(0, 1, "cd");
+    table.setCellContent(1, 0, "ef");
+    CellEditState state;
+    state.active = true;
+    state.cell = {0, 1};
+    state.caretOffset = 0;
+
+    SECTION("Left at a cell start lands at the end of the previous cell") {
+        REQUIRE(cell_edit::moveLeft(table, state));
+        REQUIRE(state.cell == CellPosition{0, 0});
+        REQUIRE(state.caretOffset == 2);
+    }
+    SECTION("Right at a cell end lands at the start of the next cell") {
+        state.cell = {0, 0};
+        state.caretOffset = 2;
+        REQUIRE(cell_edit::moveRight(table, state));
+        REQUIRE(state.cell == CellPosition{0, 1});
+        REQUIRE(state.caretOffset == 0);
+    }
+    SECTION("Left at the first cell and Right at the last stay put") {
+        state.cell = {0, 0};
+        state.caretOffset = 0;
+        REQUIRE_FALSE(cell_edit::moveLeft(table, state));
+        state.cell = {1, 1};
+        state.caretOffset = 0;
+        REQUIRE_FALSE(cell_edit::moveRight(table, state));
+    }
+    SECTION("Left/Right move within the cell otherwise") {
+        state.cell = {0, 0};
+        state.caretOffset = 2;
+        REQUIRE(cell_edit::moveLeft(table, state));
+        REQUIRE(state.caretOffset == 1);
+        REQUIRE(state.cell == CellPosition{0, 0});
+    }
+}
+
+TEST_CASE("Cell editing: Up/Down cross rows, and within wrapped cells",
+          "[table][cell-edit]") {
+    Table table(2, 2);
+    table.setCellContent(0, 0, "aaa bbb");
+    table.setCellContent(1, 0, "ccc");
+    CellEditState state;
+    state.active = true;
+
+    SECTION("Single-line cells: Down crosses, Up returns") {
+        state.cell = {0, 1};
+        state.caretOffset = 0;
+        REQUIRE(cell_edit::moveDown(table, state, 1000.0f, 16,
+                                    fixedMeasure));
+        REQUIRE(state.cell == CellPosition{1, 1});
+        REQUIRE(cell_edit::moveUp(table, state, 1000.0f, 16,
+                                  fixedMeasure));
+        REQUIRE(state.cell == CellPosition{0, 1});
+    }
+    SECTION("Up at the top row and Down at the bottom stay put") {
+        state.cell = {0, 0};
+        state.caretOffset = 0;
+        REQUIRE_FALSE(cell_edit::moveUp(table, state, 1000.0f, 16,
+                                        fixedMeasure));
+        state.cell = {1, 0};
+        REQUIRE_FALSE(cell_edit::moveDown(table, state, 1000.0f, 16,
+                                          fixedMeasure));
+    }
+    SECTION("Down moves one visual line within a wrapped cell first") {
+        state.cell = {0, 0};
+        state.caretOffset = 0;
+        // Width 50 wraps "aaa bbb" to "aaa" / "bbb".
+        REQUIRE(cell_edit::moveDown(table, state, 50.0f, 16,
+                                    fixedMeasure));
+        REQUIRE(state.cell == CellPosition{0, 0});
+        REQUIRE(state.caretOffset == 4);  // start of "bbb"
+        // Down again crosses to the row below (last visual line).
+        REQUIRE(cell_edit::moveDown(table, state, 50.0f, 16,
+                                    fixedMeasure));
+        REQUIRE(state.cell == CellPosition{1, 0});
+    }
+}
+
+TEST_CASE("Cell editing: Tab / Shift+Tab, Tab appends a row",
+          "[table][cell-edit]") {
+    Table table(2, 2);
+    CellEditState state;
+    state.active = true;
+    state.cell = {0, 0};
+
+    SECTION("Tab moves to the next cell, Shift+Tab back") {
+        REQUIRE(cell_edit::tabForward(table, state));
+        REQUIRE(state.cell == CellPosition{0, 1});
+        REQUIRE(cell_edit::tabBackward(table, state));
+        REQUIRE(state.cell == CellPosition{0, 0});
+    }
+    SECTION("Shift+Tab in the first cell stays put (no wrap)") {
+        REQUIRE_FALSE(cell_edit::tabBackward(table, state));
+        REQUIRE(state.cell == CellPosition{0, 0});
+    }
+    SECTION("Tab in the last cell appends a row and lands in (2, 0)") {
+        state.cell = {1, 1};
+        REQUIRE(cell_edit::tabForward(table, state));
+        REQUIRE(table.rowCount() == 3);
+        REQUIRE(state.cell == CellPosition{2, 0});
+        REQUIRE(state.caretOffset == 0);
+    }
+    SECTION("Tab wraps to the next row's first cell") {
+        state.cell = {0, 1};
+        REQUIRE(cell_edit::tabForward(table, state));
+        REQUIRE(state.cell == CellPosition{1, 0});
+    }
+}
+
+TEST_CASE("Cell editing: word moves, word select, select-all",
+          "[table][cell-edit]") {
+    Table table(1, 1);
+    table.setCellContent(0, 0, "hello world foo");
+    CellEditState state;
+    state.active = true;
+    state.cell = {0, 0};
+
+    SECTION("Ctrl+Right jumps to the next word end") {
+        state.caretOffset = 0;
+        REQUIRE(cell_edit::moveWordRight(table, state));
+        REQUIRE(state.caretOffset == 5);
+        REQUIRE(cell_edit::moveWordRight(table, state));
+        REQUIRE(state.caretOffset == 11);
+    }
+    SECTION("Ctrl+Left jumps to the previous word start") {
+        state.caretOffset = 15;
+        REQUIRE(cell_edit::moveWordLeft(table, state));
+        REQUIRE(state.caretOffset == 12);
+    }
+    SECTION("Double-click word selects it") {
+        state.caretOffset = 7;  // inside "world"
+        cell_edit::selectWord(table, state);
+        REQUIRE(state.hasSelection);
+        REQUIRE(state.selectedText(table.getCellContent(0, 0)) ==
+                "world");
+    }
+    SECTION("Select-all selects the whole cell") {
+        cell_edit::selectAllInCell(table, state);
+        REQUIRE(state.hasSelection);
+        REQUIRE(state.selectedText(table.getCellContent(0, 0)) ==
+                "hello world foo");
+    }
+}
+
+TEST_CASE("Cell editing: row height grows from wrapped lines",
+          "[table][cell-edit]") {
+    Table table(1, 1);
+    table.setColWidth(0, 60.0f);  // 48px of text at padding 6+6
+    CellEditState state;
+    state.active = true;
+    state.cell = {0, 0};
+    cell_edit::insertText(table, state, "aaa bbb ccc");
+    // 48px at 10px/char wraps "aaa bbb ccc" to 3 lines:
+    // 8 + 3*20 = 68 > 24 default.
+    cell_edit::recomputeRowHeights(table, fixedMeasure);
+    REQUIRE(table.rowHeight(0) == 68.0f);
+    // Clearing the cell shrinks the row back to one line.
+    cell_edit::selectAllInCell(table, state);
+    cell_edit::backspace(table, state);
+    cell_edit::recomputeRowHeights(table, fixedMeasure);
+    REQUIRE(table.rowHeight(0) == 28.0f);
+}
+
+TEST_CASE("Cell editing: snapshot undo round-trip at model level",
+          "[table][cell-edit]") {
+    // The command layer snapshots the whole table before a
+    // typing run and restores `before` on undo (cmd::undo does
+    // exactly this assignment when the entry is still live).
+    Table table(1, 2);
+    CellEditState state;
+    state.active = true;
+    state.cell = {0, 0};
+    Table before = table;
+    cell_edit::insertText(table, state, "Al");
+    cell_edit::insertText(table, state, "pha");
+    REQUIRE(table.getCellContent(0, 0) == "Alpha");
+    table = before;  // undo: one step restores the whole run
+    REQUIRE(table.getCellContent(0, 0).empty());
+}

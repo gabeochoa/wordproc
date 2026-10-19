@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -216,3 +217,174 @@ private:
 // Factory function to create common table layouts
 Table createTable(std::size_t rows, std::size_t cols);
 Table createTableWithHeader(std::size_t rows, std::size_t cols, const std::vector<std::string>& headers);
+
+// --- Cell editing (Batch 8) ---
+// One active cell caret, stored on DocumentComponent (see
+// DocumentComponent::cellEdit). Offsets are BYTE offsets into the
+// cell's content string, always on UTF-8 codepoint boundaries;
+// helpers below move/delete by whole codepoints, never bytes.
+// The body caret/selection are untouched while a cell edit is
+// active (the main text caret hides; see renderTextBuffer's
+// caretVisible flag in the render system). Entering a cell also
+// syncs Table::currentCell (the Sort / Formula target), and the
+// command layer (DocumentComponent::tableUndo) snapshots the
+// whole table before a typing run, so one undo step restores the
+// pre-run table. A typing run ends (commit: undoPending=false)
+// on navigation, Tab, click-away, or Esc — the snapshot entry
+// itself stays live until cmd::undo consumes or drops it.
+struct CellEditState {
+    bool active = false;
+    // Index into DocumentComponent::tables (not the table's line:
+    // the line is tables[tableIndex].first).
+    std::size_t tableIndex = 0;
+    CellPosition cell{0, 0};
+    std::size_t caretOffset = 0;
+    std::size_t anchorOffset = 0;
+    bool hasSelection = false;
+    // A typing run is in progress, coalescing into the live
+    // DocumentComponent::tableUndo entry (before = pre-run table).
+    bool undoPending = false;
+
+    std::size_t selectionStart() const {
+        return std::min(caretOffset, anchorOffset);
+    }
+    std::size_t selectionEnd() const {
+        return std::max(caretOffset, anchorOffset);
+    }
+    std::string selectedText(const std::string& content) const {
+        if (!hasSelection) return "";
+        std::size_t begin = selectionStart();
+        std::size_t end = selectionEnd();
+        if (begin >= content.size()) return "";
+        return content.substr(begin, std::min(end, content.size()) - begin);
+    }
+    void clearSelection() {
+        hasSelection = false;
+        anchorOffset = caretOffset;
+    }
+    void clampTo(const std::string& content) {
+        if (caretOffset > content.size()) caretOffset = content.size();
+        if (anchorOffset > content.size()) anchorOffset = content.size();
+    }
+};
+
+// One wrapped visual line of a cell's content. startOffset /
+// endOffset are byte offsets into the cell content; text is the
+// displayed slice (no trailing wrap space, no '\n'). Lines are
+// contiguous except at word-wrap breaks (the wrapped space is
+// skipped: next line starts after it) and '\n' breaks (next
+// line starts after the newline).
+struct WrappedCellLine {
+    std::string text;
+    std::size_t startOffset = 0;
+    std::size_t endOffset = 0;
+};
+
+// measure(text, fontSize) -> pixel width. Render / command
+// callers pass the real font measure; tests pass a stand-in.
+using CellMeasureFn = std::function<float(const std::string&, int)>;
+
+// Line height for a cell font size (same rule as body text).
+inline int cellLineHeight(int fontSize) { return fontSize + 4; }
+
+namespace cell_edit {
+
+// Word-wrap content into visual lines at maxWidth pixels.
+// Splits first on '\n' (each newline starts a new visual line,
+// including a trailing empty line after a final '\n'), then
+// greedily word-wraps each paragraph; a single word wider than
+// maxWidth hard-breaks by codepoint. maxWidth <= 0 means no
+// wrapping (one line per paragraph).
+std::vector<WrappedCellLine> wrapCellText(
+    const std::string& content, float maxWidth, int fontSize,
+    const CellMeasureFn& measure);
+
+// Caret offset for a click at (relX, relY) relative to the
+// cell's text origin (padding-adjusted). Nearest-boundary rule,
+// same as the body's hitTestColumn; relY clamps to the first /
+// last visual line.
+std::size_t caretOffsetAtPoint(
+    const std::vector<WrappedCellLine>& lines, float relX, float relY,
+    int fontSize, const CellMeasureFn& measure);
+
+// Word boundaries around offset (word = run of word chars:
+// ASCII alnum / '_' / any non-ASCII codepoint; everything else
+// is a separator). Used for double-click word selection and
+// Ctrl+Left / Ctrl+Right.
+std::size_t wordStart(const std::string& content, std::size_t offset);
+std::size_t wordEnd(const std::string& content, std::size_t offset);
+
+// Clamp state to a valid cell (merged-covered cells resolve to
+// their merge parent) and valid offsets. No-op on an empty table.
+void clampState(Table& table, CellEditState& state);
+
+// Text width available inside a cell (bounds width minus both
+// paddings); never negative.
+float textWidth(const Table& table, CellPosition pos);
+
+// Height a row needs to show every cell's wrapped text at the
+// render width: paddingTop + paddingBottom + lines * lineHeight
+// per cell, maxed over the row's master cells, floored at the
+// default row height (24). Clearing a long cell shrinks its row
+// back. Merged masters spanning several rows count only toward
+// their first row.
+float wrappedRowHeight(const Table& table, std::size_t row,
+                       const CellMeasureFn& measure);
+
+// Recompute every row's stored height from wrapped text.
+void recomputeRowHeights(Table& table, const CellMeasureFn& measure);
+
+// Replace the selection (if any) and insert text at the caret.
+// Returns false when the table is empty / the cell is invalid.
+bool insertText(Table& table, CellEditState& state,
+                const std::string& text);
+
+// Delete the selection, or one codepoint before the caret.
+bool backspace(Table& table, CellEditState& state);
+// Delete the selection, or one codepoint after the caret.
+bool del(Table& table, CellEditState& state);
+
+// Move one codepoint left / right. At a cell edge, cross to
+// the adjacent cell in row-major order (skipping merged-covered
+// cells): Left at offset 0 lands at the END of the previous
+// cell, Right at the end lands at the START of the next cell.
+// At the table edges the caret stays put. Returns false when
+// nothing moved.
+bool moveLeft(Table& table, CellEditState& state);
+bool moveRight(Table& table, CellEditState& state);
+
+// Move one visual line up / down, preserving the caret's x
+// within the line (nearest boundary). On the first / last
+// visual line, cross to the cell above / below in the same
+// column, landing on its last / first visual line at the same
+// x. Single-line cells always cross. At the table's top /
+// bottom row the caret stays put.
+bool moveUp(Table& table, CellEditState& state, float maxWidth,
+            int fontSize, const CellMeasureFn& measure);
+bool moveDown(Table& table, CellEditState& state, float maxWidth,
+              int fontSize, const CellMeasureFn& measure);
+
+// Start / end of the caret's visual line.
+bool moveToLineStart(Table& table, CellEditState& state, float maxWidth,
+                     int fontSize, const CellMeasureFn& measure);
+bool moveToLineEnd(Table& table, CellEditState& state, float maxWidth,
+                   int fontSize, const CellMeasureFn& measure);
+// Start / end of the whole cell text.
+bool moveToCellStart(Table& table, CellEditState& state);
+bool moveToCellEnd(Table& table, CellEditState& state);
+// Word moves (Ctrl+Left / Ctrl+Right) inside the cell only:
+// they never cross to another cell.
+bool moveWordLeft(Table& table, CellEditState& state);
+bool moveWordRight(Table& table, CellEditState& state);
+
+// Tab / Shift+Tab. Tab in the LAST cell appends a new row
+// (Word behavior) and lands in its first cell; Shift+Tab in
+// the first cell stays put (no wrap). Both clear the selection.
+bool tabForward(Table& table, CellEditState& state);
+bool tabBackward(Table& table, CellEditState& state);
+
+// Selection: double-click word, triple-click / Ctrl+A whole cell.
+void selectWord(Table& table, CellEditState& state);
+void selectAllInCell(Table& table, CellEditState& state);
+
+}  // namespace cell_edit

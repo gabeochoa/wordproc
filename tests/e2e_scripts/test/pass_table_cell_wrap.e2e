@@ -1,0 +1,26 @@
+# Test: Table cell text wraps inside the cell and the row
+# grows (Batch 8). A long line in cell (0,0) wraps to several
+# visual lines at the 100px column width; the row height the
+# render uses grows with it (unit tests pin the exact height;
+# here the screenshot is the visual proof). Table menu
+# inserts a 3x3 table; cell (0,0) centre (130,173).
+
+menu_open Table
+wait_frames 12
+menu_select "Insert Table..."
+wait_frames 12
+validate has_table=true
+
+mouse_down 130 173
+wait_frames 2
+mouse_up
+wait_frames 6
+validate cell_editing=true
+validate cell_current=0,0
+
+type "aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll"
+wait_frames 12
+validate cell_content_0_0=aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll
+validate cell_caret_offset=47
+
+screenshot cell_wrap

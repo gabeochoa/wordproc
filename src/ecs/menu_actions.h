@@ -832,8 +832,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 2: {  // Insert Row Above
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         table->insertRowAbove(table->currentCell().row);
                         doc.isDirty = true;
@@ -844,8 +843,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 3: {  // Insert Row Below
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         table->insertRowBelow(table->currentCell().row);
                         doc.isDirty = true;
@@ -856,8 +854,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 4: {  // Insert Column Left
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         table->insertColumnLeft(table->currentCell().col);
                         doc.isDirty = true;
@@ -868,8 +865,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 5: {  // Insert Column Right
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         table->insertColumnRight(table->currentCell().col);
                         doc.isDirty = true;
@@ -880,8 +876,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 7: {  // Delete Row
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         table->deleteRow(table->currentCell().row);
                         doc.isDirty = true;
@@ -892,8 +887,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 8: {  // Delete Column
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         table->deleteColumn(table->currentCell().col);
                         doc.isDirty = true;
@@ -904,8 +898,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 10: {  // Merge Cells
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table && table->hasSelection()) {
                         CellPosition start = table->selectionStart();
                         CellPosition end = table->selectionEnd();
@@ -923,8 +916,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 11: {  // Split Cell
-                    std::size_t currentLine = doc.buffer.caret().row;
-                    Table* table = doc.tableAtLine(currentLine);
+                    Table* table = cmd::tableAtCaret(doc);
                     if (table) {
                         if (table->splitCell(table->currentCell())) {
                             doc.isDirty = true;

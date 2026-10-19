@@ -53,6 +53,9 @@ int g_saved_stdout_fd = -1;
 struct PreloadedDocument {
     TextBuffer buffer;
     DocumentSettings docSettings;
+    // Tables load with the document (Batch 8): the old
+    // buffer-only preload silently dropped them on startup.
+    TableList tables;
     bool loaded = false;
     std::string error;
 };
@@ -160,13 +163,17 @@ static void app_init() {
         if (preloaded.loaded) {
             docComp.buffer = std::move(preloaded.buffer);
             docComp.docSettings = std::move(preloaded.docSettings);
+            docComp.tables = std::move(preloaded.tables);
         } else if (!preloaded.error.empty()) {
             LOG_WARNING("Failed to load file: %s", preloaded.error.c_str());
         }
     } else if (!app_state::loadFile.empty() && std::filesystem::exists(app_state::loadFile)) {
         // Fallback: synchronous load (e.g., benchmark mode or no file specified)
         SCOPED_TIMER("Load document file (sync fallback)");
-        auto result = loadTextFileEx(docComp.buffer, app_state::loadFile);
+        auto result = loadDocumentWithTables(docComp.buffer,
+                                             docComp.docSettings,
+                                             docComp.tables,
+                                             app_state::loadFile);
         if (!result.success) {
             LOG_WARNING("Failed to load file: %s", result.error.c_str());
         }
@@ -208,8 +215,10 @@ static void app_init() {
     bool recoveredAutoSave = false;
     if (!app_state::testModeEnabled && docComp.filePath.empty() &&
         std::filesystem::exists(docComp.autoSavePath)) {
-        auto result = loadDocumentEx(docComp.buffer, docComp.docSettings,
-                                     docComp.autoSavePath);
+        auto result = loadDocumentWithTables(docComp.buffer,
+                                            docComp.docSettings,
+                                            docComp.tables,
+                                            docComp.autoSavePath);
         if (result.success) {
             docComp.isDirty = true;
             recoveredAutoSave = true;
@@ -674,7 +683,9 @@ int main(int argc, char* argv[]) {
         app_state::preloadFuture = std::async(std::launch::async, [filePath = app_state::loadFile]() {
             PreloadedDocument data;
             SCOPED_TIMER("Background document preload");
-            auto result = loadDocumentEx(data.buffer, data.docSettings, filePath);
+            auto result = loadDocumentWithTables(data.buffer,
+                                                 data.docSettings,
+                                                 data.tables, filePath);
             data.loaded = result.success;
             data.error = result.error;
             return data;

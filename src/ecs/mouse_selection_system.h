@@ -41,6 +41,12 @@ struct MouseSelectionSystem
     // buffer) so a plain click leaves hasSelection()==false until the
     // drag actually moves.
     CaretPosition dragAnchor_{0, 0};
+    // Cell drag (Batch 8): same idea inside one cell — the
+    // anchor offset within the cell being dragged in. A drag
+    // never spans cells (see NavigationSystem's cross-cell
+    // collapse); movement clamps to the current cell's bounds.
+    bool cellDragging_ = false;
+    std::size_t dragAnchorCellOffset_ = 0;
     double lastClickTime_ = -1.0;
     int clickCount_ = 0;
     float lastClickX_ = 0.0f;
@@ -232,6 +238,133 @@ struct MouseSelectionSystem
         bool inTextArea = mouse.x >= area.x && mouse.x < sbX && mouse.y >= area.y &&
                           mouse.y < area.y + area.height;
 
+        // Table cells (Batch 8): same origin geometry as
+        // renderDocumentTables (effective area + TEXT_PADDING,
+        // line * lineHeight from the scrolled line), so a click
+        // lands in the cell drawn under it. A press inside a
+        // table enters cell editing at the clicked offset;
+        // a press outside any table exits it and falls through
+        // to the body click below. Not in Print Preview (read-
+        // only) or Outline mode (tables are not the outline).
+        auto cellOffsetAtMouse = [&](std::size_t tableIndex,
+                                     CellPosition cell, float mx,
+                                     float my) {
+            const Table& table = doc.tables[tableIndex].second;
+            std::size_t lineNum =
+                doc.tables[tableIndex].first;
+            float tableX = area.x +
+                           static_cast<float>(theme::layout::TEXT_PADDING);
+            float tableY = area.y +
+                           static_cast<float>(theme::layout::TEXT_PADDING) +
+                           static_cast<float>(
+                               static_cast<int>(lineNum) - scroll.offset) *
+                               static_cast<float>(lineHeight);
+            Table::CellBounds bounds = table.cellBounds(cell);
+            const TableCell& cellData = table.cell(cell);
+            float relX = mx - (tableX + bounds.x +
+                               static_cast<float>(cellData.paddingLeft));
+            float relY = my - (tableY + bounds.y +
+                               static_cast<float>(cellData.paddingTop));
+            auto lines = cell_edit::wrapCellText(
+                cellData.content, cell_edit::textWidth(table, cell),
+                cellData.textStyle.fontSize, cmd::cellMeasure());
+            return cell_edit::caretOffsetAtPoint(
+                lines, relX, relY, cellData.textStyle.fontSize,
+                cmd::cellMeasure());
+        };
+        if (pressed && inTextArea && !layout.previewMode &&
+            !layout.showOutline) {
+            bool hitTable = false;
+            for (std::size_t ti = 0; ti < doc.tables.size(); ++ti) {
+                const Table& table = doc.tables[ti].second;
+                if (table.isEmpty()) continue;
+                std::size_t lineNum = doc.tables[ti].first;
+                if (lineNum < static_cast<std::size_t>(scroll.offset)) {
+                    continue;
+                }
+                float tableX =
+                    area.x +
+                    static_cast<float>(theme::layout::TEXT_PADDING);
+                float tableY =
+                    area.y +
+                    static_cast<float>(theme::layout::TEXT_PADDING) +
+                    static_cast<float>(
+                        static_cast<int>(lineNum) - scroll.offset) *
+                        static_cast<float>(lineHeight);
+                if (mouse.x < tableX ||
+                    mouse.x >= tableX + table.totalWidth() ||
+                    mouse.y < tableY ||
+                    mouse.y >= tableY + table.totalHeight()) {
+                    continue;
+                }
+                hitTable = true;
+                CellPosition clicked = table.cellAtPoint(
+                    mouse.x - tableX, mouse.y - tableY);
+                clicked = table.getMergeParent(clicked);
+                std::size_t off =
+                    cellOffsetAtMouse(ti, clicked, mouse.x, mouse.y);
+                // Multi-click counting, same rule as the body
+                // click below (0.5s, within 4px).
+                double now = afterhours::graphics::get_time();
+                if (now - lastClickTime_ < 0.5 &&
+                    std::abs(mouse.x - lastClickX_) < 4.0f &&
+                    std::abs(mouse.y - lastClickY_) < 4.0f) {
+                    clickCount_ += 1;
+                } else {
+                    clickCount_ = 1;
+                }
+                lastClickTime_ = now;
+                lastClickX_ = mouse.x;
+                lastClickY_ = mouse.y;
+                bool shiftDown =
+                    test_input::is_key_down(
+                        afterhours::keys::LEFT_SHIFT) ||
+                    test_input::is_key_down(
+                        afterhours::keys::RIGHT_SHIFT);
+                bool sameCell =
+                    doc.cellEdit.active &&
+                    doc.cellEdit.tableIndex == ti &&
+                    doc.cellEdit.cell == clicked;
+                if (!sameCell) {
+                    cmd::beginCellEdit(doc, ti, clicked, off);
+                } else if (shiftDown) {
+                    if (!doc.cellEdit.hasSelection) {
+                        doc.cellEdit.anchorOffset =
+                            doc.cellEdit.caretOffset;
+                    }
+                    doc.cellEdit.caretOffset = off;
+                    doc.cellEdit.hasSelection =
+                        doc.cellEdit.anchorOffset != off;
+                } else {
+                    doc.cellEdit.caretOffset = off;
+                    doc.cellEdit.clearSelection();
+                }
+                if (clickCount_ == 2) {
+                    Table& editTable = doc.tables[ti].second;
+                    cell_edit::selectWord(editTable, doc.cellEdit);
+                    cellDragging_ = false;
+                } else if (clickCount_ >= 3) {
+                    Table& editTable = doc.tables[ti].second;
+                    cell_edit::selectAllInCell(editTable,
+                                              doc.cellEdit);
+                    cellDragging_ = false;
+                } else {
+                    dragAnchorCellOffset_ =
+                        doc.cellEdit.hasSelection
+                            ? doc.cellEdit.anchorOffset
+                            : doc.cellEdit.caretOffset;
+                    cellDragging_ = true;
+                }
+                dragging_ = false;
+                caret::resetBlink(caret);
+                return;
+            }
+            if (!hitTable && doc.cellEdit.active) {
+                cmd::endCellEdit(doc);
+                cellDragging_ = false;
+            }
+        }
+
         if (pressed && inTextArea) {
             // Format Painter: an armed painter applies the captured
             // style on this click (click or the press that starts a
@@ -350,6 +483,38 @@ struct MouseSelectionSystem
                 autoScrolledThisDrag_ = false;
             }
             caret::resetBlink(caret);
+            return;
+        }
+
+        // Cell drag in progress: extend the within-cell selection
+        // to the drag position (clamped to the current cell by
+        // cellOffsetAtMouse). A zero-length drag collapses to a
+        // plain caret on release, like the body drag below.
+        if (cellDragging_) {
+            if (!down) {
+                if (doc.cellEdit.active) {
+                    std::size_t off = cellOffsetAtMouse(
+                        doc.cellEdit.tableIndex, doc.cellEdit.cell,
+                        mouse.x, mouse.y);
+                    doc.cellEdit.anchorOffset = dragAnchorCellOffset_;
+                    doc.cellEdit.caretOffset = off;
+                    doc.cellEdit.hasSelection =
+                        dragAnchorCellOffset_ != off;
+                }
+                cellDragging_ = false;
+                caret::resetBlink(caret);
+                return;
+            }
+            if (doc.cellEdit.active && inTextArea) {
+                std::size_t off = cellOffsetAtMouse(
+                    doc.cellEdit.tableIndex, doc.cellEdit.cell,
+                    mouse.x, mouse.y);
+                doc.cellEdit.anchorOffset = dragAnchorCellOffset_;
+                doc.cellEdit.caretOffset = off;
+                doc.cellEdit.hasSelection =
+                    dragAnchorCellOffset_ != off;
+                caret::resetBlink(caret);
+            }
             return;
         }
 
