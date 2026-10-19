@@ -161,3 +161,10 @@ Root cause of the blue rounded focus ring: dialogs built a fresh
 default afterhours Theme instead of createWin95Theme(). All 25 modal
 sites now go through win95DialogConfig. Remaining minor: unfocused
 text fields lack the sunken inset (queued).
+
+## 2026-10-19 — Batch 11 (TOC, Symbol, Drop Cap)
+
+TOC 4->8 (leaders measured to a right tab stop), Symbol 5.5->7
+(font picker, tabs, codepoint readout), Drop Cap 3.5->7.5 (indent
+leak into later paragraphs, then vertical-extent overlap — the cap
+paragraph now reserves the cap's full height). **Batch 11 PASS.**
