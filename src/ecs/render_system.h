@@ -136,6 +136,29 @@ inline void drawBorderEdge(float x1, float y1, float x2, float y2,
     }
 }
 
+// Dotted gridline edge for table cells (Word 95 gridlines):
+// #808080, 2px on / 2px off along the axis-aligned edge. Used
+// for None/Thin sides (tableBorderIsGridline); explicitly-set
+// sides keep the black border path below.
+inline void drawTableGridlineEdge(float x1, float y1, float x2, float y2) {
+    const afterhours::Color gridColor{128, 128, 128, 255};  // #808080
+    if (y1 == y2) {  // Horizontal edge
+        for (float px = x1; px < x2; px += 4.0f) {
+            float end = std::min(px + 2.0f, x2);
+            afterhours::draw_line(static_cast<int>(px), static_cast<int>(y1),
+                                  static_cast<int>(end), static_cast<int>(y1),
+                                  gridColor);
+        }
+    } else {  // Vertical edge
+        for (float py = y1; py < y2; py += 4.0f) {
+            float end = std::min(py + 2.0f, y2);
+            afterhours::draw_line(static_cast<int>(x1), static_cast<int>(py),
+                                  static_cast<int>(x1), static_cast<int>(end),
+                                  gridColor);
+        }
+    }
+}
+
 // Render a table at a specific position
 inline void renderTable(const Table& table, float tableX, float tableY, 
                         CellPosition currentCell, bool isEditing) {
@@ -161,12 +184,25 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                                      cell.backgroundColor.b, cell.backgroundColor.a};
             afterhours::draw_rectangle(Rectangle{cellX, cellY, cellW, cellH}, bgColor);
             
-            // Draw cell borders
+            // Draw cell borders: default/gridline sides draw the
+            // light-gray dotted gridline; explicitly-set sides
+            // keep the black border. (renderDocumentTables
+            // delegates here; Double/Dashed/Dotted still draw
+            // nothing — borderStyleThickness returns 0 for them,
+            // a pre-existing limitation, not changed here.)
             afterhours::Color borderColor = afterhours::Color{0, 0, 0, 255};
-            drawBorderEdge(cellX, cellY, cellX + cellW, cellY, cell.borders.top, borderColor);
-            drawBorderEdge(cellX, cellY + cellH, cellX + cellW, cellY + cellH, cell.borders.bottom, borderColor);
-            drawBorderEdge(cellX, cellY, cellX, cellY + cellH, cell.borders.left, borderColor);
-            drawBorderEdge(cellX + cellW, cellY, cellX + cellW, cellY + cellH, cell.borders.right, borderColor);
+            auto drawTableBorder = [&](float x1, float y1, float x2, float y2,
+                                       BorderStyle style) {
+                if (tableBorderIsGridline(style)) {
+                    drawTableGridlineEdge(x1, y1, x2, y2);
+                } else {
+                    drawBorderEdge(x1, y1, x2, y2, style, borderColor);
+                }
+            };
+            drawTableBorder(cellX, cellY, cellX + cellW, cellY, cell.borders.top);
+            drawTableBorder(cellX, cellY + cellH, cellX + cellW, cellY + cellH, cell.borders.bottom);
+            drawTableBorder(cellX, cellY, cellX, cellY + cellH, cell.borders.left);
+            drawTableBorder(cellX + cellW, cellY, cellX + cellW, cellY + cellH, cell.borders.right);
             
             // Draw cell content
             if (!cell.content.empty()) {
@@ -178,11 +214,12 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                 afterhours::draw_text(cell.content.c_str(), textX, textY, fontSize, textColor);
             }
             
-            // Highlight current cell if editing
+            // Highlight current cell if editing: navy #000080,
+            // 1px — the Word 95 selection colour, not electric blue.
             if (isEditing && row == currentCell.row && col == currentCell.col) {
                 afterhours::draw_rectangle_outline(
                     Rectangle{cellX, cellY, cellW, cellH},
-                    afterhours::Color{0, 120, 215, 255}, 2.0f);  // Blue highlight
+                    afterhours::Color{0, 0, 128, 255}, 1.0f);
             }
         }
     }

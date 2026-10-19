@@ -64,6 +64,18 @@ inline float borderStyleThickness(BorderStyle style) {
     }
 }
 
+// Gridline classification for the table renderer (renderTable):
+// None and Thin draw the light-gray dotted gridline. Thin is
+// the model's default for every new cell (CellBorders below), so
+// it is the gridline, not an explicit border; None is a
+// borderless cell, which Word still shows gridlines for in the
+// editing view. Any other style (Medium, Thick, Double, Dashed,
+// Dotted) was explicitly set — via setTableBorders or a file
+// load — and keeps the black border path.
+inline bool tableBorderIsGridline(BorderStyle style) {
+    return style == BorderStyle::None || style == BorderStyle::Thin;
+}
+
 // Cell borders (each side can have different style)
 struct CellBorders {
     BorderStyle top = BorderStyle::Thin;

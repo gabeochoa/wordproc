@@ -19,6 +19,21 @@ TEST_CASE("borderStyleThickness maps styles to line widths", "[rendering][table]
     }
 }
 
+TEST_CASE("tableBorderIsGridline: None/Thin are gridlines, the rest explicit",
+          "[rendering][table]") {
+    SECTION("None and Thin draw the light-gray dotted gridline") {
+        REQUIRE(tableBorderIsGridline(BorderStyle::None));
+        REQUIRE(tableBorderIsGridline(BorderStyle::Thin));
+    }
+    SECTION("Explicitly-set styles keep the black border path") {
+        REQUIRE_FALSE(tableBorderIsGridline(BorderStyle::Medium));
+        REQUIRE_FALSE(tableBorderIsGridline(BorderStyle::Thick));
+        REQUIRE_FALSE(tableBorderIsGridline(BorderStyle::Double));
+        REQUIRE_FALSE(tableBorderIsGridline(BorderStyle::Dashed));
+        REQUIRE_FALSE(tableBorderIsGridline(BorderStyle::Dotted));
+    }
+}
+
 TEST_CASE("CellBorders default to Thin", "[rendering][table]") {
     CellBorders borders;
     REQUIRE(borders.top == BorderStyle::Thin);
