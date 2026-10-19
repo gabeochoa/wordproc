@@ -3,6 +3,7 @@
 #include "../src/editor/document_io.h"
 #include "../src/editor/drop_cap.h"
 #include "../src/editor/text_buffer.h"
+#include "../src/editor/text_layout.h"
 #include "catch2/catch.hpp"
 
 TEST_CASE("Drop cap helpers", "[drop_cap]") {
@@ -18,28 +19,72 @@ TEST_CASE("Drop cap helpers", "[drop_cap]") {
         REQUIRE(drop_cap::isEnabled(2));
     }
 
-    SECTION("coveringDropCapRow: nearest span that reaches the row") {
+    SECTION("wrapIndentApplies: only indices [1, N) of the same paragraph") {
+        REQUIRE_FALSE(drop_cap::wrapIndentApplies(3, 0));
+        REQUIRE(drop_cap::wrapIndentApplies(3, 1));
+        REQUIRE(drop_cap::wrapIndentApplies(3, 2));
+        REQUIRE_FALSE(drop_cap::wrapIndentApplies(3, 3));
+        REQUIRE_FALSE(drop_cap::wrapIndentApplies(3, 4));
+        REQUIRE_FALSE(drop_cap::wrapIndentApplies(0, 1));
+        REQUIRE_FALSE(drop_cap::wrapIndentApplies(2, 0));
+        REQUIRE(drop_cap::wrapIndentApplies(2, 1));
+        REQUIRE_FALSE(drop_cap::wrapIndentApplies(2, 2));
+    }
+
+    SECTION("coveringDropCapParagraph: only the cap paragraph itself") {
         using Row = drop_cap::RowInfo;
         std::vector<Row> rows = {{true, 3}, {}, {true, 2}, {}};
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 1) == 0);
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 2) == 0);
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 3) == 2);
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 0) == -1);
+        // The cap paragraph's own wrapped lines 1-2 indent.
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 0, 1) == 0);
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 0, 2) == 0);
+        // Its first line carries the glyph (no indent); line 3 is
+        // past the span.
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 0, 0) == -1);
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 0, 3) == -1);
+        // Paragraphs 1 and 3 are NEVER covered by paragraph 0's
+        // cap, however close they sit after it (the scope leak:
+        // the old covering-row scan indented them).
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 1, 1) == -1);
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 3, 1) == -1);
+        // Paragraph 2 carries its own cap: its wrapped line 1
+        // indents, line 2 does not (span 2).
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 2, 1) == 2);
+        REQUIRE(drop_cap::coveringDropCapParagraph(rows, 2, 2) == -1);
     }
 
-    SECTION("coveringDropCapRow: a short span does not cover") {
-        using Row = drop_cap::RowInfo;
-        std::vector<Row> rows = {{true, 2}, {}, {}, {}};
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 1) == 0);
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 2) == -1);
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 3) == -1);
-    }
-
-    SECTION("coveringDropCapRow: nearer span wins over an earlier one") {
-        using Row = drop_cap::RowInfo;
-        std::vector<Row> rows = {{true, 4}, {true, 2}, {}};
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 1) == 0);
-        REQUIRE(drop_cap::coveringDropCapRow(rows, 2) == 1);
+    SECTION("3 paragraphs, cap on p1: p2/p3 unindented, p1 lines 2..N indented") {
+        // p1 is long enough to wrap into 4 lines at width 10;
+        // p2/p3 are short (one wrapped line each).
+        TextBuffer buffer;
+        buffer.setText("First paragraph wraps a lot here\nSecond\nThird");
+        ParagraphFormat fmt = buffer.lineParagraphFormat(0);
+        fmt.dropCapLines = 3;
+        buffer.setLineParagraphFormat(0, fmt);
+        auto wrapped = layoutWrappedLines(buffer, 10);
+        // Wrapped index within each paragraph, in layout order.
+        std::vector<std::size_t> wrappedIndex(buffer.lineCount(), 0);
+        for (const auto& line : wrapped) {
+            std::size_t para = line.source_row;
+            std::size_t index = wrappedIndex[para]++;
+            std::vector<drop_cap::RowInfo> rows;
+            for (std::size_t r = 0; r < buffer.lineCount(); ++r) {
+                rows.push_back(drop_cap::RowInfo{
+                    buffer.lineDropCapLines(r) >= drop_cap::kMinLines,
+                    buffer.lineDropCapLines(r)});
+            }
+            bool indented = drop_cap::coveringDropCapParagraph(
+                                rows, para, index) >= 0;
+            if (para == 0) {
+                // p1: lines 2..3 (indices 1,2) indented, line 4 not.
+                REQUIRE(indented == (index == 1 || index == 2));
+            } else {
+                // p2/p3: first (only) line at the normal margin.
+                REQUIRE(index == 0);
+                REQUIRE_FALSE(indented);
+            }
+        }
+        // The layout really did wrap p1 into 4 lines.
+        REQUIRE(wrapped.size() == 6);
     }
 }
 

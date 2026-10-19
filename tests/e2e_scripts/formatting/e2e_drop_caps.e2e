@@ -40,6 +40,21 @@ validate dialog_open=false
 validate drop_cap=true
 validate drop_cap_lines=3
 
+# The cap belongs to paragraph 1 only: moving the caret to
+# paragraph 2 shows no drop cap there (Batch 11 fix round: the
+# old renderer indented paragraphs 2 and 3 under paragraph 1's
+# cap). The indent scoping itself is pinned by the unit test
+# (drop_cap::coveringDropCapParagraph over wrapped lines), as
+# the runner has no per-row pixel-x property.
+key DOWN
+key HOME
+wait_frames 12
+validate drop_cap=false
+validate drop_cap_lines=0
+key UP
+wait_frames 12
+validate drop_cap=true
+
 screenshot dropcap
 
 # One undo step restores the paragraph.

@@ -3,15 +3,26 @@
 // Format > Drop Cap: pure helpers. A paragraph's drop cap is
 // dropCapLines lines tall (0 = off, 2-4 = dropped). The first
 // glyph draws at lineHeight * dropCapLines, and the following
-// dropCapLines - 1 rows indent past its width — the wrap indent
-// the renderer applies via indentedBaseX, so caret, selection,
-// and squiggles follow it like the outline collapse shift.
+// dropCapLines - 1 WRAPPED lines of THE SAME PARAGRAPH indent past
+// its width — the wrap indent the renderer applies via
+// indentedBaseX, so caret, selection, and squiggles follow it
+// like the outline collapse shift.
 //
-// This renderer draws one buffer line per visual row (no text
-// wrapping), so the "following lines" are the next buffer rows:
-// the wrap indent applies to the rows a drop-cap paragraph's
-// continuation lines would occupy in a wrapping renderer. The
-// mouse hit-test does not account for paragraph indents at all
+// Scoping (Batch 11 fix round): the indent is keyed by
+// (paragraph, line-index-within-paragraph), never by "the N rows
+// after a drop-cap row". The old covering-row scan treated the
+// next buffer rows as the cap paragraph's continuations, but
+// each buffer row IS its own paragraph (the renderer draws one
+// buffer line per visual row, no wrapping), so a drop cap on
+// paragraph 1 indented paragraphs 2 and 3 as well. Now no
+// following buffer row ever inherits another paragraph's cap:
+// a wrapped line indents only when its own paragraph carries
+// the cap and its index within that paragraph is in [1, N).
+// Wrapped lines are the text_layout splits of one paragraph
+// (layoutWrappedLines); a paragraph that does not wrap has no
+// continuation lines and no indent.
+//
+// The mouse hit-test does not account for paragraph indents at all
 // (pre-existing approximation), so it does not account for this
 // indent either.
 
@@ -33,31 +44,39 @@ inline int clampLines(int lines) {
 
 inline bool isEnabled(int lines) { return lines >= kMinLines; }
 
-// One row's drop-cap state, for coveringDropCapRow.
+// One row's drop-cap state, for coveringDropCapParagraph.
 struct RowInfo {
     bool hasDropCap = false;
     int dropCapLines = kMinLines;
 };
 
-// The drop-cap paragraph covering `row`, or -1: scan back from
-// the row above (at most kMaxLines - 1 rows: a span of N covers
-// itself + N - 1 following rows) for the NEAREST drop-cap row
-// whose span reaches `row`. A nearer drop-cap row that does not
-// reach `row` does not block an earlier one that does.
-inline int coveringDropCapRow(const std::vector<RowInfo>& rows,
-                              std::size_t row) {
-    if (row == 0 || rows.empty()) return -1;
-    for (std::size_t cap = row; cap-- > 0;) {
-        if (row - cap > static_cast<std::size_t>(kMaxLines - 1)) break;
-        if (cap >= rows.size()) continue;
-        const RowInfo& info = rows[cap];
-        if (!info.hasDropCap) continue;
-        if (row - cap < static_cast<std::size_t>(
-                            std::max(kMinLines, info.dropCapLines))) {
-            return static_cast<int>(cap);
-        }
+// Does the wrapped line at `lineIndexWithinParagraph` (0 = the
+// line carrying the dropped glyph) of a paragraph with this
+// dropCapLines indent past the glyph? Only the first N - 1
+// FOLLOWING lines of the same paragraph: indices [1, N).
+inline bool wrapIndentApplies(int dropCapLines,
+                              std::size_t lineIndexWithinParagraph) {
+    if (!isEnabled(dropCapLines)) return false;
+    return lineIndexWithinParagraph >= 1 &&
+           lineIndexWithinParagraph <
+               static_cast<std::size_t>(dropCapLines);
+}
+
+// The drop-cap paragraph covering a wrapped line: `paragraphRow`
+// itself when that paragraph carries a cap whose span reaches
+// this wrapped line, else -1. A wrapped line of any OTHER
+// paragraph is never covered, however close it sits after a
+// drop-cap paragraph — that was the scope leak.
+inline int coveringDropCapParagraph(const std::vector<RowInfo>& rows,
+                                    std::size_t paragraphRow,
+                                    std::size_t lineIndexWithinParagraph) {
+    if (paragraphRow >= rows.size()) return -1;
+    const RowInfo& info = rows[paragraphRow];
+    if (!info.hasDropCap) return -1;
+    if (!wrapIndentApplies(info.dropCapLines, lineIndexWithinParagraph)) {
+        return -1;
     }
-    return -1;
+    return static_cast<int>(paragraphRow);
 }
 
 }  // namespace drop_cap
