@@ -104,6 +104,142 @@ process) before it matters for open-time claims; (3) if a future edit
 workload (e.g. repeated edits with line-offset shifting) ever approaches
 the frame budget, that — not these numbers — is the optimization target.
 
+## Perf Round 2 — 2026-10-19 (headless, typing + idle + paged)
+
+Round 1's baseline still stands (first-open wall 130 ms, pageless scroll
+0.59 ms/frame, menu +0.24 ms). Round 2 adds idle, typing, and paged /
+2-column scroll numbers, fixes what they indicted, and leaves the rest
+alone with evidence. Same method as round 1: headless only, `-O2`,
+median of 3 runs. This round also shipped the sunken unfocused text-field
+fix (commit `9f8dd1a`, Batch 10 polish — not a perf change, not covered
+here).
+
+Method notes (read before comparing): `--test-mode --frame-limit=N`
+with NO script runs production frames (the E2E `DocumentTextRegistration`
+whole-doc walk gates on script mode, not test mode, so it is a no-op
+here). Any run WITH a `--test-script` pays ~5 ms/frame of registration
+on War and Peace — script-mode numbers are therefore only comparable as
+differentials between runs with the same script shape (see "Harness
+notes" at the end). Typing is measured as a surcharge per key: 100
+`type "a"` commands (1 key per 3 frames, Paged mode, caret mid-document
+via GoTo) vs the same script with the types replaced by waits.
+
+### (1) Idle frame CPU
+
+| Doc | Command (plus `--headless --test-mode`) | ms/frame |
+|---|---|---|
+| Empty | `--frame-limit=300` vs `60`, (236.9−91.8)/240 | 0.61 |
+| 100K words, normal vocabulary (5,000 lines × 20 words) | same differential, (226.2−119.7)/240 | 0.44 |
+| 100K words, all misspelled (NATO-alphabet words, none in the 1,826-word `en_basic.txt`) | same differential, (1062.5−296.7)/240 | 3.19 |
+| War and Peace (566K words, probe) | same differential, (250.5−152.0)/240 | 0.41 |
+| `hello.txt` (1 line, probe) | same differential, (169.4−93.0)/240 | 0.32 |
+
+Reading: idle on a normal doc is ~0.4–0.6 ms/frame regardless of size —
+nothing walks the document on an idle frame. The 3.19 ms/frame on the
+all-misspelled doc is ~2.75 ms/frame of squiggle RENDERING (per squiggle
+a `measure_text` of the line prefix plus ~2 `draw_line` calls per 4 px
+of word; ~800 squiggles/frame on that doc). Real prose pays ~0 for it
+(War idle is 0.41). See "Left alone" for why the render was not changed.
+
+### (2) Typing frame CPU (War and Peace, Paged mode)
+
+| Metric | Before | After fix |
+|---|---|---|
+| Typing surcharge, paired scripts, 100 keys, mean of 5 interleaved pairs (ms/key, includes the harness artifact below) | 11.04 (median 10.65) | 6.57 (median 6.59) |
+| Same, artifact-free estimate of true production typing cost (ms/key) | ~5.0 | ~1 |
+
+Decomposition (micro-bench on the real buffer + bisection in the app,
+same 100-key workload): `stats()` is 4.44 ms/call hot (200 iters),
+~4.9 ms/key in-app (cold-cache + interleaving), 0.50 ms on the 100K doc,
+~0 on empty. Squiggle full-window recheck after a version bump is
+0.023 ms. Raw `insertChar`+`backspace` mid-doc is 0.055 ms (the
+line-offset shift is O(lines-after-caret) but ~0.03 ms). So before the
+fix, a keystroke on War cost ~5 ms, ~4.9 of it `stats()` — nearly a
+third of a 60 Hz frame just for the `Words: N` segment.
+
+Fix (commit `07c71d5`): the status bar recomputes `stats()` at most
+once per 250 ms of wall time while the buffer keeps changing, but
+recomputes as soon as the buffer has been still for 5 frames (settle),
+so pauses between keys and the end of any burst show fresh counts. The
+Word Count dialog had the same root cause — it called `stats()` every
+frame while open — and gets a version gate instead (the document cannot
+change under the modal, so it recomputes exactly once per open).
+Regression E2E: `pass_status_bar_words_catch_up.e2e` pins the catch-up
+(with the interval probed to 60 s it fails: bar stays stale).
+`pass_live_word_count.e2e` is untouched and still passes — its waits
+are pauses, so the settle rule refreshes within them. `make test` and
+`make bench-unit` (incl. the typing-burst guard) still green.
+
+### (3) Scroll: Paged and 2-column (War and Peace)
+
+`--fps-test` auto-scroll (3 lines/frame) + a script that switches the
+view first, wall differential over 540 frames (N=590 vs N=50, same
+script shape). The script's menu navigation cancels in the differential.
+
+| Mode | ms/frame |
+|---|---|
+| Pageless (script method; round 1 no-script method: 0.59) | 0.69 |
+| Paged (View > Page Layout) | 0.33 |
+| 2-column (Paged + Format > Columns… > preset 2; scriptable via the dialog) | below noise floor (see below) |
+
+Paged scroll is CHEAPER than pageless, and the 2-column differential is
+indistinguishable from zero: batch 1 gave (804.7−794.6)/540 = 0.02, but
+a second batch's walls did not grow with frame count at all (N=50:
+1088 ms, N=590: 830 ms, N=2000: 924 ms — run-to-run swing ±300 ms on
+this loaded box swamps the signal). Upper bound from the absent
+signal: ~0.2 ms/frame. The 2-column view itself was verified by
+screenshot (two columns on a small doc; long lines overflow their
+column per the documented no-wrap renderer).
+
+### Investigated and left alone
+
+- Paged full-page render (suspect: redrawing all pages' text vs the
+  visible page only) — DEAD. `renderTextBuffer` breaks past the text
+  area, and paged (0.33) is cheaper than pageless (0.69). No change.
+- Squiggle cache on typing (suspect: whole-window recheck per
+  keystroke) — already incremental per Fix 3: 0.023 ms/window, and a
+  full-window recheck on version change is required by line-shift
+  semantics. No change.
+- Squiggle RENDERING on fully-misspelled docs (2.75 ms/frame, §1) —
+  left alone. It bites only docs where (nearly) every word is flagged
+  (e.g. non-English text against the English-only dictionary). Fixing
+  it needs a render-side squiggle-position cache whose invalidation
+  key must cover zoom, resize, columns, and indents — risk >> benefit
+  for a pathological case.
+- OnDemand frame mode (`frame_loop::Mode::OnDemand`) — NOT viable.
+  Frame requests come only from sokol input events; there is no
+  timer-driven request, so caret blink, flash expiry, toast,
+  autosave, and E2E ticks (all live in the frame fn) would freeze
+  between inputs, and headless drives frames manually so `frame_mode`
+  does not apply there anyway. Stays `Continuous` at `target_fps =
+  200`. The "skip expensive systems on unchanged frames" alternative
+  was also skipped: idle is already 0.44 ms/frame, and a dirty flag
+  across all systems is big/risky for small gain.
+- 2-column scroll cost — not resolved by this method (noise floor,
+  §3). No change; no evidence of a cost to fix.
+
+### Harness notes (for future benches)
+
+- Script-mode frames on War pay ~5 ms/frame of test-only
+  `DocumentTextRegistration` (whole-doc `lineString` per frame). Never
+  compare a script-mode absolute against a no-script absolute; use
+  differentials with identical script shapes.
+- `type`/`key` E2E commands cost ~1 extra frame each vs `wait_frames`
+  (same nominal wait). Against War that reads as ~4–5 ms/key of
+  artifact (the extra frames run registration). It cancels in
+  before/after comparisons with identical scripts, but a
+  typing-vs-idle differential that mixes command types overstates
+  true typing cost. (`wait 0.05` == `wait_frames 3`: tick-equivalent.)
+- `samples=` from `--fps-test` is the 120-frame cap when a script is
+  also present, not the script's frame count. Screenshots do not flush
+  in `--fps-test` runs; use `--test-mode` for probe screenshots.
+- Headless loop runs flat-out (~2700 fps no-script); script-mode runs
+  ~100–200 fps on War (registration-capped). Wall-time waits
+  (throttles, flashes) therefore cover far fewer frames than their
+  second count suggests on small docs — size `wait_frames` by wall
+  time, not frames.
+
+
 ## Perf Lane Baseline — 2026-10-19 (headless, interaction feel)
 
 Owner priority: (1) cold first-open → first interactive frame, (2) scroll
