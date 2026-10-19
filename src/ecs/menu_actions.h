@@ -841,6 +841,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 24:  // Special Character...
                     dialogs.showSymbolDialog = true;
                     dialogs.symbolSelected = 0;
+                    dialogs.symbolTab = 0;
+                    dialogs.symbolFontIndex = 0;
+                    dialogs.symbolFontDropdownOpen = false;
                     break;
                 case 26:  // Header — enter header editing
                     // (the "[HEADER]" body-text placeholder is gone:

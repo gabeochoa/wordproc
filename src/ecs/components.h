@@ -401,9 +401,16 @@ struct DialogState : public afterhours::BaseComponent {
     // in symbol::entries(); symbolSelected indexes it. A grid
     // click selects; a second click on the selected cell (or the
     // Insert button) inserts that character at the caret through
-    // the command layer as one undo step.
+    // the command layer as one undo step. symbolTab is 0 =
+    // "Symbols" (whole grid) or 1 = "Special Characters"
+    // (punctuation/currency subset); symbolFontIndex indexes
+    // symbol::fontChoices() (the loaded families the grid renders
+    // in); symbolFontDropdownOpen is the Font dropdown state.
     bool showSymbolDialog = false;
     int symbolSelected = 0;
+    int symbolTab = 0;
+    int symbolFontIndex = 0;
+    bool symbolFontDropdownOpen = false;
 
     // Drop Cap (Format > Drop Cap): the dialog's working copy.
     // dropCapPosition 0 = None, 1 = Dropped; dropCapLines is the

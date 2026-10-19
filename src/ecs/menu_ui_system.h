@@ -2459,22 +2459,34 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
 
         // Special Character dialog (Insert > Special Character...):
-        // Win95 shell, a grid of symbol::entries() (8 columns) plus
-        // a name line for the selection. A grid click selects; a
-        // second click on the selected cell (a double-click) or
-        // the Insert button inserts that character at the caret
-        // through cmd::insertSymbol as one undo step. The grid
-        // draws with the UI font (Roboto), which carries every
-        // entry — see symbol.h.
+        // Win95 shell. Top: a Font dropdown (the loaded families
+        // from symbol::fontChoices(); the grid/list re-renders in
+        // that face, and a glyph the face lacks draws blank, like
+        // Word) and two tabs — "Symbols" (the whole grid, 8
+        // columns, inside a sunken border) and "Special
+        // Characters" (the punctuation/currency subset as a
+        // sunken scrolling list, each row showing the character,
+        // its formal name, and Word's shortcut hint). A click
+        // selects; a second click on the selected cell (a
+        // double-click) or the Insert button inserts that
+        // character at the caret through cmd::insertSymbol as
+        // one undo step. The bottom readout shows the selection's
+        // code + formal name ("U+00A9 Copyright Sign"), plus the
+        // shortcut hint on the Special tab.
         if (dialogs.showSymbolDialog) {
             constexpr int SYMBOL_MODAL_ID = 50022;
-            // Height fits content: title 20 + label 20 + grid
-            // (6 rows x 30) + name line 20 + buttons 44 + panel
-            // padding 8 = 312; width fits 8 x 44 cells + padding.
+            // Height fits content: title 20 + font row 28 + tabs
+            // 28 + label 20 + grid/list 180 + readout 20 +
+            // buttons 44 + panel padding 8 = 348; the Font
+            // dropdown list adds 4 x 22 + padding = 96 in-flow.
+            // Width fits 8 x 44 cells + padding (and the
+            // Special list's longest "name + shortcut" row).
+            const float symbolDialogH =
+                348.0f + (dialogs.symbolFontDropdownOpen ? 96.0f : 0.0f);
             auto result = afterhours::modal(ctx, mk(entity, SYMBOL_MODAL_ID),
                 dialogs.showSymbolDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(400), afterhours::ui::h720(312),
+                    afterhours::ui::h720(400), afterhours::ui::h720(symbolDialogH),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -2483,10 +2495,141 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
                 const auto& entries = symbol::entries();
+                const auto& fontChoices = symbol::fontChoices();
+                const std::size_t fontIdx =
+                    dialogs.symbolFontIndex >= 0 &&
+                    dialogs.symbolFontIndex < static_cast<int>(fontChoices.size())
+                        ? static_cast<std::size_t>(dialogs.symbolFontIndex)
+                        : 0;
+                const char* chosenFontKey = fontChoices[fontIdx].managerKey;
 
                 ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
                                               "Special Character",
                                               CONTENT_LAYER);
+
+                // Font row: label + dropdown button + triangle
+                // (the same dropdown button as the Font dialog).
+                auto fontRow = div(ctx, mk(result.ent(), 902),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(28)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(6))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (fontRow) {
+                    test_input::register_visible_text("Font:");
+                    div(ctx, mk(fontRow.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("Font:")
+                            .with_size(ComponentSize{children(), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                    test_input::register_visible_text(
+                        std::string("Font: ") + fontChoices[fontIdx].display);
+                    if (button(ctx, mk(fontRow.ent(), 1),
+                        ah_win95::win95DropdownButtonStyle(
+                            160.0f, 26.0f, dialogs.symbolFontDropdownOpen)
+                            .with_debug_name("symbol_font_dropdown")
+                            .with_label(fontChoices[fontIdx].display)
+                            .with_text_inset(8.0f, 2.0f)
+                            .with_on_draw_fg([](RectangleType r) {
+                                drawDropdownTriangle(
+                                    r.x + r.width -
+                                        theme::layout::scale(10),
+                                    r.y + r.height / 2.0f,
+                                    theme::BUTTON_TEXT);
+                            })
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.symbolFontDropdownOpen =
+                            !dialogs.symbolFontDropdownOpen;
+                    }
+                }
+                // Font list, in-flow below the button row (the
+                // dialog height grows by its height, computed
+                // before the modal call), like the Font dialog's
+                // dropdown lists.
+                if (dialogs.symbolFontDropdownOpen) {
+                    auto fontList = div(ctx, mk(result.ent(), 903),
+                        ah_win95::win95SunkenStyle()
+                            .with_size(ComponentSize{percent(1.0f), h720(96)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                            .with_render_layer(CONTENT_LAYER));
+                    if (fontList) {
+                        for (std::size_t i = 0; i < fontChoices.size(); ++i) {
+                            bool selected = i == fontIdx;
+                            test_input::register_visible_text(
+                                fontChoices[i].display);
+                            if (button(ctx, mk(fontList.ent(), 950 + static_cast<int>(i)),
+                                ComponentConfig{}
+                                    .with_debug_name(
+                                        std::string("symbol_font_") +
+                                        fontChoices[i].slug)
+                                    .with_label(fontChoices[i].display)
+                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                    .with_roundness(0.0f)
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_text_inset(8.0f, 2.0f)
+                                    .with_cursor(afterhours::ui::CursorType::Pointer)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.symbolFontIndex = static_cast<int>(i);
+                                dialogs.symbolFontDropdownOpen = false;
+                            }
+                        }
+                    }
+                }
+
+                // Tabs: Symbols | Special Characters.
+                auto tabRow = div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(28)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (tabRow) {
+                    static const char* kTabLabels[2] = {"Symbols",
+                                                        "Special Characters"};
+                    static const char* kTabDebug[2] = {"symbol_tab_symbols",
+                                                       "symbol_tab_special"};
+                    // Per-tab widths: the dialog button style is
+                    // 90px, which clips "Special Characters" (the
+                    // overflow also drew the red text-overflow
+                    // outline around it).
+                    static const float kTabWidths[2] = {90.0f, 160.0f};
+                    for (int t = 0; t < 2; ++t) {
+                        bool selected = dialogs.symbolTab == t;
+                        test_input::register_visible_text(kTabLabels[t]);
+                        if (button(ctx, mk(tabRow.ent(), t),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name(kTabDebug[t])
+                                .with_label(kTabLabels[t])
+                                .with_size(ComponentSize{w1280(kTabWidths[t]),
+                                                         h720(28)})
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.symbolTab = t;
+                        }
+                    }
+                }
 
                 test_input::register_visible_text("Select a character:");
                 div(ctx, mk(result.ent(), 901),
@@ -2499,64 +2642,139 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
 
-                const std::size_t cols = symbol::kColumns;
-                const std::size_t rows =
-                    (entries.size() + cols - 1) / cols;
-                for (std::size_t r = 0; r < rows; ++r) {
-                    auto rowDiv = div(ctx, mk(result.ent(), 910 + static_cast<int>(r)),
-                        ComponentConfig{}
-                            .with_size(ComponentSize{percent(1.0f), h720(30)})
-                            .with_flex_direction(FlexDirection::Row)
-                            .with_justify_content(JustifyContent::Center)
-                            .with_align_items(AlignItems::Center)
-                            .with_gap(pixels(2))
+                auto selectOrInsert = [&](std::size_t idx) {
+                    if (static_cast<int>(idx) == dialogs.symbolSelected) {
+                        cmd::insertSymbol(doc, entries[idx].character);
+                        dialogs.showSymbolDialog = false;
+                    } else {
+                        dialogs.symbolSelected = static_cast<int>(idx);
+                    }
+                };
+
+                if (dialogs.symbolTab == 1) {
+                    // Special Characters: the punctuation/currency
+                    // subset as a sunken scrolling list (the Font
+                    // dialog's Size list uses the same
+                    // Overflow::Auto pattern). Each row: glyph,
+                    // formal name, Word shortcut hint.
+                    auto specialList = div(ctx, mk(result.ent(), 940),
+                        ah_win95::win95SunkenStyle()
+                            .with_size(ComponentSize{percent(1.0f), h720(180)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_overflow(afterhours::ui::Overflow::Auto)
+                            .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                            .with_render_layer(CONTENT_LAYER));
+                    if (specialList) {
+                        for (std::size_t specialIdx : symbol::specialIndices()) {
+                            const auto& entry = entries[specialIdx];
+                            bool selected = static_cast<int>(specialIdx) ==
+                                            dialogs.symbolSelected;
+                            std::string rowLabel = std::string(entry.character) +
+                                                   "  " + entry.unicodeName;
+                            if (entry.shortcut[0] != '\0') {
+                                rowLabel += "  ";
+                                rowLabel += entry.shortcut;
+                            }
+                            test_input::register_visible_text(rowLabel);
+                            if (button(ctx, mk(specialList.ent(), static_cast<int>(specialIdx)),
+                                ComponentConfig{}
+                                    .with_debug_name(
+                                        std::string("symbol_special_") + entry.slug)
+                                    .with_label(rowLabel)
+                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                    .with_roundness(0.0f)
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_font(chosenFontKey, pixels(14))
+                                    .with_cursor(afterhours::ui::CursorType::Pointer)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                selectOrInsert(specialIdx);
+                            }
+                        }
+                    }
+                } else {
+                    // Symbols: the whole grid, inside a sunken
+                    // border (the sunken panel keeps the old gray
+                    // row background so the white cells read
+                    // against it).
+                    auto gridBox = div(ctx, mk(result.ent(), 941),
+                        ah_win95::win95SunkenStyle()
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
+                            .with_size(ComponentSize{percent(1.0f), h720(180)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                             .with_render_layer(CONTENT_LAYER));
-                    if (!rowDiv) continue;
-                    for (std::size_t c = 0; c < cols; ++c) {
-                        std::size_t idx = r * cols + c;
-                        if (idx >= entries.size()) break;
-                        const auto& entry = entries[idx];
-                        bool selected = static_cast<int>(idx) ==
-                                        dialogs.symbolSelected;
-                        test_input::register_visible_text(entry.character);
-                        if (button(ctx, mk(rowDiv.ent(), static_cast<int>(idx)),
-                            ComponentConfig{}
-                                .with_debug_name(
-                                    std::string("symbol_char_") + entry.slug)
-                                .with_label(entry.character)
-                                .with_size(ComponentSize{pixels(44), h720(28)})
-                                .with_roundness(0.0f)
-                                .with_custom_background(selected
-                                    ? ui_imm::win95_colors::HIGHLIGHT
-                                    : ui_imm::win95_colors::TEXT_AREA)
-                                .with_custom_text_color(selected
-                                    ? ui_imm::win95_colors::TEXT_WHITE
-                                    : ui_imm::win95_colors::TEXT)
-                                .with_alignment(
-                                    afterhours::ui::TextAlignment::Center)
-                                .with_cursor(
-                                    afterhours::ui::CursorType::Pointer)
-                                .with_render_layer(CONTENT_LAYER))) {
-                            if (selected) {
-                                cmd::insertSymbol(doc, entry.character);
-                                dialogs.showSymbolDialog = false;
-                            } else {
-                                dialogs.symbolSelected =
-                                    static_cast<int>(idx);
+                    if (gridBox) {
+                        const std::size_t cols = symbol::kColumns;
+                        const std::size_t rows =
+                            (entries.size() + cols - 1) / cols;
+                        for (std::size_t r = 0; r < rows; ++r) {
+                            auto rowDiv = div(ctx, mk(gridBox.ent(), 910 + static_cast<int>(r)),
+                                ComponentConfig{}
+                                    .with_size(ComponentSize{percent(1.0f), h720(30)})
+                                    .with_flex_direction(FlexDirection::Row)
+                                    .with_justify_content(JustifyContent::Center)
+                                    .with_align_items(AlignItems::Center)
+                                    .with_gap(pixels(2))
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_render_layer(CONTENT_LAYER));
+                            if (!rowDiv) continue;
+                            for (std::size_t c = 0; c < cols; ++c) {
+                                std::size_t idx = r * cols + c;
+                                if (idx >= entries.size()) break;
+                                const auto& entry = entries[idx];
+                                bool selected = static_cast<int>(idx) ==
+                                                dialogs.symbolSelected;
+                                test_input::register_visible_text(entry.character);
+                                if (button(ctx, mk(rowDiv.ent(), static_cast<int>(idx)),
+                                    ComponentConfig{}
+                                        .with_debug_name(
+                                            std::string("symbol_char_") + entry.slug)
+                                        .with_label(entry.character)
+                                        .with_size(ComponentSize{pixels(44), h720(28)})
+                                        .with_roundness(0.0f)
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(
+                                            afterhours::ui::TextAlignment::Center)
+                                        .with_font(chosenFontKey, pixels(16))
+                                        .with_cursor(
+                                            afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    selectOrInsert(idx);
+                                }
                             }
                         }
                     }
                 }
 
-                // Selected character name line.
+                // Bottom readout: selected character's code +
+                // formal name, plus the shortcut hint on the
+                // Special tab (Word shows the hint with the
+                // selection there).
                 std::string nameLine = " ";
                 if (dialogs.symbolSelected >= 0 &&
                     dialogs.symbolSelected < static_cast<int>(entries.size())) {
                     const auto& sel = entries[static_cast<std::size_t>(
                         dialogs.symbolSelected)];
-                    nameLine = std::string(sel.character) + "  " + sel.name;
+                    nameLine = std::string(sel.character) + "  " +
+                               symbol::readout(sel);
+                    if (dialogs.symbolTab == 1 && sel.shortcut[0] != '\0') {
+                        nameLine += "  ";
+                        nameLine += sel.shortcut;
+                    }
                 }
                 test_input::register_visible_text(nameLine);
                 div(ctx, mk(result.ent(), 930),

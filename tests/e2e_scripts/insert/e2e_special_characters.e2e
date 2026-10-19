@@ -53,3 +53,32 @@ click_ui symbol_char_copyright
 wait_frames 12
 validate text_contains_©=true
 screenshot symbol_inserted
+
+# Font dropdown, tabs, readout (Batch 11 fix round): the dialog
+# opens on the Symbols tab in Roboto with the code+name readout.
+menu_open Insert
+wait_frames 12
+menu_select "Special Character..."
+wait_frames 12
+validate dialog_open=Symbol
+expect_text "Symbols"
+expect_text "Special Characters"
+expect_text "Font: Roboto"
+expect_text "U+00A9 Copyright Sign"
+click_ui symbol_font_dropdown
+wait_frames 12
+click_ui symbol_font_garamond
+wait_frames 12
+expect_text "Font: Garamond"
+
+# Special Characters tab: the © row shows Word's shortcut hint,
+# and the readout adds it for the selection. © is already the
+# selection, so one click on its Special row inserts it.
+click_ui symbol_tab_special
+wait_frames 12
+expect_text "Alt+Ctrl+C"
+expect_text "U+00A9 Copyright Sign"
+click_ui symbol_special_copyright
+wait_frames 12
+validate dialog_open=false
+validate text_contains_©=true
