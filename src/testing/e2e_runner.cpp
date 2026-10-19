@@ -1079,15 +1079,20 @@ static void setupCallbacksEx(
                     style.highlightColor.b != 255 || style.highlightColor.a != 0) ? "true" : "false";
         }
         
-        // TOC properties
+        // TOC properties: has_toc is the marked TOC block, not
+        // merely "headings exist" (the old getter returned true
+        // for any headed document without a TOC).
         if (prop == "has_toc") {
-            // Check if document has any headings that would generate a TOC
-            auto outline = buffer.getOutline();
-            return outline.empty() ? "false" : "true";
+            return buffer.hasToc() ? "true" : "false";
         }
         if (prop == "toc_entries") {
-            auto outline = buffer.getOutline();
-            return std::to_string(outline.size());
+            return std::to_string(buffer.tocEntryCount());
+        }
+        if (prop == "toc_start") {
+            return std::to_string(buffer.tocStartOffset());
+        }
+        if (prop == "toc_end") {
+            return std::to_string(buffer.tocEndOffset());
         }
         
         // Header/footer properties (Batch 9): the text lives

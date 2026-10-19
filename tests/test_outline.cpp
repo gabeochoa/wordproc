@@ -178,18 +178,18 @@ TEST_CASE("Table of contents generation", "[text_buffer][outline][toc]") {
     
     SECTION("generates TOC from headings") {
         buffer.setText("Title\nIntro\nChapter 1\nSection 1.1\nChapter 2");
-        
+
         buffer.setCaret({0, 0});
         buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
         buffer.setCaret({1, 0});
-        buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
         buffer.setCaret({2, 0});
         buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
         buffer.setCaret({3, 0});
         buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
         buffer.setCaret({4, 0});
         buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
-        
+
         std::string toc = buffer.generateTableOfContents();
         REQUIRE(!toc.empty());
         REQUIRE(toc.find("Table of Contents") != std::string::npos);
@@ -198,6 +198,10 @@ TEST_CASE("Table of contents generation", "[text_buffer][outline][toc]") {
         REQUIRE(toc.find("Chapter 1") != std::string::npos);
         REQUIRE(toc.find("Section 1.1") != std::string::npos);
         REQUIRE(toc.find("Chapter 2") != std::string::npos);
+        // Dot leader + page number on an entry line.
+        std::size_t chapterAt = toc.find("Chapter 1");
+        REQUIRE(toc.find("...", chapterAt) != std::string::npos);
+        REQUIRE(toc.find(" 1\n", chapterAt) != std::string::npos);
     }
     
     SECTION("insertTableOfContents adds TOC to document") {

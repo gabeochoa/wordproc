@@ -149,6 +149,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Insert > Update Table of Contents is enabled only while
+        // a marked TOC block exists (same per-frame sync as the
+        // View checkmarks above; a menu rebuild resets it to the
+        // createMenuBar default of enabled).
+        for (auto& m : menu.menus) {
+            if (m.label != "Insert") continue;
+            for (auto& item : m.items) {
+                if (item.label == "Update Table of Contents") {
+                    item.enabled = doc.buffer.hasToc();
+                }
+            }
+        }
+
         // Get the UI root entity for parenting UI elements
         Entity& entity = ui_imm::getUIRootEntity();
         
@@ -6165,21 +6178,29 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             constexpr float MENU_WIDTH = 180.0f;
 
             // Indices are positional and separators occupy one, so this enum has
-            // to stay in lockstep with the item list below.
+            // to stay in lockstep with the item list below. Update
+            // Table of Contents is present but disabled until a
+            // marked TOC block exists (Insert menu syncs the same
+            // rule); a disabled item never returns its index.
             enum ContextItem : int {
                 CtxCut = 0,
                 CtxCopy,
                 CtxPaste,
                 CtxSeparator,
                 CtxSelectAll,
+                CtxSeparator2,
+                CtxUpdateToc,
             };
 
-            const std::array<imm::MenuItem, 5> items{
+            const std::vector<imm::MenuItem> items{
                 imm::MenuItem{.label = "Cut", .shortcut = "Ctrl+X"},
                 imm::MenuItem{.label = "Copy", .shortcut = "Ctrl+C"},
                 imm::MenuItem{.label = "Paste", .shortcut = "Ctrl+V"},
                 imm::MenuItem::sep(),
                 imm::MenuItem{.label = "Select All", .shortcut = "Ctrl+A"},
+                imm::MenuItem::sep(),
+                imm::MenuItem{.label = "Update Table of Contents",
+                              .disabled = !doc.buffer.hasToc()},
             };
 
             const int chosen = imm::context_menu(
@@ -6196,6 +6217,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 case CtxCopy: cmd::copy(doc); break;
                 case CtxPaste: cmd::paste(doc); break;
                 case CtxSelectAll: cmd::selectAll(doc); break;
+                case CtxUpdateToc: cmd::updateToc(doc, layout); break;
                 default: break;
             }
 

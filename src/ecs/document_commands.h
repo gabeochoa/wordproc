@@ -425,10 +425,16 @@ inline void newDocument(DocumentComponent& doc) {
     doc.tableUndo.clear();
 }
 
+// Forward: defined with the TOC commands below; Save / Save As
+// regenerate a marked TOC before writing the file.
+inline void refreshTocForSave(DocumentComponent& doc,
+                              const LayoutComponent& layout);
+
 inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
                          MenuComponent& menu) {
     std::string savePath =
         doc.filePath.empty() ? doc.defaultPath : doc.filePath;
+    refreshTocForSave(doc, layout);
     syncLayoutToSettings(doc, layout);
     // WithTables: saveDocumentEx drops tables (its serializeTable
     // helpers were dead code) — a saved table must round-trip.
@@ -456,6 +462,7 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
 
 inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
                            MenuComponent& menu, const std::string& path) {
+    refreshTocForSave(doc, layout);
     syncLayoutToSettings(doc, layout);
     auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
                                          doc.tables, path,
@@ -1010,6 +1017,63 @@ inline void insertDateTime(DocumentComponent& doc, const std::string& text) {
     doc.buffer.clearSelection();
     doc.buffer.replaceRange(offset, length, text);
     doc.isDirty = true;
+}
+
+// --- Table of Contents (Batch 11) ---
+// linesPerPage is the Batch 6 estimate the status bar, Print
+// Preview, and the Normal-view break lines share: page text
+// height / scaled line height. The TOC's page numbers come from
+// the same math, so a heading's TOC page matches its status-bar
+// page in the same layout.
+inline int tocLinesPerPage(const DocumentComponent& doc,
+                           const LayoutComponent& layout) {
+    float ds = layout::displayScale(layout);
+    int lineHeight =
+        ruler_math::scaledLineHeight(doc.buffer.textStyle().fontSize, ds);
+    return static_cast<int>(columns_math::linesPerColumnForPage(
+        layout.pageHeight, layout.marginTop, layout.marginBottom, ds,
+        lineHeight));
+}
+
+// Insert > Table of Contents: inserts at the caret, or replaces
+// the existing marked block when one exists. One undo step.
+inline bool insertToc(DocumentComponent& doc,
+                      const LayoutComponent& layout) {
+    if (!doc.buffer.insertTableOfContents(tocLinesPerPage(doc, layout))) {
+        flashStatusConfirmation("No headings for a table of contents");
+        return false;
+    }
+    doc.isDirty = true;
+    flashStatusConfirmation("Table of Contents inserted");
+    return true;
+}
+
+// Insert > Update Table of Contents (and the right-click context
+// menu): regenerates the marked block in place. No-op + flash
+// when there is no marked block.
+inline bool updateToc(DocumentComponent& doc,
+                      const LayoutComponent& layout) {
+    if (!doc.buffer.hasToc()) {
+        flashStatusConfirmation("No table of contents to update");
+        return false;
+    }
+    doc.buffer.updateTableOfContents(tocLinesPerPage(doc, layout));
+    doc.isDirty = true;
+    flashStatusConfirmation(!doc.buffer.hasToc()
+                                ? "Table of Contents removed (no headings)"
+                                : "Table of Contents updated");
+    return true;
+}
+
+// Explicit Save / Save As regenerate a marked TOC first, so the
+// saved file's entries (page numbers especially) match the
+// document as saved. Already-fresh blocks are a no-op in the
+// buffer (no undo step, no dirty churn).
+inline void refreshTocForSave(DocumentComponent& doc,
+                              const LayoutComponent& layout) {
+    if (doc.buffer.hasToc()) {
+        doc.buffer.updateTableOfContents(tocLinesPerPage(doc, layout));
+    }
 }
 
 // --- Insert commands (Insert menu + Standard toolbar share these) ---

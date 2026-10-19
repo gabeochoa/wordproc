@@ -231,6 +231,7 @@ bool TextBuffer::deleteSelection() {
     // Adjust hyperlink and bookmark offsets for the deleted selection
     adjustHyperlinkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
     adjustBookmarkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
+    adjustTocOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
 
     // Rebuild line index since we may have deleted across lines
     rebuildLineIndex();
@@ -406,6 +407,7 @@ void TextBuffer::insertChar(char ch) {
     // Adjust hyperlink and bookmark offsets for the inserted character
     adjustHyperlinkOffsets(offset, 1);
     adjustBookmarkOffsets(offset, 1);
+    adjustTocOffsets(offset, 1);
 
     if (ch == '\n') {
         // Split current line - preserve paragraph styles
@@ -464,6 +466,7 @@ void TextBuffer::setText(const std::string& text) {
     chars_.clear();
     line_spans_.clear();
     hyperlinks_.clear();  // Clear all hyperlinks when setting new text
+    clearTocMark();       // A new document has no TOC block
     version_++;  // Content changed - invalidate render cache
 
     if (!text.empty()) {
@@ -1192,6 +1195,7 @@ void TextBuffer::backspace() {
         // Adjust hyperlink and bookmark offsets for the deleted character
         adjustHyperlinkOffsets(offset - 1, -1);
         adjustBookmarkOffsets(offset - 1, -1);
+        adjustTocOffsets(offset - 1, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -1222,6 +1226,7 @@ void TextBuffer::backspace() {
     // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
     adjustBookmarkOffsets(newline_offset, -1);
+    adjustTocOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -1258,6 +1263,7 @@ void TextBuffer::del() {
         // Adjust hyperlink and bookmark offsets for the deleted character
         adjustHyperlinkOffsets(offset, -1);
         adjustBookmarkOffsets(offset, -1);
+        adjustTocOffsets(offset, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -1285,6 +1291,7 @@ void TextBuffer::del() {
     // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
     adjustBookmarkOffsets(newline_offset, -1);
+    adjustTocOffsets(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -2476,31 +2483,407 @@ void TextBuffer::adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta) {
 // Table of Contents
 // ============================================================================
 
-std::string TextBuffer::generateTableOfContents() const {
-    auto outline = getOutline();
-    if (outline.empty()) {
-        return "";
+// ===========================================================================
+// Table of Contents (marked region)
+// ===========================================================================
+
+void TocReplaceCommand::apply(TextBuffer& buffer, std::size_t start,
+                              const std::string& oldText,
+                              const std::string& newText) {
+    CaretPosition pos = buffer.positionForOffset(start);
+    buffer.setCaret(pos);
+    for (std::size_t i = 0; i < oldText.size(); ++i) {
+        buffer.deleteCharAt(pos);
     }
-    
-    std::string toc = "Table of Contents\n";
-    toc += "=================\n\n";
-    
-    for (const auto& entry : outline) {
-        // Add indentation based on level
-        for (int i = 0; i < entry.level; ++i) {
-            toc += "  ";
-        }
-        toc += entry.text + "\n";
+    CaretPosition cur = pos;
+    for (char ch : newText) {
+        buffer.insertCharAt(cur, ch);
+        cur = buffer.caret();
     }
-    
-    return toc;
+    buffer.setCaret(cur);
 }
 
-void TextBuffer::insertTableOfContents() {
-    std::string toc = generateTableOfContents();
-    if (!toc.empty()) {
-        insertText(toc);
+void TocReplaceCommand::execute(TextBuffer& buffer) {
+    apply(buffer, start_, oldText_, newText_);
+    if (newHasToc_) {
+        buffer.setTocRange(newTocStart_, newTocEnd_);
+        // Generated lines are Normal: the block's first row is
+        // the abutting line's span (the newline split keeps its
+        // style), so without this the TOC title line would carry
+        // the heading's style and getOutline would list the TOC
+        // itself as a heading. Rows starting at/after the end
+        // offset (the after-line) are outside the mark.
+        for (std::size_t row = 0; row < buffer.lineCount(); ++row) {
+            if (buffer.lineSpan(row).offset >= newTocEnd_) break;
+            if (buffer.lineSpan(row).offset >= newTocStart_) {
+                buffer.setLineParagraphStyle(
+                    row, ParagraphStyle::Normal);
+            }
+        }
+    } else {
+        buffer.clearTocMark();
     }
+    if (hasBoundary_ && boundaryRowNew_ < buffer.lineCount() &&
+        (!boundaryOnlyIfNonEmpty_ ||
+         buffer.lineSpan(boundaryRowNew_).length > 0)) {
+        buffer.setLineParagraphStyle(boundaryRowNew_, boundaryStyle_);
+    }
+}
+
+void TocReplaceCommand::undo(TextBuffer& buffer) {
+    apply(buffer, start_, newText_, oldText_);
+    if (oldHasToc_) {
+        buffer.setTocRange(oldTocStart_, oldTocEnd_);
+        for (std::size_t row = 0; row < buffer.lineCount(); ++row) {
+            if (buffer.lineSpan(row).offset >= oldTocEnd_) break;
+            if (buffer.lineSpan(row).offset >= oldTocStart_) {
+                buffer.setLineParagraphStyle(
+                    row, ParagraphStyle::Normal);
+            }
+        }
+    } else {
+        buffer.clearTocMark();
+    }
+    if (hasBoundary_ && boundaryRowOld_ < buffer.lineCount() &&
+        (!boundaryOnlyIfNonEmpty_ ||
+         buffer.lineSpan(boundaryRowOld_).length > 0)) {
+        buffer.setLineParagraphStyle(boundaryRowOld_, boundaryStyle_);
+    }
+}
+
+void TextBuffer::adjustTocOffsets(std::size_t pos, std::ptrdiff_t delta) {
+    if (!tocHasMark_) return;
+    if (delta > 0) {
+        // Insertion of `delta` chars at pos.
+        if (pos < tocStart_) {
+            tocStart_ = static_cast<std::size_t>(
+                static_cast<std::ptrdiff_t>(tocStart_) + delta);
+            tocEnd_ = static_cast<std::size_t>(
+                static_cast<std::ptrdiff_t>(tocEnd_) + delta);
+        } else if (pos < tocEnd_) {
+            tocEnd_ = static_cast<std::size_t>(
+                static_cast<std::ptrdiff_t>(tocEnd_) + delta);
+        }
+        return;
+    }
+    if (delta == 0) return;
+    // Deletion of [-delta] chars at [pos, pos + -delta).
+    const std::size_t delEnd =
+        pos + static_cast<std::size_t>(-delta);
+    if (delEnd <= tocStart_) {
+        tocStart_ = static_cast<std::size_t>(
+            static_cast<std::ptrdiff_t>(tocStart_) + delta);
+        tocEnd_ = static_cast<std::size_t>(
+            static_cast<std::ptrdiff_t>(tocEnd_) + delta);
+        return;
+    }
+    if (pos >= tocEnd_) return;
+    if (pos <= tocStart_ && delEnd >= tocEnd_) {
+        // Deletion covers the whole block: the mark is gone.
+        clearTocMark();
+        return;
+    }
+    if (pos <= tocStart_) {
+        tocStart_ = pos;
+    }
+    // End shrinks by the overlap with the deleted range.
+    const std::size_t overlapStart = std::max(pos, tocStart_);
+    const std::size_t overlapEnd = std::min(delEnd, tocEnd_);
+    if (overlapEnd > overlapStart) {
+        tocEnd_ -= overlapEnd - overlapStart;
+    }
+    if (tocEnd_ <= tocStart_) clearTocMark();
+}
+
+void TextBuffer::clearTocMark() {
+    tocHasMark_ = false;
+    tocStart_ = 0;
+    tocEnd_ = 0;
+    version_++;
+}
+
+void TextBuffer::setTocRange(std::size_t start, std::size_t end) {
+    // Accepted only when in bounds and starting at the TOC title
+    // line (setTocRange is the load path: a stale or corrupt
+    // "tableOfContents" object must not mark arbitrary text).
+    // Title check is on the title LINE: the range must start at a
+    // line start and the line must read exactly the title.
+    if (start > end || end > chars_.size()) {
+        clearTocMark();
+        return;
+    }
+    if (start > 0 && chars_.at(start - 1) != '\n') {
+        clearTocMark();
+        return;
+    }
+    CaretPosition pos = offsetToPosition(start);
+    if (pos.row >= line_spans_.size() ||
+        lineString(pos.row) != toc::kTitle) {
+        clearTocMark();
+        return;
+    }
+    tocHasMark_ = true;
+    tocStart_ = start;
+    tocEnd_ = end;
+    version_++;
+}
+
+std::size_t TextBuffer::tocEntryCount() const {
+    if (!tocHasMark_ || tocEnd_ <= tocStart_ ||
+        tocEnd_ > chars_.size()) {
+        return 0;
+    }
+    std::size_t count = 0;
+    std::size_t lineBegin = tocStart_;
+    while (lineBegin < tocEnd_) {
+        std::size_t lineEnd = lineBegin;
+        while (lineEnd < tocEnd_ && chars_.at(lineEnd) != '\n') ++lineEnd;
+        std::string line;
+        line.reserve(lineEnd - lineBegin);
+        for (std::size_t i = lineBegin; i < lineEnd; ++i) {
+            line.push_back(chars_.at(i));
+        }
+        if (toc::isEntryLine(line)) ++count;
+        lineBegin = lineEnd + 1;
+    }
+    return count;
+}
+
+bool TextBuffer::resolveTocRange(std::size_t& start,
+                                 std::size_t& end) const {
+    if (!tocHasMark_) return false;
+    // Stored range, trusted when its first line is still the title.
+    if (tocStart_ < tocEnd_ && tocEnd_ <= chars_.size()) {
+        CaretPosition pos = offsetToPosition(tocStart_);
+        if (pos.row < line_spans_.size() &&
+            lineString(pos.row) == toc::kTitle) {
+            start = tocStart_;
+            end = tocEnd_;
+            return true;
+        }
+    }
+    // Rescan: a line reading exactly the title, followed by
+    // entry lines. The end is the start of the line after the
+    // last entry line (its terminating '\n' belongs to the block).
+    for (std::size_t row = 0; row < line_spans_.size(); ++row) {
+        if (lineString(row) != toc::kTitle) continue;
+        std::size_t blockStart = line_spans_[row].offset;
+        std::size_t blockEnd = blockStart + line_spans_[row].length;
+        if (blockEnd < chars_.size() && chars_.at(blockEnd) == '\n') {
+            ++blockEnd;
+        }
+        std::size_t r = row + 1;
+        while (r < line_spans_.size() &&
+               toc::isEntryLine(lineString(r))) {
+            blockEnd = line_spans_[r].offset + line_spans_[r].length;
+            if (blockEnd < chars_.size() && chars_.at(blockEnd) == '\n') {
+                ++blockEnd;
+            }
+            ++r;
+        }
+        start = blockStart;
+        end = blockEnd;
+        return true;
+    }
+    // No block found: fall back to the stored range when it is
+    // still in bounds (a hand-renamed title still updates).
+    if (tocStart_ < tocEnd_ && tocEnd_ <= chars_.size()) {
+        start = tocStart_;
+        end = tocEnd_;
+        return true;
+    }
+    return false;
+}
+
+std::vector<toc::Entry> TextBuffer::tocEntriesForBlock(
+    std::size_t insertLine, std::size_t blockLines,
+    std::size_t oldStartLine, std::size_t oldEndLine, bool hasOld,
+    int linesPerPage) const {
+    // Entry count is known up front: the block is 1 title line +
+    // one line per entry, so blockLines is exact for page math
+    // whether inserting or replacing.
+    std::vector<toc::Entry> entries;
+    for (std::size_t row = 0; row < line_spans_.size(); ++row) {
+        if (hasOld && row >= oldStartLine && row < oldEndLine) continue;
+        ParagraphStyle style = line_spans_[row].style;
+        int level = -1;
+        switch (style) {
+            case ParagraphStyle::Title: level = 0; break;
+            case ParagraphStyle::Heading1: level = 1; break;
+            case ParagraphStyle::Heading2: level = 2; break;
+            case ParagraphStyle::Heading3: level = 3; break;
+            default: break;
+        }
+        if (level < 0) continue;
+        std::size_t effectiveRow = row;
+        if (hasOld) {
+            if (row >= oldEndLine) {
+                effectiveRow = row + blockLines -
+                               (oldEndLine - oldStartLine);
+            }
+        } else if (row >= insertLine) {
+            effectiveRow = row + blockLines;
+        }
+        entries.push_back(toc::Entry{lineString(row), level, row,
+                                     toc::pageForLine(effectiveRow,
+                                                      linesPerPage)});
+    }
+    return entries;
+}
+
+std::string TextBuffer::generateTableOfContents(
+    int linesPerPage) const {
+    if (line_spans_.empty()) return "";
+    auto entries = tocEntriesForBlock(
+        line_spans_.size(), 0, 0, 0, false, linesPerPage);
+    if (entries.empty()) return "";
+    return toc::blockText(entries);
+}
+
+bool TextBuffer::insertTableOfContents(int linesPerPage) {
+    // Replacing the existing block is the same operation with
+    // the old range as the replaced span.
+    if (tocHasMark_) return updateTableOfContents(linesPerPage);
+
+    std::size_t insertOffset = caretOffset();
+    std::size_t insertLine = caret_.row;
+    // Count entries first: the block length shifts the page
+    // numbers of headings at/after the insertion line.
+    auto entries = tocEntriesForBlock(
+        insertLine, 0, 0, 0, false, linesPerPage);
+    if (entries.empty()) return false;
+    const std::size_t blockLines = entries.size() + 1;
+    entries = tocEntriesForBlock(insertLine, blockLines, 0, 0, false,
+                                 linesPerPage);
+    std::string block = toc::blockText(entries);
+
+    // The block must occupy whole lines, or the mark's first
+    // line would be a fragment of the caret line. A leading /
+    // trailing '\n' outside the marked region splits the caret
+    // line around the block — only when the caret is mid-line
+    // (column > 0): at a line start the block's own trailing
+    // '\n' already ends the block's last line, and an extra
+    // '\n' would leave a blank line between TOC and body.
+    std::string inserted;
+    std::size_t markStart = insertOffset;
+    bool midLine = caret_.column > 0;
+    if (midLine) {
+        inserted += '\n';
+        markStart = insertOffset + 1;
+    }
+    inserted += block;
+    if (midLine && insertOffset < chars_.size() &&
+        chars_.at(insertOffset) != '\n') {
+        inserted += '\n';
+    }
+    std::size_t markEnd = markStart + block.size();
+    // The caret line's paragraph style is stolen by the newline
+    // split in the command (insertCharAt gives the remainder
+    // Normal): the command carries the boundary restore, only
+    // when the remainder is non-empty — at end of line / EOF the
+    // remainder is an empty row that must stay Normal, or it
+    // would become a phantom empty heading.
+    ParagraphStyle boundaryStyle = lineParagraphStyle(insertLine);
+    std::size_t boundaryRowAfter =
+        insertLine +
+        static_cast<std::size_t>(std::count(inserted.begin(),
+                                            inserted.end(), '\n'));
+    history_.execute(
+        std::make_unique<TocReplaceCommand>(
+            insertOffset, "", inserted, false, 0, 0, true, markStart,
+            markEnd, true, boundaryStyle, boundaryRowAfter, insertLine,
+            true),
+        *this);
+    // Caret-safe: the caret was at the insertion point; the
+    // inserted block now starts there, so leave the caret at the
+    // end of the block.
+    setCaret(positionForOffset(markEnd));
+    version_++;
+    return true;
+}
+
+bool TextBuffer::updateTableOfContents(int linesPerPage) {
+    std::size_t oldStart = 0;
+    std::size_t oldEnd = 0;
+    if (!resolveTocRange(oldStart, oldEnd)) return false;
+    CaretPosition oldStartPos = offsetToPosition(oldStart);
+    CaretPosition oldEndPos = offsetToPosition(oldEnd);
+    const std::size_t oldStartLine = oldStartPos.row;
+    std::size_t oldEndLine = oldEndPos.row;
+    // oldEnd sits at a line start (after the block's last '\n')
+    // except at EOF, where it is the last line's end.
+    if (oldEnd < chars_.size() ||
+        (oldEndLine > 0 && oldEnd == line_spans_[oldEndLine].offset)) {
+        // oldEnd is exactly a line start: oldEndLine is the first
+        // line after the block.
+    } else if (oldEnd == chars_.size() && oldEndLine < line_spans_.size()) {
+        oldEndLine = oldEndLine + 1;  // Block ran to EOF
+    }
+    const std::size_t oldBlockLines = oldEndLine - oldStartLine;
+
+    std::size_t caretBefore = caretOffset();
+    std::string oldText;
+    oldText.reserve(oldEnd - oldStart);
+    for (std::size_t i = oldStart; i < oldEnd; ++i) {
+        oldText.push_back(chars_.at(i));
+    }
+    // The first line after the block loses its paragraph style
+    // to the delete/insert of the block's trailing newline (same
+    // newline-split steal as insert): snapshot it, restore it on
+    // that line's new row after the command.
+    bool hasAfterLine = oldEndLine < line_spans_.size();
+    ParagraphStyle afterLineStyle =
+        hasAfterLine ? lineParagraphStyle(oldEndLine)
+                     : ParagraphStyle::Normal;
+
+    auto entries = tocEntriesForBlock(oldStartLine, oldBlockLines,
+                                      oldStartLine, oldEndLine, true,
+                                      linesPerPage);
+    if (entries.empty()) {
+        // No headings left: erase the block, clear the mark.
+        history_.execute(
+            std::make_unique<TocReplaceCommand>(
+                oldStart, oldText, "", true, oldStart, oldEnd, false,
+                0, 0, hasAfterLine, afterLineStyle, oldStartLine,
+                oldEndLine, false),
+            *this);
+        // Caret-safe: a caret after the erased block shifts back
+        // by the block's length; before / inside lands at its start.
+        std::size_t erasedCaret =
+            caretBefore > oldEnd
+                ? caretBefore - oldText.size()
+                : std::min(caretBefore, oldStart);
+        setCaret(positionForOffset(erasedCaret));
+        version_++;
+        return false;
+    }
+    const std::size_t newBlockLines = entries.size() + 1;
+    if (newBlockLines != oldBlockLines) {
+        // Page numbers depend on the new block's length.
+        entries = tocEntriesForBlock(oldStartLine, newBlockLines,
+                                     oldStartLine, oldEndLine, true,
+                                     linesPerPage);
+    }
+    std::string block = toc::blockText(entries);
+    if (block == oldText) return true;  // Already fresh: no undo step
+    history_.execute(
+        std::make_unique<TocReplaceCommand>(
+            oldStart, oldText, block, true, oldStart, oldEnd, true,
+            oldStart, oldStart + block.size(), hasAfterLine,
+            afterLineStyle, oldStartLine + newBlockLines, oldEndLine,
+            false),
+        *this);
+    // Caret-safe: before the block -> unchanged; inside -> end of
+    // the new block; after -> shifted by the length delta.
+    std::size_t newCaret = caretBefore;
+    if (caretBefore >= oldStart && caretBefore <= oldEnd) {
+        newCaret = oldStart + block.size();
+    } else if (caretBefore > oldEnd) {
+        newCaret = caretBefore + block.size() - oldText.size();
+    }
+    setCaret(positionForOffset(newCaret));
+    version_++;
+    return true;
 }
 
 // ============================================================================

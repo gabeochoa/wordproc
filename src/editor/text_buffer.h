@@ -11,6 +11,7 @@
 #include "borders_shading.h"
 #include "document_settings.h"
 #include "gap_buffer.h"
+#include "toc.h"
 
 struct CaretPosition {
     std::size_t row = 0;
@@ -235,6 +236,72 @@ class SwapAdjacentLineRangesCommand : public afterhours::Command<TextBuffer> {
     std::size_t secondEnd_;
     std::size_t oldCaretRow_;
     std::size_t newCaretRow_;
+};
+
+// Replace the TOC's marked region with a new block (or insert a
+// block where there was none), as ONE undo step, carrying the
+// mark with it: undo restores the old text AND the old mark, so
+// a later Update never eats text past a stale end offset. The
+// command stores absolute offsets; execute/undo apply via the
+// low-level insertCharAt/deleteCharAt (no history, no offset
+// adjustment — the mark is set explicitly here).
+class TocReplaceCommand : public afterhours::Command<TextBuffer> {
+   public:
+    // Boundary style: the paragraph style of the line the block
+    // abuts (the caret line on insert, the first line after the
+    // block on update). The newline split in apply() gives the
+    // remainder Normal, so execute/undo restore the style on
+    // boundaryRowNew / boundaryRowOld. onlyIfNonEmpty is the
+    // insert case: a remainder that is empty must stay Normal, or
+    // it would become a phantom empty heading after the block.
+    TocReplaceCommand(std::size_t start, std::string oldText,
+                      std::string newText, bool oldHasToc,
+                      std::size_t oldTocStart, std::size_t oldTocEnd,
+                      bool newHasToc, std::size_t newTocStart,
+                      std::size_t newTocEnd, bool hasBoundary = false,
+                      ParagraphStyle boundaryStyle =
+                          ParagraphStyle::Normal,
+                      std::size_t boundaryRowNew = 0,
+                      std::size_t boundaryRowOld = 0,
+                      bool boundaryOnlyIfNonEmpty = false)
+        : start_(start),
+          oldText_(std::move(oldText)),
+          newText_(std::move(newText)),
+          oldHasToc_(oldHasToc),
+          oldTocStart_(oldTocStart),
+          oldTocEnd_(oldTocEnd),
+          newHasToc_(newHasToc),
+          newTocStart_(newTocStart),
+          newTocEnd_(newTocEnd),
+          hasBoundary_(hasBoundary),
+          boundaryStyle_(boundaryStyle),
+          boundaryRowNew_(boundaryRowNew),
+          boundaryRowOld_(boundaryRowOld),
+          boundaryOnlyIfNonEmpty_(boundaryOnlyIfNonEmpty) {}
+    void execute(TextBuffer& buffer) override;
+    void undo(TextBuffer& buffer) override;
+    std::string description() const override {
+        return "Table of Contents";
+    }
+
+   private:
+    static void apply(TextBuffer& buffer, std::size_t start,
+                      const std::string& oldText,
+                      const std::string& newText);
+    std::size_t start_ = 0;
+    std::string oldText_;
+    std::string newText_;
+    bool oldHasToc_ = false;
+    std::size_t oldTocStart_ = 0;
+    std::size_t oldTocEnd_ = 0;
+    bool newHasToc_ = false;
+    std::size_t newTocStart_ = 0;
+    std::size_t newTocEnd_ = 0;
+    bool hasBoundary_ = false;
+    ParagraphStyle boundaryStyle_ = ParagraphStyle::Normal;
+    std::size_t boundaryRowNew_ = 0;
+    std::size_t boundaryRowOld_ = 0;
+    bool boundaryOnlyIfNonEmpty_ = false;
 };
 
 class ReplaceRangesCommand : public afterhours::Command<TextBuffer> {
@@ -614,9 +681,39 @@ class TextBuffer {
     std::vector<OutlineEntry> getOutline() const;  // Extract document outline from headings
     bool goToOutlineEntry(std::size_t lineNumber);  // Navigate to an outline entry
     
-    // Table of contents generation
-    std::string generateTableOfContents() const;  // Generate TOC text from headings
-    void insertTableOfContents();  // Insert TOC at current caret position
+    // Table of contents generation. generateTableOfContents formats
+    // the current Title / Heading 1-3 paragraphs with dot leaders
+    // and estimated page numbers (Batch 6 page math, linesPerPage
+    // rows per page). insertTableOfContents inserts the block at
+    // the caret, or REPLACES the existing marked TOC block when
+    // one exists; updateTableOfContents regenerates in place.
+    // All three are one undo step; the marked region is
+    // [tocStartOffset, tocEndOffset). Returns false from the
+    // insert/update when there are no headings (update with no
+    // headings erases an existing block and clears the mark).
+    std::string generateTableOfContents(
+        int linesPerPage = toc::kDefaultLinesPerPage) const;
+    bool insertTableOfContents(
+        int linesPerPage = toc::kDefaultLinesPerPage);
+    bool updateTableOfContents(
+        int linesPerPage = toc::kDefaultLinesPerPage);
+
+    // The marked TOC region (DocumentComponent/docSettings
+    // persistence: document_io writes these as the
+    // "tableOfContents" object; the mark itself lives here, next
+    // to the bookmarks, so buffer edits shift it with the same
+    // adjust*Offsets mechanism). Text inside the region is
+    // ordinary buffer text, so it saves/loads as text.
+    bool hasToc() const { return tocHasMark_; }
+    std::size_t tocStartOffset() const { return tocStart_; }
+    std::size_t tocEndOffset() const { return tocEnd_; }
+    // Number of generated entry lines inside the marked region.
+    std::size_t tocEntryCount() const;
+    // Set the mark from loaded file data: only accepted when the
+    // range is in bounds and starts at the TOC title line. Used
+    // by document_io; anything else clears the mark.
+    void setTocRange(std::size_t start, std::size_t end);
+    void clearTocMark();
 
     // Performance metrics
     struct PerfStats {
@@ -681,6 +778,36 @@ class TextBuffer {
 
     // Adjust bookmark offsets when text is inserted/deleted
     void adjustBookmarkOffsets(std::size_t pos, std::ptrdiff_t delta);
+
+    // Adjust the TOC mark the same way (insert/delete before the
+    // mark shifts it, inside it grows/shrinks the end, a deletion
+    // covering it clears it). Called at the same sites as
+    // adjustBookmarkOffsets.
+    void adjustTocOffsets(std::size_t pos, std::ptrdiff_t delta);
+    // The marked region, trusted when its title line still reads
+    // "Table of Contents"; otherwise rescanned for a title line
+    // followed by entry lines (recovers the region after an
+    // undo of a plain edit, which the low-level undo ops do not
+    // retarget — the same limitation bookmarks have). Falls back
+    // to the stored range when no rescan finds a block, so a
+    // hand-renamed title still updates in place.
+    bool resolveTocRange(std::size_t& start, std::size_t& end) const;
+    // Headings for a (re)generated block, with page numbers
+    // computed for the document AFTER the block is in place:
+    // headings at/after `insertLine` shift by `blockLines`, and
+    // headings inside [oldStartLine, oldEndLine) (a replaced
+    // block) are skipped. Only Title / Heading 1-3 are entries.
+    std::vector<toc::Entry> tocEntriesForBlock(
+        std::size_t insertLine, std::size_t blockLines,
+        std::size_t oldStartLine, std::size_t oldEndLine,
+        bool hasOld, int linesPerPage) const;
+
+    // Marked TOC region [tocStart_, tocEnd_); tocHasMark_ is the
+    // flag. Ordinary buffer text inside the region; hand edits
+    // there are allowed and are lost on the next update.
+    bool tocHasMark_ = false;
+    std::size_t tocStart_ = 0;
+    std::size_t tocEnd_ = 0;
 
     GapBuffer chars_;                   // Contiguous character storage
     std::vector<LineSpan> line_spans_;  // SoA line metadata

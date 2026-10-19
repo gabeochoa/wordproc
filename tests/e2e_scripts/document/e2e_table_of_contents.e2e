@@ -1,46 +1,78 @@
-# Test: Table of contents generation
-# Validates TOC generation from headings
+# Test: Table of Contents is a real generated block, not headings.
+# Insert > Table of Contents inserts a marked block at the caret
+# (one line per Title/Heading 1-3 paragraph: indent, dot leader,
+# estimated page number); inserting again replaces it (no
+# duplication); Insert > Update Table of Contents regenerates it
+# after a heading is added; the right-click context menu offers
+# the same Update while a TOC exists.
 
-# Create document with headings
-type "Document Title"
-key CTRL+ALT+1  # H1
+type "First Heading"
+key CTRL+ALT+1
 key ENTER
-wait 2
+type "Body text"
+key ENTER
+type "Second Heading"
+key CTRL+ALT+2
+key ENTER
+type "More body"
+key ENTER
+type "Third Heading"
+key CTRL+ALT+2
+wait_frames 12
 
-type "Introduction"
-key CTRL+ALT+2  # H2
-key ENTER
-type "Some introduction text."
-key ENTER
-wait 2
-
-type "Methods"
-key CTRL+ALT+2  # H2
-key ENTER
-type "Description of methods."
-key ENTER
-wait 2
-
-type "Results"
-key CTRL+ALT+2  # H2
-key ENTER
-type "Our findings."
-key ENTER
-wait 2
-
-# Go to beginning to insert TOC
-key CTRL+HOME
-wait 2
-
-# Insert Table of Contents
+# Insert the TOC at the top. (key CTRL+HOME does not move the
+# caret — pre-existing harness quirk, see pass_goto_dialog.e2e —
+# so walk up with UP, then HOME to column 0.)
+key UP
+key UP
+key UP
+key UP
+key HOME
+wait_frames 12
 menu_open Insert
-wait 2
+wait_frames 12
 menu_select "Table of Contents"
-wait 2
+wait_frames 12
 
-# Validate TOC was generated
 validate has_toc=true
+validate toc_entries=3
+validate text_contains_First Heading=true
+validate text_contains_Second Heading=true
+validate text_contains_Third Heading=true
+
+# Inserting again replaces the block: still one block, 3 entries.
+menu_open Insert
+wait_frames 12
+menu_select "Table of Contents"
+wait_frames 12
+validate has_toc=true
+validate toc_entries=3
+
+# Add a heading, then Update: 4 entries, still one block.
+# (key CTRL+END does not move the caret either — same harness
+# quirk as CTRL+HOME — so walk DOWN to the last row, then END.)
+key DOWN
+key DOWN
+key DOWN
+key DOWN
+key END
+wait_frames 12
+key ENTER
+type "Fourth Heading"
+key CTRL+ALT+2
+wait_frames 12
+menu_open Insert
+wait_frames 12
+menu_select "Update Table of Contents"
+wait_frames 12
+validate toc_entries=4
+validate text_contains_Fourth Heading=true
+
+# Right-click context menu Update keeps the block (no duplication).
+right_click 50% 50%
+wait_frames 18
+click_text "Update Table of Contents"
+wait_frames 12
 validate toc_entries=4
 
-screenshot e2e_table_of_contents
-
+screenshot toc

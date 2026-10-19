@@ -414,6 +414,16 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
     // Header/footer config (Batch 9).
     writeHeaderFooterConfig(doc, settings);
 
+    // Table of Contents mark (Batch 11): the generated lines are
+    // ordinary buffer text in doc["text"]; the mark is the only
+    // extra state, so an edited-then-saved TOC still updates.
+    if (buffer.hasToc()) {
+        doc["tableOfContents"] = {
+            {"start", buffer.tocStartOffset()},
+            {"end", buffer.tocEndOffset()},
+        };
+    }
+
     // Font requirements - which fonts and scripts the document needs
     // This enables lazy loading of CJK fonts only when needed
     if (!settings.fontRequirements.empty()) {
@@ -687,6 +697,19 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
         // a settings-only load leaves the buffers untouched.
         readHeaderFooterConfig(doc, settings);
 
+        // Load the TOC mark (Batch 11): the generated text is
+        // already in the buffer; setTocRange accepts only a
+        // range starting at the title line, so a stale object
+        // marks nothing.
+        if (doc.contains("tableOfContents")) {
+            const auto& tocJson = doc.at("tableOfContents");
+            if (tocJson.contains("start") && tocJson.contains("end")) {
+                buffer.setTocRange(
+                    tocJson.at("start").get<std::size_t>(),
+                    tocJson.at("end").get<std::size_t>());
+            }
+        }
+
         result.success = true;
     } catch (const std::exception &e) {
         // JSON parse failed - load as plain text
@@ -809,6 +832,14 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
     // written unconditionally (same as pageLayout) so a footer
     // page-number toggle survives even with empty footer text.
     writeHeaderFooterConfig(doc, settings);
+
+    // Table of Contents mark (Batch 11, same as saveDocumentEx).
+    if (buffer.hasToc()) {
+        doc["tableOfContents"] = {
+            {"start", buffer.tocStartOffset()},
+            {"end", buffer.tocEndOffset()},
+        };
+    }
     if (headerBuffer != nullptr && !headerBuffer->getText().empty()) {
         doc["headerText"] = headerBuffer->getText();
     }

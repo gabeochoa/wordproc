@@ -258,7 +258,8 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Page Number", "", true, false, nullptr},               // 28
         {"Document Body", "", true, false, nullptr},             // 29
         {"", "", false, true, nullptr},                          // 30 Separator
-        {"Table of Contents", "", true, false, nullptr}          // 31
+        {"Table of Contents", "", true, false, nullptr},         // 31
+        {"Update Table of Contents", "", true, false, nullptr}   // 32 (enabled only with a marked TOC: MenuUISystem syncs it)
     };
     menus.push_back(insertMenu);   // Index 3: Insert
 

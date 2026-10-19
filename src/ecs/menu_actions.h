@@ -866,12 +866,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 case 31:  // Table of Contents
-                {
-                    doc.buffer.insertTableOfContents();
-                    doc.isDirty = true;
-                    flash("Table of Contents inserted");
+                    if (cmd::insertToc(doc, layout)) {
+                        doc.isDirty = true;
+                    }
                     break;
-                }
+                case 32:  // Update Table of Contents
+                    cmd::updateToc(doc, layout);
+                    break;
                 default:
                     break;
             }

@@ -221,7 +221,8 @@ inline std::vector<MenuData> createMenuBarData() {
                         {"Page Number", "", true, false},
                         {"Document Body", "", true, false},
                         {"", "", false, true},
-                        {"Table of Contents", "", true, false}};
+                        {"Table of Contents", "", true, false},
+                        {"Update Table of Contents", "", true, false}};
     menus.push_back(insertMenu);
 
     // Table menu
