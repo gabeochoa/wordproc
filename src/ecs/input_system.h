@@ -559,10 +559,10 @@ struct KeyboardShortcutSystem
 
         // Font size
         if (actionMap_.isActionPressed(Action::IncreaseFontSize)) {
-            cmd::setFontSize(doc, std::min(72, doc.buffer.textStyle().fontSize + 2));
+            cmd::setFontSize(doc, std::min(72, doc.buffer.effectiveStyleAtCaretOrSelection().fontSize + 2));
         }
         if (actionMap_.isActionPressed(Action::DecreaseFontSize)) {
-            cmd::setFontSize(doc, std::max(8, doc.buffer.textStyle().fontSize - 2));
+            cmd::setFontSize(doc, std::max(8, doc.buffer.effectiveStyleAtCaretOrSelection().fontSize - 2));
         }
         if (actionMap_.isActionPressed(Action::ResetFontSize)) {
             cmd::setFontSize(doc, 16);

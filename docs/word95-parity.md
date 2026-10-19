@@ -3,7 +3,7 @@
 Status key: **Have** = works end-to-end (menu/toolbar + behavior + test) ·
 **Partial** = present but incomplete vs Word 95 · **Missing** = absent.
 Priority: P0 = daily-driver value, P1 = common, P2 = niche/stub-OK.
-Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions.h`,
+Inventory by code read, 2026-10-19 (Batch 12) (`src/ui/menu_setup.h`, `src/ecs/menu_actions.h`,
 `src/editor/*`, `tests/`). Counts at bottom are computed from these tables.
 
 ## File
@@ -60,7 +60,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Format
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Font... dialog (family/size/effects) | Have | P0 | FIRST Format item: Win95 dialog with Font list (toolbar fonts vector), Font style list (Regular/Bold/Italic/Bold Italic), Size list (16 sizes + custom field), Effects (Underline/Strikethrough/Superscript/Subscript, super/sub mutually exclusive), color swatch row (existing text colors), Preview "AaBbYyZz 123" in the chosen size/bold/color. OK applies via buffer.setTextStyle, the toolbar path (buffer style is document-global). Honest partial: Times New Roman/Arial/Courier New are toolbar names with no loaded face, so the preview family falls back to the default face (size/bold/color exact); italic has no slanted UI face in the preview |
+| Font... dialog (family/size/effects) | Have | P0 | FIRST Format item: Win95 dialog with Font list (toolbar fonts vector), Font style list (Regular/Bold/Italic/Bold Italic), Size list (16 sizes + custom field), Effects (Underline/Strikethrough/Superscript/Subscript, super/sub mutually exclusive), Font-color dropdown (no swatch row), Preview "AaBbYyZz 123" in the chosen size/bold/color. OK applies via applyStyleToCurrentRange, the toolbar path (a selection gets a per-range span, a bare caret sets the typing style — Batch 12). Honest partial: Times New Roman/Arial/Courier New are toolbar names with no loaded face, so the preview family falls back to the default face (size/bold/color exact); italic has no slanted UI face in the preview |
 | Bold/Italic/Underline/Strike/Super/Sub | Have | P0 | |
 | Alignment L/C/R/Justify | Have | P0 | |
 | Indents & Tabs (ruler + dialog) | Have | P0 | ruler drag sets indents (one undo step) + indent keys + Tab Width dialog + full Paragraph dialog (indents/spacing/line spacing, Default tab stops = document-wide tabWidth, Tabs... opens Tab Width) |
@@ -108,10 +108,10 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Chrome (toolbars / ruler / status bar)
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Standard toolbar (icons) | Partial | P0 | Batch 3 + fix round: Word 95 Standard order — New Open Save \| Print Print Preview Spelling (ABC + green check icon) \| Cut Copy Paste FormatPainter \| Undo Redo \| ¶ \| Zoom (dropdown 50/75/100/125/150/200%, wired to zoomLevel) \| Insert Hyperlink / Insert Image / Insert Table. Format Painter: click copies the current style and arms; the next click in text applies it and disarms (command layer; unit + E2E). Subset: the buffer carries one document-global TextStyle, not per-range styles, so apply sets the global style like Bold/Italic do. Show/Hide ¶ (pressed state) renders a ¶ glyph at each line end in the text pass, hidden in Print Preview. Fix round 2: Zoom sits immediately after the ¶ group (was pinned to the right edge); Insert Hyperlink runs the Insert > Hyperlink... command, Insert Image runs Insert > Image..., Insert Table opens the Table menu dropdown (no grid popup — the menu is the Word 95 entry) |
-| Formatting toolbar (style/font/size/BIU/align) | Partial | P0 | present; font list = 2 families |
+| Standard toolbar (icons) | Partial | P0 | Batch 3 + fix round: Word 95 Standard order — New Open Save \| Print Print Preview Spelling (ABC + red check icon) \| Cut Copy Paste FormatPainter \| Undo Redo \| ¶ \| Zoom (dropdown 50/75/100/125/150/200%, wired to zoomLevel) \| Insert Hyperlink / Insert Image / Insert Table. Format Painter: click copies the EFFECTIVE style at the selection/caret and arms; the next click in text applies it to the clicked word (or selection) and disarms (command layer; unit + E2E). Batch 12: character formatting is per-range (CharStyleSpan [start, end) overrides in TextBuffer; the global TextStyle is the typing/fallback style), so Bold and the painter bold only the target range — the old 'one global style' note was the pre-Batch-12 truth (no per-range store existed then). Spans shift with edits, persist in `.wpdoc` as `charStyleSpans`, and render per segment; a bare caret on whitespace still sets the global typing style. Batch 12: Standard icons are 16x16 COLOR pixel-art palette maps (Word 95 set: yellow folder, blue floppy, gray printer, ABC + red check, steel scissors, tan clipboard, orange brush, blue curved arrows); disabled icons desaturate to gray. Show/Hide ¶ (pressed state) renders a ¶ glyph at each line end in the text pass, hidden in Print Preview. Fix round 2: Zoom sits immediately after the ¶ group (was pinned to the right edge); Insert Hyperlink runs the Insert > Hyperlink... command, Insert Image runs Insert > Image..., Insert Table opens the Table menu dropdown (no grid popup — the menu is the Word 95 entry) |
+| Formatting toolbar (style/font/size/BIU/align) | Partial | P0 | present; font list = 5 families (Times New Roman, Arial, Courier New, Gaegu, Gaegu-Bold — `ToolbarComponent.fonts`) + Font dialog; B/I/U stay text buttons (authentic) |
 | Title bar / menu bar / bevels | Have | P0 | Win95 theme, drop shadows, focus ring |
-| Scrollbars (Win95 style) | Partial | P1 | verify |
+| Scrollbars (Win95 style) | Have | P1 | Win95 arrows + track + thumb: arrows step one line, track click pages, thumb drag scrolls proportionally. Evidence: headless `pass_p0_scrollbar.e2e` (P0-3) — arrow/track/thumb-drag asserts + screenshot |
 
 ## Docs-era (Win95-styled)
 Batch 5 (owner direction): after Word 95 parity, a few Google Docs
@@ -128,8 +128,9 @@ honest about Word 95 itself.
 | Live word count | Have | P1 | Batch 5 item 5: status bar left cluster gains a "Words: N" segment after the Ln/Col group, updating as you type, from buffer stats. The O(n) `TextBuffer::stats()` is cached on the status-bar system and recomputed only when the buffer version changes, so the per-frame status render stays O(1). Bench guard: `make bench-unit` class unchanged (no benchmark touched). E2E `pass_live_word_count.e2e` (type 3 words -> "Words: 3", add a word, delete it) |
 
 ## Counts (from tables above, 2026-10-19)
-**Have 54 · Partial 11 · Missing 2** (after Batch 11: Table of Contents,
-Special Character, Drop Cap move Partial -> Have) (67 grouped rows;
+**Have 55 · Partial 10 · Missing 2** (after Batch 12: Scrollbars moves
+Partial -> Have; Batch 11: Table of Contents, Special Character, Drop Cap
+moved Partial -> Have) (67 grouped rows;
 several rows bundle e.g. Cut/Copy/Paste).
 Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —

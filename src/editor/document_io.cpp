@@ -386,6 +386,40 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         }
     }
 
+    // Per-range character styles (Batch 12): [start, end) spans
+    // with a full TextStyle each. Written only when spans exist,
+    // so plain documents keep the old file shape byte-for-byte.
+    // The global "style" below stays the typing / fallback style.
+    if (!buffer.charStyleSpans().empty()) {
+        nlohmann::json spanArr = nlohmann::json::array();
+        for (const auto& cs : buffer.charStyleSpans()) {
+            nlohmann::json obj;
+            obj["start"] = cs.startOffset;
+            obj["end"] = cs.endOffset;
+            obj["style"] = {
+                {"bold", cs.style.bold},
+                {"italic", cs.style.italic},
+                {"underline", cs.style.underline},
+                {"strikethrough", cs.style.strikethrough},
+                {"superscript", cs.style.superscript},
+                {"subscript", cs.style.subscript},
+                {"font", cs.style.font},
+                {"fontSize", cs.style.fontSize},
+                {"textColor", {{"r", cs.style.textColor.r},
+                               {"g", cs.style.textColor.g},
+                               {"b", cs.style.textColor.b},
+                               {"a", cs.style.textColor.a}}},
+                {"highlightColor",
+                 {{"r", cs.style.highlightColor.r},
+                  {"g", cs.style.highlightColor.g},
+                  {"b", cs.style.highlightColor.b},
+                  {"a", cs.style.highlightColor.a}}},
+            };
+            spanArr.push_back(std::move(obj));
+        }
+        doc["charStyleSpans"] = std::move(spanArr);
+    }
+
     // Style settings (document-specific, saved with file)
     doc["style"] = {
         {"bold", style.bold},
@@ -626,6 +660,76 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                             : 0;
                     buffer.setLineParagraphFormat(i, fmt);
                 }
+            }
+        }
+
+        // Load per-range character styles (written by
+        // saveDocumentEx when spans exist; absent in old files ->
+        // no spans). Missing style fields fall back to the
+        // document-global style loaded above; out-of-range
+        // spans are clamped by applyCharStyleRange.
+        if (doc.contains("charStyleSpans")) {
+            const nlohmann::json& spans = doc.at("charStyleSpans");
+            for (const auto& entry : spans) {
+                if (!entry.is_object() || !entry.contains("start") ||
+                    !entry.contains("end") || !entry.contains("style")) {
+                    continue;
+                }
+                TextStyle spanStyle = buffer.textStyle();
+                const nlohmann::json& sj = entry.at("style");
+                if (sj.contains("bold"))
+                    spanStyle.bold = sj.at("bold").get<bool>();
+                if (sj.contains("italic"))
+                    spanStyle.italic = sj.at("italic").get<bool>();
+                if (sj.contains("underline"))
+                    spanStyle.underline = sj.at("underline").get<bool>();
+                if (sj.contains("strikethrough"))
+                    spanStyle.strikethrough =
+                        sj.at("strikethrough").get<bool>();
+                if (sj.contains("superscript"))
+                    spanStyle.superscript =
+                        sj.at("superscript").get<bool>();
+                if (sj.contains("subscript"))
+                    spanStyle.subscript = sj.at("subscript").get<bool>();
+                if (sj.contains("font"))
+                    spanStyle.font = sj.at("font").get<std::string>();
+                if (sj.contains("fontSize")) {
+                    spanStyle.fontSize = std::max(
+                        8, std::min(72, sj.at("fontSize").get<int>()));
+                }
+                if (sj.contains("textColor")) {
+                    const nlohmann::json& c = sj.at("textColor");
+                    if (c.contains("r"))
+                        spanStyle.textColor.r =
+                            c.at("r").get<unsigned char>();
+                    if (c.contains("g"))
+                        spanStyle.textColor.g =
+                            c.at("g").get<unsigned char>();
+                    if (c.contains("b"))
+                        spanStyle.textColor.b =
+                            c.at("b").get<unsigned char>();
+                    if (c.contains("a"))
+                        spanStyle.textColor.a =
+                            c.at("a").get<unsigned char>();
+                }
+                if (sj.contains("highlightColor")) {
+                    const nlohmann::json& c = sj.at("highlightColor");
+                    if (c.contains("r"))
+                        spanStyle.highlightColor.r =
+                            c.at("r").get<unsigned char>();
+                    if (c.contains("g"))
+                        spanStyle.highlightColor.g =
+                            c.at("g").get<unsigned char>();
+                    if (c.contains("b"))
+                        spanStyle.highlightColor.b =
+                            c.at("b").get<unsigned char>();
+                    if (c.contains("a"))
+                        spanStyle.highlightColor.a =
+                            c.at("a").get<unsigned char>();
+                }
+                buffer.applyCharStyleRange(
+                    entry.at("start").get<std::size_t>(),
+                    entry.at("end").get<std::size_t>(), spanStyle);
             }
         }
 

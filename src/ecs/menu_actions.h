@@ -554,10 +554,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     cmd::setFont(doc, "EBGaramond-Regular");
                     break;
                 case 43:  // Increase Size
-                    cmd::setFontSize(doc, std::min(72, doc.buffer.textStyle().fontSize + 2));
+                    cmd::setFontSize(doc, std::min(72, doc.buffer.effectiveStyleAtCaretOrSelection().fontSize + 2));
                     break;
                 case 44:  // Decrease Size
-                    cmd::setFontSize(doc, std::max(8, doc.buffer.textStyle().fontSize - 2));
+                    cmd::setFontSize(doc, std::max(8, doc.buffer.effectiveStyleAtCaretOrSelection().fontSize - 2));
                     break;
                 case 45:  // Reset Size
                     cmd::setFontSize(doc, 16);

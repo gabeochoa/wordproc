@@ -5,6 +5,7 @@
 #include <iosfwd>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../vendor/afterhours/src/plugins/command_history.h"
@@ -440,6 +441,66 @@ class TextBuffer {
     TextStats stats() const;
     TextStyle textStyle() const;
     void setTextStyle(const TextStyle& style);
+
+    // Per-range character formatting (Batch 12). Before this, the
+    // buffer carried ONE document-global TextStyle (style_) plus a
+    // per-line ParagraphStyle per LineSpan — no per-word/per-selection
+    // character store existed, so Bold/Format Painter could only flip
+    // the global style (and the renderer bolded whole lines). A
+    // CharStyleSpan is an explicit [startOffset, endOffset) override:
+    // the renderer uses the span's style for covered chars and the
+    // global style elsewhere. Spans are kept sorted, non-overlapping,
+    // and merged when adjacent spans share a style. They are NOT
+    // dropped when they equal the global style: a later global
+    // change (e.g. toggling Bold with no selection, which sets the
+    // typing style) must not leak into already-styled text.
+    struct CharStyleSpan {
+        std::size_t startOffset = 0;  // Inclusive, document offset
+        std::size_t endOffset = 0;    // Exclusive, document offset
+        TextStyle style;
+    };
+    const std::vector<CharStyleSpan>& charStyleSpans() const {
+        return charStyleSpans_;
+    }
+    void clearCharStyleSpans() {
+        charStyleSpans_.clear();
+        version_++;
+    }
+    // Effective style at a document offset: the covering span's
+    // style, else the global style. Out of range -> global.
+    TextStyle effectiveStyleAt(std::size_t offset) const;
+    // The span covering offset, or nullptr.
+    const CharStyleSpan* charStyleSpanAt(std::size_t offset) const;
+    // Effective style at the selection start (when a selection
+    // exists) or at the caret. This is what the toolbar Bold button
+    // shows and what Format Painter captures. Caret rule (Word's
+    // insertion-point rule): the caret AT a span's end reads the
+    // span's style — typing there continues the span — so a
+    // caret just past "Hello" in a bold "Hello" still reads bold.
+    TextStyle effectiveStyleAtCaretOrSelection() const;
+    // The span that governs the caret's typing style: the span
+    // covering the caret, else the span ending at the caret (the
+    // span-end rule above), else nullptr.
+    const CharStyleSpan* charStyleSpanAtCaret() const;
+    // Replace every span overlapping [start, end) with one span of
+    // `style` over exactly that range (clamped to the document,
+    // no-op on an empty range). Overlapping spans are clipped or
+    // split so the untouched parts keep their style.
+    void applyCharStyleRange(std::size_t start, std::size_t end,
+                             const TextStyle& style);
+    // Apply `style` to the current range: the selection when one
+    // exists, else the whole span the caret sits in or ends at
+    // (so Ctrl+B with the caret inside — or just past — a bold
+    // word unbolds that word), else the global style (a bare
+    // caret sets the typing style, Word-like: it styles what is
+    // typed next, not existing text).
+    void applyStyleToCurrentRange(const TextStyle& style);
+    // Word-char range at a caret position, as [start, end) document
+    // offsets; empty when the caret is not on a word char (same
+    // word-char rule as selectWordAt: letters + apostrophe; caret
+    // at end of line uses the char before it).
+    std::pair<std::size_t, std::size_t> wordRangeAt(
+        CaretPosition pos) const;
     
     // Paragraph style for current line (where caret is)
     ParagraphStyle currentParagraphStyle() const;
@@ -835,6 +896,24 @@ class TextBuffer {
     // covering it clears it). Called at the same sites as
     // adjustBookmarkOffsets.
     void adjustTocOffsets(std::size_t pos, std::ptrdiff_t delta);
+
+    // Shift char-style spans for an insert/delete at `pos`:
+    // insert of `delta` chars (delta > 0) / delete of -delta chars
+    // starting at pos (delta < 0). Insert at a span's start shifts
+    // the span (typed text before a styled word is not styled);
+    // insert at its end or inside expands it (typing inside/at the
+    // end of a styled word keeps styling it). Delete clips the
+    // overlapped part and shifts what follows. Called at the same
+    // sites as adjustBookmarkOffsets, plus the low-level
+    // insertCharAt/deleteCharAt (undo/redo and ReplaceRanges go
+    // through those, and unshifted spans would desync). One known
+    // asymmetry, same class as the hyperlink/bookmark gaps: undo
+    // of a delete of a span's FIRST char re-inserts at the span's
+    // start, so that char lands just outside the span.
+    void adjustCharStyleSpans(std::size_t pos, std::ptrdiff_t delta);
+    // Normalize charStyleSpans_: sorted, non-overlapping, adjacent
+    // equal-style spans merged, empties dropped.
+    void normalizeCharStyleSpans();
     // The marked region, trusted when its title line still reads
     // "Table of Contents"; otherwise rescanned for a title line
     // followed by entry lines (recovers the region after an
@@ -862,6 +941,7 @@ class TextBuffer {
 
     GapBuffer chars_;                   // Contiguous character storage
     std::vector<LineSpan> line_spans_;  // SoA line metadata
+    std::vector<CharStyleSpan> charStyleSpans_;  // Per-range char styles
     std::vector<Hyperlink> hyperlinks_; // Hyperlinks in the document
     std::vector<Bookmark> bookmarks_;   // Bookmarks for internal navigation
     std::vector<Footnote> footnotes_;   // Footnotes with auto-numbering

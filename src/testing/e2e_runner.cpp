@@ -53,7 +53,7 @@ static void setupCallbacks(
     // Set up property getter for validation
     runner.set_property_getter([&docComp](const std::string& prop) -> std::string {
         const auto& buffer = docComp.buffer;
-        const auto& style = buffer.textStyle();
+        const auto& style = buffer.effectiveStyleAtCaretOrSelection();
         
         if (prop == "text") return buffer.getText();
         if (prop == "line_count") return std::to_string(buffer.lineCount());
@@ -134,6 +134,7 @@ static void setupCallbacks(
         docComp.buffer.clearHistory();
         // Reset text style to defaults
         docComp.buffer.setTextStyle(TextStyle{});
+        docComp.buffer.clearCharStyleSpans();
         docComp.tables.clear();
         docComp.cellEdit = CellEditState{};
         docComp.images.clear();
@@ -217,8 +218,12 @@ static void setupCallbacksEx(
     runner.set_property_getter([&docComp, &menuComp, &dialogState, &layoutComp, &toolbarComp, &scrollComp](const std::string& prop) -> std::string {
         (void)toolbarComp; // Available if needed for future property queries
         const auto& buffer = docComp.buffer;
-        const auto& style = buffer.textStyle();
-        
+        const auto& style = buffer.effectiveStyleAtCaretOrSelection();
+        // Layout math (line height) uses the GLOBAL font size, like
+        // the renderer — a per-range size span does not change the
+        // line's height.
+        const auto& globalStyle = buffer.textStyle();
+
         // Basic text properties
         if (prop == "text") return buffer.getText();
         // row_text_N = the content of buffer row N (validate
@@ -716,7 +721,7 @@ static void setupCallbacksEx(
             if (!ecs::layout::isNormalView(layoutComp)) return "0";
             float ds = ecs::layout::displayScale(layoutComp);
             int lineHeight =
-                ruler_math::scaledLineHeight(style.fontSize, ds);
+                ruler_math::scaledLineHeight(globalStyle.fontSize, ds);
             int linesPerPage = static_cast<int>(
                 columns_math::linesPerColumnForPage(
                     layoutComp.pageHeight, layoutComp.marginTop,
@@ -784,7 +789,7 @@ static void setupCallbacksEx(
                     static_cast<std::size_t>(std::stoul(prop.substr(13)));
                 if (row < buffer.lineCount()) {
                     int lineHeight = ruler_math::scaledLineHeight(
-                        style.fontSize,
+                        globalStyle.fontSize,
                         ecs::layout::displayScale(layoutComp));
                     if (lineHeight <= 0) return "0";
                     int offset = yOffsetForRow(
@@ -844,10 +849,10 @@ static void setupCallbacksEx(
         // is base * zoomLevel, as before.
         if (prop == "text_font_size")
             return std::to_string(ruler_math::scaledFontSize(
-                style.fontSize, ecs::layout::displayScale(layoutComp)));
+                globalStyle.fontSize, ecs::layout::displayScale(layoutComp)));
         if (prop == "text_line_height")
             return std::to_string(ruler_math::scaledLineHeight(
-                style.fontSize, ecs::layout::displayScale(layoutComp)));
+                globalStyle.fontSize, ecs::layout::displayScale(layoutComp)));
         if (prop == "text_boundaries")
             return docComp.docSettings.showTextBoundaries ? "true"
                                                           : "false";

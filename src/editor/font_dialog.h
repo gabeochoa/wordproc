@@ -3,9 +3,9 @@
 // Format > Font... dialog model (Word 95 parity).
 // Pure selection <-> TextStyle mapping, unit-tested; the dialog in
 // MenuUISystem holds a FontDialogSelection and applies it through
-// the same buffer.setTextStyle path the formatting toolbar uses
-// (the buffer's style is document-global, so OK sets the caret
-// style for the next typing, exactly like the toolbar buttons).
+// the same applyStyleToCurrentRange path the formatting toolbar
+// uses (a selection gets a per-range span, a bare caret sets the
+// global typing style).
 
 #include <algorithm>
 #include <cmath>

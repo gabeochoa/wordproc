@@ -1265,7 +1265,10 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         fmtX += sepWidth + sepPadding;
         
         // === Formatting Buttons (Bold, Italic, Underline) ===
-        TextStyle currentStyle = doc.buffer.textStyle();
+        // Effective style at the selection/caret (per-range span
+        // wins over the global typing style), so the buttons show
+        // the style of the text the caret is in.
+        TextStyle currentStyle = doc.buffer.effectiveStyleAtCaretOrSelection();
         toolbar.boldActive = currentStyle.bold;
         toolbar.italicActive = currentStyle.italic;
         toolbar.underlineActive = currentStyle.underline;

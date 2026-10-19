@@ -317,6 +317,21 @@ struct TextStyle {
     int fontSize = 16;  // Default size in pixels
     TextColor textColor = TextColors::Black;  // Text color (default black)
     TextColor highlightColor = HighlightColors::None;  // Highlight/background color (default none)
+    // Equality for char-style-span merging: two adjacent spans with
+    // equal styles are one span (see TextBuffer::applyCharStyleRange).
+    bool operator==(const TextStyle& other) const {
+        return bold == other.bold && italic == other.italic &&
+               underline == other.underline &&
+               strikethrough == other.strikethrough &&
+               superscript == other.superscript &&
+               subscript == other.subscript && font == other.font &&
+               fontSize == other.fontSize &&
+               textColor == other.textColor &&
+               highlightColor == other.highlightColor;
+    }
+    bool operator!=(const TextStyle& other) const {
+        return !(*this == other);
+    }
 };
 
 // Comment/annotation on a text range

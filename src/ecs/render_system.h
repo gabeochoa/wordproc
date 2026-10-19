@@ -1418,8 +1418,28 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             afterhours::Color textColor = {globalStyle.textColor.r, globalStyle.textColor.g,
                                        globalStyle.textColor.b, globalStyle.textColor.a};
             
-            // Draw highlight background if set
-            if (!globalStyle.highlightColor.isNone()) {
+            // Per-range spans on this line? A span overrides the
+            // global style for its chars only (Batch 12); drop-cap
+            // lines keep the old whole-line draw (their x/text are
+            // shifted, so per-segment math would misalign there).
+            bool lineHasCharSpans = false;
+            if (!span.hasDropCap) {
+                std::size_t lineBegin = span.offset;
+                std::size_t lineEnd = span.offset + span.length;
+                for (const auto& cs : buffer.charStyleSpans()) {
+                    if (cs.startOffset < lineEnd &&
+                        cs.endOffset > lineBegin) {
+                        lineHasCharSpans = true;
+                        break;
+                    }
+                }
+            }
+
+            // Draw highlight background if set (whole-line: only
+            // when no per-range spans — the span path below draws
+            // one highlight rect per segment).
+            if (!globalStyle.highlightColor.isNone() &&
+                !lineHasCharSpans) {
                 afterhours::Color highlightColor = {globalStyle.highlightColor.r, globalStyle.highlightColor.g,
                                                 globalStyle.highlightColor.b, globalStyle.highlightColor.a};
                 afterhours::draw_rectangle(
@@ -1483,6 +1503,251 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 if (globalStyle.underline) {
                     int underlineY = y + lineFontSize + 1;
                     afterhours::draw_line(x, underlineY, x + textWidth, underlineY, textColor);
+                }
+            } else if (lineHasCharSpans) {
+                // Per-range path: split the line into segments
+                // where the effective style (span or global) or
+                // the tracked-insert flag changes, and draw each
+                // segment with its own bold / italic / color /
+                // underline / strikethrough / highlight /
+                // super-sub sizing. Unspanned chars use the
+                // global style, so a bold word A next to plain
+                // word C draws bold only for A.
+                std::vector<std::size_t> displayOffsets;
+                displayOffsets.reserve(displayLine.size());
+                if (tabWidth <= 0) {
+                    for (std::size_t i = 0; i < lineLen; ++i) {
+                        displayOffsets.push_back(span.offset + i);
+                    }
+                } else {
+                    int col = 0;
+                    for (std::size_t i = 0; i < lineLen; ++i) {
+                        if (lineData[i] == '\t') {
+                            int spaces = tabWidth - (col % tabWidth);
+                            for (int s = 0; s < spaces; ++s) {
+                                displayOffsets.push_back(span.offset + i);
+                            }
+                            col += spaces;
+                        } else {
+                            displayOffsets.push_back(span.offset + i);
+                            ++col;
+                        }
+                    }
+                }
+                const std::size_t segCount =
+                    std::min(displayOffsets.size(), displayLine.size());
+                std::size_t segStart = 0;
+                int cursorX = x;
+                while (segStart < segCount) {
+                    const TextStyle segStyle =
+                        buffer.effectiveStyleAt(displayOffsets[segStart]);
+                    const bool segInsert =
+                        revisions::offsetInInsertRanges(
+                            displayOffsets[segStart], verifiedInserts);
+                    std::size_t segEnd = segStart + 1;
+                    while (segEnd < segCount &&
+                           revisions::offsetInInsertRanges(
+                               displayOffsets[segEnd], verifiedInserts) ==
+                                   segInsert &&
+                           buffer.effectiveStyleAt(displayOffsets[segEnd]) ==
+                               segStyle) {
+                        ++segEnd;
+                    }
+                    const std::string segText = displayLine.substr(
+                        segStart, segEnd - segStart);
+                    int segFontSize = lineFontSize;
+                    int segYOffset = 0;
+                    if (segStyle.superscript || segStyle.subscript) {
+                        segFontSize = std::max(
+                            8, static_cast<int>(lineFontSize * 0.75f));
+                        segYOffset = segStyle.superscript
+                                         ? -lineFontSize / 3
+                                         : lineFontSize / 4;
+                    }
+                    const int segW = afterhours::graphics::measure_text(
+                        segText.c_str(), segFontSize);
+                    if (!segStyle.highlightColor.isNone()) {
+                        afterhours::draw_rectangle(
+                            Rectangle{static_cast<float>(cursorX),
+                                      static_cast<float>(y),
+                                      static_cast<float>(segW),
+                                      static_cast<float>(lineHeight)},
+                            afterhours::Color{
+                                segStyle.highlightColor.r,
+                                segStyle.highlightColor.g,
+                                segStyle.highlightColor.b,
+                                segStyle.highlightColor.a});
+                    }
+                    const bool segBold =
+                        paragraphStyleIsBold(paraStyle) || segStyle.bold;
+                    const bool segItalic =
+                        paragraphStyleIsItalic(paraStyle) ||
+                        segStyle.italic;
+                    const afterhours::Color segTextColor{
+                        segStyle.textColor.r, segStyle.textColor.g,
+                        segStyle.textColor.b, segStyle.textColor.a};
+                    const afterhours::Color segItalicColor{
+                        static_cast<unsigned char>(segTextColor.r / 2 + 64),
+                        static_cast<unsigned char>(segTextColor.g / 2 + 64),
+                        static_cast<unsigned char>(segTextColor.b / 2 + 64),
+                        segTextColor.a};
+                    const afterhours::Color segColor =
+                        segInsert ? revisionGreen
+                                  : (segItalic ? segItalicColor
+                                               : segTextColor);
+                    if (segBold) {
+                        afterhours::draw_text(segText.c_str(), cursorX,
+                                              y + segYOffset, segFontSize,
+                                              segColor);
+                        afterhours::draw_text(segText.c_str(), cursorX + 1,
+                                              y + segYOffset, segFontSize,
+                                              segColor);
+                    } else {
+                        afterhours::draw_text(segText.c_str(), cursorX,
+                                              y + segYOffset, segFontSize,
+                                              segColor);
+                    }
+                    if (segInsert || segStyle.underline) {
+                        const int underlineY = y + lineFontSize + 1;
+                        afterhours::draw_line(cursorX, underlineY,
+                                              cursorX + segW, underlineY,
+                                              segColor);
+                    }
+                    if (segStyle.strikethrough) {
+                        const int strikeY = y + lineFontSize / 2;
+                        afterhours::draw_line(cursorX, strikeY,
+                                              cursorX + segW, strikeY,
+                                              segColor);
+                    }
+                    cursorX += segW;
+                    segStart = segEnd;
+                }
+                // Selection redraw for span lines (the whole-line
+                // block below is skipped for these lines): the
+                // selected sub-segments redraw in SELECTION_TEXT
+                // with each sub-segment's own bold / underline /
+                // strikethrough.
+                if (hasSelection && segCount > 0) {
+                    bool lineInSelection =
+                        (row >= selStart.row && row <= selEnd.row);
+                    if (lineInSelection) {
+                        std::size_t rawStart =
+                            (row == selStart.row) ? selStart.column : 0;
+                        std::size_t rawEnd =
+                            (row == selEnd.row) ? selEnd.column
+                                                : span.length;
+                        std::size_t dispStart = rawColumnToDisplayColumn(
+                            lineData, lineLen, rawStart, tabWidth);
+                        std::size_t dispEnd = rawColumnToDisplayColumn(
+                            lineData, lineLen, rawEnd, tabWidth);
+                        dispStart =
+                            std::min(dispStart, displayLine.size());
+                        dispEnd = std::min(
+                            std::max(dispEnd, dispStart),
+                            displayLine.size());
+                        std::size_t subStart = dispStart;
+                        int subX = x;
+                        // Re-measure up to dispStart with per-segment
+                        // font sizes (super/sub segments are narrower).
+                        {
+                            std::size_t acc = 0;
+                            while (acc < dispStart && acc < segCount) {
+                                const TextStyle accStyle =
+                                    buffer.effectiveStyleAt(
+                                        displayOffsets[acc]);
+                                int accSize = lineFontSize;
+                                if (accStyle.superscript ||
+                                    accStyle.subscript) {
+                                    accSize = std::max(
+                                        8, static_cast<int>(
+                                                lineFontSize * 0.75f));
+                                }
+                                std::size_t accEnd = acc + 1;
+                                while (accEnd < dispStart &&
+                                       accEnd < segCount &&
+                                       buffer.effectiveStyleAt(
+                                           displayOffsets[accEnd]) ==
+                                           accStyle) {
+                                    ++accEnd;
+                                }
+                                subX += afterhours::graphics::measure_text(
+                                    displayLine.substr(acc, accEnd - acc)
+                                        .c_str(),
+                                    accSize);
+                                acc = accEnd;
+                            }
+                        }
+                        while (subStart < dispEnd) {
+                            const TextStyle subStyle =
+                                buffer.effectiveStyleAt(
+                                    displayOffsets[std::min(
+                                        subStart, segCount - 1)]);
+                            const bool subInsert =
+                                revisions::offsetInInsertRanges(
+                                    displayOffsets[std::min(
+                                        subStart, segCount - 1)],
+                                    verifiedInserts);
+                            std::size_t subEnd = subStart + 1;
+                            while (subEnd < dispEnd &&
+                                   revisions::offsetInInsertRanges(
+                                       displayOffsets[std::min(
+                                           subEnd, segCount - 1)],
+                                       verifiedInserts) == subInsert &&
+                                   buffer.effectiveStyleAt(
+                                       displayOffsets[std::min(
+                                           subEnd, segCount - 1)]) ==
+                                       subStyle) {
+                                ++subEnd;
+                            }
+                            const std::string subText =
+                                displayLine.substr(subStart,
+                                                   subEnd - subStart);
+                            int subSize = lineFontSize;
+                            int subYOff = 0;
+                            if (subStyle.superscript ||
+                                subStyle.subscript) {
+                                subSize = std::max(
+                                    8, static_cast<int>(
+                                            lineFontSize * 0.75f));
+                                subYOff = subStyle.superscript
+                                              ? -lineFontSize / 3
+                                              : lineFontSize / 4;
+                            }
+                            const int subW =
+                                afterhours::graphics::measure_text(
+                                    subText.c_str(), subSize);
+                            const bool subBold =
+                                paragraphStyleIsBold(paraStyle) ||
+                                subStyle.bold;
+                            if (subBold) {
+                                afterhours::draw_text(
+                                    subText.c_str(), subX, y + subYOff,
+                                    subSize, theme::SELECTION_TEXT);
+                                afterhours::draw_text(
+                                    subText.c_str(), subX + 1, y + subYOff,
+                                    subSize, theme::SELECTION_TEXT);
+                            } else {
+                                afterhours::draw_text(
+                                    subText.c_str(), subX, y + subYOff,
+                                    subSize, theme::SELECTION_TEXT);
+                            }
+                            if (subInsert || subStyle.underline) {
+                                const int underlineY =
+                                    y + lineFontSize + 1;
+                                afterhours::draw_line(
+                                    subX, underlineY, subX + subW,
+                                    underlineY, theme::SELECTION_TEXT);
+                            }
+                            if (subStyle.strikethrough) {
+                                const int strikeY = y + lineFontSize / 2;
+                                afterhours::draw_line(
+                                    subX, strikeY, subX + subW, strikeY,
+                                    theme::SELECTION_TEXT);
+                            }
+                            subX += subW;
+                            subStart = subEnd;
+                        }
+                    }
                 }
             } else if (!verifiedInserts.empty()) {
                 // Split the line into insert / non-insert segments.
@@ -1577,8 +1842,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 }
             }
             
-            // Draw strikethrough if enabled
-            if (globalStyle.strikethrough) {
+            // Draw strikethrough if enabled (span lines draw it
+            // per segment above).
+            if (globalStyle.strikethrough && !lineHasCharSpans) {
                 int strikeY = y + lineFontSize / 2;
                 afterhours::draw_line(x, strikeY, x + textWidth, strikeY, textColor);
             }
@@ -1589,7 +1855,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             // bold / super / subscript / underline / strikethrough.
             // Drop-cap lines skip this: their x/text are shifted, so the
             // segment math would misalign (bg rect still shows).
-            if (hasSelection && !span.hasDropCap) {
+            // Span lines skip this too: the span path above already
+            // redrew the selection per segment.
+            if (hasSelection && !span.hasDropCap && !lineHasCharSpans) {
                 bool lineInSelection = (row >= selStart.row && row <= selEnd.row);
                 if (lineInSelection) {
                     std::size_t rawStart =

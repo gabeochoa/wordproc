@@ -1873,17 +1873,19 @@ inline bool tryAutoCorrect(DocumentComponent& doc, char delimiter) {
 }
 
 // --- Format Painter (Standard toolbar) ---
-// Click the button to copy the current style and arm; clicking it
-// again disarms. The next click in the text applies the captured
-// style (through here) and disarms. See format_painter.h: the
-// buffer's style is document-global, so apply sets the global
-// style like the Bold/Italic buttons do.
+// Click the button to copy the EFFECTIVE style at the selection /
+// caret and arm; clicking it again disarms. The next click in the
+// text applies the captured style to the clicked range (word at
+// the caret, or the selection) through here and disarms. See
+// format_painter.h: the painter writes a per-range span, the
+// same store the Bold button writes through.
 inline void toggleFormatPainter(DocumentComponent& doc,
                                 ToolbarComponent& toolbar) {
     if (toolbar.formatPainter.armed) {
         toolbar.formatPainter.disarm();
     } else {
-        toolbar.formatPainter.arm(doc.buffer.textStyle());
+        toolbar.formatPainter.arm(
+            doc.buffer.effectiveStyleAtCaretOrSelection());
     }
 }
 
@@ -1891,6 +1893,19 @@ inline bool applyFormatPainter(DocumentComponent& doc,
                                ToolbarComponent& toolbar) {
     if (!toolbar.formatPainter.armed) return false;
     if (!toolbar.formatPainter.apply(doc.buffer)) return false;
+    doc.isDirty = true;
+    return true;
+}
+
+// Apply the armed painter to an explicit [start, end) range (the
+// mouse path: the caret has already been placed by the click, so
+// the caller passes the clicked word / selection range).
+inline bool applyFormatPainterToRange(DocumentComponent& doc,
+                                      ToolbarComponent& toolbar,
+                                      std::size_t start,
+                                      std::size_t end) {
+    if (!toolbar.formatPainter.armed) return false;
+    if (!toolbar.formatPainter.apply(doc.buffer, start, end)) return false;
     doc.isDirty = true;
     return true;
 }
@@ -2099,64 +2114,59 @@ inline void toggleBold(DocumentComponent& doc) {
     // Cells have no formatting model yet: formatting
     // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    // Per-range (Batch 12): flip bold in the EFFECTIVE style at
+    // the selection/caret, then write it back through the same
+    // span store the Format Painter uses (selection -> span over
+    // the selection, caret inside a span -> that span, bare caret
+    // -> global typing style).
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.bold = !style.bold;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord = repeat::setBool(RepeatKind::SetBold, style.bold);
 }
 
 inline void toggleItalic(DocumentComponent& doc) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.italic = !style.italic;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord = repeat::setBool(RepeatKind::SetItalic, style.italic);
 }
 
 inline void toggleUnderline(DocumentComponent& doc) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.underline = !style.underline;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord =
         repeat::setBool(RepeatKind::SetUnderline, style.underline);
 }
 
 inline void toggleStrikethrough(DocumentComponent& doc) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.strikethrough = !style.strikethrough;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord =
         repeat::setBool(RepeatKind::SetStrikethrough, style.strikethrough);
 }
 
 inline void toggleSuperscript(DocumentComponent& doc) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.superscript = !style.superscript;
     if (style.superscript) style.subscript = false;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord =
         repeat::setBool(RepeatKind::SetSuperscript, style.superscript);
 }
 
 inline void toggleSubscript(DocumentComponent& doc) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.subscript = !style.subscript;
     if (style.subscript) style.superscript = false;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord =
         repeat::setBool(RepeatKind::SetSubscript, style.subscript);
 }
@@ -2185,42 +2195,34 @@ inline void setAlignment(DocumentComponent& doc, TextAlignment align) {
 }
 
 inline void setFontSize(DocumentComponent& doc, int size) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.fontSize = size;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord = repeat::setInt(RepeatKind::SetFontSize, size);
 }
 
 inline void setFont(DocumentComponent& doc, const std::string& font) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.font = font;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord = repeat::setText(RepeatKind::SetFont, font);
 }
 
 inline void setTextColor(DocumentComponent& doc, TextColor color) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.textColor = color;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord = repeat::setColor(RepeatKind::SetTextColor, color);
 }
 
 inline void setHighlightColor(DocumentComponent& doc, TextColor color) {
-    // Cells have no formatting model yet: formatting
-    // commands never act on the body buffer from a cell.
     if (doc.cellEdit.active) return;
-    TextStyle style = doc.buffer.textStyle();
+    TextStyle style = doc.buffer.effectiveStyleAtCaretOrSelection();
     style.highlightColor = color;
-    doc.buffer.setTextStyle(style);
+    doc.buffer.applyStyleToCurrentRange(style);
     doc.repeatRecord =
         repeat::setColor(RepeatKind::SetHighlightColor, color);
 }

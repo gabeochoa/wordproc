@@ -256,6 +256,7 @@ bool TextBuffer::deleteSelection() {
     adjustHyperlinkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
     adjustBookmarkOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
     adjustTocOffsets(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
+    adjustCharStyleSpans(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
 
     // Rebuild line index since we may have deleted across lines
     rebuildLineIndex();
@@ -450,6 +451,7 @@ void TextBuffer::insertChar(char ch) {
     adjustHyperlinkOffsets(offset, 1);
     adjustBookmarkOffsets(offset, 1);
     adjustTocOffsets(offset, 1);
+    adjustCharStyleSpans(offset, 1);
 
     if (ch == '\n') {
         // Split current line - preserve paragraph styles
@@ -507,6 +509,7 @@ void TextBuffer::insertText(const std::string& text) {
 void TextBuffer::setText(const std::string& text) {
     chars_.clear();
     line_spans_.clear();
+    charStyleSpans_.clear();  // New text has no per-range styles
     hyperlinks_.clear();  // Clear all hyperlinks when setting new text
     clearTocMark();       // A new document has no TOC block
     version_++;  // Content changed - invalidate render cache
@@ -782,6 +785,168 @@ TextStyle TextBuffer::textStyle() const { return style_; }
 
 void TextBuffer::setTextStyle(const TextStyle& style) { style_ = style; }
 
+// --- Per-range character formatting (Batch 12) ---
+
+TextStyle TextBuffer::effectiveStyleAt(std::size_t offset) const {
+    const CharStyleSpan* span = charStyleSpanAt(offset);
+    return span != nullptr ? span->style : style_;
+}
+
+const TextBuffer::CharStyleSpan* TextBuffer::charStyleSpanAt(
+    std::size_t offset) const {
+    for (const auto& span : charStyleSpans_) {
+        if (offset >= span.startOffset && offset < span.endOffset) {
+            return &span;
+        }
+    }
+    return nullptr;
+}
+
+const TextBuffer::CharStyleSpan* TextBuffer::charStyleSpanAtCaret() const {
+    std::size_t offset = caretOffset();
+    const CharStyleSpan* span = charStyleSpanAt(offset);
+    if (span != nullptr) return span;
+    if (offset > 0) return charStyleSpanAt(offset - 1);
+    return nullptr;
+}
+
+TextStyle TextBuffer::effectiveStyleAtCaretOrSelection() const {
+    if (has_selection_) {
+        return effectiveStyleAt(positionToOffset(selectionStart()));
+    }
+    const CharStyleSpan* span = charStyleSpanAtCaret();
+    return span != nullptr ? span->style : style_;
+}
+
+void TextBuffer::normalizeCharStyleSpans() {
+    std::sort(charStyleSpans_.begin(), charStyleSpans_.end(),
+              [](const CharStyleSpan& a, const CharStyleSpan& b) {
+                  return a.startOffset < b.startOffset;
+              });
+    std::vector<CharStyleSpan> kept;
+    for (auto& span : charStyleSpans_) {
+        if (span.startOffset >= span.endOffset) continue;
+        span.endOffset = std::min(span.endOffset, chars_.size());
+        if (span.startOffset >= span.endOffset) continue;
+        if (!kept.empty() && kept.back().endOffset >= span.startOffset &&
+            kept.back().style == span.style) {
+            kept.back().endOffset =
+                std::max(kept.back().endOffset, span.endOffset);
+        } else {
+            kept.push_back(span);
+        }
+    }
+    charStyleSpans_ = std::move(kept);
+}
+
+void TextBuffer::applyCharStyleRange(std::size_t start, std::size_t end,
+                                     const TextStyle& style) {
+    start = std::min(start, chars_.size());
+    end = std::min(end, chars_.size());
+    if (start >= end) return;
+    std::vector<CharStyleSpan> next;
+    for (const auto& span : charStyleSpans_) {
+        if (span.endOffset <= start || span.startOffset >= end) {
+            next.push_back(span);
+            continue;
+        }
+        // Overlap: keep the untouched head / tail.
+        if (span.startOffset < start) {
+            next.push_back(
+                CharStyleSpan{span.startOffset, start, span.style});
+        }
+        if (span.endOffset > end) {
+            next.push_back(CharStyleSpan{end, span.endOffset, span.style});
+        }
+    }
+    next.push_back(CharStyleSpan{start, end, style});
+    std::sort(next.begin(), next.end(),
+              [](const CharStyleSpan& a, const CharStyleSpan& b) {
+                  return a.startOffset < b.startOffset;
+              });
+    charStyleSpans_ = std::move(next);
+    normalizeCharStyleSpans();
+    version_++;
+}
+
+void TextBuffer::applyStyleToCurrentRange(const TextStyle& style) {
+    if (has_selection_) {
+        std::size_t start = positionToOffset(selectionStart());
+        std::size_t end = positionToOffset(selectionEnd());
+        if (end > start) {
+            applyCharStyleRange(start, end, style);
+            return;
+        }
+    }
+    const CharStyleSpan* span = charStyleSpanAtCaret();
+    if (span != nullptr) {
+        // Copy the range first: applyCharStyleRange rebuilds the
+        // vector, invalidating the pointer.
+        std::size_t start = span->startOffset;
+        std::size_t end = span->endOffset;
+        applyCharStyleRange(start, end, style);
+        return;
+    }
+    setTextStyle(style);
+}
+
+std::pair<std::size_t, std::size_t> TextBuffer::wordRangeAt(
+    CaretPosition pos) const {
+    if (pos.row >= line_spans_.size()) return {0, 0};
+    std::string line = lineString(pos.row);
+    auto isWordChar = [](char ch) {
+        return std::isalpha(static_cast<unsigned char>(ch)) || ch == '\'';
+    };
+    if (line.empty() || pos.column > line.size()) return {0, 0};
+    std::size_t col = std::min(pos.column, line.size());
+    std::size_t at =
+        col < line.size() ? col : line.size() - 1;
+    if (!isWordChar(line[at])) return {0, 0};
+    std::size_t start = at;
+    while (start > 0 && isWordChar(line[start - 1])) --start;
+    std::size_t end = at;
+    while (end < line.size() && isWordChar(line[end])) ++end;
+    std::size_t lineOffset = line_spans_[pos.row].offset;
+    return {lineOffset + start, lineOffset + end};
+}
+
+void TextBuffer::adjustCharStyleSpans(std::size_t pos,
+                                      std::ptrdiff_t delta) {
+    if (delta == 0 || charStyleSpans_.empty()) return;
+    if (delta > 0) {
+        std::size_t count = static_cast<std::size_t>(delta);
+        for (auto& span : charStyleSpans_) {
+            if (pos <= span.startOffset) {
+                span.startOffset += count;
+                span.endOffset += count;
+            } else if (pos <= span.endOffset) {
+                span.endOffset += count;
+            }
+        }
+        return;
+    }
+    std::size_t count = static_cast<std::size_t>(-delta);
+    std::size_t delEnd = pos + count;
+    for (auto& span : charStyleSpans_) {
+        if (span.endOffset <= pos) continue;
+        if (span.startOffset >= delEnd) {
+            span.startOffset -= count;
+            span.endOffset -= count;
+            continue;
+        }
+        // Overlap: keep the kept-before + kept-after lengths.
+        std::size_t before =
+            span.startOffset < pos ? pos - span.startOffset : 0;
+        std::size_t after =
+            span.endOffset > delEnd ? span.endOffset - delEnd : 0;
+        std::size_t newStart =
+            span.startOffset < pos ? span.startOffset : pos;
+        span.startOffset = newStart;
+        span.endOffset = newStart + before + after;
+    }
+    normalizeCharStyleSpans();
+}
+
 ParagraphStyle TextBuffer::currentParagraphStyle() const {
     if (caret_.row < line_spans_.size()) {
         return line_spans_[caret_.row].style;
@@ -1037,6 +1202,51 @@ void TextBuffer::swapAdjacentLineRanges(std::size_t firstStart,
         secondEnd < line_spans_.size()
             ? line_spans_[secondEnd].offset
             : chars_.size();
+    // Char-style spans move with their text: split every span at
+    // the three boundaries and remap each piece. Normal case
+    // (range ends mid-document): B moves to the start, A follows.
+    // End-of-document case: the swapped string is B + "\n" + A
+    // minus A's trailing "\n" (that newline moves to the middle),
+    // so A-body pieces gain len(B)+1 and the trailing newline
+    // piece lands at start+len(B).
+    if (!charStyleSpans_.empty()) {
+        std::size_t lenA = boundaryOffset - startOffset;
+        std::size_t lenB = endOffset - boundaryOffset;
+        bool endsAtDocEnd = secondEnd >= line_spans_.size();
+        std::vector<std::size_t> cuts = {startOffset, boundaryOffset,
+                                         endOffset};
+        if (endsAtDocEnd && lenA > 0) cuts.push_back(boundaryOffset - 1);
+        std::sort(cuts.begin(), cuts.end());
+        std::vector<CharStyleSpan> remapped;
+        for (const auto& span : charStyleSpans_) {
+            std::size_t cur = span.startOffset;
+            while (cur < span.endOffset) {
+                std::size_t next = span.endOffset;
+                for (std::size_t cut : cuts) {
+                    if (cut > cur && cut < next) next = cut;
+                }
+                std::size_t pieceStart = cur;
+                std::size_t pieceEnd = next;
+                std::size_t mappedStart = pieceStart;
+                if (pieceStart < startOffset || pieceStart >= endOffset) {
+                    mappedStart = pieceStart;
+                } else if (endsAtDocEnd && pieceStart == boundaryOffset - 1 &&
+                           pieceEnd == boundaryOffset) {
+                    mappedStart = startOffset + lenB;
+                } else if (pieceStart < boundaryOffset) {
+                    mappedStart = pieceStart + lenB + (endsAtDocEnd ? 1 : 0);
+                } else {
+                    mappedStart = pieceStart - lenA;
+                }
+                remapped.push_back(CharStyleSpan{
+                    mappedStart, mappedStart + (pieceEnd - pieceStart),
+                    span.style});
+                cur = next;
+            }
+        }
+        charStyleSpans_ = std::move(remapped);
+        normalizeCharStyleSpans();
+    }
     std::string combined;
     combined.reserve(endOffset - startOffset);
     for (std::size_t i = startOffset; i < endOffset; ++i) {
@@ -1425,6 +1635,7 @@ void TextBuffer::backspace() {
         adjustHyperlinkOffsets(offset - 1, -1);
         adjustBookmarkOffsets(offset - 1, -1);
         adjustTocOffsets(offset - 1, -1);
+        adjustCharStyleSpans(offset - 1, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -1468,6 +1679,7 @@ void TextBuffer::backspace() {
     adjustHyperlinkOffsets(newline_offset, -1);
     adjustBookmarkOffsets(newline_offset, -1);
     adjustTocOffsets(newline_offset, -1);
+    adjustCharStyleSpans(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -1510,6 +1722,7 @@ void TextBuffer::del() {
         adjustHyperlinkOffsets(offset, -1);
         adjustBookmarkOffsets(offset, -1);
         adjustTocOffsets(offset, -1);
+        adjustCharStyleSpans(offset, -1);
 
         line_spans_[caret_.row].length -= 1;
         shiftLineOffsetsFrom(caret_.row + 1, -1);
@@ -1551,6 +1764,7 @@ void TextBuffer::del() {
     adjustHyperlinkOffsets(newline_offset, -1);
     adjustBookmarkOffsets(newline_offset, -1);
     adjustTocOffsets(newline_offset, -1);
+    adjustCharStyleSpans(newline_offset, -1);
 
     rebuildLineIndex();
 
@@ -1861,6 +2075,7 @@ void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
     }
     chars_.insert(offset, ch);
     version_++;
+    adjustCharStyleSpans(offset, 1);
 
     if (ch == '\n') {
         // Split current line - preserve paragraph styles
@@ -1907,6 +2122,7 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
         noteStatsCharErased(offset, paragraphDelta);
         chars_.erase(offset, 1);
         version_++;
+        adjustCharStyleSpans(offset, -1);
         line_spans_[pos.row].length -= 1;
         shiftLineOffsetsFrom(pos.row + 1, -1);
     } else if (pos.row + 1 < line_spans_.size()) {
@@ -1926,7 +2142,8 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
         }
         chars_.erase(offset, 1);
         version_++;
-        
+        adjustCharStyleSpans(offset, -1);
+
         // Merge next line into current line (keep current line's style)
         LineSpan& nextSpan = line_spans_[pos.row + 1];
         line_spans_[pos.row].length += nextSpan.length;

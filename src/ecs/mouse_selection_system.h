@@ -498,15 +498,12 @@ struct MouseSelectionSystem
         }
 
         if (pressed && inTextArea) {
-            // Format Painter: an armed painter applies the captured
-            // style on this click (click or the press that starts a
-            // click-drag) through the command layer, then disarms;
-            // the click still places the caret / starts the drag.
-            // Not in Print Preview: the preview toolbar replaces the
-            // Standard toolbar, so the painter cannot be armed there.
-            if (!layout.previewMode) {
-                cmd::applyFormatPainter(doc, toolbar);
-            }
+            // Format Painter: applied AFTER the caret is placed
+            // below (the old code applied before, to the previous
+            // caret's word — so painting word B painted whatever
+            // the caret was on before the click). Not in Print
+            // Preview: the preview toolbar replaces the Standard
+            // toolbar, so the painter cannot be armed there.
             // Outline collapse box: a press on a heading's +/-
             // box toggles that heading's collapse instead of
             // moving the caret. The row band uses the same
@@ -619,6 +616,33 @@ struct MouseSelectionSystem
                 dragAnchor_ = pos;
                 dragging_ = true;
                 autoScrolledThisDrag_ = false;
+            }
+            // Format Painter (armed): apply the captured style to
+            // the range this click landed on — the selection for a
+            // double/triple/shift click, the word at the caret for
+            // a plain click — then disarm. A plain click on
+            // whitespace falls back to the global typing style
+            // (FormatPainter::apply with no word).
+            if (!layout.previewMode && toolbar.formatPainter.armed) {
+                if (doc.buffer.hasSelection()) {
+                    std::size_t selStart = doc.buffer.offsetForPosition(
+                        doc.buffer.selectionStart());
+                    std::size_t selEnd = doc.buffer.offsetForPosition(
+                        doc.buffer.selectionEnd());
+                    if (selEnd > selStart) {
+                        cmd::applyFormatPainterToRange(doc, toolbar, selStart,
+                                                       selEnd);
+                    }
+                } else {
+                    auto [wordStart, wordEnd] =
+                        doc.buffer.wordRangeAt(pos);
+                    if (wordEnd > wordStart) {
+                        cmd::applyFormatPainterToRange(doc, toolbar,
+                                                       wordStart, wordEnd);
+                    } else {
+                        cmd::applyFormatPainter(doc, toolbar);
+                    }
+                }
             }
             caret::resetBlink(caret);
             return;

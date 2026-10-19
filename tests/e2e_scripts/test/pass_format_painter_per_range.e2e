@@ -1,0 +1,88 @@
+# Regression (Batch 12): per-range character formatting.
+# Bold a selection bolds ONLY the selection (the old code flipped
+# the document-global style, so the whole line went bold), and the
+# Format Painter paints the captured style onto the clicked word
+# only. validate bold= reads the EFFECTIVE style at the caret /
+# selection start, so moving the caret between words proves the
+# range: on pre-fix bytes the "caret on beta" validate fails.
+
+type "alpha beta gamma"
+wait_frames 12
+
+# AutoCorrect capitalizes the sentence start: the text is
+# "Alpha beta gamma". Select "Alpha" (5 x SHIFT+RIGHT) and bold it.
+key HOME
+wait_frames 6
+key SHIFT+RIGHT
+wait_frames 3
+key SHIFT+RIGHT
+wait_frames 3
+key SHIFT+RIGHT
+wait_frames 3
+key SHIFT+RIGHT
+wait_frames 3
+key SHIFT+RIGHT
+wait_frames 6
+validate selected_text=Alpha
+
+key CTRL+B
+wait_frames 12
+validate bold=true
+
+# Collapse the selection and step on: RIGHT from a selection
+# lands one past the selection end (column 6, on "beta") —
+# outside the bold span, so the effective style is plain — on
+# pre-fix bytes the global bold made this read true.
+key RIGHT
+wait_frames 6
+validate has_selection=false
+validate caret_col=6
+validate bold=false
+
+# Back inside "Alpha": bold again.
+key HOME
+wait_frames 6
+validate bold=true
+validate caret_col=0
+
+# Format Painter: capture the bold style at the caret, move the
+# caret onto "beta", then click the word to paint it.
+click_ui btn_format_painter
+wait_frames 12
+validate format_painter_armed=true
+
+key RIGHT
+wait_frames 3
+key RIGHT
+wait_frames 3
+key RIGHT
+wait_frames 3
+key RIGHT
+wait_frames 3
+key RIGHT
+wait_frames 3
+key RIGHT
+wait_frames 6
+validate caret_col=6
+validate bold=false
+
+# Click inside "beta" (x=132 probed headless: caret lands at
+# column 7-8, inside "beta" [6, 10)).
+mouse_down 132 170
+wait_frames 2
+mouse_up
+wait_frames 12
+validate format_painter_armed=false
+validate bold=true
+
+# "gamma" is still plain: move the caret onto it.
+key END
+wait_frames 6
+validate bold=false
+
+# "Alpha" is still bold.
+key HOME
+wait_frames 6
+validate bold=true
+
+screenshot format_painter_per_range

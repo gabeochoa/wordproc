@@ -719,7 +719,7 @@ struct ToolbarComponent : public afterhours::BaseComponent {
     bool outlineShowLevelDropdownOpen = false;
 
     // Format Painter (Standard toolbar): captured style + armed
-    // state. See src/editor/format_painter.h for the subset note.
+    // state. See src/editor/format_painter.h (per-range spans).
     FormatPainter formatPainter;
 
 };

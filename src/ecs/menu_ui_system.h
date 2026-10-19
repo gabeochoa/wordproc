@@ -2833,8 +2833,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // (the Font color dropdown is the ONLY color control --
         // the old swatch row is gone), and a Preview box. The
         // font list comes from the toolbar fonts vector; OK
-        // applies the selection via buffer.setTextStyle, the same
-        // path the toolbar uses. ONE pending state: every
+        // applies via applyStyleToCurrentRange (a selection gets
+        // a per-range span, a bare caret sets the typing style),
+        // the same path the toolbar uses. ONE pending state: every
         // list/dropdown click writes
         // dialogs.fontDialogSelection, and the fields + Preview
         // read only that state, so they can never disagree with
@@ -2888,7 +2889,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 if (!dialogs.fontDialogInitialized) {
                     dialogs.fontDialogSelection =
                         font_dialog::fontDialogSelectionFromStyle(
-                            doc.buffer.textStyle(), toolbar.fonts);
+                            doc.buffer.effectiveStyleAtCaretOrSelection(),
+                            toolbar.fonts);
                     dialogs.fontDialogCustomSize = std::to_string(
                         dialogs.fontDialogSelection.size);
                     dialogs.fontDialogInitialized = true;
@@ -3525,8 +3527,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         int custom = std::atoi(dialogs.fontDialogCustomSize.c_str());
                         if (custom > 0) sel.size = custom;
                         TextStyle style = font_dialog::fontDialogApplyStyle(
-                            doc.buffer.textStyle(), sel, toolbar.fonts);
-                        doc.buffer.setTextStyle(style);
+                            doc.buffer.effectiveStyleAtCaretOrSelection(),
+                            sel, toolbar.fonts);
+                        // Per-range: a selection gets a span, a bare
+                        // caret sets the typing style.
+                        doc.buffer.applyStyleToCurrentRange(style);
                         toolbar.currentFont = style.font;
                         toolbar.currentFontSize = style.fontSize;
                         doc.isDirty = true;

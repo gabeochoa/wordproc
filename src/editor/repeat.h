@@ -100,41 +100,41 @@ inline void apply(TextBuffer& buffer, const ActionRecord& record) {
             return;
         }
         case RepeatKind::SetBold: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.bold = record.boolValue;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetItalic: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.italic = record.boolValue;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetUnderline: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.underline = record.boolValue;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetStrikethrough: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.strikethrough = record.boolValue;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetSuperscript: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.superscript = record.boolValue;
             if (record.boolValue) style.subscript = false;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetSubscript: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.subscript = record.boolValue;
             if (record.boolValue) style.superscript = false;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetParagraphStyle:
@@ -142,27 +142,27 @@ inline void apply(TextBuffer& buffer, const ActionRecord& record) {
                 static_cast<ParagraphStyle>(record.intValue));
             return;
         case RepeatKind::SetFontSize: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.fontSize = record.intValue;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetFont: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.font = record.text;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetTextColor: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.textColor = record.color;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetHighlightColor: {
-            TextStyle style = buffer.textStyle();
+            TextStyle style = buffer.effectiveStyleAtCaretOrSelection();
             style.highlightColor = record.color;
-            buffer.setTextStyle(style);
+            buffer.applyStyleToCurrentRange(style);
             return;
         }
         case RepeatKind::SetAlignment:

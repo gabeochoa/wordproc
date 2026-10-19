@@ -199,6 +199,25 @@ TEST_CASE("saveDocumentEx and loadDocumentEx roundtrip with full settings", "[do
         REQUIRE(loadedSettings.pageSettings.lineWidthLimit == Approx(80.0f));
     }
     
+    SECTION("per-range char style spans round-trip (Batch 12)") {
+        TextBuffer original;
+        original.setText("alpha beta gamma");
+        TextStyle bold;
+        bold.bold = true;
+        original.applyCharStyleRange(0, 5, bold);
+        DocumentSettings settings;
+        REQUIRE(saveDocumentEx(original, settings, path).success);
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path).success);
+        REQUIRE(loaded.getText() == "alpha beta gamma");
+        REQUIRE(loaded.charStyleSpans().size() == 1);
+        REQUIRE(loaded.charStyleSpans()[0].startOffset == 0);
+        REQUIRE(loaded.charStyleSpans()[0].endOffset == 5);
+        REQUIRE(loaded.effectiveStyleAt(0).bold);
+        REQUIRE_FALSE(loaded.effectiveStyleAt(6).bold);
+    }
+
     SECTION("default page settings are used when loading old document format") {
         // Simulate old format without pageLayout field
         {

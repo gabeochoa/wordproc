@@ -1,5 +1,5 @@
 # Test: Format > Font... dialog applies size + Bold to the
-# selection (buffer style is document-global, same as the toolbar).
+# selection (per-range span, same as the toolbar).
 # Open the dialog, screenshot it, pick Bold + size 18, OK, and
 # assert the applied style. The dialog is the FIRST Format item.
 

@@ -38,7 +38,7 @@ Wordproc documents use JSON for structured storage with backward compatibility t
 |-------|------|----------|-------------|
 | version | integer | Yes | Document format version (currently `1`) |
 | text | string | Yes | Full document text content |
-| style | object | No | Global document style (may become per-range in future) |
+| style | object | No | Global document style: the typing / fallback style for text with no per-range span (see `charStyleSpans`) |
 | style.bold | boolean | No | Default: false |
 | style.italic | boolean | No | Default: false |
 | style.font | string | No | Font name. Default: "Gaegu-Bold" |
@@ -48,6 +48,7 @@ Wordproc documents use JSON for structured storage with backward compatibility t
 | fontRequirements[].scripts | array | Yes | Script identifiers this font provides |
 | paragraphStyles | array of strings | No | One paragraph-style name per line ("Title", "Heading 1", ..., "Normal"); written only when some line is not Normal. Templates rely on this to carry styled headings. Unknown names load as Normal; a shorter array leaves the rest Normal |
 | dropCapLines | array of integers | No | One drop-cap span per line (0 = off, 2-4 = first glyph spans that many lines; Format > Drop Cap). Written only when some line has a drop cap; out-of-range values load as off; a shorter array leaves the rest off |
+| charStyleSpans | array of objects | No | Per-range character styles (Batch 12): `{start, end, style}` with `style` a full `style` object (bold/italic/underline/strikethrough/superscript/subscript/font/fontSize/textColor/highlightColor). Spans are `[start, end)` document offsets, sorted/non-overlapping. Written only when spans exist; missing style fields load as the global style; out-of-range spans are clamped |
 | tableOfContents | object | No | The marked TOC region: `start` / `end` buffer offsets. The generated lines are ordinary text in `text`; this mark is the only extra state, so a saved TOC still updates. A range not starting at a "Table of Contents" line loads as no mark |
 | headerText / footerText | string | No | Header / footer body text (the `DocumentComponent` header/footer buffers). Written only when non-empty; loading a file without them clears the buffers |
 | headerFooter | object | No | Header/footer config: `header` / `footer` each carry `enabled`, `differentFirstPage`, `differentOddEven`, and `left` / `center` / `right` sections with `showPageNumber`, `format` (0=None, 1=Arabic, 2=RomanLower, 3=RomanUpper, 4=LetterLower, 5=LetterUpper), `showTotalPages`. The strip's Page Number button toggles `center.showPageNumber` of the active target |
