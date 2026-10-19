@@ -115,9 +115,18 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
                 cache_.scroll ? cache_.scroll->offset : 0;
             int page = scroll_math::pageFromScrollOffset(
                 scrollOffset, linesPerPage, stats.lines);
+            // Word 95 style: "Page <cur>   Sec 1
+            // <curPage>/<totalPages>   At ... Ln ... Col ...".
+            // The fraction is a PAGE fraction: curPage is the
+            // page above, totalPages uses the SAME page math
+            // (the same linesPerPage, via previewPageCount).
+            // The old row/total-lines fraction ("1/100") read
+            // as a bogus page fraction.
+            int totalPages = scroll_math::previewPageCount(
+                stats.lines, linesPerPage);
             leftText = std::format(
                 "Page {}   Sec 1      {}/{}      At {:.1f}\"      Ln {}   Col {}      Words: {}",
-                page, caretPos.row + 1, stats.lines,
+                page, page, totalPages,
                 inchPos,
                 caretPos.row + 1, caretPos.column + 1, stats.words);
 

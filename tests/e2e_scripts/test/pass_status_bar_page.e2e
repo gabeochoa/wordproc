@@ -45,5 +45,8 @@ scroll_wheel 0 -2
 wait_frames 6
 validate scroll_offset=36
 expect_text "Page 2"
+# Word 95 page fraction: curPage/totalPages from the same page
+# math as Page above (not the old row/total-lines "1/100").
+expect_text "2/"
 
 screenshot status_page2
