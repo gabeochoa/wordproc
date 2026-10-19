@@ -261,13 +261,14 @@ TEST_SRC += src/util/logging.cpp
 
 # Test object files
 TEST_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/test/%.o,$(notdir $(TEST_SRC)))
+TEST_DEPS := $(TEST_OBJS:.o=.d)
 
 # Test executable
 TEST_EXE := $(OUTPUT_DIR)/run_tests$(EXT)
 
 # Test compiler flags (no raylib, no GUI)
 # Use -O2 for fast test execution; -g for debug symbols on failure
-TEST_CXXFLAGS := $(CXXSTD) -O2 -g -Wall -Wextra -Wpedantic \
+TEST_CXXFLAGS := $(CXXSTD) -O2 -g -Wall -Wextra -Wpedantic -MMD -MP \
     $(COVERAGE_CXXFLAGS) \
     -Wno-deprecated-volatile -Wno-missing-field-initializers
 
@@ -332,6 +333,8 @@ $(OBJ_DIR)/test/logging.o: src/util/logging.cpp | $(OBJ_DIR)/test
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_INCLUDES) -c $< -o $@
 
 # Link test executable
+-include $(TEST_DEPS)
+
 $(TEST_EXE): $(TEST_OBJS) | $(OUTPUT_DIR)/.stamp
 	@echo "Linking $(TEST_EXE)..."
 	$(CXX) $(TEST_CXXFLAGS) $(TEST_OBJS) $(TEST_LDFLAGS) -o $@
