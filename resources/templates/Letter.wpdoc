@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "text": "Letter\n\n[Your Name]\n[Your Address]\n[City, State ZIP]\n\n[Date]\n\n[Recipient Name]\n[Recipient Address]\n[City, State ZIP]\n\nDear [Recipient],\n\n[Write your message here. Replace this paragraph with the body of your letter.]\n\nSincerely,\n[Your Name]",
+  "style": {
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "strikethrough": false,
+    "superscript": false,
+    "subscript": false,
+    "font": "Gaegu-Bold",
+    "fontSize": 16,
+    "textColor": {"r": 0, "g": 0, "b": 0, "a": 255},
+    "highlightColor": {"r": 0, "g": 0, "b": 0, "a": 0}
+  },
+  "paragraphStyles": [
+    "Title",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal"
+  ],
+  "options": {
+    "smartQuotesEnabled": true,
+    "tabWidth": 4,
+    "showTextBoundaries": false,
+    "spellCheckAsYouType": true
+  },
+  "pageLayout": {
+    "mode": "pageless",
+    "pageWidth": 612.0,
+    "pageHeight": 792.0,
+    "pageMargin": 72.0,
+    "lineWidthLimit": 0.0
+  }
+}

@@ -259,6 +259,28 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
     doc["version"] = DocumentSettings::VERSION;
     doc["text"] = buffer.getText();
 
+    // Per-line paragraph styles, one style name per line (Title /
+    // Heading 1-6 / ...). Written only when some line is not Normal,
+    // so plain documents keep the old file shape byte-for-byte.
+    // Templates rely on this to carry their styled headings.
+    {
+        bool anyStyled = false;
+        for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+            if (buffer.lineParagraphStyle(i) != ParagraphStyle::Normal) {
+                anyStyled = true;
+                break;
+            }
+        }
+        if (anyStyled) {
+            nlohmann::json styles = nlohmann::json::array();
+            for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+                styles.push_back(
+                    paragraphStyleName(buffer.lineParagraphStyle(i)));
+            }
+            doc["paragraphStyles"] = std::move(styles);
+        }
+    }
+
     // Style settings (document-specific, saved with file)
     doc["style"] = {
         {"bold", style.bold},
@@ -440,6 +462,23 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             buffer.setTextStyle(style);
         }
 
+        // Load per-line paragraph styles (written by saveDocumentEx
+        // when any line is styled; absent in old files -> all Normal).
+        // Unknown names parse as Normal; a shorter array leaves the
+        // remaining lines Normal.
+        if (doc.contains("paragraphStyles")) {
+            const nlohmann::json& styles = doc.at("paragraphStyles");
+            std::size_t count =
+                std::min<std::size_t>(styles.size(), buffer.lineCount());
+            for (std::size_t i = 0; i < count; ++i) {
+                if (styles[i].is_string()) {
+                    buffer.setLineParagraphStyle(
+                        i, paragraphStyleFromName(
+                               styles[i].get<std::string>()));
+                }
+            }
+        }
+
         // Load text options
         if (doc.contains("options")) {
             const nlohmann::json &opts = doc.at("options");
@@ -537,6 +576,25 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
     nlohmann::json doc;
     doc["version"] = DocumentSettings::VERSION;
     doc["text"] = buffer.getText();
+
+    // Per-line paragraph styles (see saveDocumentEx above).
+    {
+        bool anyStyled = false;
+        for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+            if (buffer.lineParagraphStyle(i) != ParagraphStyle::Normal) {
+                anyStyled = true;
+                break;
+            }
+        }
+        if (anyStyled) {
+            nlohmann::json styles = nlohmann::json::array();
+            for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+                styles.push_back(
+                    paragraphStyleName(buffer.lineParagraphStyle(i)));
+            }
+            doc["paragraphStyles"] = std::move(styles);
+        }
+    }
 
     // Style settings
     doc["style"] = {

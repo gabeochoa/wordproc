@@ -579,6 +579,13 @@ void TextBuffer::setCurrentParagraphStyle(ParagraphStyle style) {
     }
 }
 
+void TextBuffer::setLineParagraphStyle(std::size_t row, ParagraphStyle style) {
+    if (row < line_spans_.size()) {
+        line_spans_[row].style = style;
+        version_++;
+    }
+}
+
 ParagraphStyle TextBuffer::lineParagraphStyle(std::size_t row) const {
     if (row < line_spans_.size()) {
         return line_spans_[row].style;

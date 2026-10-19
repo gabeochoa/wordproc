@@ -267,10 +267,12 @@ struct DialogState : public afterhours::BaseComponent {
     char commentInputBuffer[256] = {0};
     std::string commentInputStr;
 
-    // Template
+    // Template (File > New from Template...): templateNames is the
+    // .wpdoc stem list scanned from resources/templates/ when the
+    // dialog opens; templateSelected is the chosen index.
     bool showTemplateDialog = false;
-    char templateInputBuffer[128] = {0};
-    std::string templateInputStr;
+    std::vector<std::string> templateNames;
+    int templateSelected = 0;
 
     // Date and Time (Insert > Date and Time...): formats are computed
     // from the current local time when the dialog opens; selected is

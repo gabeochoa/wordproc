@@ -10,7 +10,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
 | New / Open / Save / Save As | Have | P0 | native dialogs, recent files |
-| New from Template... | Partial | P1 | template dialog exists; no shipped .dot-style templates |
+| New from Template... | Have | P1 | Win95 dialog lists the shipped .wpdoc templates in resources/templates/ (Letter/Memo/Report, scanned via the afterhours files resource path); OK opens the selected template as a NEW Untitled document (filePath cleared, dirty=true, undo history cleared). Templates carry Title/Heading 1 styles via the .wpdoc `paragraphStyles` array (see docs/file_format.md); the legacy .txt templates are gone |
 | Export RTF / HTML / PDF | Have | P1 | File menu exports; native .doc binary I/O Missing below |
 | Save/open .doc (Word binary) | Missing | P2 | RTF is the interchange path |
 | Save/open .rtf / .txt | Have | P0 | document_io + tests |
@@ -113,7 +113,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 40 · Partial 17 · Missing 9** (after Batch 4 item 1, Date/Time) (66 grouped rows; several rows bundle
+**Have 41 · Partial 16 · Missing 9** (after Batch 4 item 2, Templates) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

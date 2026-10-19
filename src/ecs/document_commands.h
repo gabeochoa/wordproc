@@ -8,6 +8,7 @@
 #include "../util/clipboard.h"
 #include "../editor/date_time.h"
 #include "../editor/document_io.h"
+#include "../editor/templates.h"
 #include "../editor/export/export_pdf.h"
 #include "../editor/spell_session.h"
 #include "../settings.h"
@@ -73,10 +74,14 @@ inline void syncSettingsToLayout(DocumentComponent& doc, LayoutComponent& layout
 }
 
 // Refresh the menu bar after a file operation (updates recent files list
-// and restores the Track Changes checkmark if needed).
+// and restores the Track Changes checkmark if needed). addRecent=false
+// rebuilds the bar (e.g. the Window menu's "1 <file>" label) without
+// recording the path as a recent file — used when a template opens as
+// a new Untitled document.
 inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
-                           const std::string& filePath) {
-    Settings::get().add_recent_file(filePath);
+                           const std::string& filePath,
+                           bool addRecent = true) {
+    if (addRecent) Settings::get().add_recent_file(filePath);
     menu.menus = menu_setup::createMenuBar(
         Settings::get().get_recent_files(), doc.filePath);
     menu.windowDocLabel = menu_setup::windowDocLabel(doc.filePath);
@@ -87,6 +92,33 @@ inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
         menu.menus[1].items.size() > 3) {
         menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
     }
+}
+
+// File > New from Template...: open a shipped .wpdoc template as a
+// NEW Untitled document — filePath cleared, dirty, template content
+// + per-line styles adopted, undo history cleared (no undoing into
+// the previous document). The template path itself is not recorded
+// as a recent file (refreshMenuBar with addRecent=false).
+inline bool openTemplateAsNew(DocumentComponent& doc, MenuComponent& menu,
+                              const std::string& name) {
+    std::filesystem::path path =
+        templates::templateDir() / (name + ".wpdoc");
+    TextBuffer tmp;
+    DocumentSettings tmpSettings;
+    if (!templates::loadTemplate(path, tmp, tmpSettings)) {
+        toast_notify::error("Template not found: " + name);
+        return false;
+    }
+    doc.comments.clear();
+    doc.revisions.clear();
+    doc.trackChangesBaseline.clear();
+    doc.docSettings = tmpSettings;
+    templates::adoptTemplate(doc.buffer, tmp, tmpSettings);
+    doc.filePath.clear();
+    doc.isDirty = true;
+    refreshMenuBar(menu, doc, "", false);
+    toast_notify::success("Template loaded: " + name);
+    return true;
 }
 
 // --- File commands ---

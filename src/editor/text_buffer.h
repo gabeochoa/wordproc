@@ -241,6 +241,11 @@ class TextBuffer {
     
     // Get paragraph style for a specific line
     ParagraphStyle lineParagraphStyle(std::size_t row) const;
+
+    // Set the paragraph style of one line (used by the document loader
+    // to restore per-line styles, and by template adoption). Direct
+    // span write: no history entry, like setCurrentParagraphStyle.
+    void setLineParagraphStyle(std::size_t row, ParagraphStyle style);
     
     // Text alignment for current line (where caret is)
     TextAlignment currentAlignment() const;

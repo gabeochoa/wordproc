@@ -132,6 +132,28 @@ inline const char* paragraphStyleName(ParagraphStyle style) {
     }
 }
 
+// Parse a paragraph style name back to the enum (the inverse of
+// paragraphStyleName). Accepts "Heading 1" and "heading1" spellings;
+// anything unrecognized is Normal, matching the loader's tolerance.
+inline ParagraphStyle paragraphStyleFromName(const std::string& name) {
+    std::string lowered;
+    lowered.reserve(name.size());
+    for (char ch : name) {
+        if (ch != ' ' && ch != '_' && ch != '-') {
+            lowered.push_back(static_cast<char>(std::tolower(ch)));
+        }
+    }
+    if (lowered == "title") return ParagraphStyle::Title;
+    if (lowered == "subtitle") return ParagraphStyle::Subtitle;
+    if (lowered == "heading1" || lowered == "h1") return ParagraphStyle::Heading1;
+    if (lowered == "heading2" || lowered == "h2") return ParagraphStyle::Heading2;
+    if (lowered == "heading3" || lowered == "h3") return ParagraphStyle::Heading3;
+    if (lowered == "heading4" || lowered == "h4") return ParagraphStyle::Heading4;
+    if (lowered == "heading5" || lowered == "h5") return ParagraphStyle::Heading5;
+    if (lowered == "heading6" || lowered == "h6") return ParagraphStyle::Heading6;
+    return ParagraphStyle::Normal;
+}
+
 // Get font size for a paragraph style (base size is 16)
 inline int paragraphStyleFontSize(ParagraphStyle style) {
     switch (style) {

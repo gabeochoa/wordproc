@@ -1,0 +1,26 @@
+# Test: File > New from Template... dialog lists the shipped
+# .wpdoc templates; picking Memo opens its content as a NEW Untitled
+# document (filePath cleared -> Window label "1 Untitled", dirty).
+
+menu_open File
+wait_frames 12
+menu_select "New from Template..."
+wait_frames 12
+
+validate dialog_open=Template
+expect_text "Templates:"
+expect_text "Memo"
+expect_text "Letter"
+expect_text "Report"
+
+screenshot template_dialog
+
+click_ui template_item_Memo
+wait_frames 12
+click_ui template_ok
+wait_frames 12
+
+validate dialog_open=false
+validate text_contains_MEMORANDUM=true
+validate is_dirty=true
+validate window_doc_label=1 Untitled

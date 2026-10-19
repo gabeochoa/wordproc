@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "text": "REPORT\n\nAuthor: [Name]\nDate: [Date]\n\nExecutive Summary\n[Summary paragraph]\n\nIntroduction\n[Background and scope]\n\nFindings\n1. [Finding]\n2. [Finding]\n\nConclusion\n[Wrap-up and recommendations]",
+  "style": {
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "strikethrough": false,
+    "superscript": false,
+    "subscript": false,
+    "font": "Gaegu-Bold",
+    "fontSize": 16,
+    "textColor": {"r": 0, "g": 0, "b": 0, "a": 255},
+    "highlightColor": {"r": 0, "g": 0, "b": 0, "a": 0}
+  },
+  "paragraphStyles": [
+    "Title",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Heading 1",
+    "Normal",
+    "Normal",
+    "Heading 1",
+    "Normal",
+    "Normal",
+    "Heading 1",
+    "Normal",
+    "Normal",
+    "Normal",
+    "Heading 1",
+    "Normal"
+  ],
+  "options": {
+    "smartQuotesEnabled": true,
+    "tabWidth": 4,
+    "showTextBoundaries": false,
+    "spellCheckAsYouType": true
+  },
+  "pageLayout": {
+    "mode": "pageless",
+    "pageWidth": 612.0,
+    "pageHeight": 792.0,
+    "pageMargin": 72.0,
+    "lineWidthLimit": 0.0
+  }
+}

@@ -4,6 +4,7 @@
 
 #include "../ecs/components.h"
 #include "../editor/document_io.h"
+#include "../editor/templates.h"
 #include "../settings.h"
 #include "../util/file_dialog.h"
 
@@ -270,18 +271,46 @@ struct HandleLoadTemplateCommand : System<testing::PendingE2ECommand> {
     }
 
     std::string name = cmd.arg(0);
-    for (auto &ch : name) ch = static_cast<char>(std::tolower(ch));
-    std::filesystem::path templatePath =
-        std::filesystem::current_path() / "resources/templates" / (name + ".txt");
-    if (std::filesystem::exists(templatePath)) {
-      std::ifstream ifs(templatePath);
+    // Templates are .wpdoc now (Letter/Memo/Report): load through the
+    // document loader so per-line paragraph styles survive. A
+    // same-stem .txt is still accepted as plain text, for any
+    // caller that still ships one. Matching is case-insensitive
+    // ("letter" finds Letter.wpdoc) so scripts need not know the
+    // shipped capitalization.
+    std::filesystem::path dir = templates::templateDir();
+    std::string loweredName = name;
+    for (auto& ch : loweredName) ch = static_cast<char>(std::tolower(ch));
+    std::string stem = name;
+    for (const auto& candidate : templates::listTemplateNames(dir)) {
+        std::string loweredCandidate = candidate;
+        for (auto& ch : loweredCandidate) {
+            ch = static_cast<char>(std::tolower(ch));
+        }
+        if (loweredCandidate == loweredName) stem = candidate;
+    }
+    std::filesystem::path wpdocPath = dir / (stem + ".wpdoc");
+    if (std::filesystem::exists(wpdocPath)) {
+      DocumentSettings settings = doc_comp->docSettings;
+      if (loadDocumentEx(doc_comp->buffer, settings, wpdocPath.string())
+              .success) {
+        doc_comp->docSettings = settings;
+        doc_comp->isDirty = true;
+        cmd.consume();
+        return;
+      }
+      cmd.fail("Failed to load template: " + wpdocPath.string());
+      return;
+    }
+    std::filesystem::path txtPath = dir / (stem + ".txt");
+    if (std::filesystem::exists(txtPath)) {
+      std::ifstream ifs(txtPath);
       std::stringstream buf;
       buf << ifs.rdbuf();
       doc_comp->buffer.setText(buf.str());
       doc_comp->isDirty = true;
       cmd.consume();
     } else {
-      cmd.fail("Template not found: " + templatePath.string());
+      cmd.fail("Template not found: " + wpdocPath.string());
     }
   }
 };

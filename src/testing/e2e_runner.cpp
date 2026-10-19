@@ -417,6 +417,7 @@ static void setupCallbacksEx(
             if (dialogState.showSpellingDialog) return "Spelling";
             if (dialogState.showGrammarDialog) return "Grammar";
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
+            if (dialogState.showTemplateDialog) return "Template";
             if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
@@ -975,8 +976,8 @@ static void setupCallbacksEx(
         dialogState.commentInputBuffer[0] = '\0';
         dialogState.commentInputStr.clear();
         dialogState.showTemplateDialog = false;
-        dialogState.templateInputBuffer[0] = '\0';
-        dialogState.templateInputStr.clear();
+        dialogState.templateNames.clear();
+        dialogState.templateSelected = 0;
         dialogState.showDateTimeDialog = false;
         dialogState.dateTimeFormats.clear();
         dialogState.dateTimeSelected = 0;

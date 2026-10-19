@@ -46,6 +46,7 @@ Wordproc documents use JSON for structured storage with backward compatibility t
 | fontRequirements | array | No | Fonts and scripts needed by document (for lazy loading) |
 | fontRequirements[].fontId | string | Yes | Font identifier (e.g., "NotoSansKR") |
 | fontRequirements[].scripts | array | Yes | Script identifiers this font provides |
+| paragraphStyles | array of strings | No | One paragraph-style name per line ("Title", "Heading 1", ..., "Normal"); written only when some line is not Normal. Templates rely on this to carry styled headings. Unknown names load as Normal; a shorter array leaves the rest Normal |
 
 ### Script Identifiers
 

@@ -1728,88 +1728,125 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
-        // Template input dialog
+        // New from Template dialog (File > New from Template...) -
+        // Win95 shell: sunken list of the .wpdoc templates found in
+        // resources/templates/, OK opens the selected template as a
+        // NEW Untitled document (filePath cleared, dirty).
         if (dialogs.showTemplateDialog) {
             constexpr int TEMPLATE_MODAL_ID = 50003;
             auto result = afterhours::modal(ctx, mk(entity, TEMPLATE_MODAL_ID),
                 dialogs.showTemplateDialog,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(380), afterhours::ui::h720(180))
-                    .with_title("New from Template"));
-            
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(380), afterhours::ui::h720(300),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
-                
-                // Prompt label
-                div(ctx, mk(result.ent(), 0),
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "New from Template", CONTENT_LAYER);
+
+                test_input::register_visible_text("Templates:");
+                div(ctx, mk(result.ent(), 901),
                     ComponentConfig{}
-                        .with_label("Template (letter/memo/report/resume/essay):")
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_label("Templates:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
-                
-                // Text input
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
-                    dialogs.templateInputStr,
-                    ComponentConfig{}
-                        .with_debug_name("template_input")
-                        .with_size(ComponentSize{percent(1.0f), h720(32)})
-                        .with_background(Theme::Usage::Surface)
+
+                float listHeight = 22.0f * static_cast<float>(
+                    std::max<std::size_t>(dialogs.templateNames.size(), 1)) +
+                    4.0f;
+                auto templateList = div(ctx, mk(result.ent(), 902),
+                    ah_win95::win95SunkenStyle()
+                        .with_size(ComponentSize{percent(1.0f), h720(listHeight)})
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                         .with_render_layer(CONTENT_LAYER));
-                
-                // Button row
-                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                if (templateList) {
+                    if (dialogs.templateNames.empty()) {
+                        div(ctx, mk(templateList.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("(no templates found)")
+                                .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::TEXT_AREA)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(afterhours::ui::TextAlignment::Left)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_render_layer(CONTENT_LAYER));
+                    }
+                    for (std::size_t i = 0; i < dialogs.templateNames.size(); ++i) {
+                        const std::string& name = dialogs.templateNames[i];
+                        bool selected =
+                            static_cast<int>(i) == dialogs.templateSelected;
+                        test_input::register_visible_text(name);
+                        if (button(ctx, mk(templateList.ent(), 100 + static_cast<int>(i)),
+                            ComponentConfig{}
+                                .with_debug_name("template_item_" + name)
+                                .with_label(name)
+                                .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                .with_roundness(0.0f)
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::TEXT_AREA)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_alignment(afterhours::ui::TextAlignment::Left)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.templateSelected = static_cast<int>(i);
+                        }
+                    }
+                }
+
+                auto buttonRow = div(ctx, mk(result.ent(), 903),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(44)})
                         .with_flex_direction(FlexDirection::Row)
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
-                        .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                
-                if (button(ctx, mk(buttonRow.ent(), 0),
-                    ComponentConfig{}
-                        .with_debug_name("template_ok")
-                        .with_label("OK")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_background(Theme::Usage::Primary)
-                        .with_cursor(afterhours::ui::CursorType::Pointer)
-                        .with_render_layer(CONTENT_LAYER))) {
-                    // Handle OK - load template
-                    if (!dialogs.templateInputStr.empty()) {
-                        std::string name = dialogs.templateInputStr;
-                        for (auto& ch : name) ch = static_cast<char>(std::tolower(ch));
-                        std::filesystem::path templatePath =
-                            std::filesystem::current_path() / "resources/templates" /
-                            (name + ".txt");
-                        if (std::filesystem::exists(templatePath)) {
-                            std::ifstream ifs(templatePath);
-                            std::stringstream buffer;
-                            buffer << ifs.rdbuf();
-                            doc.buffer.setText(buffer.str());
-                            doc.isDirty = true;
-                            toast_notify::success("Template loaded: " + name);
-                        } else {
-                            toast_notify::error("Template not found: " + name);
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("template_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        if (dialogs.templateSelected >= 0 &&
+                            dialogs.templateSelected < static_cast<int>(
+                                dialogs.templateNames.size())) {
+                            cmd::openTemplateAsNew(
+                                doc, menu,
+                                dialogs.templateNames[static_cast<std::size_t>(
+                                    dialogs.templateSelected)]);
                         }
+                        dialogs.showTemplateDialog = false;
                     }
-                    dialogs.templateInputStr.clear();
-                    dialogs.showTemplateDialog = false;
-                }
-                
-                if (button(ctx, mk(buttonRow.ent(), 1),
-                    ComponentConfig{}
-                        .with_label("Cancel")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_render_layer(CONTENT_LAYER))) {
-                    dialogs.templateInputStr.clear();
-                    dialogs.showTemplateDialog = false;
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("template_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showTemplateDialog = false;
+                    }
                 }
             }
         }
-        
+
         // Date and Time dialog (Insert > Date and Time...) - Win95
         // shell: label + sunken list of formats computed from the
         // current local time at open, "Update automatically"

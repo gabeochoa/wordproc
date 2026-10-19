@@ -51,6 +51,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 1:  // New from Template...
                     dialogs.showTemplateDialog = true;
+                    dialogs.templateNames = templates::listTemplateNames(
+                        templates::templateDir());
+                    dialogs.templateSelected = 0;
                     break;
                 case 2:  // Open
                     menu.pendingDialog = MenuComponent::PendingDialog::Open;
