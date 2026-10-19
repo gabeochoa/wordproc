@@ -1,0 +1,25 @@
+# Test: text fields keep a Win95 sunken edge when unfocused.
+# Regression: unfocused fields rendered as flat white (no border at
+# all) because text_input drops the bevel from its field config and
+# skips its default border with a custom background; only the
+# focused field showed an edge (upstream's black 2px border). The
+# shared win95TextInput wrapper gives every dialog field a 1px
+# sunken per-side edge (dark top/left, light bottom/right).
+# Find auto-focuses its field on open, so focus is moved onto
+# Find Next first to read the unfocused edge.
+
+key CTRL+F
+wait_frames 30
+
+click_ui find_next
+wait_frames 12
+validate field_border_find_input=sunken
+screenshot text_input_sunken_unfocused
+
+focus_ui find_input
+wait_frames 12
+validate field_border_find_input=black
+screenshot text_input_sunken_focused
+
+escape
+wait_frames 6

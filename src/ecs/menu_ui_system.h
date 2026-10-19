@@ -1016,7 +1016,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
 
-                    afterhours::text_input::text_input(ctx, mk(leftCol.ent(), 5),
+                    ah_win95::win95TextInput(ctx, mk(leftCol.ent(), 5),
                         dialogs.spellReplacementStr,
                         ah_win95::win95SunkenStyle()
                             .with_debug_name("spell_change_to_input")
@@ -1468,7 +1468,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_custom_text_color(ui_imm::win95_colors::TEXT)
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
-                    afterhours::text_input::text_input(ctx, mk(leftCol.ent(), 5),
+                    ah_win95::win95TextInput(ctx, mk(leftCol.ent(), 5),
                         dialogs.thesaurusLookupStr,
                         ah_win95::win95SunkenStyle()
                             .with_debug_name("thesaurus_lookup_input")
@@ -1551,7 +1551,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_custom_text_color(ui_imm::win95_colors::TEXT)
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 902),
+                ah_win95::win95TextInput(ctx, mk(result.ent(), 902),
                     dialogs.tableFormulaStr,
                     ah_win95::win95SunkenStyle()
                         .with_debug_name("table_formula_input")
@@ -1802,7 +1802,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                         ui_imm::win95_colors::TEXT)
                                     .with_alignment(afterhours::ui::TextAlignment::Left)
                                     .with_render_layer(CONTENT_LAYER));
-                            afterhours::text_input::text_input(
+                            ah_win95::win95TextInput(
                                 ctx, mk(replaceRow.ent(), 1),
                                 dialogs.autoCorrectReplaceStr,
                                 ah_win95::win95SunkenStyle()
@@ -1830,7 +1830,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                         ui_imm::win95_colors::TEXT)
                                     .with_alignment(afterhours::ui::TextAlignment::Left)
                                     .with_render_layer(CONTENT_LAYER));
-                            afterhours::text_input::text_input(
+                            ah_win95::win95TextInput(
                                 ctx, mk(withRow.ent(), 1),
                                 dialogs.autoCorrectWithStr,
                                 ah_win95::win95SunkenStyle()
@@ -2103,7 +2103,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_render_layer(CONTENT_LAYER));
 
                 // Text input
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                ah_win95::win95TextInput(ctx, mk(result.ent(), 1),
                     dialogs.commentInputStr,
                     ah_win95::win95SunkenStyle()
                         .with_debug_name("comment_input")
@@ -2672,7 +2672,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         // every frame; a list pick writes the field.
                         test_input::register_visible_text(
                             "Size field: " + std::to_string(sel.size));
-                        afterhours::text_input::text_input(
+                        ah_win95::win95TextInput(
                             ctx, mk(sizeCol.ent(), 6),
                             dialogs.fontDialogCustomSize,
                             ah_win95::win95SunkenStyle()
@@ -3243,7 +3243,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_custom_text_color(ui_imm::win95_colors::TEXT)
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 905),
+                ah_win95::win95TextInput(ctx, mk(result.ent(), 905),
                     dialogs.columnsSpacingStr,
                     ah_win95::win95SunkenStyle()
                         .with_debug_name("columns_spacing_input")
@@ -3350,7 +3350,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_custom_text_color(ui_imm::win95_colors::TEXT)
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
-                    afterhours::text_input::text_input(
+                    ah_win95::win95TextInput(
                         ctx, mk(row.ent(), 1), value,
                         ah_win95::win95SunkenStyle()
                             .with_debug_name(debugName)
@@ -3610,7 +3610,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_alignment(
                                     afterhours::ui::TextAlignment::Left)
                                 .with_render_layer(CONTENT_LAYER));
-                        afterhours::text_input::text_input(
+                        ah_win95::win95TextInput(
                             ctx, mk(row.ent(), 3),
                             dialogs.paragraphByStr,
                             ah_win95::win95SunkenStyle()
@@ -4497,7 +4497,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_alignment(
                                     afterhours::ui::TextAlignment::Left)
                                 .with_render_layer(CONTENT_LAYER));
-                        afterhours::text_input::text_input(
+                        ah_win95::win95TextInput(
                             ctx, mk(marginRow.ent(), 1),
                             *marginFields[i].value,
                             ah_win95::win95SunkenStyle()
@@ -4610,7 +4610,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_render_layer(CONTENT_LAYER));
 
                 // Text input
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                ah_win95::win95TextInput(ctx, mk(result.ent(), 1),
                     dialogs.tabWidthInputStr,
                     ah_win95::win95SunkenStyle()
                         .with_debug_name("tabwidth_input")
@@ -4693,7 +4693,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_render_layer(CONTENT_LAYER));
 
                 // Text input
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                ah_win95::win95TextInput(ctx, mk(result.ent(), 1),
                     dialogs.uiScaleInputStr,
                     ah_win95::win95SunkenStyle()
                         .with_debug_name("ui_scale_input")
@@ -4924,7 +4924,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_alignment(
                                     afterhours::ui::TextAlignment::Left)
                                 .with_render_layer(CONTENT_LAYER));
-                        afterhours::text_input::text_input(
+                        ah_win95::win95TextInput(
                             ctx, mk(rightCol.ent(), 1), dialogs.goToInputStr,
                             ah_win95::win95SunkenStyle()
                                 .with_debug_name("goto_input")
@@ -5234,7 +5234,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
 
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
+                ah_win95::win95TextInput(ctx, mk(result.ent(), 1),
                     dialogs.findInputStr,
                     ah_win95::win95SunkenStyle()
                         .with_debug_name("find_input")
@@ -5254,7 +5254,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
 
-                    afterhours::text_input::text_input(ctx, mk(result.ent(), 3),
+                    ah_win95::win95TextInput(ctx, mk(result.ent(), 3),
                         dialogs.replaceInputStr,
                         ah_win95::win95SunkenStyle()
                             .with_debug_name("replace_input")

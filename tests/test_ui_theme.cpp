@@ -75,6 +75,13 @@ TEST_CASE("Win95 theme text-input focus border is dark and square",
     REQUIRE(*theme.corner_radius == 0.0f);
 }
 
+// NOTE: no unit test for the sunken unfocused edge:
+// ah_win95_widgets.h pulls the afterhours graphics backend, which
+// the test binary does not define (same reason as the P0-6 note in
+// test_p0_ux.cpp). The regression check is the E2E below plus the
+// `field_border_` validate property in e2e_runner.cpp:
+// tests/e2e_scripts/test/pass_text_input_sunken_edge.e2e.
+
 // Feature request #10: popups cast a hard 2px shadow (afterhours ShadowStyle::
 // Hard). Menus and dropdown lists read these; a zero offset or a transparent
 // colour would silently turn the shadow off.

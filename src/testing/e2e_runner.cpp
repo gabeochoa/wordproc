@@ -576,6 +576,70 @@ static void setupCallbacksEx(
             return "none";
         }
 
+        // field_border_NAME — the HasBorder on text field NAME's
+        // field entity (the last InFocusCluster child of the
+        // debug-named outer, same drill as focus_ui), classified
+        // as "sunken" (1px dark top/left, 1px light bottom/right
+        // = the Win95 sunken unfocused edge),
+        // "black" (uniform black 2px = upstream's focused
+        // border), "none" (no border = flat white), "other", or
+        // "missing" (no such field rendered). A field routed
+        // around win95TextInput reads "none" unfocused — that
+        // is the flat-white regression.
+        if (prop.rfind("field_border_", 0) == 0) {
+            std::string name = prop.substr(13);
+            auto matches = afterhours::EntityQuery({.force_merge = true})
+                               .whereHasComponent<afterhours::ui::UIComponent>()
+                               .whereHasComponent<
+                                   afterhours::ui::UIComponentDebug>()
+                               .whereLambda(
+                                   [&](const afterhours::Entity& e) {
+                                       return e.get<afterhours::ui::
+                                                       UIComponentDebug>()
+                                                  .name() == name &&
+                                              e.get<afterhours::ui::UIComponent>()
+                                                  .was_rendered_to_screen;
+                                   })
+                               .gen();
+            if (matches.empty()) return "missing";
+            auto& outer = matches[0].get();
+            afterhours::Entity* field = &outer;
+            for (int childId :
+                 outer.get<afterhours::ui::UIComponent>().children) {
+                auto childOpt =
+                    afterhours::ui::UICollectionHolder::getEntityForID(
+                        childId);
+                if (!childOpt.has_value()) continue;
+                auto& child = childOpt.asE();
+                if (child.has<afterhours::ui::InFocusCluster>()) {
+                    field = &child;
+                }
+            }
+            if (!field->has<afterhours::ui::HasBorder>()) return "none";
+            const auto& border =
+                field->get<afterhours::ui::HasBorder>().border;
+            auto isColor = [](const afterhours::Color& c, int r, int g,
+                              int b) {
+                return c.r == r && c.g == g && c.b == b && c.a == 255;
+            };
+            if (border.is_uniform() &&
+                isColor(border.uniform_color(), 0, 0, 0) &&
+                border.uniform_thickness().value == 2.0f) {
+                return "black";
+            }
+            if (isColor(border.top.color, 128, 128, 128) &&
+                isColor(border.left.color, 128, 128, 128) &&
+                isColor(border.bottom.color, 255, 255, 255) &&
+                isColor(border.right.color, 255, 255, 255) &&
+                border.top.thickness.value == 1.0f &&
+                border.left.thickness.value == 1.0f &&
+                border.bottom.thickness.value == 1.0f &&
+                border.right.thickness.value == 1.0f) {
+                return "sunken";
+            }
+            return "other";
+        }
+
         // Go To dialog state (Batch 9)
         if (prop == "goto_target") {
             if (dialogState.goToTarget == 1) return "Line";

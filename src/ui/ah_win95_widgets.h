@@ -7,8 +7,10 @@
 
 #include <afterhours/src/plugins/modal.h>
 #include <afterhours/src/plugins/ui.h>
+#include <afterhours/src/plugins/ui/text_input/text_input.h>
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "theme.h"
@@ -279,6 +281,44 @@ inline auto win95DialogTitleBar(UIContextT& ctx,
                    .with_padding(Padding{.left = pixels(4)})
                    .with_render_layer(renderLayer)
                    .with_debug_name("win95_dialog_title"));
+}
+
+// Win95 text-field edge for `text_input` (shared widget point: every
+// dialog field goes through win95TextInput below, never a per-dialog
+// border).
+//
+// Why a border, not the bevel: `text_input` builds its field div
+// with `inherit_from(config)`, which copies `border_config` but
+// drops `bevel_config`, and with a custom (white) background it
+// skips its own default border. So a `win95SunkenStyle()` field
+// renders as flat white with no edge at all when unfocused, while
+// the focused field gets upstream's hardcoded 2px black
+// `HasBorder`. The per-side border below is the 1px form of the
+// same sunken edge — dark top/left, light bottom/right — and it
+// survives `inherit_from` onto the field entity. A caller-set
+// border is left alone. Focused rendering is untouched: upstream
+// overwrites the field's `HasBorder` with the black 2px border
+// every frame after the div, so focus still shows the black
+// square.
+inline ComponentConfig win95TextInputConfig(ComponentConfig config) {
+    if (!config.has_border()) {
+        config.with_border_top(ui_imm::win95_colors::BORDER_DARK, pixels(1.0f))
+            .with_border_left(ui_imm::win95_colors::BORDER_DARK, pixels(1.0f))
+            .with_border_bottom(ui_imm::win95_colors::BORDER_LIGHT, pixels(1.0f))
+            .with_border_right(ui_imm::win95_colors::BORDER_LIGHT, pixels(1.0f));
+    }
+    return config;
+}
+
+// Win95 single-line text field: upstream `text_input` with the
+// sunken unfocused edge above. All dialog text fields call this,
+// not `afterhours::text_input::text_input` directly.
+template <typename UIContextT>
+inline auto win95TextInput(UIContextT& ctx,
+                           afterhours::ui::imm::EntityParent epPair,
+                           std::string& text, ComponentConfig config) {
+    return afterhours::text_input::text_input(
+        ctx, epPair, text, win95TextInputConfig(std::move(config)));
 }
 
 // Sunken white field / list box (Not-in-dictionary field,
