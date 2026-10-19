@@ -22,8 +22,9 @@ wait_frames 12
 menu_select "Revisions..."
 wait_frames 12
 validate dialog_open=Revisions
-expect_text "Insert"
-expect_text "Delete"
+expect_text "Inserted"
+expect_text "Deleted"
+expect_text "Ln 1"
 
 screenshot revisions_dialog
 

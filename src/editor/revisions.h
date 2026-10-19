@@ -108,6 +108,20 @@ inline bool offsetInInsertRanges(
     return false;
 }
 
+// Human dialog row label: `Inserted "abc" — Ln 3` /
+// `Deleted "abc" — Ln 3`. The line is 1-based, from the revision's
+// start offset (positionForOffset clamps a past-end offset to
+// the last line, so a stale offset still yields a sane line).
+// The excerpt caps at ~24 chars with "..." (see excerpt).
+inline std::string dialogLabel(const TextBuffer& buffer,
+                               const Revision& rev) {
+    const std::size_t line =
+        buffer.positionForOffset(rev.startOffset).row + 1;
+    return std::string(rev.type == RevisionType::Insert ? "Inserted"
+                                                        : "Deleted") +
+           " \"" + excerpt(rev) + "\" — Ln " + std::to_string(line);
+}
+
 // Dialog row label: Insert — Gabe — "abc".
 inline std::string label(const Revision& rev) {
     return std::string(rev.type == RevisionType::Insert ? "Insert"

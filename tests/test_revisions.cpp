@@ -127,6 +127,22 @@ TEST_CASE("Revision accept/reject (suggesting mode)", "[revisions]") {
         REQUIRE(revisions::excerpt(insertRev(0, "line1\nline2")) ==
                 "line1 line2");
     }
+    SECTION("human dialog rows: verb, excerpt, 1-based line") {
+        TextBuffer buffer;
+        buffer.setText("first\nsecond line");
+        REQUIRE(revisions::dialogLabel(buffer, insertRev(0, "abc")) ==
+                "Inserted \"abc\" — Ln 1");
+        REQUIRE(revisions::dialogLabel(buffer, deleteRev(7, "c")) ==
+                "Deleted \"c\" — Ln 2");
+        // Long excerpt truncates at ~24 chars with an ellipsis.
+        REQUIRE(revisions::dialogLabel(
+                    buffer,
+                    insertRev(0, "abcdefghijklmnopqrstuvwxyz1234")) ==
+                "Inserted \"abcdefghijklmnopqrstuvwx...\" — Ln 1");
+        // A past-end offset clamps to the last line, not a crash.
+        REQUIRE(revisions::dialogLabel(buffer, insertRev(999, "x")) ==
+                "Inserted \"x\" — Ln 2");
+    }
     SECTION("verified insert ranges classify only matching inserts") {
         TextBuffer buffer;
         buffer.setText("abc");
