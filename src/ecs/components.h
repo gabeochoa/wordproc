@@ -286,10 +286,14 @@ struct DialogState : public afterhours::BaseComponent {
     // Font dialog (Format > Font...): the working selection plus the
     // custom-size field text. fontDialogInitialized seeds them from
     // the current style on the first frame the dialog is open.
+    // The Underline-style / Font-color dropdowns expand in-flow
+    // below their button row; their open flags size the dialog.
     bool showFontDialog = false;
     bool fontDialogInitialized = false;
     font_dialog::FontDialogSelection fontDialogSelection;
     std::string fontDialogCustomSize;
+    bool fontDialogUnderlineDropdownOpen = false;
+    bool fontDialogColorDropdownOpen = false;
 
     // Columns dialog (Format > Columns...): the preset being picked
     // (1-4) and the spacing field text in inches.

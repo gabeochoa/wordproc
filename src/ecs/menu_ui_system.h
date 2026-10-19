@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "components.h"
+#include "toolbar_icons.h"
 #include "editor_entity_cache.h"
 #include "scrollbar_system.h"  // anyModalDialogOpen for the no-UI focus guard
 #include "menu_actions.h"
@@ -2001,16 +2002,48 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
 
         // Font dialog (Format > Font...) - Word 95 layout: Font /
-        // Font style / Size lists, Effects checkboxes, a color
-        // swatch row, and a Preview box. The font list comes from
-        // the toolbar fonts vector; OK applies the selection via
-        // buffer.setTextStyle, the same path the toolbar uses.
+        // Font style / Size lists, each with a pending-value field
+        // above it (Word's editable fields; here read-only except
+        // Size, which is the custom-size edit), Effects
+        // checkboxes, Underline-style + Font-color dropdowns, a
+        // color swatch row, and a Preview box. The font list comes
+        // from the toolbar fonts vector; OK applies the selection
+        // via buffer.setTextStyle, the same path the toolbar uses.
+        // ONE pending state: every list/dropdown click writes
+        // dialogs.fontDialogSelection, and the fields + Preview
+        // read only that state, so they can never disagree with
+        // the lists (the old dialog had no fields, so the toolbar
+        // labels were the only "field" and they showed the old
+        // style while the lists showed the pending one).
         if (dialogs.showFontDialog) {
             constexpr int FONT_MODAL_ID = 50016;
+            // Dialog height fits content: title 20 + lists row
+            // (label 20 + field 26 + list 196 = 242) + Effects
+            // (label 20 + row 48 = 68) + dropdown row 28 +
+            // dropdown lists (underline 48 / color 92, when open)
+            // + swatches (label 20 + row 28 = 48) + Preview
+            // (label 20 + box) + buttons 44 + panel padding 8.
+            // The old fixed 500 clipped the Size list's lower
+            // entries (8 rows x 22 + padding + the text_input
+            // field's extra layout height > the old 176 box), so
+            // the list boxes carry 16px of slack over the 180
+            // the rows nominally need.
+            const int pendingPreviewSize =
+                dialogs.fontDialogInitialized
+                    ? dialogs.fontDialogSelection.size
+                    : doc.buffer.textStyle().fontSize;
+            const float previewBoxH = static_cast<float>(
+                std::clamp(pendingPreviewSize + 28, 48, 96));
+            const float fontDialogH =
+                20.0f + 242.0f + 68.0f + 28.0f + 48.0f + 20.0f +
+                previewBoxH + 44.0f + 8.0f +
+                (dialogs.fontDialogUnderlineDropdownOpen ? 48.0f : 0.0f) +
+                (dialogs.fontDialogColorDropdownOpen ? 92.0f : 0.0f);
             auto result = afterhours::modal(ctx, mk(entity, FONT_MODAL_ID),
                 dialogs.showFontDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(540), afterhours::ui::h720(500),
+                    afterhours::ui::h720(540),
+                    afterhours::ui::h720(fontDialogH),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -2032,6 +2065,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
                 auto& sel = dialogs.fontDialogSelection;
                 const auto colors = font_dialog::fontDialogColors();
+                // A typed custom size is pending too: sync it into
+                // sel every frame (guarded so clearing the field
+                // while typing does not zero the size).
+                {
+                    int typed = std::atoi(dialogs.fontDialogCustomSize.c_str());
+                    if (typed > 0) sel.size = typed;
+                }
 
                 auto listLabel = [&](auto& parentEnt, int id,
                                      const std::string& label) {
@@ -2045,6 +2085,23 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
                 };
+                // Pending-value field above a list: sunken, like the
+                // list itself. The value is the ONE pending state,
+                // so a list click updates this text on the next
+                // frame. Registered as "X field: value" for E2E.
+                auto pendingField = [&](auto& parentEnt, int id,
+                                        const std::string& fieldLabel,
+                                        const std::string& value) {
+                    test_input::register_visible_text(fieldLabel + ": " +
+                                                      value);
+                    div(ctx, mk(parentEnt, id),
+                        ah_win95::win95SunkenStyle()
+                            .with_label(value)
+                            .with_size(ComponentSize{percent(1.0f), h720(26)})
+                            .with_text_inset(8.0f, 2.0f)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                };
                 test_input::register_visible_text("Font:");
                 test_input::register_visible_text("Font style:");
                 test_input::register_visible_text("Size:");
@@ -2052,7 +2109,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 // Three list columns: Font | Font style | Size.
                 auto listsRow = div(ctx, mk(result.ent(), 901),
                     ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(200)})
+                        .with_size(ComponentSize{percent(1.0f), h720(242)})
                         .with_flex_direction(FlexDirection::Row)
                         .with_gap(pixels(8))
                         .with_custom_background(
@@ -2062,16 +2119,25 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     // Font list.
                     auto fontCol = div(ctx, mk(listsRow.ent(), 0),
                         ComponentConfig{}
-                            .with_size(ComponentSize{percent(0.38f), h720(200)})
+                            .with_size(ComponentSize{percent(0.38f), h720(242)})
                             .with_flex_direction(FlexDirection::Column)
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
                     if (fontCol) {
                         listLabel(fontCol.ent(), 0, "Font:");
+                        {
+                            const std::string& pendingFont =
+                                sel.fontIndex >= 0 &&
+                                sel.fontIndex < static_cast<int>(toolbar.fonts.size())
+                                    ? toolbar.fonts[static_cast<std::size_t>(sel.fontIndex)]
+                                    : toolbar.currentFont;
+                            pendingField(fontCol.ent(), 10, "Font field",
+                                         pendingFont);
+                        }
                         auto fontList = div(ctx, mk(fontCol.ent(), 1),
                             ah_win95::win95SunkenStyle()
-                                .with_size(ComponentSize{percent(1.0f), h720(176)})
+                                .with_size(ComponentSize{percent(1.0f), h720(196)})
                                 .with_flex_direction(FlexDirection::Column)
                                 .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                                 .with_render_layer(CONTENT_LAYER));
@@ -2110,16 +2176,20 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         "font_style_Italic", "font_style_BoldItalic"};
                     auto styleCol = div(ctx, mk(listsRow.ent(), 1),
                         ComponentConfig{}
-                            .with_size(ComponentSize{percent(0.28f), h720(200)})
+                            .with_size(ComponentSize{percent(0.28f), h720(242)})
                             .with_flex_direction(FlexDirection::Column)
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
                     if (styleCol) {
                         listLabel(styleCol.ent(), 2, "Font style:");
+                        pendingField(styleCol.ent(), 11, "Style field",
+                                     sel.styleIndex >= 0 && sel.styleIndex < 4
+                                         ? kStyleNames[sel.styleIndex]
+                                         : "Regular");
                         auto styleList = div(ctx, mk(styleCol.ent(), 3),
                             ah_win95::win95SunkenStyle()
-                                .with_size(ComponentSize{percent(1.0f), h720(176)})
+                                .with_size(ComponentSize{percent(1.0f), h720(196)})
                                 .with_flex_direction(FlexDirection::Column)
                                 .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                                 .with_render_layer(CONTENT_LAYER));
@@ -2151,16 +2221,31 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     // Size list: two columns of the toolbar sizes.
                     auto sizeCol = div(ctx, mk(listsRow.ent(), 2),
                         ComponentConfig{}
-                            .with_size(ComponentSize{percent(0.34f), h720(200)})
+                            .with_size(ComponentSize{percent(0.34f), h720(242)})
                             .with_flex_direction(FlexDirection::Column)
                             .with_custom_background(
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
                     if (sizeCol) {
                         listLabel(sizeCol.ent(), 4, "Size:");
+                        // Size field: Word's editable field above the
+                        // list — this IS the custom-size edit (the
+                        // old separate "Custom size:" row below the
+                        // lists is gone). Typing syncs into sel
+                        // every frame; a list pick writes the field.
+                        test_input::register_visible_text(
+                            "Size field: " + std::to_string(sel.size));
+                        afterhours::text_input::text_input(
+                            ctx, mk(sizeCol.ent(), 6),
+                            dialogs.fontDialogCustomSize,
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name("font_custom_size")
+                                .with_size(ComponentSize{percent(1.0f),
+                                                         h720(26)})
+                                .with_render_layer(CONTENT_LAYER));
                         auto sizeList = div(ctx, mk(sizeCol.ent(), 5),
                             ah_win95::win95SunkenStyle()
-                                .with_size(ComponentSize{percent(1.0f), h720(176)})
+                                .with_size(ComponentSize{percent(1.0f), h720(196)})
                                 .with_flex_direction(FlexDirection::Row)
                                 .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                                 .with_render_layer(CONTENT_LAYER));
@@ -2211,23 +2296,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                 }
 
-                // Custom size field (a size not in the list).
-                test_input::register_visible_text("Custom size:");
-                div(ctx, mk(result.ent(), 905),
-                    ComponentConfig{}
-                        .with_label("Custom size:")
-                        .with_size(ComponentSize{percent(1.0f), h720(20)})
-                        .with_custom_background(
-                            ui_imm::win95_colors::BUTTON_FACE)
-                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
-                        .with_alignment(afterhours::ui::TextAlignment::Left)
-                        .with_render_layer(CONTENT_LAYER));
-                afterhours::text_input::text_input(ctx, mk(result.ent(), 906),
-                    dialogs.fontDialogCustomSize,
-                    ah_win95::win95SunkenStyle()
-                        .with_debug_name("font_custom_size")
-                        .with_size(ComponentSize{w1280(80), h720(28)})
-                        .with_render_layer(CONTENT_LAYER));
+                // (No separate Custom-size row: the Size field above
+                // the Size list is the custom-size edit.)
 
                 // Effects checkboxes, two columns of two.
                 test_input::register_visible_text("Effects:");
@@ -2278,6 +2348,205 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         ah_win95::win95Checkbox(
                             ctx, mk(effectsRight.ent(), 1), sel.subscript,
                             "font_subscript", "Subscript", CONTENT_LAYER);
+                    }
+                }
+
+                // Underline style + Font color dropdowns (the Word
+                // controls): the Effects Underline checkbox and the
+                // swatch row below are the same state through
+                // sel.underline / sel.colorIndex, so all three
+                // views stay in sync. The lists expand in-flow
+                // below the button row (the dialog height grows by
+                // their height, computed before the modal call), so
+                // they never clip or overlay other controls. The
+                // triangle is drawn, not typed: the UI font has no
+                // U+25BC glyph (same as the toolbar dropdowns).
+                {
+                    auto dropdownBtn = [&](auto& parentEnt, int id,
+                                           const std::string& debugName,
+                                           const std::string& value,
+                                           bool open) {
+                        return button(
+                            ctx, mk(parentEnt, id),
+                            ah_win95::win95DropdownButtonStyle(
+                                120.0f, 26.0f, open)
+                                .with_debug_name(debugName)
+                                .with_label(value)
+                                .with_text_inset(8.0f, 2.0f)
+                                .with_on_draw_fg([](RectangleType r) {
+                                    drawDropdownTriangle(
+                                        r.x + r.width -
+                                            theme::layout::scale(10),
+                                        r.y + r.height / 2.0f,
+                                        theme::BUTTON_TEXT);
+                                })
+                                .with_render_layer(CONTENT_LAYER));
+                    };
+                    auto dropRow = div(ctx, mk(result.ent(), 914),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (dropRow) {
+                        auto underlineHalf = div(ctx, mk(dropRow.ent(), 0),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{percent(0.5f), h720(28)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_align_items(AlignItems::Center)
+                                .with_gap(pixels(6))
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_render_layer(CONTENT_LAYER));
+                        if (underlineHalf) {
+                            test_input::register_visible_text("Underline style:");
+                            div(ctx, mk(underlineHalf.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label("Underline style:")
+                                    .with_size(ComponentSize{children(), h720(20)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_render_layer(CONTENT_LAYER));
+                            test_input::register_visible_text(
+                                "Underline style: " +
+                                std::string(sel.underline ? "Single" : "None"));
+                            if (dropdownBtn(underlineHalf.ent(), 1,
+                                            "font_underline_dropdown",
+                                            sel.underline ? "Single" : "None",
+                                            dialogs.fontDialogUnderlineDropdownOpen)) {
+                                dialogs.fontDialogUnderlineDropdownOpen =
+                                    !dialogs.fontDialogUnderlineDropdownOpen;
+                                dialogs.fontDialogColorDropdownOpen = false;
+                            }
+                        }
+                        auto colorHalf = div(ctx, mk(dropRow.ent(), 1),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{percent(0.5f), h720(28)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_align_items(AlignItems::Center)
+                                .with_gap(pixels(6))
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_render_layer(CONTENT_LAYER));
+                        if (colorHalf) {
+                            test_input::register_visible_text("Font color:");
+                            div(ctx, mk(colorHalf.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label("Font color:")
+                                    .with_size(ComponentSize{children(), h720(20)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_render_layer(CONTENT_LAYER));
+                            const std::string colorName =
+                                sel.colorIndex >= 0 &&
+                                sel.colorIndex < static_cast<int>(colors.size())
+                                    ? colors[static_cast<std::size_t>(sel.colorIndex)].first
+                                    : "";
+                            test_input::register_visible_text("Font color: " + colorName);
+                            if (dropdownBtn(colorHalf.ent(), 1,
+                                            "font_color_dropdown", colorName,
+                                            dialogs.fontDialogColorDropdownOpen)) {
+                                dialogs.fontDialogColorDropdownOpen =
+                                    !dialogs.fontDialogColorDropdownOpen;
+                                dialogs.fontDialogUnderlineDropdownOpen = false;
+                            }
+                        }
+                    }
+                    if (dialogs.fontDialogUnderlineDropdownOpen) {
+                        auto uList = div(ctx, mk(result.ent(), 915),
+                            ah_win95::win95SunkenStyle()
+                                .with_size(ComponentSize{percent(1.0f), h720(48)})
+                                .with_flex_direction(FlexDirection::Column)
+                                .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (uList) {
+                            static const char* kUnderlineNames[2] = {"None", "Single"};
+                            for (int i = 0; i < 2; ++i) {
+                                bool selected = (sel.underline == (i == 1));
+                                test_input::register_visible_text(kUnderlineNames[i]);
+                                if (button(ctx, mk(uList.ent(), 700 + i),
+                                    ComponentConfig{}
+                                        .with_debug_name(
+                                            std::string("font_underline_") +
+                                            kUnderlineNames[i])
+                                        .with_label(kUnderlineNames[i])
+                                        .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                        .with_roundness(0.0f)
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                                        .with_text_inset(8.0f, 2.0f)
+                                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    sel.underline = (i == 1);
+                                    dialogs.fontDialogUnderlineDropdownOpen = false;
+                                }
+                            }
+                        }
+                    }
+                    if (dialogs.fontDialogColorDropdownOpen) {
+                        auto cList = div(ctx, mk(result.ent(), 916),
+                            ah_win95::win95SunkenStyle()
+                                .with_size(ComponentSize{percent(1.0f), h720(92)})
+                                .with_flex_direction(FlexDirection::Row)
+                                .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (cList) {
+                            for (int half = 0; half < 2; ++half) {
+                                auto halfCol = div(ctx, mk(cList.ent(), 800 + half),
+                                    ComponentConfig{}
+                                        .with_size(ComponentSize{percent(0.5f), children()})
+                                        .with_flex_direction(FlexDirection::Column)
+                                        .with_custom_background(
+                                            ui_imm::win95_colors::TEXT_AREA)
+                                        .with_render_layer(CONTENT_LAYER));
+                                if (!halfCol) continue;
+                                std::size_t begin =
+                                    static_cast<std::size_t>(half) *
+                                    (colors.size() + 1) / 2;
+                                std::size_t end =
+                                    static_cast<std::size_t>(half + 1) *
+                                    (colors.size() + 1) / 2;
+                                for (std::size_t i = begin;
+                                     i < end && i < colors.size(); ++i) {
+                                    bool selected =
+                                        static_cast<int>(i) == sel.colorIndex;
+                                    test_input::register_visible_text(colors[i].first);
+                                    if (button(ctx, mk(halfCol.ent(), 900 + static_cast<int>(i)),
+                                        ComponentConfig{}
+                                            // _option_ to not collide with
+                                            // the swatch debug names
+                                            // (font_color_<name>) below.
+                                            .with_debug_name("font_color_option_" + colors[i].first)
+                                            .with_label(colors[i].first)
+                                            .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                            .with_roundness(0.0f)
+                                            .with_custom_background(selected
+                                                ? ui_imm::win95_colors::HIGHLIGHT
+                                                : ui_imm::win95_colors::TEXT_AREA)
+                                            .with_custom_text_color(selected
+                                                ? ui_imm::win95_colors::TEXT_WHITE
+                                                : ui_imm::win95_colors::TEXT)
+                                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                                            .with_text_inset(8.0f, 2.0f)
+                                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                                            .with_render_layer(CONTENT_LAYER))) {
+                                        sel.colorIndex = static_cast<int>(i);
+                                        dialogs.fontDialogColorDropdownOpen = false;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -2334,12 +2603,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                 }
 
-                // Preview box: "AaBbYyZz 123" in the chosen font /
-                // size / bold / color. The FontManager falls back to
-                // the default face for names with no loaded variant
-                // (Times New Roman / Arial / Courier New are toolbar
-                // names, not loaded faces), so the preview is exact
-                // for size/bold/color and best-effort for family.
+                // Preview box: "AaBbYyZz 123" in the PENDING font /
+                // size / bold / color (the same sel the fields read
+                // above, so a list click updates the preview on the
+                // next frame). The family is requested by name, the
+                // way the toolbar font dropdown names it: a name
+                // with no loaded face (Times New Roman / Arial /
+                // Courier New are toolbar names, not loaded faces)
+                // falls back to the default face, so the preview is
+                // exact for size/bold/color and best-effort for
+                // family. A bold weight resolves to "<family>@bold"
+                // and falls back to the family when that variant
+                // was never loaded (Gaegu-Bold has no bold
+                // variant), so the preview still uses that family.
                 // Italic has no slanted UI face; the style list still
                 // records it (applied on OK).
                 test_input::register_visible_text("Preview:");
@@ -2366,10 +2642,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         ? colors[static_cast<std::size_t>(sel.colorIndex)].second
                         : TextColors::Black;
                     test_input::register_visible_text("AaBbYyZz 123");
+                    // Test-visible preview state for E2E (checked
+                    // before OK): the pending family + size.
+                    test_input::register_visible_text(
+                        "Preview font: " + previewFont + ", size " +
+                        std::to_string(sel.size));
                     div(ctx, mk(result.ent(), 912),
                         ah_win95::win95SunkenStyle()
                             .with_label("AaBbYyZz 123")
-                            .with_size(ComponentSize{percent(1.0f), h720(44)})
+                            .with_size(ComponentSize{percent(1.0f),
+                                                     h720(previewBoxH)})
                             .with_font(previewFont, pixels(static_cast<float>(sel.size)))
                             .with_font_weight(previewBold
                                 ? afterhours::colors::FontWeight::Bold
@@ -2408,6 +2690,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         doc.isDirty = true;
                         dialogs.showFontDialog = false;
                         dialogs.fontDialogInitialized = false;
+                        dialogs.fontDialogUnderlineDropdownOpen = false;
+                        dialogs.fontDialogColorDropdownOpen = false;
                     }
                     if (button(ctx, mk(buttonRow.ent(), 1),
                         ah_win95::win95DialogButtonStyle()
@@ -2416,6 +2700,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.showFontDialog = false;
                         dialogs.fontDialogInitialized = false;
+                        dialogs.fontDialogUnderlineDropdownOpen = false;
+                        dialogs.fontDialogColorDropdownOpen = false;
                     }
                 }
             }

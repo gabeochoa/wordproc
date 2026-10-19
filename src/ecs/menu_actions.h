@@ -309,6 +309,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             if (itemIndex == 0) {  // Font...
                 dialogs.showFontDialog = true;
                 dialogs.fontDialogInitialized = false;
+                dialogs.fontDialogUnderlineDropdownOpen = false;
+                dialogs.fontDialogColorDropdownOpen = false;
             } else switch (itemIndex - 1) {
                 case 0:  // Normal
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
