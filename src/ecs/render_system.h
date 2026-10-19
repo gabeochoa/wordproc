@@ -34,6 +34,7 @@
 #include <afterhours/src/drawing_helpers.h>  // Direct afterhours drawing functions
 #include "../util/drawing.h"
 #include "../util/logging.h"
+#include "cached_measure.h"
 #include "component_helpers.h"
 #include "components.h"
 
@@ -184,7 +185,7 @@ inline void renderHeaderFooter(const DocumentComponent& doc,
     auto [headerArea, footerArea] = layout::headerFooterAreas(layout);
     auto measure = [](const std::string& text, int fontSize) {
         return static_cast<float>(
-            afterhours::graphics::measure_text(text.c_str(), fontSize));
+            cachedMeasureText(text.c_str(), fontSize));
     };
     const afterhours::Color textColor{0, 0, 0, 255};
     for (int target = 0; target < 2; ++target) {
@@ -425,7 +426,7 @@ inline void renderTable(const Table& table, float tableX, float tableY,
     if (table.isEmpty()) return;
     auto measure = [](const std::string& text, int fontSize) {
         return static_cast<float>(
-            afterhours::graphics::measure_text(text.c_str(), fontSize));
+            cachedMeasureText(text.c_str(), fontSize));
     };
 
     // Draw table cells
@@ -955,7 +956,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             
             // Draw "Page Break" text in center
             const char* breakText = "Page Break";
-            int textWidth = afterhours::graphics::measure_text(breakText, 10);
+            int textWidth = cachedMeasureText(breakText, 10);
             int textX = lineStart + (lineEnd - lineStart - textWidth) / 2;
             
             // Draw background for text
@@ -1046,7 +1047,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             std::snprintf(lineNumStr, sizeof(lineNumStr), "%d", lineNum);
             
             // Measure line number text to right-align in gutter
-            int numWidth = afterhours::graphics::measure_text(lineNumStr, 14);
+            int numWidth = cachedMeasureText(lineNumStr, 14);
             int gutterX = static_cast<int>(textArea.x) + static_cast<int>(lineNumberGutterWidth) - numWidth - 8;
             
             // Draw line number in gray
@@ -1157,7 +1158,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         }
         
         // Calculate text width for alignment
-        int textWidth = displayLine.empty() ? 0 : afterhours::graphics::measure_text(displayLine.c_str(), lineFontSize);
+        int textWidth = displayLine.empty() ? 0 : cachedMeasureText(displayLine.c_str(), lineFontSize);
         
         // Apply text alignment (within the indented area)
         TextAlignment alignment = buffer.lineAlignment(row);
@@ -1293,9 +1294,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         displayLine.substr(dispStart, dispEnd - dispStart);
 
                     int selX =
-                        x + afterhours::graphics::measure_text(beforeSel.c_str(), lineFontSize);
+                        x + cachedMeasureText(beforeSel.c_str(), lineFontSize);
                     int selWidth =
-                        afterhours::graphics::measure_text(selectedText.c_str(), lineFontSize);
+                        cachedMeasureText(selectedText.c_str(), lineFontSize);
                     afterhours::draw_rectangle(
                         Rectangle{static_cast<float>(selX), static_cast<float>(y),
                                           static_cast<float>(selWidth), static_cast<float>(lineHeight)},
@@ -1324,10 +1325,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 dispEnd = std::min(std::max(dispEnd, dispBegin),
                                    displayLine.size());
                 if (dispBegin >= dispEnd) continue;
-                int hlX = x + afterhours::graphics::measure_text(
+                int hlX = x + cachedMeasureText(
                                   displayLine.substr(0, dispBegin).c_str(),
                                   lineFontSize);
-                int hlW = afterhours::graphics::measure_text(
+                int hlW = cachedMeasureText(
                     displayLine.substr(dispBegin, dispEnd - dispBegin)
                         .c_str(),
                     lineFontSize);
@@ -1371,11 +1372,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                    displayLine.size());
                 if (dispBegin >= dispEnd) continue;
                 const int labelX =
-                    x + afterhours::graphics::measure_text(
+                    x + cachedMeasureText(
                             displayLine.substr(0, dispBegin).c_str(),
                             lineFontSize);
                 const int labelW =
-                    afterhours::graphics::measure_text(
+                    cachedMeasureText(
                         displayLine.substr(dispBegin, dispEnd - dispBegin)
                             .c_str(),
                         lineFontSize);
@@ -1505,7 +1506,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                           y - lineFontSize / 2, dropFontSize,
                                           dropDrawColor);
                 }
-                int dropWidth = afterhours::graphics::measure_text(dropChar.c_str(), dropFontSize);
+                int dropWidth = cachedMeasureText(dropChar.c_str(), dropFontSize);
                 textToDraw = textToDraw.substr(1);
                 if (!textToDraw.empty()) {
                     x += dropWidth + 4;
@@ -1612,7 +1613,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                          ? -lineFontSize / 3
                                          : lineFontSize / 4;
                     }
-                    const int segW = afterhours::graphics::measure_text(
+                    const int segW = cachedMeasureText(
                         segText.c_str(), segFontSize);
                     if (!segStyle.highlightColor.isNone()) {
                         afterhours::draw_rectangle(
@@ -1724,7 +1725,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                            accStyle) {
                                     ++accEnd;
                                 }
-                                subX += afterhours::graphics::measure_text(
+                                subX += cachedMeasureText(
                                     displayLine.substr(acc, accEnd - acc)
                                         .c_str(),
                                     accSize);
@@ -1777,7 +1778,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                               : lineFontSize / 4;
                             }
                             const int subW =
-                                afterhours::graphics::measure_text(
+                                cachedMeasureText(
                                     subText.c_str(), subSize);
                             const bool subBold =
                                 paragraphStyleIsBold(paraStyle) ||
@@ -1864,7 +1865,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     const std::string segText = displayLine.substr(
                         segStart, segEnd - segStart);
                     const int segX =
-                        x + afterhours::graphics::measure_text(
+                        x + cachedMeasureText(
                                 displayLine.substr(0, segStart).c_str(),
                                 textFontSize);
                     const afterhours::Color revisionRed{255, 0, 0, 255};
@@ -1892,7 +1893,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         globalStyle.underline) {
                         const int underlineY = y + lineFontSize + 1;
                         const int segW =
-                            afterhours::graphics::measure_text(
+                            cachedMeasureText(
                                 segText.c_str(), textFontSize);
                         afterhours::draw_line(segX, underlineY, segX + segW,
                                               underlineY, segColor);
@@ -1900,7 +1901,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     if (segDelete) {
                         const int strikeY = y + lineFontSize / 2;
                         const int segW =
-                            afterhours::graphics::measure_text(
+                            cachedMeasureText(
                                 segText.c_str(), textFontSize);
                         afterhours::draw_line(segX, strikeY, segX + segW,
                                               strikeY, segColor);
@@ -1958,10 +1959,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     if (dispStart < dispEnd) {
                         std::string selText =
                             displayLine.substr(dispStart, dispEnd - dispStart);
-                        int selX = x + afterhours::graphics::measure_text(
+                        int selX = x + cachedMeasureText(
                                            displayLine.substr(0, dispStart).c_str(),
                                            textFontSize);
-                        int selW = afterhours::graphics::measure_text(
+                        int selW = cachedMeasureText(
                             selText.c_str(), textFontSize);
                         if (paragraphStyleIsBold(paraStyle) || globalStyle.bold) {
                             afterhours::draw_text(selText.c_str(), selX, y + textYOffset,
@@ -2028,12 +2029,12 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                 }
                                 if (subDelete) {
                                     const int subX =
-                                        x + afterhours::graphics::measure_text(
+                                        x + cachedMeasureText(
                                                 displayLine.substr(0, subStart)
                                                     .c_str(),
                                                 textFontSize);
                                     const int subW =
-                                        afterhours::graphics::measure_text(
+                                        cachedMeasureText(
                                             displayLine.substr(subStart,
                                                                subEnd - subStart)
                                                 .c_str(),
@@ -2160,12 +2161,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 // alignment) plus the word's offset in the line:
                 // the same origin text rendering used, so the
                 // underline sits under its word in every column.
+                // string_view slices, not substr copies: a copy per
+                // squiggle (2 per error) would allocate 1600 strings a
+                // frame on an error-dense page, dwarfing the cache hit.
                 float x1 = static_cast<float>(layoutTextX) +
-                           static_cast<float>(afterhours::graphics::measure_text(
-                               displayLine.substr(0, dispStart).c_str(), lineFontSize));
+                           static_cast<float>(cachedMeasureText(
+                               std::string_view(displayLine).substr(0, dispStart),
+                               lineFontSize));
                 float x2 = static_cast<float>(layoutTextX) +
-                           static_cast<float>(afterhours::graphics::measure_text(
-                               displayLine.substr(0, dispEnd).c_str(), lineFontSize));
+                           static_cast<float>(cachedMeasureText(
+                               std::string_view(displayLine).substr(0, dispEnd),
+                               lineFontSize));
                 if (x2 > x1) drawSpellSquiggle(x1, x2, waveY);
                 ++squiggleIdx;
             }
@@ -2178,9 +2184,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
         // Draw caret
         if (caretVisible && row == caret.row) {
-            std::string beforeCaret =
-                displayLine.substr(0, std::min(caret.column, displayLine.length()));
-            int caretX = x + afterhours::graphics::measure_text(beforeCaret.c_str(), lineFontSize);
+            const std::string_view beforeCaret =
+                std::string_view(displayLine)
+                    .substr(0, std::min(caret.column, displayLine.length()));
+            int caretX = x + cachedMeasureText(beforeCaret, lineFontSize);
             afterhours::draw_rectangle(
                 Rectangle{static_cast<float>(caretX), static_cast<float>(y), 2.0f,
                                   static_cast<float>(lineHeight)},
@@ -2473,7 +2480,7 @@ struct EditorRenderSystem
                 int tabFontSize = ruler_math::scaledFontSize(
                     tabStyle.fontSize, layout::displayScale(layout));
                 float spaceWidth = static_cast<float>(
-                    afterhours::graphics::measure_text(" ", tabFontSize));
+                    cachedMeasureText(" ", tabFontSize));
                 for (float x : ruler_math::tabStopXs(
                          g, doc.docSettings.tabWidth, spaceWidth)) {
                     afterhours::draw_line(static_cast<int>(x),

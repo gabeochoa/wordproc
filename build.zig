@@ -52,6 +52,7 @@ const test_sources = [_][]const u8{
     "tests/test_log_macros.cpp",
     "tests/test_main.cpp",
     "tests/test_menu_setup.cpp",
+    "tests/test_measure_cache.cpp",
     "tests/test_new_window.cpp",
     "tests/test_normal_view.cpp",
     "tests/test_outline.cpp",

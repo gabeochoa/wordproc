@@ -845,6 +845,121 @@ exit 0: `e2e_large_doc_scroll`, `e2e_large_doc_menus`,
 `pass_status_bar_words_catch_up`, `pass_live_word_count`,
 `pass_spelling_dialog`, `pass_p0_tooltip`.
 
+## Perf Round 5 — 2026-10-19 (headless, cached text measurement)
+
+Target from Round 4: on an all-misspelled document, frame cost ~4.7 ms,
+~3.6 ms of it uncached fontstash prefix measures in the spell-squiggle
+render path (vs 0.16 ms of actual squiggle drawing). Normal docs
+unaffected (0.44 ms).
+
+### What was wrong
+
+`renderTextBuffer` (`src/ecs/render_system.h`) called
+`afterhours::graphics::measure_text` (fontstash `fonsTextBounds` via
+the active font) for every squiggle's two line prefixes, plus
+selection / caret / line-width / segment measures, every frame.
+On an error-dense page that is ~1,600 fontstash walks per frame for
+text that has not changed. Two near-miss caches already existed and
+neither could serve this path:
+
+- afterhours `TextMeasureCache` answers *advance* widths through a
+  `Font`; the document renderer measures *ink bounds* through the
+  active font. Swapping one for the other would move every squiggle,
+  caret, and selection edge by the side bearings.
+- afterhours `measure_memo` is wired only into the `Font`-taking
+  `measure_text` overload, not into the backend's
+  `graphics::measure_text` the renderer calls — so the render path
+  was entirely uncached.
+
+### Fix (one commit)
+
+- New `MeasureCache` (`src/editor/measure_cache.h`, next to the
+  squiggle cache): bounded LRU, 4096 entries, keyed on (font key,
+  font size, text). Hits return the exact integer the uncached call
+  would return. The map key carries two independent text hashes,
+  and a hit still verifies the stored full string — a hash
+  collision can only evict an entry, never serve a wrong width.
+  Buffer edits need no invalidation: widths are keyed on the text
+  itself.
+- New `cachedMeasureText` wiring (`src/ecs/cached_measure.h`): the
+  font key folds in the active fontstash id and the DPI scale —
+  everything `graphics::measure_text` depends on besides (text,
+  size). A font reload mints a new fontstash id and a display move
+  changes the scale, so both land in a different key rather than
+  a stale hit. One process-wide cache; the render path is
+  single-threaded.
+- All 27 `graphics::measure_text` call sites in the render path
+  (`render_system.h`: body, header/footer, tables, line numbers,
+  ruler; `menu_ui_system.h`: chip-popup caret x) now go through
+  it — squiggle, caret, selection, comment/chip highlights, and
+  segment measures alike.
+- Squiggle and caret sites pass `string_view` slices instead of
+  `substr` copies: a copy per squiggle (2 per error) would allocate
+  ~1,600 strings a frame on an error-dense page, dwarfing the
+  cache hit (measured: idle 1.04 → 0.91 ms on the identical-lines
+  doc from this change alone).
+
+### Results (frame-time sampler, medians of 3 runs)
+
+| Doc / mode | Before p50 (mean) | After p50 (mean) | After vs War |
+|---|---|---|---|
+| Misspelled, identical lines, idle | 4.72 (4.73) | 0.91 (0.93) | 2.0× |
+| Misspelled, identical lines, scroll (fps-test) | 5.01 (5.01) | 0.99 (1.02) | 2.3× |
+| Misspelled, varied lines, idle | 4.05 (4.04) | 0.84 (0.87) | 1.9× |
+| Misspelled, varied lines, scroll | 4.04 (4.06) | 1.23 (1.27) | 2.8× |
+| Misspelled, varied lines, typing (10-key script, same script both sides) | 4.59 (4.58) | 1.31 (1.36) | — |
+| War and Peace, idle (control) | 0.57 (0.58) | 0.45 (0.46) | — |
+| War and Peace, scroll (control) | 0.42 (0.42) | 0.44 (0.44) | — |
+
+The varied-lines doc is new this round (100,000 distinct `zx…`
+nonsense words, 5,000 lines, verified 0 in `en_basic.txt`): it is
+the honest case for a *persistent* cache — a per-frame-only cache
+would score the same on Round 4's identical-lines doc but nothing
+here, since no prefix repeats within a frame on varied text. The
+control moved within box-load variance (0.57 → 0.45 idle); no
+regression. Scroll on the varied doc stays at 2.8×: the residual
+is first-sight measurement of newly scrolled-in rows (~120 fresh
+prefixes per 3-line scroll frame, ~2–3 µs each) plus the spell
+recheck of those rows — irreducible under pixel-identical output,
+since ink bounds are not additive across words (a prefix cannot
+be built from word widths without shifting positions), which is
+why the identical-lines doc, whose prefixes are already cached,
+scrolls at 2.3×. Typing-script absolutes include the test-only
+registration artifact; only the before/after pair with the
+identical script is comparable.
+
+### Pixel-identical squiggles
+
+Before/after screenshots of the same varied misspelled page:
+17,883 pure-red pixels in both; per-row red-pixel runs identical.
+The raw diff is 279 pixels, all inside the status-bar clock box
+(`06:56 PM` → `07:03 PM` — the two runs were 7 minutes apart);
+excluding that time-dependent box, the diff is 0 pixels.
+
+### Guards
+
+`make test` green (9906 assertions, 336 cases, incl. new
+`tests/test_measure_cache.cpp`: exact-width caching across
+fontKey/size/text changes, LRU eviction + recency refresh,
+`clear()`). `make bench-unit` typing burst 0.172 µs/keystroke
+vs 0.160 in Round 4 — within the 0.151–0.183 run-to-run range;
+the fix touches only the render path. Zero new warnings
+(app build grep-clean). Headless E2E spot (direct binary, never
+`run_e2e.sh`), all exit 0: `pass_spell_squiggles`,
+`pass_columns_squiggle`, `pass_spell_common_words`,
+`pass_basic_typing`, `pass_selection`,
+`pass_p0_mouse_selection`, `pass_shift_arrow_selection`,
+`e2e_large_doc_scroll`. `scripts/check_e2e.py` and
+`scripts/check_no_raylib.sh` ok (no E2E files changed).
+
+### Vendored fmt (addendum recheck, 2026-10-19)
+
+Still `FMT_VERSION 110200` (11.2.0) — kart-afterhours still
+vendors 8.0.1. An app-shaped TU (`log.h` + `FMT_COMPILE`
+consteval path) compiles and runs clean under Apple clang
+17.0.0 and the zig-bundled clang (zig 0.16.0). **No fmt bump
+needed.**
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage

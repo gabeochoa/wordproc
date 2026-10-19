@@ -28,6 +28,7 @@
 #include "../ui/ui_context.h"  // For ui_imm::getUIRootEntity()
 #include "../ui/menu_setup.h"
 #include "../settings.h"
+#include "cached_measure.h"
 
 namespace ecs {
 
@@ -6622,7 +6623,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 float popupX =
                     effective.x +
                     static_cast<float>(theme::layout::TEXT_PADDING) +
-                    static_cast<float>(afterhours::graphics::measure_text(
+                    static_cast<float>(cachedMeasureText(
                         prefix.c_str(), popupFontSize));
                 if (layout.showLineNumbers) {
                     popupX += layout.lineNumberGutterWidth;
