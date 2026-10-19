@@ -145,3 +145,11 @@ cell_editing 8, cell_wrap 8 — **PASS.** Tables also persisted on
 save for the first time (serializers had no callers). Polish round:
 active-cell outline navy on all edges (neighbors' gridlines were
 overpainting it), status flashes expire on next keystroke.
+
+## 2026-10-19 — Batch 9 (Headers/Footers, Go To)
+
+Go To 1->8 (was built on the default modern modal — new dialogs must
+use ah_win95::win95DialogConfig; census found 5 older dialogs still on
+the default shell, queued), header editing 7.5, rendered header 7,
+footer/Page N 8 (same baseline, verified with both texts visible).
+**Batch 9 PASS.** Headers were literal "[HEADER]" body text before.
