@@ -24,7 +24,11 @@ endif
 CXXSTD := -std=c++23
 
 # Base compiler flags
-CXXFLAGS_BASE := -g \
+# -O2: the app is the thing users run, and the perf lane measured it at
+# -O0 (no -O flag) at 3x slower startup, 30x slower setText, 5.6x slower
+# scroll frames than -O2 (2026-10-19). Same -O2 -g as the test binary
+# below. For an -O0 debugging build: make CXXFLAGS_BASE="-O0 -g".
+CXXFLAGS_BASE := -g -O2 \
     -Wall -Wextra -Wpedantic \
     -Wuninitialized -Wshadow -Wconversion \
     -Wcast-qual -Wchar-subscripts \

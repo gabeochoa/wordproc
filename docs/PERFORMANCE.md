@@ -227,6 +227,29 @@ fmt bump needed.** (Kart-afterhours still vendors fmt 8.0.1 — that
 is kart's exposure, not wordproc's.) No PCH / `build.zig` pattern to
 copy: wordproc builds with `makefile`, no PCH.
 
+## Fixes — 2026-10-19 (same commands as baseline, medians of 3)
+
+### Fix 1: build the app with `-O2` (was `-O0`) — `makefile`
+
+Root cause behind several baseline numbers: the app binary was built
+with **no `-O` flag** (`-O0`), while the test binary already used
+`-O2 -g`. `CXXFLAGS_BASE` now starts with `-g -O2`. An `-O0` build
+remains available via `make CXXFLAGS_BASE="-O0 -g"`.
+
+| Metric (same command) | Before (`-O0`) | After (`-O2`, default `make`) |
+|---|---|---|
+| First-open, no file: wall / `Startup` | 231.1 ms / 119 ms | 80.6 ms / 37 ms |
+| First-open, War and Peace: wall / `Startup` | 331.9 ms / 105 ms | 143.8 ms / 49 ms (re-measured on the default build; the isolated `-O2` build gave 130.2 / 39) |
+| Scroll, War and Peace (fps-test, 600 vs 60 frames) | 3.09 ms/frame | 0.58 ms/frame ((407.1−96.2)/540) |
+| Format menu open, steady-state (script-mode differential, War, 200 frames) | +3.83 ms/frame | +0.47 ms/frame |
+| `setText` (plain text), War and Peace preload | 18.2 ms | 2.8 ms |
+| `Load fonts` (all faces) | 59.2 ms | 3.6 ms (Gaegu 50.1 → 2.6 ms) |
+
+Verification: `make test` — all pass (2909 assertions, 253 cases);
+E2E spot-checks headless on the new default build all exit 0:
+`e2e_menu_format_fonts.e2e` (font switching), `e2e_large_doc_scroll.e2e`
+(War and Peace scroll), `pass_status_bar_text.e2e`.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
