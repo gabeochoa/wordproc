@@ -579,14 +579,110 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // Modal Dialogs (using afterhours modal.h)
         // ============================================================
         
-        // About dialog
+        // About dialog - Win95 shell: square BUTTON_FACE panel,
+        // navy caption, no backdrop dim, icon-ish "W" box + text,
+        // raised 90px OK button. Same text as the old modal::info.
         if (dialogs.showAboutDialog) {
             constexpr int ABOUT_MODAL_ID = 50000;
-            afterhours::modal::info(ctx, mk(entity, ABOUT_MODAL_ID),
+            auto aboutResult = afterhours::modal(ctx, mk(entity, ABOUT_MODAL_ID),
                 dialogs.showAboutDialog,
-                "About Wordproc",
-                "Wordproc v0.1\n\nA Windows 95 style word processor\nbuilt with Afterhours.",
-                "OK");
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(360), afterhours::ui::h720(148),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (aboutResult) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(aboutResult.ent(), 900),
+                                              "About Wordproc", CONTENT_LAYER);
+
+                // Body row: "W" box + text column
+                auto aboutBody = div(ctx, mk(aboutResult.ent(), 901),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), children()})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(12))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (aboutBody) {
+                    div(ctx, mk(aboutBody.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("W")
+                            .with_size(ComponentSize{w1280(48), h720(48)})
+                            .with_roundness(0.0f)
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(
+                                ui_imm::win95_colors::TITLE_BAR)
+                            .with_font_weight(afterhours::colors::FontWeight::Bold)
+                            .with_font_size(afterhours::ui::h720(28))
+                            .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                        ui_imm::win95_colors::BORDER_LIGHT,
+                                        ui_imm::win95_colors::BORDER_DARK, 2.0f)
+                            .with_alignment(afterhours::ui::TextAlignment::Center)
+                            .with_render_layer(CONTENT_LAYER));
+
+                    auto aboutText = div(ctx, mk(aboutBody.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{w1280(280), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (aboutText) {
+                        auto aboutLine = [&](int id, const char* text, bool bold) {
+                            div(ctx, mk(aboutText.ent(), id),
+                                ComponentConfig{}
+                                    .with_label(text)
+                                    .with_size(ComponentSize{percent(1.0f), h720(20)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(
+                                        ui_imm::win95_colors::TEXT)
+                                    .with_font_weight(bold ? afterhours::colors::FontWeight::Bold
+                                                           : afterhours::colors::FontWeight::Regular)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_render_layer(CONTENT_LAYER));
+                        };
+                        aboutLine(0, "Wordproc v0.1", true);
+                        // Blank line, as in the old modal::info text
+                        div(ctx, mk(aboutText.ent(), 1),
+                            ComponentConfig{}
+                                .with_size(ComponentSize{percent(1.0f), h720(8)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_render_layer(CONTENT_LAYER));
+                        aboutLine(2, "A Windows 95 style word processor", false);
+                        aboutLine(3, "built with Afterhours.", false);
+                    }
+                }
+
+                // OK button row
+                auto aboutButtonRow = div(ctx, mk(aboutResult.ent(), 902),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (aboutButtonRow) {
+                    if (button(ctx, mk(aboutButtonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("about_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showAboutDialog = false;
+                    }
+                }
+            }
         }
 
         // Save-changes prompt on quit (Win95: Yes / No / Cancel).
