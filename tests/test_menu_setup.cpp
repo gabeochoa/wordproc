@@ -188,6 +188,22 @@ TEST_CASE("File menu has Print Preview + Print after Page Setup", "[menu][print]
     REQUIRE(items[print].enabled == true);
 }
 
+TEST_CASE("Insert menu has Date and Time before Special Character", "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* insert = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "Insert") insert = &m;
+    }
+    REQUIRE(insert != nullptr);
+    std::size_t dateTime = insert->items.size(), special = insert->items.size();
+    for (std::size_t i = 0; i < insert->items.size(); ++i) {
+        if (insert->items[i].label == "Date and Time...") dateTime = i;
+        if (insert->items[i].label == "Special Character...") special = i;
+    }
+    REQUIRE(dateTime < insert->items.size());
+    REQUIRE(special == dateTime + 1);
+}
+
 TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
     auto menus = createMenuBarData();
     const MenuData* tools = nullptr;

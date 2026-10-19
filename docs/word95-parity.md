@@ -49,8 +49,8 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Page/Section Break | Have | P0 | |
 | Table... | Have | P0 | grid insert + Table menu |
 | Picture... | Have | P1 | image insert + layout/wrap |
-| Symbol / Special Character... | Partial | P1 | dialog exists; date/time insert Missing |
-| Date & Time... | Missing | P1 | |
+| Symbol / Special Character... | Partial | P1 | dialog exists; date/time insert is now Date & Time... above |
+| Date & Time... | Have | P1 | Insert menu (before Special Character...): Win95 dialog, sunken list of 6 formats computed from current local time (M/d/yyyy, Month D, YYYY, Mon D, YYYY, h:MM AM/PM, D Month YYYY, ISO), Update automatically checkbox, OK inserts at caret through the command layer as one undo step (unit + E2E). Honest partial: no field engine exists, so Update automatically inserts the same static text |
 | Header / Footer / Page Number | Have | P0 | |
 | Footnote | Have | P2 | |
 | Hyperlink / Bookmark / Comment | Have | P1 | comment is also a Docs-era feature, kept |
@@ -113,7 +113,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 39 · Partial 17 · Missing 10** (after Batch 3 fix round, Tools) (66 grouped rows; several rows bundle
+**Have 40 · Partial 17 · Missing 9** (after Batch 4 item 1, Date/Time) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

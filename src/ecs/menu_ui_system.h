@@ -1810,6 +1810,122 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Date and Time dialog (Insert > Date and Time...) - Win95
+        // shell: label + sunken list of formats computed from the
+        // current local time at open, "Update automatically"
+        // checkbox, OK/Cancel. "Update automatically" inserts the
+        // same static text: no field engine exists, so there is no
+        // live-updating field to insert (see cmd::insertDateTime).
+        if (dialogs.showDateTimeDialog) {
+            constexpr int DATETIME_MODAL_ID = 50015;
+            auto result = afterhours::modal(ctx, mk(entity, DATETIME_MODAL_ID),
+                dialogs.showDateTimeDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(420), afterhours::ui::h720(300),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Date and Time", CONTENT_LAYER);
+
+                test_input::register_visible_text("Available formats:");
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Available formats:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                float listHeight = 22.0f * static_cast<float>(
+                    std::max<std::size_t>(dialogs.dateTimeFormats.size(), 1)) +
+                    4.0f;
+                auto formatList = div(ctx, mk(result.ent(), 902),
+                    ah_win95::win95SunkenStyle()
+                        .with_size(ComponentSize{percent(1.0f), h720(listHeight)})
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                        .with_render_layer(CONTENT_LAYER));
+                if (formatList) {
+                    for (std::size_t i = 0; i < dialogs.dateTimeFormats.size(); ++i) {
+                        const std::string& format = dialogs.dateTimeFormats[i];
+                        bool selected =
+                            static_cast<int>(i) == dialogs.dateTimeSelected;
+                        test_input::register_visible_text(format);
+                        if (button(ctx, mk(formatList.ent(), 100 + static_cast<int>(i)),
+                            ComponentConfig{}
+                                .with_debug_name("date_time_format_" +
+                                                std::to_string(i))
+                                .with_label(format)
+                                .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                .with_roundness(0.0f)
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::TEXT_AREA)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_alignment(afterhours::ui::TextAlignment::Left)
+                                .with_padding(Padding{.left = pixels(4)})
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.dateTimeSelected = static_cast<int>(i);
+                        }
+                    }
+                }
+
+                test_input::register_visible_text("Update automatically");
+                ah_win95::win95Checkbox(
+                    ctx, mk(result.ent(), 903),
+                    dialogs.dateTimeUpdateAutomatically,
+                    "date_time_update_auto", "Update automatically",
+                    CONTENT_LAYER);
+
+                auto buttonRow = div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("date_time_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        if (dialogs.dateTimeSelected >= 0 &&
+                            dialogs.dateTimeSelected < static_cast<int>(
+                                dialogs.dateTimeFormats.size())) {
+                            cmd::insertDateTime(
+                                doc,
+                                dialogs.dateTimeFormats[static_cast<std::size_t>(
+                                    dialogs.dateTimeSelected)]);
+                        }
+                        dialogs.showDateTimeDialog = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("date_time_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showDateTimeDialog = false;
+                    }
+                }
+            }
+        }
+
         // Tab Width input dialog
         if (dialogs.showTabWidthDialog) {
             constexpr int TABWIDTH_MODAL_ID = 50004;
@@ -2327,6 +2443,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
+            !dialogs.showDateTimeDialog &&
             !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&
             !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&

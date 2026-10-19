@@ -1,0 +1,26 @@
+# Test: Insert > Date and Time... dialog inserts the chosen
+# format at the caret through the command layer as ONE undo step.
+# Default selection is the first format (M/d/yyyy, 10 chars):
+# the inserted text matches MM/DD/YYYY shape, and a single Ctrl+Z
+# removes the whole string (per-char insertion would leave 9 chars).
+
+menu_open Insert
+wait_frames 12
+menu_select "Date and Time..."
+wait_frames 12
+
+validate dialog_open=DateTime
+expect_text "Available formats:"
+expect_text "Update automatically"
+
+screenshot date_time_dialog
+
+click_ui date_time_ok
+wait_frames 12
+validate dialog_open=false
+validate text_length=10
+validate regex_match_^\d{1,2}/\d{1,2}/\d{4}$=true
+
+key CTRL+Z
+wait_frames 12
+validate text_length=0

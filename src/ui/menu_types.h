@@ -201,6 +201,7 @@ inline std::vector<MenuData> createMenuBarData() {
                         {"", "", false, true},
                         {"Equation...", "", true, false},
                         {"Footnote", "", true, false},
+                        {"Date and Time...", "", true, false},
                         {"Special Character...", "", true, false},
                         {"", "", false, true},
                         {"Header", "", true, false},

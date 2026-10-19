@@ -417,6 +417,7 @@ static void setupCallbacksEx(
             if (dialogState.showSpellingDialog) return "Spelling";
             if (dialogState.showGrammarDialog) return "Grammar";
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
+            if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
             return "false";
@@ -976,6 +977,10 @@ static void setupCallbacksEx(
         dialogState.showTemplateDialog = false;
         dialogState.templateInputBuffer[0] = '\0';
         dialogState.templateInputStr.clear();
+        dialogState.showDateTimeDialog = false;
+        dialogState.dateTimeFormats.clear();
+        dialogState.dateTimeSelected = 0;
+        dialogState.dateTimeUpdateAutomatically = false;
         dialogState.showTabWidthDialog = false;
         dialogState.tabWidthInputBuffer[0] = '\0';
         dialogState.tabWidthInputStr.clear();

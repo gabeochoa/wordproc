@@ -6,6 +6,7 @@
 
 #include "../external.h"
 #include "../util/clipboard.h"
+#include "../editor/date_time.h"
 #include "../editor/document_io.h"
 #include "../editor/export/export_pdf.h"
 #include "../editor/spell_session.h"
@@ -214,6 +215,33 @@ inline void paste(DocumentComponent& doc) {
 
 inline void selectAll(DocumentComponent& doc) {
     doc.buffer.selectAll();
+}
+
+// Insert > Date and Time...: inserts the chosen formatted string at
+// the caret (replacing a selection, like typing) as ONE undo step via
+// replaceRange (insertText would record one undo step per character).
+// "Update automatically" has no field engine behind it: the dialog
+// inserts the same static text either way (noted in the dialog code).
+inline void insertDateTime(DocumentComponent& doc, const std::string& text) {
+    if (text.empty()) return;
+    CaretPosition start = doc.buffer.hasSelection()
+                              ? doc.buffer.selectionStart()
+                              : doc.buffer.caret();
+    CaretPosition end = doc.buffer.hasSelection()
+                            ? doc.buffer.selectionEnd()
+                            : start;
+    std::size_t offset = doc.buffer.offsetForPosition(start);
+    std::size_t length = doc.buffer.offsetForPosition(end) - offset;
+    std::string oldText;
+    oldText.reserve(length);
+    for (std::size_t i = 0; i < length; ++i) {
+        oldText.push_back(doc.buffer.charAtOffset(offset + i));
+    }
+    if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
+    recordInsertRevision(doc, offset, text);
+    doc.buffer.clearSelection();
+    doc.buffer.replaceRange(offset, length, text);
+    doc.isDirty = true;
 }
 
 // --- Insert commands (Insert menu + Standard toolbar share these) ---

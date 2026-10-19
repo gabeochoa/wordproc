@@ -227,14 +227,15 @@ inline std::vector<win95::Menu> createMenuBar(
         {"", "", false, true, nullptr},                          // 20 Separator
         {"Equation...", "", true, false, nullptr},               // 21
         {"Footnote", "", true, false, nullptr},                  // 22
-        {"Special Character...", "", true, false, nullptr},      // 23
-        {"", "", false, true, nullptr},                          // 24 Separator
-        {"Header", "", true, false, nullptr},                    // 25
-        {"Footer", "", true, false, nullptr},                    // 26
-        {"Page Number", "", true, false, nullptr},               // 27
-        {"Document Body", "", true, false, nullptr},             // 28
-        {"", "", false, true, nullptr},                          // 29 Separator
-        {"Table of Contents", "", true, false, nullptr}          // 30
+        {"Date and Time...", "", true, false, nullptr},          // 23
+        {"Special Character...", "", true, false, nullptr},      // 24
+        {"", "", false, true, nullptr},                          // 25 Separator
+        {"Header", "", true, false, nullptr},                    // 26
+        {"Footer", "", true, false, nullptr},                    // 27
+        {"Page Number", "", true, false, nullptr},               // 28
+        {"Document Body", "", true, false, nullptr},             // 29
+        {"", "", false, true, nullptr},                          // 30 Separator
+        {"Table of Contents", "", true, false, nullptr}          // 31
     };
     menus.push_back(insertMenu);   // Index 3: Insert
 

@@ -272,6 +272,14 @@ struct DialogState : public afterhours::BaseComponent {
     char templateInputBuffer[128] = {0};
     std::string templateInputStr;
 
+    // Date and Time (Insert > Date and Time...): formats are computed
+    // from the current local time when the dialog opens; selected is
+    // an index into dateTimeFormats.
+    bool showDateTimeDialog = false;
+    std::vector<std::string> dateTimeFormats;
+    int dateTimeSelected = 0;
+    bool dateTimeUpdateAutomatically = false;
+
     // Tab Width
     bool showTabWidthDialog = false;
     char tabWidthInputBuffer[16] = {0};

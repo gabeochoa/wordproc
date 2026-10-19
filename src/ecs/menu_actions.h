@@ -632,28 +632,35 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 }
-                case 25:  // Header
+                case 23:  // Date and Time...
+                    dialogs.showDateTimeDialog = true;
+                    dialogs.dateTimeFormats =
+                        date_time::dateTimeFormats(date_time::localTimeNow());
+                    dialogs.dateTimeSelected = 0;
+                    dialogs.dateTimeUpdateAutomatically = false;
+                    break;
+                case 26:  // Header
                 {
                     doc.buffer.insertText("[HEADER]");
                     doc.isDirty = true;
                     toast_notify::info("Header placeholder inserted");
                     break;
                 }
-                case 26:  // Footer
+                case 27:  // Footer
                 {
                     doc.buffer.insertText("[FOOTER]");
                     doc.isDirty = true;
                     toast_notify::info("Footer placeholder inserted");
                     break;
                 }
-                case 27:  // Page Number
+                case 28:  // Page Number
                 {
                     doc.buffer.insertText("[PAGE #]");
                     doc.isDirty = true;
                     toast_notify::info("Page number placeholder inserted");
                     break;
                 }
-                case 30:  // Table of Contents
+                case 31:  // Table of Contents
                 {
                     doc.buffer.insertTableOfContents();
                     doc.isDirty = true;
