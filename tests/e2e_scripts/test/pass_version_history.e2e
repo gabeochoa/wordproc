@@ -11,6 +11,7 @@ wait_frames 12
 menu_select "Save"
 wait_frames 12
 validate is_dirty=false
+validate status_text=Saved: document.wpdoc
 
 type " plus more"
 wait_frames 12

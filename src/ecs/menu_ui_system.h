@@ -1724,7 +1724,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         comment.text = dialogs.commentInputStr;
                         comment.createdAt = std::time(nullptr);
                         doc.comments.push_back(comment);
-                        toast_notify::success("Comment added");
+                        // Confirmation to the status-bar flash, not
+                        // a floating toast.
+                        if (cache_.status)
+                            status::flash(*cache_.status, "Comment added",
+                                          afterhours::graphics::get_time());
                     }
                     dialogs.commentInputStr.clear();
                     dialogs.showCommentDialog = false;

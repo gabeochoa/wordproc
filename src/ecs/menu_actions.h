@@ -143,13 +143,20 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 3:  // Track Changes
                     doc.trackChangesEnabled = !doc.trackChangesEnabled;
+                    // Confirmation to the status-bar flash (same
+                    // pattern as Paged/Pageless mode above), not a
+                    // floating toast.
                     if (doc.trackChangesEnabled) {
                         doc.trackChangesBaseline = doc.buffer.getText();
                         menu.menus[1].items[3].mark = win95::MenuMark::Checkmark;
-                        toast_notify::info("Track Changes: On");
+                        if (statusComp)
+                            status::flash(*statusComp, "Track Changes: On",
+                                          afterhours::graphics::get_time());
                     } else {
                         menu.menus[1].items[3].mark = win95::MenuMark::None;
-                        toast_notify::info("Track Changes: Off");
+                        if (statusComp)
+                            status::flash(*statusComp, "Track Changes: Off",
+                                          afterhours::graphics::get_time());
                     }
                     break;
                 case 4:  // Accept All Changes

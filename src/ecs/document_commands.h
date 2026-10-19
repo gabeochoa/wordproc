@@ -19,6 +19,7 @@
 #include "../settings.h"
 #include "../ui/ui_context.h"
 #include "../ui/menu_setup.h"
+#include "component_helpers.h"
 #include "components.h"
 
 namespace ecs {
@@ -33,6 +34,25 @@ inline void requestQuit(DocumentComponent& doc, DialogState& dialogs) {
     } else {
         dialogs.quitRequested = true;
     }
+}
+
+// --- Status-bar confirmations (Word 95 channel) ---
+// Confirmations ("Comment added", "Track Changes: On", "Saved")
+// go to the transient status-bar flash, not a floating toast
+// (the rounded green toasts are modern, not Word 95). The
+// StatusComponent lives on the editor entity; call sites that
+// already hold it (menu actions, dialogs) flash directly, while
+// the command layer — which has no status handle — uses this
+// lookup. In contexts without one (unit tests) it is a no-op.
+// Errors keep their toast_notify::error calls.
+// Mirrors the e2e_runner status_text lookup.
+inline void flashStatusConfirmation(const std::string& msg) {
+    auto entities = afterhours::EntityQuery({.force_merge = true})
+                        .whereHasComponent<StatusComponent>()
+                        .gen();
+    if (entities.empty()) return;
+    auto& status = entities[0].get().get<StatusComponent>();
+    status::flash(status, msg, afterhours::graphics::get_time());
 }
 
 // --- Revision tracking helpers (moved here as single source of truth) ---
@@ -329,7 +349,7 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
         }
         refreshMenuBar(menu, doc, savePath);
         snapshotVersionHistory(doc);
-        toast_notify::success(
+        flashStatusConfirmation(
             "Saved: " +
             std::filesystem::path(savePath).filename().string());
         return true;
@@ -350,7 +370,7 @@ inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
         }
         refreshMenuBar(menu, doc, path);
         snapshotVersionHistory(doc);
-        toast_notify::success(
+        flashStatusConfirmation(
             "Saved as: " +
             std::filesystem::path(path).filename().string());
         return true;

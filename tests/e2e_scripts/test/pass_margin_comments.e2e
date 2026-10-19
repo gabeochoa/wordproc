@@ -24,6 +24,7 @@ type "Review this"
 wait_frames 12
 click_ui comment_ok
 wait_frames 12
+validate status_text=Comment added
 
 validate comment_count=1
 expect_text "Review this"
