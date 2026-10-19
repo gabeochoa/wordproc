@@ -110,6 +110,22 @@ Preload &Preload::make_singleton() {
                 fontMgr.load_font("Garamond", document_font.c_str());
             }
             {
+                // Gaegu-Bold is the default document font and a
+                // toolbar font name, so it must be a real registered
+                // face -- not just a FontLoader id (loadStartupFonts
+                // only records ids): with_font("Gaegu-Bold") fell back
+                // to the default face, so the Font dialog preview
+                // never rendered in Gaegu-Bold. "Gaegu" loads the same
+                // file: it is the only shipped Gaegu face, and the
+                // toolbar offers both names.
+                SCOPED_TIMER("  font: Gaegu-Bold / Gaegu");
+                std::string gaeguPath =
+                    files::get_resource_path("fonts", "Gaegu-Bold.ttf")
+                        .string();
+                fontMgr.load_font("Gaegu-Bold", gaeguPath.c_str());
+                fontMgr.load_font("Gaegu", gaeguPath.c_str());
+            }
+            {
                 SCOPED_TIMER("  font: UI_FONT (manual load)");
                 theme::UI_FONT = afterhours::load_font_from_file(ui_font_path.c_str());
                 theme::UI_FONT_LOADED = true;

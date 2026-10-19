@@ -449,6 +449,18 @@ static void setupCallbacksEx(
             return dialogState.showHelpWindow ? "true" : "false";
         }
         
+        // Font dialog preview size: the computed preview pixel
+        // size for the pending size (font_dialog::previewFontPx),
+        // 0 when the Font dialog is not open. The dialog and the
+        // runner read the same helper, so the value the E2E
+        // asserts is the value the dialog draws with.
+        if (prop == "font_preview_size") {
+            if (!dialogState.showFontDialog) return "0";
+            return std::to_string(font_dialog::previewFontPx(
+                dialogState.fontDialogSelection.size,
+                Settings::get().get_ui_scale()));
+        }
+
         // Outline properties
         if (prop == "outline_visible") return layoutComp.showOutline ? "true" : "false";
         if (prop == "line_numbers_visible") return layoutComp.showLineNumbers ? "true" : "false";

@@ -8,6 +8,7 @@
 // style for the next typing, exactly like the toolbar buttons).
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,6 +16,18 @@
 #include "document_settings.h"
 
 namespace font_dialog {
+
+// Preview font size in pixels: the pending point size scaled by the
+// UI scale (Settings::get().get_ui_scale(), the same factor
+// theme::layout::scale() applies to every other UI text size). The
+// old preview used pixels(pendingPt), which ignored that scale, so
+// at the default ui_scale 1.2 a 16pt preview rendered 16px while
+// its neighbouring dialog text was scaled up -- the preview looked
+// small for its size. At ui_scale 1.0 this is the identity.
+inline int previewFontPx(int pendingPt, float uiScale) {
+    return std::max(1, static_cast<int>(
+                           std::lround(static_cast<float>(pendingPt) * uiScale)));
+}
 
 // The dialog's working selection.
 struct FontDialogSelection {
@@ -28,7 +41,9 @@ struct FontDialogSelection {
     int colorIndex = 0;  // index into fontDialogColors()
 };
 
-// The color swatch row: the existing text colors.
+// The Font color dropdown's entries: the existing text colors.
+// The dialog has no color swatch row (the dropdown is the only
+// color control); this list is its single source of entries.
 inline std::vector<std::pair<std::string, TextColor>> fontDialogColors() {
     return {{"Black", TextColors::Black},   {"White", TextColors::White},
             {"Red", TextColors::Red},       {"Orange", TextColors::Orange},

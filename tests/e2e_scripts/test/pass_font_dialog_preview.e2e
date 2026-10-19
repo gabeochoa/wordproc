@@ -1,0 +1,52 @@
+# Test: Format > Font... preview renders the PENDING selection.
+# The preview font size is the pending point size scaled by the UI
+# scale (font_dialog::previewFontPx): at the default ui_scale 1.2
+# the default 16pt previews at 19px, and picking size 28 previews
+# at 34px (28 * 1.2 = 33.6, rounded). Size 28 sits below the fold
+# of the single-column Size list, so the test wheels the list
+# (mouse over it, scroll_wheel) before clicking it -- the scroll
+# is part of what this test proves. Cancel proves nothing applied.
+# RED-ON-REVERT: with pixels(pendingPt) the preview sizes read
+# 16 / 28, and the "Preview size: 34px" text never appears.
+
+type "Hello Font"
+wait_frames 12
+select_all
+wait_frames 12
+
+menu_open Format
+wait_frames 12
+menu_select "Font..."
+wait_frames 12
+
+validate dialog_open=Font
+expect_text "AaBbYyZz 123"
+expect_text "Preview font: Gaegu-Bold, size 16"
+validate font_preview_size=19
+expect_text "Preview size: 19px"
+
+mouse_move 780 270
+wait_frames 6
+scroll_wheel 0 -6
+wait_frames 12
+click_ui font_size_28
+wait_frames 12
+
+expect_text "Size field: 28"
+expect_text "Preview font: Gaegu-Bold, size 28"
+validate font_preview_size=34
+expect_text "Preview size: 34px"
+
+click_ui font_underline_dropdown
+wait_frames 12
+click_ui font_underline_Single
+wait_frames 12
+expect_text "Preview style: Underline "
+
+screenshot font_dialog_preview
+
+click_ui font_cancel
+wait_frames 12
+
+validate dialog_open=false
+validate underline=false

@@ -2005,11 +2005,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // Font style / Size lists, each with a pending-value field
         // above it (Word's editable fields; here read-only except
         // Size, which is the custom-size edit), Effects
-        // checkboxes, Underline-style + Font-color dropdowns, a
-        // color swatch row, and a Preview box. The font list comes
-        // from the toolbar fonts vector; OK applies the selection
-        // via buffer.setTextStyle, the same path the toolbar uses.
-        // ONE pending state: every list/dropdown click writes
+        // checkboxes, Underline-style + Font-color dropdowns
+        // (the Font color dropdown is the ONLY color control --
+        // the old swatch row is gone), and a Preview box. The
+        // font list comes from the toolbar fonts vector; OK
+        // applies the selection via buffer.setTextStyle, the same
+        // path the toolbar uses. ONE pending state: every
+        // list/dropdown click writes
         // dialogs.fontDialogSelection, and the fields + Preview
         // read only that state, so they can never disagree with
         // the lists (the old dialog had no fields, so the toolbar
@@ -2021,21 +2023,25 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             // (label 20 + field 26 + list 196 = 242) + Effects
             // (label 20 + row 48 = 68) + dropdown row 28 +
             // dropdown lists (underline 48 / color 92, when open)
-            // + swatches (label 20 + row 28 = 48) + Preview
-            // (label 20 + box) + buttons 44 + panel padding 8.
-            // The old fixed 500 clipped the Size list's lower
-            // entries (8 rows x 22 + padding + the text_input
-            // field's extra layout height > the old 176 box), so
-            // the list boxes carry 16px of slack over the 180
-            // the rows nominally need.
+            // + Preview (label 20 + box) + buttons 44 + panel
+            // padding 8. The old fixed 500 clipped the Size
+            // list's lower entries (8 rows x 22 + padding + the
+            // text_input field's extra layout height > the old
+            // 176 box), so the list boxes carry 16px of slack
+            // over the 180 the rows nominally need.
             const int pendingPreviewSize =
                 dialogs.fontDialogInitialized
                     ? dialogs.fontDialogSelection.size
                     : doc.buffer.textStyle().fontSize;
+            // Preview box grows with the scaled preview font
+            // (font_dialog::previewFontPx) so a large pending size
+            // is never clipped by a box sized for the old size.
+            const int previewPx = font_dialog::previewFontPx(
+                pendingPreviewSize, Settings::get().get_ui_scale());
             const float previewBoxH = static_cast<float>(
-                std::clamp(pendingPreviewSize + 28, 48, 96));
+                std::clamp(previewPx + 32, 48, 120));
             const float fontDialogH =
-                20.0f + 242.0f + 68.0f + 28.0f + 48.0f + 20.0f +
+                20.0f + 242.0f + 68.0f + 28.0f + 20.0f +
                 previewBoxH + 44.0f + 8.0f +
                 (dialogs.fontDialogUnderlineDropdownOpen ? 48.0f : 0.0f) +
                 (dialogs.fontDialogColorDropdownOpen ? 92.0f : 0.0f);
@@ -2218,7 +2224,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             }
                         }
                     }
-                    // Size list: two columns of the toolbar sizes.
+                    // Size list: ONE vertical chronological column
+                    // (8, 9, 10, ... 72 top to bottom), scrolling
+                    // when the 16 entries exceed the box -- the old
+                    // two-column split (8|20, 9|22, ...) read as two
+                    // unrelated lists. The scroll container is the
+                    // same Overflow::Auto pattern as the AutoCorrect
+                    // and bookmark lists.
                     auto sizeCol = div(ctx, mk(listsRow.ent(), 2),
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(0.34f), h720(242)})
@@ -2246,50 +2258,34 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         auto sizeList = div(ctx, mk(sizeCol.ent(), 5),
                             ah_win95::win95SunkenStyle()
                                 .with_size(ComponentSize{percent(1.0f), h720(196)})
-                                .with_flex_direction(FlexDirection::Row)
+                                .with_flex_direction(FlexDirection::Column)
+                                .with_overflow(afterhours::ui::Overflow::Auto)
                                 .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                                 .with_render_layer(CONTENT_LAYER));
                         if (sizeList) {
-                            for (int half = 0; half < 2; ++half) {
-                                auto halfCol = div(ctx, mk(sizeList.ent(), 300 + half),
+                            for (std::size_t i = 0; i < toolbar.fontSizes.size(); ++i) {
+                                int size = toolbar.fontSizes[i];
+                                bool selected = size == sel.size;
+                                std::string label = std::to_string(size);
+                                test_input::register_visible_text(label);
+                                if (button(ctx, mk(sizeList.ent(), 400 + static_cast<int>(i)),
                                     ComponentConfig{}
-                                        .with_size(ComponentSize{percent(0.5f), children()})
-                                        .with_flex_direction(FlexDirection::Column)
-                                        .with_custom_background(
-                                            ui_imm::win95_colors::TEXT_AREA)
-                                        .with_render_layer(CONTENT_LAYER));
-                                if (!halfCol) continue;
-                                std::size_t begin =
-                                    static_cast<std::size_t>(half) *
-                                    (toolbar.fontSizes.size() + 1) / 2;
-                                std::size_t end =
-                                    static_cast<std::size_t>(half + 1) *
-                                    (toolbar.fontSizes.size() + 1) / 2;
-                                for (std::size_t i = begin;
-                                     i < end && i < toolbar.fontSizes.size(); ++i) {
-                                    int size = toolbar.fontSizes[i];
-                                    bool selected = size == sel.size;
-                                    std::string label = std::to_string(size);
-                                    test_input::register_visible_text(label);
-                                    if (button(ctx, mk(halfCol.ent(), 400 + static_cast<int>(i)),
-                                        ComponentConfig{}
-                                            .with_debug_name("font_size_" + label)
-                                            .with_label(label)
-                                            .with_size(ComponentSize{percent(1.0f), h720(22)})
-                                            .with_roundness(0.0f)
-                                            .with_custom_background(selected
-                                                ? ui_imm::win95_colors::HIGHLIGHT
-                                                : ui_imm::win95_colors::TEXT_AREA)
-                                            .with_custom_text_color(selected
-                                                ? ui_imm::win95_colors::TEXT_WHITE
-                                                : ui_imm::win95_colors::TEXT)
-                                            .with_alignment(afterhours::ui::TextAlignment::Left)
-                                            .with_padding(Padding{.left = pixels(4)})
-                                            .with_cursor(afterhours::ui::CursorType::Pointer)
-                                            .with_render_layer(CONTENT_LAYER))) {
-                                        sel.size = size;
-                                        dialogs.fontDialogCustomSize = label;
-                                    }
+                                        .with_debug_name("font_size_" + label)
+                                        .with_label(label)
+                                        .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                        .with_roundness(0.0f)
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                                        .with_padding(Padding{.left = pixels(4)})
+                                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    sel.size = size;
+                                    dialogs.fontDialogCustomSize = label;
                                 }
                             }
                         }
@@ -2353,9 +2349,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
 
                 // Underline style + Font color dropdowns (the Word
                 // controls): the Effects Underline checkbox and the
-                // swatch row below are the same state through
-                // sel.underline / sel.colorIndex, so all three
-                // views stay in sync. The lists expand in-flow
+                // Font color dropdown are the same state through
+                // sel.underline / sel.colorIndex, so both views
+                // stay in sync (there is no swatch row). The lists expand in-flow
                 // below the button row (the dialog height grows by
                 // their height, computed before the modal call), so
                 // they never clip or overlay other controls. The
@@ -2550,74 +2546,35 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                 }
 
-                // Color swatch row: the existing text colors.
-                test_input::register_visible_text("Color:");
-                div(ctx, mk(result.ent(), 909),
-                    ComponentConfig{}
-                        .with_label("Color:")
-                        .with_size(ComponentSize{percent(1.0f), h720(20)})
-                        .with_custom_background(
-                            ui_imm::win95_colors::BUTTON_FACE)
-                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
-                        .with_alignment(afterhours::ui::TextAlignment::Left)
-                        .with_render_layer(CONTENT_LAYER));
-                auto colorRow = div(ctx, mk(result.ent(), 910),
-                    ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(28)})
-                        .with_flex_direction(FlexDirection::Row)
-                        .with_gap(pixels(4))
-                        .with_custom_background(
-                            ui_imm::win95_colors::BUTTON_FACE)
-                        .with_render_layer(CONTENT_LAYER));
-                if (colorRow) {
-                    for (std::size_t i = 0; i < colors.size(); ++i) {
-                        bool selected =
-                            static_cast<int>(i) == sel.colorIndex;
-                        const TextColor& c = colors[i].second;
-                        afterhours::Color bg{c.r, c.g, c.b, c.a};
-                        if (button(ctx, mk(colorRow.ent(), 500 + static_cast<int>(i)),
-                            ComponentConfig{}
-                                .with_debug_name("font_color_" + colors[i].first)
-                                .with_label("")
-                                .with_size(ComponentSize{pixels(24), pixels(24)})
-                                .with_roundness(0.0f)
-                                .with_custom_background(bg)
-                                .with_border(ui_imm::win95_colors::TEXT,
-                                             selected ? 2.0f : 1.0f)
-                                .with_cursor(afterhours::ui::CursorType::Pointer)
-                                .with_render_layer(CONTENT_LAYER))) {
-                            sel.colorIndex = static_cast<int>(i);
-                        }
-                    }
-                    div(ctx, mk(colorRow.ent(), 600),
-                        ComponentConfig{}
-                            .with_label(sel.colorIndex >= 0 &&
-                                        sel.colorIndex < static_cast<int>(colors.size())
-                                        ? colors[static_cast<std::size_t>(sel.colorIndex)].first
-                                        : "")
-                            .with_size(ComponentSize{children(), h720(24)})
-                            .with_custom_background(
-                                ui_imm::win95_colors::BUTTON_FACE)
-                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
-                            .with_alignment(afterhours::ui::TextAlignment::Left)
-                            .with_render_layer(CONTENT_LAYER));
-                }
+                // No color swatch row: the Font color dropdown above
+                // is the only color control.
 
                 // Preview box: "AaBbYyZz 123" in the PENDING font /
-                // size / bold / color (the same sel the fields read
-                // above, so a list click updates the preview on the
-                // next frame). The family is requested by name, the
-                // way the toolbar font dropdown names it: a name
-                // with no loaded face (Times New Roman / Arial /
-                // Courier New are toolbar names, not loaded faces)
-                // falls back to the default face, so the preview is
-                // exact for size/bold/color and best-effort for
-                // family. A bold weight resolves to "<family>@bold"
-                // and falls back to the family when that variant
-                // was never loaded (Gaegu-Bold has no bold
-                // variant), so the preview still uses that family.
-                // Italic has no slanted UI face; the style list still
-                // records it (applied on OK).
+                // size / bold / underline / strikethrough / color
+                // (the same sel the fields read above, so a list
+                // click updates the preview on the next frame).
+                // The family is requested by name, the way the
+                // toolbar font dropdown names it. Gaegu-Bold (and
+                // Gaegu, same file) ARE loaded faces now (preload),
+                // so a Gaegu-Bold preview renders in Gaegu-Bold; a
+                // name with no loaded face (Times New Roman /
+                // Arial / Courier New are toolbar names, not
+                // loaded faces) falls back to the default face, so
+                // the preview is exact for size/bold/color and
+                // best-effort for those families. A bold weight
+                // resolves to "<family>@bold" and falls back to
+                // the family when that variant was never loaded
+                // (Gaegu-Bold has no bold variant), so the preview
+                // still uses that family. Size is the scaled
+                // preview size (font_dialog::previewFontPx), not
+                // the raw point size. Underline / strikethrough
+                // are drawn by on_draw_fg: the UI label has no
+                // decoration support. Italic has no slanted UI
+                // face (no italic font is shipped, and the UI font
+                // system has no shear), so italic is recorded in
+                // the pending state and applied on OK but the
+                // preview glyphs stay upright -- the one effect
+                // the preview cannot draw.
                 test_input::register_visible_text("Preview:");
                 div(ctx, mk(result.ent(), 911),
                     ComponentConfig{}
@@ -2636,6 +2593,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         : toolbar.currentFont;
                     bool previewBold =
                         sel.styleIndex == 1 || sel.styleIndex == 3;
+                    bool previewItalic =
+                        sel.styleIndex == 2 || sel.styleIndex == 3;
                     TextColor previewColor =
                         sel.colorIndex >= 0 &&
                         sel.colorIndex < static_cast<int>(colors.size())
@@ -2643,23 +2602,82 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         : TextColors::Black;
                     test_input::register_visible_text("AaBbYyZz 123");
                     // Test-visible preview state for E2E (checked
-                    // before OK): the pending family + size.
+                    // before OK): the pending family + size + the
+                    // computed preview pixel size (font_preview_size
+                    // in the runner reads the same value).
                     test_input::register_visible_text(
                         "Preview font: " + previewFont + ", size " +
                         std::to_string(sel.size));
+                    test_input::register_visible_text(
+                        "Preview size: " + std::to_string(previewPx) +
+                        "px");
+                    test_input::register_visible_text(
+                        std::string("Preview style: ") +
+                        (previewBold ? "Bold " : "") +
+                        (previewItalic ? "Italic " : "") +
+                        (sel.underline ? "Underline " : "") +
+                        (sel.strikethrough ? "Strikethrough" : ""));
+                    // Width of the preview string in the preview
+                    // face, for centring the underline /
+                    // strikethrough rules in on_draw_fg. Measured
+                    // in the face the renderer will use
+                    // (FontManager::find_font falls back to the
+                    // default face for unloaded names, exactly as
+                    // the label renderer does), so the rules span
+                    // the drawn glyphs.
+                    float previewTextW = 0.0f;
+                    if (auto* fontMgr = afterhours::EntityHelper::
+                            get_singleton_cmp<
+                                afterhours::ui::FontManager>()) {
+                        auto face = fontMgr->find_font(previewFont);
+                        previewTextW = afterhours::measure_text(
+                            face, "AaBbYyZz 123",
+                            static_cast<float>(previewPx), 1.0f).x;
+                    }
+                    const afterhours::Color previewAhColor{
+                        previewColor.r, previewColor.g,
+                        previewColor.b, previewColor.a};
+                    const bool previewUnderline = sel.underline;
+                    const bool previewStrike = sel.strikethrough;
+                    const float previewPxF = static_cast<float>(previewPx);
                     div(ctx, mk(result.ent(), 912),
                         ah_win95::win95SunkenStyle()
                             .with_label("AaBbYyZz 123")
                             .with_size(ComponentSize{percent(1.0f),
                                                      h720(previewBoxH)})
-                            .with_font(previewFont, pixels(static_cast<float>(sel.size)))
+                            .with_font(previewFont, pixels(previewPxF))
                             .with_font_weight(previewBold
                                 ? afterhours::colors::FontWeight::Bold
                                 : afterhours::colors::FontWeight::Regular)
-                            .with_custom_text_color(afterhours::Color{
-                                previewColor.r, previewColor.g,
-                                previewColor.b, previewColor.a})
+                            .with_custom_text_color(previewAhColor)
                             .with_alignment(afterhours::ui::TextAlignment::Center)
+                            .with_on_draw_fg(
+                                [previewTextW, previewAhColor,
+                                 previewUnderline, previewStrike,
+                                 previewPxF](RectangleType r) {
+                                    if (!previewUnderline && !previewStrike) {
+                                        return;
+                                    }
+                                    float x1 = r.x + (r.width - previewTextW) / 2.0f;
+                                    float x2 = x1 + previewTextW;
+                                    if (previewUnderline) {
+                                        int uy = static_cast<int>(
+                                            r.y + r.height / 2.0f +
+                                            previewPxF * 0.35f);
+                                        afterhours::draw_line(
+                                            static_cast<int>(x1), uy,
+                                            static_cast<int>(x2), uy,
+                                            previewAhColor);
+                                    }
+                                    if (previewStrike) {
+                                        int sy = static_cast<int>(
+                                            r.y + r.height / 2.0f);
+                                        afterhours::draw_line(
+                                            static_cast<int>(x1), sy,
+                                            static_cast<int>(x2), sy,
+                                            previewAhColor);
+                                    }
+                                })
                             .with_render_layer(CONTENT_LAYER));
                 }
 
