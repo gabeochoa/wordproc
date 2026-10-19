@@ -49,12 +49,12 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Page/Section Break | Have | P0 | |
 | Table... | Have | P0 | grid insert + Table menu |
 | Picture... | Have | P1 | image insert + layout/wrap |
-| Symbol / Special Character... | Partial | P1 | dialog exists; date/time insert is now Date & Time... above |
+| Symbol / Special Character... | Have | P1 | Batch 11 item 2: Insert > Special Character... opens a Win95 dialog with a grid of 47 symbols (23 symbols: © ® ™ § ¶ • – — ' ' " " « » € £ ¥ ° ± ½ ÷ × …, plus lowercase Greek alpha-omega) from `symbol.h`; click selects (name line), second click or Insert inserts at the caret through the command layer as one undo step. Every grid glyph verified present in Roboto's cmap (the dialog/document font), so nothing was dropped. Unit + E2E `e2e_special_characters.e2e` (grid + doc screenshots) |
 | Date & Time... | Have | P1 | Insert menu (before Special Character...): Win95 dialog, sunken list of 6 formats computed from current local time (M/d/yyyy, Month D, YYYY, Mon D, YYYY, h:MM AM/PM, D Month YYYY, ISO), Update automatically checkbox, OK inserts at caret through the command layer as one undo step (unit + E2E). Honest partial: no field engine exists, so Update automatically inserts the same static text |
 | Header / Footer / Page Number | Have | P0 | Batch 9: strip Page Number button toggles the active target's center page-number field, rendered centered as "Page N" (real per-page index, `HeaderFooter::formatPageNumber`) after the footer/header text; Insert > Page Number in the body still inserts the `[PAGE #]` placeholder (no field engine) |
 | Footnote | Have | P2 | |
 | Hyperlink / Bookmark / Comment | Have | P1 | comment is also a Docs-era feature, kept |
-| Table of Contents | Partial | P2 | entry exists; field update semantics TBD |
+| Table of Contents | Have | P2 | Batch 11 item 1: Insert > Table of Contents inserts a marked block at the caret (or replaces the existing block): one line per Title/Heading 1-3 paragraph, indent by level, dot leader, estimated page number from the Batch 6 page math. The block is ordinary buffer text; the mark (start/end + flag, `tableOfContents` in `.wpdoc`) shifts on buffer edits like bookmarks. Insert > Update Table of Contents (enabled only with a mark) + right-click context menu regenerate in place, caret-safe; explicit Save / Save As regenerate first. Hand edits inside the region are allowed and lost on update. One undo step; unit (`test_toc.cpp`) + E2E `e2e_table_of_contents.e2e` |
 | Equation / Shapes | Have | P2 | beyond Word 95 basic drawing |
 
 ## Format
@@ -69,7 +69,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Borders and Shading... | Have | P1 | Format menu (before Columns...): Win95 dialog with Setting (None / Box / Custom), per-edge toggles (Top/Bottom/Left/Right), Style (None / Single line), shading swatches (None + highlight palette). OK applies border edges bitmask + style + shading index to the caret paragraph or every paragraph in the selection as one undo step through the command layer (ParagraphFormat, stored like indents; preserves each paragraph's indents/spacing). Render: shading fill behind text before selection/squiggles, border via the shared table-border drawBorderEdge helper; the border/shading rect is the paragraph line box expanded 7px horizontal / 5px vertical (4/2 base + 3 expansion) so glyphs never touch the stroke; consecutive identical paragraphs merge into one box (no internal horizontal edge). Unit + E2E `pass_borders_shading_dialog.e2e` (Box + Yellow, neighbor plain, one Ctrl+Z restores) |
 | Columns... | Have | P1 | Format menu (last item): Win95 dialog with 1/2/3/4 presets, Equal column width fixed on, spacing field in inches (default 0.5, saved/loaded with the document in `pageLayout.columns` / `columnSpacing`). Paged renderer flows the page's lines through N columns (column width = (textWidth - (N-1)*spacing)/N, column 1 fills linesPerColumn top-to-bottom, then column 2...); caret rendering, click hit-test, and squiggles use the same column offsets (unit-tested math + E2E clicks in column 1/2). Honest partials: scrolling in columns is page-at-a-time (the page containing the scroll offset); Print Preview ignores columns (its own line stride); pageless is unchanged |
 | Styles (Normal/Title/Headings 1-6) | Have | P0 | style dropdown + Ctrl+Alt+n |
-| Drop Cap | Partial | P2 | menu entry exists |
+| Drop Cap | Have | P2 | Batch 11 item 3: Format > Drop Cap opens a compact Win95 dialog (Position None / Dropped, Lines 2-4 via - / +), seeded from the caret paragraph, applying to the caret paragraph or every paragraph in the selection as one undo step. First glyph draws at lineHeight*N; the following N-1 rows indent past its width (the renderer draws one buffer line per visual row, so the following rows are the buffer rows after the paragraph). Per-paragraph `dropCapLines` (0 = off, 2-4) rides `ParagraphFormat` and persists in `.wpdoc` as a per-line `dropCapLines` array. Unit (`test_drop_cap.cpp`) + E2E `e2e_drop_caps.e2e` (dialog + with/without screenshots). Honest partial: the mouse hit-test does not account for paragraph indents at all (pre-existing approximation), including this indent |
 
 ## Tools
 | Feature | Status | Priority | Notes |
@@ -128,9 +128,9 @@ honest about Word 95 itself.
 | Live word count | Have | P1 | Batch 5 item 5: status bar left cluster gains a "Words: N" segment after the Ln/Col group, updating as you type, from buffer stats. The O(n) `TextBuffer::stats()` is cached on the status-bar system and recomputed only when the buffer version changes, so the per-frame status render stays O(1). Bench guard: `make bench-unit` class unchanged (no benchmark touched). E2E `pass_live_word_count.e2e` (type 3 words -> "Words: 3", add a word, delete it) |
 
 ## Counts (from tables above, 2026-10-19)
-**Have 51 · Partial 14 · Missing 2** (after Batch 8: Table cell editing
-moves Missing -> Have) (67 grouped rows; several rows bundle e.g.
-Cut/Copy/Paste).
+**Have 54 · Partial 11 · Missing 2** (after Batch 11: Table of Contents,
+Special Character, Drop Cap move Partial -> Have) (67 grouped rows;
+several rows bundle e.g. Cut/Copy/Paste).
 Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95
