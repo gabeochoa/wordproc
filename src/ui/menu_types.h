@@ -69,7 +69,9 @@ inline std::vector<MenuData> createMenuBarData() {
                       {"Find Previous", "Shift+F3", true, false},
                       {"Replace...", "Ctrl+H", true, false},
                       {"", "", false, true},  // Separator
-                      {"Go To Bookmark...", "", true, false}};
+                      {"Go To Bookmark...", "", true, false},
+                      {"", "", false, true},  // Separator
+                      {"Repeat", "F4", true, false}};
     menus.push_back(editMenu);
 
     // View menu

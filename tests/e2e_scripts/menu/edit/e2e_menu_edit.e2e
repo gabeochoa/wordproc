@@ -3,7 +3,7 @@
 
 # Open Edit menu
 menu_open Edit
-wait 1
+wait_frames 12
 
 # Validate menu is open
 validate menu_open=Edit
@@ -17,6 +17,7 @@ validate menu_item_Paste=true
 validate menu_item_Select All=true
 validate menu_item_Find...=true
 validate menu_item_Replace...=true
+validate menu_item_Repeat=true
 
 screenshot e2e_menu_edit
 

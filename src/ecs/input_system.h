@@ -127,9 +127,7 @@ struct TextInputSystem
                             }
                         }
                         const char* quote = opening ? openQuote : closeQuote;
-                        recordInsertRevision(doc, offset, quote);
-                        doc.buffer.insertText(quote);
-                        doc.isDirty = true;
+                        cmd::insertTypedText(doc, quote);
                         caret::resetBlink(caret);
                     };
                     if (ch == '"') {
@@ -162,9 +160,7 @@ struct TextInputSystem
                                 }
                             }
                         }
-                        recordInsertRevision(doc, offset, std::string(1, ch));
-                        doc.buffer.insertChar(ch);
-                        doc.isDirty = true;
+                        cmd::insertTypedChar(doc, ch);
                         if (openChipPopup) {
                             dialogs.showChipPopup = true;
                             dialogs.chipPopupAtOffset = offset;
@@ -178,13 +174,13 @@ struct TextInputSystem
         }
 
         if (actionMap_.isActionPressed(Action::InsertNewline)) {
-            std::size_t offset = doc.buffer.caretOffset();
-            recordInsertRevision(doc, offset, "\n");
-            doc.buffer.insertChar('\n');
-            doc.isDirty = true;
+            cmd::insertTypedText(doc, "\n");
         }
         // Use isActionPressedRepeat for backspace/delete so they repeat when held
         if (actionMap_.isActionPressedRepeat(Action::Backspace)) {
+            // Backspace/Delete are not repeatable: they clear the
+            // Repeat record (like Cut).
+            repeat::clear(doc.repeatRecord);
             // Backspace at a chip's end deletes the whole chip (one
             // undo step), not one character. Not while the popup is
             // open: there Backspace edits the filter text.
@@ -208,6 +204,7 @@ struct TextInputSystem
             doc.isDirty = true;
         }
         if (actionMap_.isActionPressedRepeat(Action::Delete)) {
+            repeat::clear(doc.repeatRecord);
             if (doc.buffer.hasSelection()) {
                 CaretPosition start = doc.buffer.selectionStart();
                 std::string selected = doc.buffer.getSelectedText();
@@ -227,10 +224,7 @@ struct TextInputSystem
         if (input::isKeyPressed(afterhours::keys::TAB)) {
             int width = std::max(1, doc.docSettings.tabWidth);
             std::string spaces(static_cast<std::size_t>(width), ' ');
-            std::size_t offset = doc.buffer.caretOffset();
-            recordInsertRevision(doc, offset, spaces);
-            doc.buffer.insertText(spaces);
-            doc.isDirty = true;
+            cmd::insertTypedText(doc, spaces);
         }
     }
 };
@@ -323,115 +317,105 @@ struct KeyboardShortcutSystem
 
         // Font selection
         if (actionMap_.isActionPressed(Action::FontGaegu)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.font = "Gaegu-Bold";
-            doc.buffer.setTextStyle(style);
+            cmd::setFont(doc, "Gaegu-Bold");
         }
         if (actionMap_.isActionPressed(Action::FontGaramond)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.font = "EBGaramond-Regular";
-            doc.buffer.setTextStyle(style);
+            cmd::setFont(doc, "EBGaramond-Regular");
         }
 
         // Font size
         if (actionMap_.isActionPressed(Action::IncreaseFontSize)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.fontSize = std::min(72, style.fontSize + 2);
-            doc.buffer.setTextStyle(style);
+            cmd::setFontSize(doc, std::min(72, doc.buffer.textStyle().fontSize + 2));
         }
         if (actionMap_.isActionPressed(Action::DecreaseFontSize)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.fontSize = std::max(8, style.fontSize - 2);
-            doc.buffer.setTextStyle(style);
+            cmd::setFontSize(doc, std::max(8, doc.buffer.textStyle().fontSize - 2));
         }
         if (actionMap_.isActionPressed(Action::ResetFontSize)) {
-            TextStyle style = doc.buffer.textStyle();
-            style.fontSize = 16;
-            doc.buffer.setTextStyle(style);
+            cmd::setFontSize(doc, 16);
         }
 
         // Paragraph styles
         if (actionMap_.isActionPressed(Action::StyleNormal)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Normal);
         }
         if (actionMap_.isActionPressed(Action::StyleTitle)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Title);
         }
         if (actionMap_.isActionPressed(Action::StyleSubtitle)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Subtitle);
         }
         if (actionMap_.isActionPressed(Action::StyleHeading1)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Heading1);
         }
         if (actionMap_.isActionPressed(Action::StyleHeading2)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Heading2);
         }
         if (actionMap_.isActionPressed(Action::StyleHeading3)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading3);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Heading3);
         }
         if (actionMap_.isActionPressed(Action::StyleHeading4)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading4);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Heading4);
         }
         if (actionMap_.isActionPressed(Action::StyleHeading5)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading5);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Heading5);
         }
         if (actionMap_.isActionPressed(Action::StyleHeading6)) {
-            doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
+            cmd::setParagraphStyle(doc, ParagraphStyle::Heading6);
         }
-        
+
         // Text alignment
         if (actionMap_.isActionPressed(Action::AlignLeft)) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Left);
+            cmd::setAlignment(doc, TextAlignment::Left);
         }
         if (actionMap_.isActionPressed(Action::AlignCenter)) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Center);
+            cmd::setAlignment(doc, TextAlignment::Center);
         }
         if (actionMap_.isActionPressed(Action::AlignRight)) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Right);
+            cmd::setAlignment(doc, TextAlignment::Right);
         }
         if (actionMap_.isActionPressed(Action::AlignJustify)) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+            cmd::setAlignment(doc, TextAlignment::Justify);
         }
-        
+
         // Indentation
         if (actionMap_.isActionPressed(Action::IndentIncrease)) {
-            doc.buffer.increaseIndent();
+            cmd::increaseIndent(doc);
         }
         if (actionMap_.isActionPressed(Action::IndentDecrease)) {
-            doc.buffer.decreaseIndent();
+            cmd::decreaseIndent(doc);
         }
-        
+
         // Line spacing
         if (actionMap_.isActionPressed(Action::LineSpacingSingle)) {
-            doc.buffer.setLineSpacingSingle();
+            cmd::setLineSpacing(doc, 100);
         }
         if (actionMap_.isActionPressed(Action::LineSpacing1_5)) {
-            doc.buffer.setLineSpacing1_5();
+            cmd::setLineSpacing(doc, 150);
         }
         if (actionMap_.isActionPressed(Action::LineSpacingDouble)) {
-            doc.buffer.setLineSpacingDouble();
+            cmd::setLineSpacing(doc, 200);
         }
-        
+
         // Lists
         if (actionMap_.isActionPressed(Action::ToggleBulletedList)) {
-            doc.buffer.toggleBulletedList();
+            cmd::toggleBulletedList(doc);
         }
         if (actionMap_.isActionPressed(Action::ToggleNumberedList)) {
-            doc.buffer.toggleNumberedList();
+            cmd::toggleNumberedList(doc);
         }
-        
+
         // Paragraph spacing (increase/decrease by 6px increments)
         if (actionMap_.isActionPressed(Action::IncreaseSpaceBefore)) {
-            doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() + 6);
+            cmd::setSpaceBefore(doc, doc.buffer.currentSpaceBefore() + 6);
         }
         if (actionMap_.isActionPressed(Action::DecreaseSpaceBefore)) {
-            doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() - 6);
+            cmd::setSpaceBefore(doc, doc.buffer.currentSpaceBefore() - 6);
         }
         if (actionMap_.isActionPressed(Action::IncreaseSpaceAfter)) {
-            doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() + 6);
+            cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() + 6);
         }
         if (actionMap_.isActionPressed(Action::DecreaseSpaceAfter)) {
-            doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
+            cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() - 6);
         }
 
         // View controls
@@ -471,12 +455,15 @@ struct KeyboardShortcutSystem
         if (actionMap_.isActionPressed(Action::Paste)) cmd::paste(doc);
         if (actionMap_.isActionPressed(Action::SelectAll)) cmd::selectAll(doc);
 
-        // Undo/Redo
+        // Undo/Redo (Ctrl+Y stays Redo; Repeat is F4 only)
         if (actionMap_.isActionPressed(Action::Undo)) {
             if (cmd::undo(doc)) caret::resetBlink(caret);
         }
         if (actionMap_.isActionPressed(Action::Redo)) {
             if (cmd::redo(doc)) caret::resetBlink(caret);
+        }
+        if (actionMap_.isActionPressed(Action::Repeat)) {
+            if (cmd::repeatLastAction(doc)) caret::resetBlink(caret);
         }
     }
 };

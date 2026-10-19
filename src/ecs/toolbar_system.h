@@ -1011,9 +1011,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                     toolbar.currentFont = toolbar.fonts[i];
                     toolbar.fontDropdownOpen = false;
                     ctx.set_focus(ctx.ROOT);
-                    TextStyle style = doc.buffer.textStyle();
-                    style.font = toolbar.currentFont;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFont(doc, toolbar.currentFont);
                     doc.isDirty = true;
                 }
             }
@@ -1065,9 +1063,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                     toolbar.currentFontSize = toolbar.fontSizes[i];
                     toolbar.fontSizeDropdownOpen = false;
                     ctx.set_focus(ctx.ROOT);
-                    TextStyle style = doc.buffer.textStyle();
-                    style.fontSize = toolbar.currentFontSize;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFontSize(doc, toolbar.currentFontSize);
                     doc.isDirty = true;
                 }
             }
@@ -1134,9 +1130,8 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 0, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignLeft)
                 .with_label("")
                 .with_debug_name("btn_align_left"))) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Left);
+            cmd::setAlignment(doc, TextAlignment::Left);
             toolbar.currentAlignment = 0;
-            doc.isDirty = true;
         }
         trackTooltip(fmtX, fmtBtnY, "Align Left (Ctrl+L)");
         fmtX += buttonSize + buttonPadding;
@@ -1146,9 +1141,8 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 1, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignCenter)
                 .with_label("")
                 .with_debug_name("btn_align_center"))) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Center);
+            cmd::setAlignment(doc, TextAlignment::Center);
             toolbar.currentAlignment = 1;
-            doc.isDirty = true;
         }
         trackTooltip(fmtX, fmtBtnY, "Align Center (Ctrl+E)");
         fmtX += buttonSize + buttonPadding;
@@ -1158,9 +1152,8 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 2, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignRight)
                 .with_label("")
                 .with_debug_name("btn_align_right"))) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Right);
+            cmd::setAlignment(doc, TextAlignment::Right);
             toolbar.currentAlignment = 2;
-            doc.isDirty = true;
         }
         trackTooltip(fmtX, fmtBtnY, "Align Right (Ctrl+R)");
         fmtX += buttonSize + buttonPadding;
@@ -1170,9 +1163,8 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             absToolbarButton(fmtX, fmtBtnY, buttonSize, true, toolbar.currentAlignment == 3, isMouseOver(fmtX, fmtBtnY), ToolbarIcon::AlignJustify)
                 .with_label("")
                 .with_debug_name("btn_align_justify"))) {
-            doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+            cmd::setAlignment(doc, TextAlignment::Justify);
             toolbar.currentAlignment = 3;
-            doc.isDirty = true;
         }
         trackTooltip(fmtX, fmtBtnY, "Justify (Ctrl+J)");
         }  // if (!layout.showOutline): the Formatting toolbar

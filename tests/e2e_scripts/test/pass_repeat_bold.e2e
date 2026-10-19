@@ -1,0 +1,52 @@
+# Test: Edit > Repeat (F4) re-applies a formatting application
+# Bold a selection (records SetBold{true}); select other text, F4
+# bolds it (the record is the resulting value, not the toggle, so
+# re-applying stays bold). Ctrl+Y stays Redo: after an Undo, Ctrl+Y
+# redoes instead of repeating.
+
+# AutoCorrect capitalizes the sentence start: "Hello world".
+type "hello world"
+wait_frames 12
+
+key CTRL+A
+wait_frames 6
+key CTRL+B
+wait_frames 12
+validate bold=true
+validate repeat_kind=bold
+
+# Select the other word ("world"), F4 re-applies bold.
+key END
+wait_frames 6
+key SHIFT+LEFT
+key SHIFT+LEFT
+key SHIFT+LEFT
+key SHIFT+LEFT
+key SHIFT+LEFT
+wait_frames 6
+validate selected_text=world
+
+key F4
+wait_frames 12
+validate bold=true
+validate text=Hello world
+validate repeat_kind=bold
+
+# Ctrl+Y is Redo, not Repeat: one Ctrl+Z undoes one typed char
+# (style changes carry no history); Ctrl+Y restores the text.
+# If Ctrl+Y were Repeat it would only re-apply bold, leaving "Hello worl".
+key CTRL+Z
+wait_frames 12
+validate text=Hello worl
+validate bold=true
+
+key CTRL+Y
+wait_frames 12
+validate text=Hello world
+validate bold=true
+
+# Edit menu shows the Repeat item.
+menu_open Edit
+wait_frames 12
+validate menu_item_Repeat=true
+screenshot repeat_menu

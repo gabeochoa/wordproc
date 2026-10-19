@@ -240,6 +240,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 18:  // Go To Bookmark...
                     dialogs.showBookmarkListDialog = true;
                     break;
+                case 20:  // Repeat (F4)
+                    cmd::repeatLastAction(doc);
+                    break;
                 default:
                     break;
             }
@@ -352,7 +355,6 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
             }
         } else if (menuIndex == 4) {  // Format menu
-            TextStyle style = doc.buffer.textStyle();
             // "Font..." is item 0, so every item below it dispatches
             // on itemIndex - 1 and the old case numbers are unchanged.
             if (itemIndex == 0) {  // Font...
@@ -362,39 +364,39 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 dialogs.fontDialogColorDropdownOpen = false;
             } else switch (itemIndex - 1) {
                 case 0:  // Normal
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Normal);
                     toast_notify::info("Style: Normal");
                     break;
                 case 1:  // Title
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Title);
                     toast_notify::info("Style: Title");
                     break;
                 case 2:  // Subtitle
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Subtitle);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Subtitle);
                     toast_notify::info("Style: Subtitle");
                     break;
                 case 3:  // Heading 1
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Heading1);
                     toast_notify::info("Style: Heading 1");
                     break;
                 case 4:  // Heading 2
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Heading2);
                     toast_notify::info("Style: Heading 2");
                     break;
                 case 5:  // Heading 3
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading3);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Heading3);
                     toast_notify::info("Style: Heading 3");
                     break;
                 case 6:  // Heading 4
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading4);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Heading4);
                     toast_notify::info("Style: Heading 4");
                     break;
                 case 7:  // Heading 5
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading5);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Heading5);
                     toast_notify::info("Style: Heading 5");
                     break;
                 case 8:  // Heading 6
-                    doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Heading6);
+                    cmd::setParagraphStyle(doc, ParagraphStyle::Heading6);
                     toast_notify::info("Style: Heading 6");
                     break;
                 case 10:  // Bold
@@ -416,92 +418,74 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     cmd::toggleSubscript(doc);
                     break;
                 case 20:  // Align Left
-                    doc.buffer.setCurrentAlignment(TextAlignment::Left);
+                    cmd::setAlignment(doc, TextAlignment::Left);
                     toast_notify::info("Align: Left");
                     break;
                 case 21:  // Align Center
-                    doc.buffer.setCurrentAlignment(TextAlignment::Center);
+                    cmd::setAlignment(doc, TextAlignment::Center);
                     toast_notify::info("Align: Center");
                     break;
                 case 22:  // Align Right
-                    doc.buffer.setCurrentAlignment(TextAlignment::Right);
+                    cmd::setAlignment(doc, TextAlignment::Right);
                     toast_notify::info("Align: Right");
                     break;
                 case 23:  // Justify
-                    doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+                    cmd::setAlignment(doc, TextAlignment::Justify);
                     toast_notify::info("Align: Justify");
                     break;
                 case 25:  // Text: Black
-                    style.textColor = TextColors::Black;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Black);
                     break;
                 case 26:  // Text: Red
-                    style.textColor = TextColors::Red;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Red);
                     break;
                 case 27:  // Text: Orange
-                    style.textColor = TextColors::Orange;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Orange);
                     break;
                 case 28:  // Text: Green
-                    style.textColor = TextColors::Green;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Green);
                     break;
                 case 29:  // Text: Blue
-                    style.textColor = TextColors::Blue;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Blue);
                     break;
                 case 30:  // Text: Purple
-                    style.textColor = TextColors::Purple;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Purple);
                     break;
                 case 31:  // Text: Gray
-                    style.textColor = TextColors::Gray;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setTextColor(doc, TextColors::Gray);
                     break;
                 case 33:  // Highlight: None
-                    style.highlightColor = HighlightColors::None;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setHighlightColor(doc, HighlightColors::None);
                     break;
                 case 34:  // Highlight: Yellow
-                    style.highlightColor = HighlightColors::Yellow;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setHighlightColor(doc, HighlightColors::Yellow);
                     break;
                 case 35:  // Highlight: Green
-                    style.highlightColor = HighlightColors::Green;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setHighlightColor(doc, HighlightColors::Green);
                     break;
                 case 36:  // Highlight: Cyan
-                    style.highlightColor = HighlightColors::Cyan;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setHighlightColor(doc, HighlightColors::Cyan);
                     break;
                 case 37:  // Highlight: Pink
-                    style.highlightColor = HighlightColors::Pink;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setHighlightColor(doc, HighlightColors::Pink);
                     break;
                 case 38:  // Highlight: Orange
-                    style.highlightColor = HighlightColors::Orange;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setHighlightColor(doc, HighlightColors::Orange);
                     break;
                 case 40:  // Font: Gaegu
-                    style.font = "Gaegu-Bold";
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFont(doc, "Gaegu-Bold");
                     break;
                 case 41:  // Font: Garamond
-                    style.font = "EBGaramond-Regular";
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFont(doc, "EBGaramond-Regular");
                     break;
                 case 43:  // Increase Size
-                    style.fontSize = std::min(72, style.fontSize + 2);
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFontSize(doc, std::min(72, doc.buffer.textStyle().fontSize + 2));
                     break;
                 case 44:  // Decrease Size
-                    style.fontSize = std::max(8, style.fontSize - 2);
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFontSize(doc, std::max(8, doc.buffer.textStyle().fontSize - 2));
                     break;
                 case 45:  // Reset Size
-                    style.fontSize = 16;
-                    doc.buffer.setTextStyle(style);
+                    cmd::setFontSize(doc, 16);
                     break;
                 case 47:  // Paragraph...
                     // Seed the dialog from the caret paragraph; OK
@@ -550,47 +534,47 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 case 48:  // Align Left
-                    doc.buffer.setCurrentAlignment(TextAlignment::Left);
+                    cmd::setAlignment(doc, TextAlignment::Left);
                     toast_notify::info("Align: Left");
                     break;
                 case 49:  // Align Center
-                    doc.buffer.setCurrentAlignment(TextAlignment::Center);
+                    cmd::setAlignment(doc, TextAlignment::Center);
                     toast_notify::info("Align: Center");
                     break;
                 case 50:  // Align Right
-                    doc.buffer.setCurrentAlignment(TextAlignment::Right);
+                    cmd::setAlignment(doc, TextAlignment::Right);
                     toast_notify::info("Align: Right");
                     break;
                 case 51:  // Justify
-                    doc.buffer.setCurrentAlignment(TextAlignment::Justify);
+                    cmd::setAlignment(doc, TextAlignment::Justify);
                     toast_notify::info("Align: Justify");
                     break;
                 case 53:  // Increase Indent
-                    doc.buffer.increaseIndent();
+                    cmd::increaseIndent(doc);
                     toast_notify::info("Indent increased");
                     break;
                 case 54:  // Decrease Indent
-                    doc.buffer.decreaseIndent();
+                    cmd::decreaseIndent(doc);
                     toast_notify::info("Indent decreased");
                     break;
                 case 56:  // Single Spacing
-                    doc.buffer.setLineSpacingSingle();
+                    cmd::setLineSpacing(doc, 100);
                     toast_notify::info("Line spacing: Single");
                     break;
                 case 57:  // 1.5 Line Spacing
-                    doc.buffer.setLineSpacing1_5();
+                    cmd::setLineSpacing(doc, 150);
                     toast_notify::info("Line spacing: 1.5");
                     break;
                 case 58:  // Double Spacing
-                    doc.buffer.setLineSpacingDouble();
+                    cmd::setLineSpacing(doc, 200);
                     toast_notify::info("Line spacing: Double");
                     break;
                 case 60:  // Bulleted List
-                    doc.buffer.toggleBulletedList();
+                    cmd::toggleBulletedList(doc);
                     toast_notify::info(doc.buffer.currentListType() == ListType::Bulleted ? "Bullets on" : "Bullets off");
                     break;
                 case 61:  // Numbered List
-                    doc.buffer.toggleNumberedList();
+                    cmd::toggleNumberedList(doc);
                     toast_notify::info(doc.buffer.currentListType() == ListType::Numbered ? "Numbering on" : "Numbering off");
                     break;
                 case 62:  // Increase List Level
@@ -602,19 +586,19 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("List level decreased");
                     break;
                 case 65:  // Increase Space Before
-                    doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() + 6);
+                    cmd::setSpaceBefore(doc, doc.buffer.currentSpaceBefore() + 6);
                     toast_notify::info("Space before increased");
                     break;
                 case 66:  // Decrease Space Before
-                    doc.buffer.setCurrentSpaceBefore(doc.buffer.currentSpaceBefore() - 6);
+                    cmd::setSpaceBefore(doc, doc.buffer.currentSpaceBefore() - 6);
                     toast_notify::info("Space before decreased");
                     break;
                 case 67:  // Increase Space After
-                    doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() + 6);
+                    cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() + 6);
                     toast_notify::info("Space after increased");
                     break;
                 case 68:  // Decrease Space After
-                    doc.buffer.setCurrentSpaceAfter(doc.buffer.currentSpaceAfter() - 6);
+                    cmd::setSpaceAfter(doc, doc.buffer.currentSpaceAfter() - 6);
                     toast_notify::info("Space after decreased");
                     break;
                 case 70:  // Drop Cap

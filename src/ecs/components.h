@@ -11,6 +11,7 @@
 #include "../editor/version_history.h"
 #include "../editor/font_dialog.h"
 #include "../editor/format_painter.h"
+#include "../editor/repeat.h"
 #include "../editor/spell_squiggles.h"
 #include "../editor/spellcheck.h"
 #include "../editor/thesaurus.h"
@@ -140,6 +141,11 @@ struct DocumentComponent : public afterhours::BaseComponent {
 
     // AutoCorrect engine + toggles (Tools > AutoCorrect...).
     AutoCorrect autoCorrect;
+
+    // Edit > Repeat (F4): the last repeatable action, closure-free
+    // (see src/editor/repeat.h). The command layer records after
+    // each repeatable command; Repeat re-applies it.
+    ActionRecord repeatRecord;
 
     // Drawings/shapes embedded in the document
     DrawingCollection drawings;

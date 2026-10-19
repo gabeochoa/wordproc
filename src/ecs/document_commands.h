@@ -207,7 +207,11 @@ inline bool applyChipPopup(DocumentComponent& doc, DialogState& dialogs) {
     bool ok = chips::insertChipAt(doc.buffer, doc.chips, at, caret,
                                   item.kind, item.label);
     dialogs.showChipPopup = false;
-    if (ok) doc.isDirty = true;
+    if (ok) {
+        doc.isDirty = true;
+        // A chip insert is not a repeatable typed run.
+        repeat::clear(doc.repeatRecord);
+    }
     return ok;
 }
 
@@ -370,6 +374,7 @@ inline bool openTemplateAsNew(DocumentComponent& doc, MenuComponent& menu,
     doc.comments.clear();
     doc.revisions.clear();
     doc.chips.clear();
+    doc.repeatRecord = ActionRecord{};
     doc.trackChangesBaseline.clear();
     doc.docSettings = tmpSettings;
     templates::adoptTemplate(doc.buffer, tmp, tmpSettings);
@@ -389,6 +394,7 @@ inline void newDocument(DocumentComponent& doc) {
     doc.comments.clear();
     doc.revisions.clear();
     doc.chips.clear();
+    doc.repeatRecord = ActionRecord{};
     doc.trackChangesBaseline.clear();
 }
 
@@ -445,6 +451,7 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
         doc.comments.clear();
         doc.revisions.clear();
         doc.chips.clear();
+        doc.repeatRecord = ActionRecord{};
         syncSettingsToLayout(doc, layout);
         refreshMenuBar(menu, doc, path);
         toast_notify::success(
@@ -477,6 +484,8 @@ inline bool redo(DocumentComponent& doc) {
 }
 
 inline void cut(DocumentComponent& doc) {
+    // Cut is not repeatable: it clears the Repeat record.
+    repeat::clear(doc.repeatRecord);
     if (doc.buffer.hasSelection()) {
         std::string selected = doc.buffer.getSelectedText();
         if (!selected.empty()) {
@@ -505,7 +514,26 @@ inline void paste(DocumentComponent& doc) {
         recordInsertRevision(doc, offset, clipText);
         doc.buffer.insertText(clipText);
         doc.isDirty = true;
+        doc.repeatRecord = repeat::setText(RepeatKind::Paste, clipText);
     }
+}
+
+// --- Typed text (TextInputSystem): one typed unit (a char, a smart
+// quote, a Tab's spaces, a newline) inserts through the buffer and
+// coalesces into the Repeat InsertText run (repeat::noteTyped).
+// Revision records mirror the plain insertChar path below.
+inline void insertTypedText(DocumentComponent& doc, const std::string& text) {
+    if (text.empty()) return;
+    std::size_t offset = doc.buffer.caretOffset();
+    bool hadSelection = doc.buffer.hasSelection();
+    repeat::noteTyped(doc.repeatRecord, text, offset, hadSelection);
+    recordInsertRevision(doc, offset, text);
+    doc.buffer.insertText(text);
+    doc.isDirty = true;
+}
+
+inline void insertTypedChar(DocumentComponent& doc, char ch) {
+    insertTypedText(doc, std::string(1, ch));
 }
 
 inline void selectAll(DocumentComponent& doc) {
@@ -1028,6 +1056,9 @@ inline bool tryAutoCorrect(DocumentComponent& doc, char delimiter) {
     recordInsertRevision(doc, start, replacement);
     buffer.replaceRange(start, word.size(), replacement);
     doc.isDirty = true;
+    // An AutoCorrect fix is not a repeatable typed run: the "teh"
+    // run must not survive to be re-inserted by F4.
+    repeat::clear(doc.repeatRecord);
     return true;
 }
 
@@ -1258,24 +1289,30 @@ inline void toggleBold(DocumentComponent& doc) {
     TextStyle style = doc.buffer.textStyle();
     style.bold = !style.bold;
     doc.buffer.setTextStyle(style);
+    doc.repeatRecord = repeat::setBool(RepeatKind::SetBold, style.bold);
 }
 
 inline void toggleItalic(DocumentComponent& doc) {
     TextStyle style = doc.buffer.textStyle();
     style.italic = !style.italic;
     doc.buffer.setTextStyle(style);
+    doc.repeatRecord = repeat::setBool(RepeatKind::SetItalic, style.italic);
 }
 
 inline void toggleUnderline(DocumentComponent& doc) {
     TextStyle style = doc.buffer.textStyle();
     style.underline = !style.underline;
     doc.buffer.setTextStyle(style);
+    doc.repeatRecord =
+        repeat::setBool(RepeatKind::SetUnderline, style.underline);
 }
 
 inline void toggleStrikethrough(DocumentComponent& doc) {
     TextStyle style = doc.buffer.textStyle();
     style.strikethrough = !style.strikethrough;
     doc.buffer.setTextStyle(style);
+    doc.repeatRecord =
+        repeat::setBool(RepeatKind::SetStrikethrough, style.strikethrough);
 }
 
 inline void toggleSuperscript(DocumentComponent& doc) {
@@ -1283,6 +1320,8 @@ inline void toggleSuperscript(DocumentComponent& doc) {
     style.superscript = !style.superscript;
     if (style.superscript) style.subscript = false;
     doc.buffer.setTextStyle(style);
+    doc.repeatRecord =
+        repeat::setBool(RepeatKind::SetSuperscript, style.superscript);
 }
 
 inline void toggleSubscript(DocumentComponent& doc) {
@@ -1290,7 +1329,145 @@ inline void toggleSubscript(DocumentComponent& doc) {
     style.subscript = !style.subscript;
     if (style.subscript) style.superscript = false;
     doc.buffer.setTextStyle(style);
+    doc.repeatRecord =
+        repeat::setBool(RepeatKind::SetSubscript, style.subscript);
 }
+
+// --- Format applications (menu / toolbar / shortcuts share these) ---
+// Each applies the same buffer write the old direct call made, then
+// records the RESULTING value for Edit > Repeat (F4).
+
+inline void setParagraphStyle(DocumentComponent& doc, ParagraphStyle style) {
+    doc.buffer.setCurrentParagraphStyle(style);
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetParagraphStyle,
+                                      static_cast<int>(style));
+}
+
+inline void setAlignment(DocumentComponent& doc, TextAlignment align) {
+    doc.buffer.setCurrentAlignment(align);
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetAlignment,
+                                      static_cast<int>(align));
+    doc.isDirty = true;
+}
+
+inline void setFontSize(DocumentComponent& doc, int size) {
+    TextStyle style = doc.buffer.textStyle();
+    style.fontSize = size;
+    doc.buffer.setTextStyle(style);
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetFontSize, size);
+}
+
+inline void setFont(DocumentComponent& doc, const std::string& font) {
+    TextStyle style = doc.buffer.textStyle();
+    style.font = font;
+    doc.buffer.setTextStyle(style);
+    doc.repeatRecord = repeat::setText(RepeatKind::SetFont, font);
+}
+
+inline void setTextColor(DocumentComponent& doc, TextColor color) {
+    TextStyle style = doc.buffer.textStyle();
+    style.textColor = color;
+    doc.buffer.setTextStyle(style);
+    doc.repeatRecord = repeat::setColor(RepeatKind::SetTextColor, color);
+}
+
+inline void setHighlightColor(DocumentComponent& doc, TextColor color) {
+    TextStyle style = doc.buffer.textStyle();
+    style.highlightColor = color;
+    doc.buffer.setTextStyle(style);
+    doc.repeatRecord =
+        repeat::setColor(RepeatKind::SetHighlightColor, color);
+}
+
+inline void increaseIndent(DocumentComponent& doc) {
+    doc.buffer.increaseIndent();
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetLeftIndent,
+                                      doc.buffer.currentLeftIndent());
+}
+
+inline void decreaseIndent(DocumentComponent& doc) {
+    doc.buffer.decreaseIndent();
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetLeftIndent,
+                                      doc.buffer.currentLeftIndent());
+}
+
+inline void setLineSpacing(DocumentComponent& doc, int spacingTimes100) {
+    if (spacingTimes100 == 100) {
+        doc.buffer.setLineSpacingSingle();
+    } else if (spacingTimes100 == 150) {
+        doc.buffer.setLineSpacing1_5();
+    } else if (spacingTimes100 == 200) {
+        doc.buffer.setLineSpacingDouble();
+    } else {
+        return;
+    }
+    doc.repeatRecord =
+        repeat::setInt(RepeatKind::SetLineSpacing, spacingTimes100);
+}
+
+inline void toggleBulletedList(DocumentComponent& doc) {
+    doc.buffer.toggleBulletedList();
+    doc.repeatRecord = repeat::setInt(
+        RepeatKind::SetListType,
+        static_cast<int>(doc.buffer.currentListType()));
+}
+
+inline void toggleNumberedList(DocumentComponent& doc) {
+    doc.buffer.toggleNumberedList();
+    doc.repeatRecord = repeat::setInt(
+        RepeatKind::SetListType,
+        static_cast<int>(doc.buffer.currentListType()));
+}
+
+inline void setSpaceBefore(DocumentComponent& doc, int pixels) {
+    doc.buffer.setCurrentSpaceBefore(pixels);
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetSpaceBefore, pixels);
+}
+
+inline void setSpaceAfter(DocumentComponent& doc, int pixels) {
+    doc.buffer.setCurrentSpaceAfter(pixels);
+    doc.repeatRecord = repeat::setInt(RepeatKind::SetSpaceAfter, pixels);
+}
+
+// --- Edit > Repeat (F4) ---
+// Re-applies doc.repeatRecord at the current caret/selection.
+// Text kinds (InsertText / Paste) go through replaceRange with
+// revision records (one undo step); formatting kinds go through
+// repeat::apply. Repeat never records itself. Empty history is a
+// no-op with a status-bar flash ("Nothing to repeat").
+inline bool repeatLastAction(DocumentComponent& doc) {
+    if (!repeat::hasAction(doc.repeatRecord)) {
+        flashStatusConfirmation("Nothing to repeat");
+        return false;
+    }
+    ActionRecord record = doc.repeatRecord;
+    if (record.kind == RepeatKind::InsertText ||
+        record.kind == RepeatKind::Paste) {
+        std::size_t offset = doc.buffer.caretOffset();
+        std::size_t length = 0;
+        if (doc.buffer.hasSelection()) {
+            offset = doc.buffer.offsetForPosition(
+                doc.buffer.selectionStart());
+            length = doc.buffer.offsetForPosition(
+                         doc.buffer.selectionEnd()) -
+                     offset;
+        }
+        std::string oldText;
+        oldText.reserve(length);
+        for (std::size_t i = 0; i < length; ++i) {
+            oldText.push_back(doc.buffer.charAtOffset(offset + i));
+        }
+        if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
+        recordInsertRevision(doc, offset, record.text);
+        doc.buffer.clearSelection();
+        doc.buffer.replaceRange(offset, length, record.text);
+    } else {
+        repeat::apply(doc.buffer, record);
+    }
+    doc.isDirty = true;
+    return true;
+}
+
 
 }  // namespace cmd
 }  // namespace ecs

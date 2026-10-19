@@ -81,7 +81,9 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"Find Previous", "Shift+F3", true, false, nullptr},// 15
                       {"Replace...", "Ctrl+H", true, false, nullptr},     // 16
                       {"", "", false, true, nullptr},                     // 17 Separator
-                      {"Go To Bookmark...", "", true, false, nullptr}};   // 18
+                      {"Go To Bookmark...", "", true, false, nullptr},  // 18
+                      {"", "", false, true, nullptr},                     // 19 Separator
+                      {"Repeat", "F4", true, false, nullptr}};            // 20
     menus.push_back(editMenu);
 
     // View menu

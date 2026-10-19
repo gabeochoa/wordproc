@@ -40,6 +40,7 @@ enum class Action {
     // Undo/Redo
     Undo,
     Redo,
+    Repeat,  // F4 - repeat last repeatable action (Ctrl+Y stays Redo)
 
     // File operations
     New,

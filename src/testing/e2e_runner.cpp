@@ -129,6 +129,7 @@ static void setupCallbacks(
         docComp.drawings.clear();
         docComp.equations.clear();
         docComp.comments.clear();
+        docComp.repeatRecord = ActionRecord{};
         docComp.isDirty = false;
         docComp.filePath.clear();
         docComp.spellChecker.clearIgnoreList();
@@ -451,6 +452,9 @@ static void setupCallbacksEx(
         if (prop == "grammar_error_count") return std::to_string(dialogState.grammarErrors.size());
         // Thesaurus dialog state: current word, synonym count, and
         // comma-joined synonyms (for the Replace target + list).
+        // Edit > Repeat (F4): kind of the stored repeatable action.
+        if (prop == "repeat_kind")
+            return repeat::kindName(docComp.repeatRecord);
         if (prop == "thesaurus_current") return dialogState.thesaurusCurrentWord;
         if (prop == "thesaurus_lookup") return dialogState.thesaurusLookupStr;
         if (prop == "thesaurus_synonym_count")
@@ -1125,6 +1129,7 @@ static void setupCallbacksEx(
         docComp.comments.clear();
         docComp.revisions.clear();
         docComp.chips.clear();
+        docComp.repeatRecord = ActionRecord{};
         docComp.trackChangesEnabled = false;
         docComp.trackChangesBaseline.clear();
         docComp.docSettings = DocumentSettings{};

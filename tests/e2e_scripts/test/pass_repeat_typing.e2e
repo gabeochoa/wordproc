@@ -1,0 +1,44 @@
+# Test: Edit > Repeat (F4) repeats a typed run, and pastes again
+# Empty history is a no-op with a "Nothing to repeat" status flash.
+# Type "ab", move the caret, F4 -> "ab" again; F4 again repeats again.
+# Paste then F4 pastes the same text again.
+
+key F4
+wait_frames 12
+validate status_text=Nothing to repeat
+validate text=
+validate repeat_kind=none
+
+type "ab"
+wait_frames 12
+validate repeat_kind=insert
+
+# Move the caret away and back: the typing run stays "ab".
+key LEFT
+wait_frames 6
+key RIGHT
+wait_frames 6
+
+key F4
+wait_frames 12
+validate text=abab
+
+key F4
+wait_frames 12
+validate text=ababab
+
+# Copy the whole run, paste at the end, F4 pastes it again.
+key CTRL+A
+wait_frames 6
+key CTRL+C
+wait_frames 6
+key END
+wait_frames 6
+key CTRL+V
+wait_frames 12
+validate repeat_kind=paste
+validate text_length=12
+
+key F4
+wait_frames 12
+validate text_length=18

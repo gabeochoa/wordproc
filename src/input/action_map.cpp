@@ -135,6 +135,8 @@ const char* ActionMap::actionName(Action action) {
             return "Undo";
         case Action::Redo:
             return "Redo";
+        case Action::Repeat:
+            return "Repeat";
         case Action::New:
             return "New";
         case Action::Open:
@@ -342,6 +344,7 @@ static void bindWindowsPreset(ActionMap& map) {
     map.bind({afterhours::keys::V, true, false, false}, Action::Paste);
     map.bind({afterhours::keys::Z, true, false, false}, Action::Undo);
     map.bind({afterhours::keys::Y, true, false, false}, Action::Redo);
+    map.bind({afterhours::keys::F4, false, false, false}, Action::Repeat);
 
     // File operations: Ctrl+key
     map.bind({afterhours::keys::N, true, false, false}, Action::New);
@@ -453,9 +456,14 @@ static void bindMacOSPreset(ActionMap& map) {
     map.bind({afterhours::keys::X, true, false, false}, Action::Cut);
     map.bind({afterhours::keys::V, true, false, false}, Action::Paste);
 
-    // Undo: Cmd+Z, Redo: Cmd+Shift+Z (macOS style)
+    // Undo: Cmd+Z, Redo: Cmd+Shift+Z (macOS style) plus Ctrl+Y:
+    // the menu labels Redo as Ctrl+Y on both platforms, and F4
+    // (Repeat) must never steal it, so Ctrl+Y stays a Redo binding
+    // here too instead of a dead label.
     map.bind({afterhours::keys::Z, true, false, false}, Action::Undo);
     map.bind({afterhours::keys::Z, true, true, false}, Action::Redo);  // Cmd+Shift+Z
+    map.bind({afterhours::keys::Y, true, false, false}, Action::Redo);  // Ctrl+Y
+    map.bind({afterhours::keys::F4, false, false, false}, Action::Repeat);
 
     // File operations: Cmd+key (Ctrl as substitute)
     map.bind({afterhours::keys::N, true, false, false}, Action::New);
@@ -612,6 +620,8 @@ const char* actionDisplayName(Action action) {
             return "Undo";
         case Action::Redo:
             return "Redo";
+        case Action::Repeat:
+            return "Repeat";
         case Action::New:
             return "New Document";
         case Action::Open:
@@ -985,6 +995,7 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     // Undo/Redo
     addBinding(Action::Undo, {afterhours::keys::Z, true, false, false});
     addBinding(Action::Redo, {afterhours::keys::Y, true, false, false});
+    addBinding(Action::Repeat, {afterhours::keys::F4, false, false, false});  // F4
 
     // File
     addBinding(Action::New, {afterhours::keys::N, true, false, false});
