@@ -1,8 +1,10 @@
 # P0-7: toolbar tooltip appears only after ~0.5s of steady hover, in
 # Win95 style (pale yellow #FFFFE1, 1px black border, 4px/2px padding).
-# Save button center is (79, 76) at 1280x720 / ui_scale 1.2; the tooltip
-# lands just below it at about y=92.
-mouse_move 79 76
+# Print Preview button center is (110, 76) at 1280x720 / ui_scale 1.2;
+# the tooltip lands just below it at about y=92. (79, 76) was the old
+# coordinate: it lands in the 1px gap between buttons, so no tooltip
+# ever appeared in the after-delay screenshot.
+mouse_move 110 76
 wait_frames 6
 screenshot p0_tooltip_before_delay
 wait_frames 900
