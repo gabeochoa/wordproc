@@ -8,6 +8,7 @@
 #include "../util/clipboard.h"
 #include "../editor/date_time.h"
 #include "../editor/document_io.h"
+#include "../editor/revisions.h"
 #include "../editor/outline_view.h"
 #include "../editor/templates.h"
 #include "../editor/export/export_pdf.h"
@@ -40,6 +41,7 @@ inline void recordInsertRevision(DocumentComponent& doc, std::size_t offset,
     rev.type = RevisionType::Insert;
     rev.startOffset = offset;
     rev.text = text;
+    rev.author = "Gabe";
     rev.timestamp = std::time(nullptr);
     doc.revisions.push_back(rev);
 }
@@ -51,8 +53,50 @@ inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
     rev.type = RevisionType::Delete;
     rev.startOffset = offset;
     rev.text = text;
+    rev.author = "Gabe";
     rev.timestamp = std::time(nullptr);
     doc.revisions.push_back(rev);
+}
+
+// --- Suggesting mode: per-revision accept/reject (revisions.h) ---
+// Accept makes the change permanent, Reject makes it as if the
+// change never happened; each is one undo step via replaceRange.
+// Accept All / Reject All resolve every record; after either, the
+// baseline (the pre-tracking snapshot) equals the current buffer.
+
+inline bool acceptRevision(DocumentComponent& doc, std::size_t index) {
+    if (!revisions::acceptRevision(doc.buffer, doc.revisions, index)) {
+        return false;
+    }
+    // Resolving a revision is a document change even when the text
+    // itself does not move (the common accept case).
+    doc.isDirty = true;
+    return true;
+}
+
+inline bool rejectRevision(DocumentComponent& doc, std::size_t index) {
+    if (!revisions::rejectRevision(doc.buffer, doc.revisions, index)) {
+        return false;
+    }
+    doc.isDirty = true;
+    return true;
+}
+
+inline void acceptAllRevisions(DocumentComponent& doc) {
+    revisions::acceptAllRevisions(doc.buffer, doc.revisions);
+    doc.trackChangesBaseline = doc.buffer.getText();
+    toast_notify::success("All changes accepted");
+}
+
+inline void rejectAllRevisions(DocumentComponent& doc) {
+    // Reverse-apply (not the old baseline restore, which replaced the
+    // whole buffer in one history-less setText and also discarded
+    // edits made while tracking was off). Each reject is one undo
+    // step, so Reject All is undoable revision by revision.
+    revisions::rejectAllRevisions(doc.buffer, doc.revisions);
+    doc.trackChangesBaseline = doc.buffer.getText();
+    doc.isDirty = true;
+    toast_notify::success("All changes rejected");
 }
 
 // --- Layout <-> DocumentSettings sync ---

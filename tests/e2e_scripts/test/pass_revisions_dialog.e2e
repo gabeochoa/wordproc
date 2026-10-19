@@ -1,0 +1,58 @@
+# Test: Suggesting mode + Tools > Revisions... dialog
+# With Track Changes on, typing records Insert revisions and
+# Backspace records a Delete revision. The Revisions dialog lists
+# both kinds; Accept keeps an insert, Reject restores a deleted
+# character, and Edit > Reject All Changes rejects the rest.
+
+menu_open Edit
+wait_frames 12
+menu_select "Track Changes"
+wait_frames 12
+validate track_changes_enabled=true
+
+type "abc"
+wait_frames 12
+key BACKSPACE
+wait_frames 12
+validate revision_count=4
+validate text=ab
+
+menu_open Tools
+wait_frames 12
+menu_select "Revisions..."
+wait_frames 12
+validate dialog_open=Revisions
+expect_text "Insert"
+expect_text "Delete"
+
+screenshot revisions_dialog
+
+# Accept the first revision (Insert "a"): text unchanged, one fewer record
+click_ui revision_item_0
+wait_frames 12
+click_ui revision_accept
+wait_frames 12
+validate revision_count=3
+validate text=ab
+
+# Reject the Delete revision (now index 2): the deleted "c" comes back
+click_ui revision_item_2
+wait_frames 12
+click_ui revision_reject
+wait_frames 12
+validate revision_count=2
+validate text=abc
+
+click_ui revision_close
+wait_frames 12
+
+screenshot revisions
+
+# Reject All rejects the two remaining inserts ("a" was accepted,
+# so it stays)
+menu_open Edit
+wait_frames 12
+menu_select "Reject All Changes"
+wait_frames 12
+validate revision_count=0
+validate text=a

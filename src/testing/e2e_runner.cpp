@@ -454,6 +454,7 @@ static void setupCallbacksEx(
             if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
+            if (dialogState.showRevisionsDialog) return "Revisions";
             return "false";
         }
         if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";

@@ -14,6 +14,7 @@
 #include <afterhours/src/drawing_helpers.h>
 #include "../editor/columns_math.h"
 #include "../editor/outline_view.h"
+#include "../editor/revisions.h"
 #include "../editor/scroll_math.h"
 #include "../editor/table.h"
 #include "../input/action_map.h"
@@ -240,9 +241,31 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              // Margin comments (Docs-era): the anchored
                              // ranges highlight pale yellow; the cards
                              // themselves are UI in MenuUISystem.
-                             const std::vector<Comment>* comments = nullptr) {
+                             const std::vector<Comment>* comments = nullptr,
+                             // Tracked inserts (suggesting mode): green
+                             // underline while the recorded text still
+                             // matches the buffer at the offset.
+                             // Deletes have no in-text render (see
+                             // revisions.h); they live in the dialog.
+                             const std::vector<Revision>* revisions = nullptr) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
+
+    // Verified tracked inserts, computed once per render (not per
+    // line): only revisions whose text still matches the buffer at
+    // their offset render; a stale revision draws nothing rather
+    // than underlining the wrong text.
+    std::vector<std::pair<std::size_t, std::size_t>> verifiedInserts;
+    if (revisions) {
+        for (const auto& rev : *revisions) {
+            if (rev.type != RevisionType::Insert) continue;
+            if (revisions::bufferMatchesAt(buffer, rev.startOffset,
+                                           rev.text)) {
+                verifiedInserts.emplace_back(
+                    rev.startOffset, rev.startOffset + rev.text.size());
+            }
+        }
+    }
     const std::vector<SpellSquiggle>* squiggles =
         spellCache ? &spellCache->squiggles : nullptr;
     std::size_t lineCount = buffer.lineCount();
@@ -859,6 +882,44 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
 
+        // Draw green underlines under tracked inserts (suggesting
+        // mode). Same origin/column mapping as the squiggles above;
+        // drop-cap lines are skipped for the same shift reason.
+        if (!verifiedInserts.empty() && !span.hasDropCap) {
+            const int underlineY = y + lineFontSize + 1;
+            const afterhours::Color green{0, 128, 0, 255};
+            for (const auto& range : verifiedInserts) {
+                std::size_t segBegin =
+                    std::max(range.first, span.offset);
+                std::size_t segEnd =
+                    std::min(range.second, span.offset + span.length);
+                if (segBegin >= segEnd) continue;
+                std::size_t dispBegin = rawColumnToDisplayColumn(
+                    lineData, lineLen, segBegin - span.offset, tabWidth);
+                std::size_t dispEnd = rawColumnToDisplayColumn(
+                    lineData, lineLen, segEnd - span.offset, tabWidth);
+                dispBegin = std::min(dispBegin, displayLine.size());
+                dispEnd = std::min(std::max(dispEnd, dispBegin),
+                                   displayLine.size());
+                if (dispBegin >= dispEnd) continue;
+                float x1 = static_cast<float>(layoutTextX) +
+                           static_cast<float>(
+                               afterhours::graphics::measure_text(
+                                   displayLine.substr(0, dispBegin).c_str(),
+                                   lineFontSize));
+                float x2 = static_cast<float>(layoutTextX) +
+                           static_cast<float>(
+                               afterhours::graphics::measure_text(
+                                   displayLine.substr(0, dispEnd).c_str(),
+                                   lineFontSize));
+                if (x2 > x1) {
+                    afterhours::draw_line(static_cast<int>(x1), underlineY,
+                                          static_cast<int>(x2), underlineY,
+                                          green);
+                }
+            }
+        }
+
         // Draw caret
         if (caretVisible && row == caret.row) {
             std::string beforeCaret =
@@ -1322,7 +1383,8 @@ struct EditorRenderSystem
                              columnsSpacingPx, columnsLinesPerPage,
                              layout.outlineShowLevel,
                              &layout.outlineCollapsedRows,
-                             layout.previewMode ? nullptr : &doc.comments);
+                             layout.previewMode ? nullptr : &doc.comments,
+                             layout.previewMode ? nullptr : &doc.revisions);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
@@ -1333,7 +1395,8 @@ struct EditorRenderSystem
                              columnsSpacingPx, columnsLinesPerPage,
                              layout.outlineShowLevel,
                              &layout.outlineCollapsedRows,
-                             layout.previewMode ? nullptr : &doc.comments);
+                             layout.previewMode ? nullptr : &doc.comments,
+                             layout.previewMode ? nullptr : &doc.revisions);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1352,7 +1415,8 @@ struct EditorRenderSystem
                              columnsSpacingPx, columnsLinesPerPage,
                              layout.outlineShowLevel,
                              &layout.outlineCollapsedRows,
-                             layout.previewMode ? nullptr : &doc.comments);
+                             layout.previewMode ? nullptr : &doc.comments,
+                             layout.previewMode ? nullptr : &doc.revisions);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

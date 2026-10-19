@@ -27,7 +27,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Select All | Have | P0 | |
 | Find / Replace / Find Next-Prev | Have | P0 | dialog + F3/Shift+F3 |
 | Go To / Bookmarks | Partial | P1 | bookmark dialog + Go To Bookmark |
-| Track Changes (revise mode) | Partial | P1 | toggle + accept/reject all; no per-revision UI |
+| Track Changes (revise mode) | Partial | P1 | Batch 5: toggle + Accept/Reject All + per-revision Accept/Reject in Tools > Revisions...; typed inserts record Insert revisions and render green-underlined while matching; deletes are records only (see Docs-era row). Reject All reverse-applies through the command layer (one undo step per revision), replacing the old history-less baseline restore |
 | AutoCorrect | Have | P0 | replace-as-type + TWo-caps + sentence cap; Tools dialog (Batch 1) |
 | Repeat (F4) | Missing | P2 | |
 
@@ -121,6 +121,7 @@ honest about Word 95 itself.
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
 | Margin comments | Have | P1 | Batch 5 item 1: Insert > Comment... (author defaults to "Gabe", createdAt set) anchors a range highlighted pale yellow in the text; in Paged mode a card (white/yellow, 1px border, author + relative date + text) sits in the right margin connected to its anchor row, in Pageless it docks at the right edge of the text area; same-row cards stack; clicking a card moves the caret to the anchor start; Resolve removes the comment. Cards are UI (click_ui `comment_card_<i>` / `comment_resolve_<i>`), hidden in Print Preview and Focus mode; split view shows the top pane's cards. Honest partial: the author line requests Bold weight but the UI font has no bold variant registered, so it renders regular (same as other in-app Bold uses). Unit: relative-date labels; E2E `pass_margin_comments.e2e` (dialog add, card click -> caret 0,0, Resolve -> count 0) |
+| Suggesting mode + Revisions dialog | Have | P1 | Batch 5 item 2: Edit menu keeps the Word 95 term "Track Changes". When ON, typed insertions record Insert revisions (green-underlined in text while matching) and Backspace/Delete record Delete revisions. Tools > Revisions... (Win95 shell, Word 95 had one) lists type, author "Gabe", excerpt; Accept / Reject per selected row, Accept All / Reject All wired to the Edit-menu commands; each resolve is one undo step. Honest partial: deletions are NOT kept visible in the text — deleted text vanishes from the buffer (as before) and the Delete revision is a record in the dialog only. Rendering deleted text red-strikethrough in place would need the gap buffer to keep deleted text (per-character deleted flags / overlay shifting caret/selection math), which conflicts fundamentally with the gap buffer, so it is dialog-only by design, not faked. Unit: accept/reject insert/delete, re-anchor rules, reject-all replay, undo; E2E `pass_revisions_dialog.e2e` |
 
 ## Counts (from tables above, 2026-10-18)
 **Have 44 · Partial 14 · Missing 8** (after Batch 4 item 5, Columns) (66 grouped rows; several rows bundle

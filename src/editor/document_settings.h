@@ -338,6 +338,7 @@ struct Revision {
     RevisionType type = RevisionType::Insert;
     std::size_t startOffset = 0;
     std::string text;
+    std::string author = "Gabe";
     std::time_t timestamp = 0;
 };
 

@@ -258,6 +258,7 @@ inline std::vector<MenuData> createMenuBarData() {
                        {"", "", false, true},  // Separator
                        {"Grammar...", "", true, false},
                        {"AutoFormat...", "", true, false},
+                       {"Revisions...", "", true, false},
                        {"", "", false, true},  // Separator
                        {"Mail Merge...", "", false, false},
                        {"", "", false, true},  // Separator

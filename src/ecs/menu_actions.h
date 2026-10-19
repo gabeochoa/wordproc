@@ -146,17 +146,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 case 4:  // Accept All Changes
-                    doc.revisions.clear();
-                    doc.trackChangesBaseline = doc.buffer.getText();
-                    toast_notify::success("All changes accepted");
+                    cmd::acceptAllRevisions(doc);
                     break;
                 case 5:  // Reject All Changes
-                    if (!doc.trackChangesBaseline.empty()) {
-                        doc.buffer.setText(doc.trackChangesBaseline);
-                        doc.isDirty = true;
-                    }
-                    doc.revisions.clear();
-                    toast_notify::success("All changes rejected");
+                    cmd::rejectAllRevisions(doc);
                     break;
                 case 7:  // Cut
                     cmd::cut(doc);
@@ -881,11 +874,16 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 }
-                case 7:  // Mail Merge... — DISABLED: never dispatched
+                case 6:  // Revisions... (suggesting mode)
+                    dialogs.showRevisionsDialog = true;
+                    dialogs.revisionsSelected =
+                        doc.revisions.empty() ? -1 : 0;
+                    break;
+                case 8:  // Mail Merge... — DISABLED: never dispatched
                          // (menu item is enabled=false; the dialog code
                          // stays unreachable while disabled).
                     break;
-                case 9:  // Options...
+                case 10:  // Options...
                     dialogs.showOptionsDialog = true;
                     break;
                 default:

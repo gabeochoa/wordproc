@@ -3385,6 +3385,132 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
+        // Revisions dialog (Tools > Revisions...): Win95 shell listing
+        // the tracked revisions (type — author — excerpt). Accept /
+        // Reject act on the selected row; Accept All / Reject All
+        // are wired to the existing Edit-menu commands. Deletes are
+        // records only (see revisions.h: no keep-visible deleted
+        // text in the buffer), so the dialog is where they are
+        // visible; inserts additionally render green-underlined in
+        // the text while their text still matches the buffer.
+        if (dialogs.showRevisionsDialog) {
+            constexpr int REVISIONS_MODAL_ID = 50013;
+            auto result = afterhours::modal(ctx, mk(entity, REVISIONS_MODAL_ID),
+                dialogs.showRevisionsDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(480), afterhours::ui::h720(300),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Revisions", CONTENT_LAYER);
+
+                if (doc.revisions.empty()) {
+                    div(ctx, mk(result.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("No revisions to review.")
+                            .with_size(ComponentSize{percent(1.0f), h720(24)})
+                            .with_render_layer(CONTENT_LAYER));
+                } else {
+                    auto listContainer = div(ctx, mk(result.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(180)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_overflow(afterhours::ui::Overflow::Auto)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (listContainer) {
+                        for (std::size_t i = 0; i < doc.revisions.size(); ++i) {
+                            const Revision& rev = doc.revisions[i];
+                            const bool selected =
+                                static_cast<int>(i) == dialogs.revisionsSelected;
+                            test_input::register_visible_text(
+                                revisions::label(rev));
+                            if (button(ctx, mk(listContainer.ent(), 1000 + static_cast<int>(i)),
+                                ComponentConfig{}
+                                    .with_debug_name("revision_item_" + std::to_string(i))
+                                    .with_label(revisions::label(rev))
+                                    .with_size(ComponentSize{percent(1.0f), h720(26)})
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_cursor(afterhours::ui::CursorType::Pointer)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.revisionsSelected = static_cast<int>(i);
+                            }
+                        }
+                    }
+                }
+
+                auto clampSelection = [&]() {
+                    if (doc.revisions.empty()) {
+                        dialogs.revisionsSelected = -1;
+                    } else if (dialogs.revisionsSelected >=
+                               static_cast<int>(doc.revisions.size())) {
+                        dialogs.revisionsSelected =
+                            static_cast<int>(doc.revisions.size()) - 1;
+                    }
+                };
+
+                auto buttonRow = div(ctx, mk(result.ent(), 2),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(afterhours::ui::pixels(8))
+                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    auto dialogBtn = [&](int id, const char* debugName,
+                                         const char* label, auto&& onClick) {
+                        if (button(ctx, mk(buttonRow.ent(), id),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name(debugName)
+                                .with_label(label)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            onClick();
+                            clampSelection();
+                        }
+                    };
+                    dialogBtn(0, "revision_accept", "Accept", [&]() {
+                        if (dialogs.revisionsSelected >= 0) {
+                            cmd::acceptRevision(
+                                doc,
+                                static_cast<std::size_t>(dialogs.revisionsSelected));
+                        }
+                    });
+                    dialogBtn(1, "revision_reject", "Reject", [&]() {
+                        if (dialogs.revisionsSelected >= 0) {
+                            cmd::rejectRevision(
+                                doc,
+                                static_cast<std::size_t>(dialogs.revisionsSelected));
+                        }
+                    });
+                    dialogBtn(2, "revision_accept_all", "Accept All", [&]() {
+                        cmd::acceptAllRevisions(doc);
+                        dialogs.revisionsSelected = -1;
+                    });
+                    dialogBtn(3, "revision_reject_all", "Reject All", [&]() {
+                        cmd::rejectAllRevisions(doc);
+                        dialogs.revisionsSelected = -1;
+                    });
+                    dialogBtn(4, "revision_close", "Close", [&]() {
+                        dialogs.showRevisionsDialog = false;
+                    });
+                }
+            }
+        }
+
         // Margin comment cards (Docs comments, Win95 dress): one card
         // per comment, anchored to its anchor row. Paged mode: the
         // card sits in the page's right margin (text right + 8, kept
@@ -3567,7 +3693,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&
             !dialogs.showSettingsDialog && !dialogs.showBookmarkListDialog &&
-            !dialogs.showSaveAsDialog && !dialogs.showPageSetup) {
+            !dialogs.showSaveAsDialog && !dialogs.showPageSetup &&
+            !dialogs.showRevisionsDialog) {
             if (input::isMouseButtonPressed(1)) {
                 auto mousePos = input::getMousePosition();
                 dialogs.showContextMenu = true;

@@ -231,8 +231,8 @@ TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
     REQUIRE(view != nullptr);
 
     // Tools: Spelling, Word Count, AutoCorrect, sep, Grammar,
-    // AutoFormat, sep, Mail Merge, sep, Options.
-    REQUIRE(tools->items.size() == 10);
+    // AutoFormat, Revisions..., sep, Mail Merge, sep, Options.
+    REQUIRE(tools->items.size() == 11);
     REQUIRE(tools->items[0].label == "Spelling...");
     REQUIRE(tools->items[0].shortcut == "F7");
     REQUIRE(tools->items[1].label == "Word Count...");
@@ -240,11 +240,12 @@ TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
     REQUIRE(tools->items[3].isSeparator);
     REQUIRE(tools->items[4].label == "Grammar...");
     REQUIRE(tools->items[5].label == "AutoFormat...");
-    REQUIRE(tools->items[6].isSeparator);
-    REQUIRE(tools->items[7].label == "Mail Merge...");
-    REQUIRE(tools->items[7].enabled == false);
-    REQUIRE(tools->items[8].isSeparator);
-    REQUIRE(tools->items[9].label == "Options...");
+    REQUIRE(tools->items[6].label == "Revisions...");
+    REQUIRE(tools->items[7].isSeparator);
+    REQUIRE(tools->items[8].label == "Mail Merge...");
+    REQUIRE(tools->items[8].enabled == false);
+    REQUIRE(tools->items[9].isSeparator);
+    REQUIRE(tools->items[10].label == "Options...");
     for (const auto& item : tools->items) {
         REQUIRE(item.label != "UI Scale...");
         REQUIRE(item.label != "Preferences...");

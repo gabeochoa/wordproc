@@ -259,6 +259,11 @@ struct DialogState : public afterhours::BaseComponent {
     // Mail Merge Helper (Tools > Mail Merge...): parity stub.
     bool showMailMergeDialog = false;
 
+    // Revisions (Tools > Revisions...): suggesting-mode dialog.
+    // revisionsSelected indexes doc.revisions; -1 = none selected.
+    bool showRevisionsDialog = false;
+    int revisionsSelected = -1;
+
     // AutoCorrect dialog (Tools > AutoCorrect...)
     bool showAutoCorrectDialog = false;
     // Selected row in the dialog's Replace/With list, as an index into

@@ -256,10 +256,11 @@ inline std::vector<win95::Menu> createMenuBar(
         {"", "", false, true, nullptr},                          // 3 Separator
         {"Grammar...", "", true, false, nullptr},                // 4
         {"AutoFormat...", "", true, false, nullptr},            // 5
-        {"", "", false, true, nullptr},                          // 6 Separator
-        {"Mail Merge...", "", false, false, nullptr},           // 7 DISABLED: no merge engine / data source, grayed like Word shows unavailable commands
-        {"", "", false, true, nullptr},                          // 8 Separator
-        {"Options...", "", true, false, nullptr}                // 9
+        {"Revisions...", "", true, false, nullptr},             // 6 (Docs-era suggesting mode)
+        {"", "", false, true, nullptr},                          // 7 Separator
+        {"Mail Merge...", "", false, false, nullptr},           // 8 DISABLED: no merge engine / data source, grayed like Word shows unavailable commands
+        {"", "", false, true, nullptr},                          // 9 Separator
+        {"Options...", "", true, false, nullptr}                // 10
     };
     menus.push_back(toolsMenu);    // Index 5: Tools
 
