@@ -1,0 +1,59 @@
+# Test: Tools > Thesaurus... (Shift+F7) dialog, Replace changes text
+# "happy" has synonyms; clicking "glad" then Replace swaps the word
+# at the caret: "happy" -> "glad". "glad" has no thesaurus entry, so
+# after Replace the list shows "(no thesaurus entry)".
+
+type "happy"
+wait_frames 12
+
+key SHIFT+F7
+wait_frames 12
+
+validate dialog_open=Thesaurus
+validate thesaurus_current=happy
+validate thesaurus_synonym_count=6
+validate thesaurus_synonyms=joyful,cheerful,glad,delighted,pleased,content
+
+# Click the "glad" synonym, then Replace
+click_ui thesaurus_synonym_glad
+wait_frames 12
+click_ui thesaurus_replace
+wait_frames 12
+
+validate text=glad
+validate thesaurus_current=glad
+validate thesaurus_synonym_count=0
+expect_text "(no thesaurus entry)"
+
+click_ui thesaurus_close
+wait_frames 12
+
+# Missing word: open on an empty document. The list shows
+# "(no thesaurus entry)" and Replace is a no-op.
+key CTRL+A
+key DELETE
+wait_frames 12
+
+key SHIFT+F7
+wait_frames 12
+
+validate dialog_open=Thesaurus
+validate thesaurus_current=
+validate thesaurus_synonym_count=0
+expect_text "(no thesaurus entry)"
+
+# Look Up: type a word into the (empty) Look Up field and look it up.
+click_ui thesaurus_lookup_input
+wait_frames 6
+type "sad"
+wait_frames 6
+click_ui thesaurus_lookup
+wait_frames 12
+
+validate thesaurus_synonym_count=6
+validate thesaurus_synonyms=unhappy,sorrowful,gloomy,melancholy,downcast,dejected
+
+screenshot thesaurus_dialog
+
+click_ui thesaurus_close
+wait_frames 12

@@ -269,6 +269,8 @@ const char* ActionMap::actionName(Action action) {
             return "ShowWordCount";
         case Action::ShowSpelling:
             return "ShowSpelling";
+        case Action::ShowThesaurus:
+            return "ShowThesaurus";
         case Action::COUNT:
         default:
             return "NONE";
@@ -420,6 +422,7 @@ static void bindWindowsPreset(ActionMap& map) {
     // Tools: Word Count (Ctrl+Shift+W), Spelling (F7)
     map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
     map.bind({afterhours::keys::F7, false, false, false}, Action::ShowSpelling);
+    map.bind({afterhours::keys::F7, false, true, false}, Action::ShowThesaurus);
 }
 
 // macOS-style bindings: uses Ctrl as Cmd equivalent
@@ -533,6 +536,7 @@ static void bindMacOSPreset(ActionMap& map) {
     // Tools: Word Count (Cmd+Shift+W), Spelling (F7)
     map.bind({afterhours::keys::W, true, true, false}, Action::ShowWordCount);
     map.bind({afterhours::keys::F7, false, false, false}, Action::ShowSpelling);
+    map.bind({afterhours::keys::F7, false, true, false}, Action::ShowThesaurus);
 }
 
 ActionMap createActionMapWithPreset(Preset preset) {
@@ -742,6 +746,8 @@ const char* actionDisplayName(Action action) {
             return "Word Count";
         case Action::ShowSpelling:
             return "Spelling";
+        case Action::ShowThesaurus:
+            return "Thesaurus";
         case Action::COUNT:
         default:
             return "";
@@ -1056,9 +1062,10 @@ std::vector<BindingInfo> getBindingsList(const ActionMap& /*map*/) {
     addBinding(Action::SaveAs, {afterhours::keys::F12, false, false, false});  // F12
     addBinding(Action::Print, {afterhours::keys::P, true, false, false});  // Ctrl+P
 
-    // Tools: Word Count, Spelling
+    // Tools: Word Count, Spelling, Thesaurus
     addBinding(Action::ShowWordCount, {afterhours::keys::W, true, true, false});  // Ctrl+Shift+W
     addBinding(Action::ShowSpelling, {afterhours::keys::F7, false, false, false});  // F7
+    addBinding(Action::ShowThesaurus, {afterhours::keys::F7, false, true, false});  // Shift+F7
 
     return result;
 }

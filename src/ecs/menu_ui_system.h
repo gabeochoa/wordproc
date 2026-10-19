@@ -1209,6 +1209,186 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Thesaurus dialog (Tools > Thesaurus..., Shift+F7) - Win95
+        // shell, Spelling pattern: left column (current word field,
+        // synonyms sunken list, Look Up field), right column of gray
+        // buttons (Look Up, Replace, Close). Clicking a synonym
+        // selects it (highlight); Replace swaps the word at the
+        // caret for the selected synonym through the command layer
+        // (one undo step). A word with no entry shows
+        // "(no thesaurus entry)" in the list and disables Replace.
+        if (dialogs.showThesaurusDialog) {
+            constexpr int THESAURUS_MODAL_ID = 50013;
+            auto result = afterhours::modal(ctx, mk(entity, THESAURUS_MODAL_ID),
+                dialogs.showThesaurusDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(430), afterhours::ui::h720(300),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Thesaurus", CONTENT_LAYER);
+
+                test_input::register_visible_text(dialogs.thesaurusCurrentWord);
+                for (const auto& syn : dialogs.thesaurusSynonyms) {
+                    test_input::register_visible_text(syn);
+                }
+                if (dialogs.thesaurusSynonyms.empty()) {
+                    test_input::register_visible_text("(no thesaurus entry)");
+                }
+
+                auto bodyRow = div(ctx, mk(result.ent(), 903),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), children()})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (bodyRow) {
+                auto leftCol = div(ctx, mk(bodyRow.ent(), 0),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{w1280(302), children()})
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_gap(pixels(4))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (leftCol) {
+                    div(ctx, mk(leftCol.ent(), 0),
+                        ComponentConfig{}
+                            .with_label("Current word:")
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                    div(ctx, mk(leftCol.ent(), 1),
+                        ah_win95::win95SunkenStyle()
+                            .with_label(dialogs.thesaurusCurrentWord)
+                            .with_size(ComponentSize{percent(1.0f), h720(26)})
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_padding(Padding{.left = pixels(4)})
+                            .with_render_layer(CONTENT_LAYER));
+                    div(ctx, mk(leftCol.ent(), 2),
+                        ComponentConfig{}
+                            .with_label("Synonyms:")
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                    float synHeight = 22.0f * static_cast<float>(
+                        std::max<std::size_t>(dialogs.thesaurusSynonyms.size(), 1)) + 4.0f;
+                    auto synList = div(ctx, mk(leftCol.ent(), 3),
+                        ah_win95::win95SunkenStyle()
+                            .with_size(ComponentSize{percent(1.0f), h720(synHeight)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
+                            .with_render_layer(CONTENT_LAYER));
+                    if (synList) {
+                        if (dialogs.thesaurusSynonyms.empty()) {
+                            div(ctx, mk(synList.ent(), 0),
+                                ComponentConfig{}
+                                    .with_label("(no thesaurus entry)")
+                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(
+                                        ui_imm::win95_colors::TEXT)
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        } else {
+                            for (std::size_t i = 0; i < dialogs.thesaurusSynonyms.size(); ++i) {
+                                const std::string& syn = dialogs.thesaurusSynonyms[i];
+                                bool selected =
+                                    dialogs.thesaurusSelected == static_cast<int>(i);
+                                if (button(ctx, mk(synList.ent(), 100 + static_cast<int>(i)),
+                                    ComponentConfig{}
+                                        .with_debug_name("thesaurus_synonym_" + syn)
+                                        .with_label(syn)
+                                        .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                        .with_roundness(0.0f)
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                                        .with_padding(Padding{.left = pixels(4)})
+                                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    dialogs.thesaurusSelected = static_cast<int>(i);
+                                }
+                            }
+                        }
+                    }
+                    div(ctx, mk(leftCol.ent(), 4),
+                        ComponentConfig{}
+                            .with_label("Look Up:")
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                    afterhours::text_input::text_input(ctx, mk(leftCol.ent(), 5),
+                        dialogs.thesaurusLookupStr,
+                        ah_win95::win95SunkenStyle()
+                            .with_debug_name("thesaurus_lookup_input")
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_render_layer(CONTENT_LAYER));
+                }  // leftCol
+
+                auto rightCol = div(ctx, mk(bodyRow.ent(), 1),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{w1280(100), children()})
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_gap(pixels(6))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (rightCol) {
+                    if (button(ctx, mk(rightCol.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("thesaurus_lookup")
+                            .with_label("Look Up")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        cmd::thesaurusLookup(doc, dialogs);
+                    }
+                    bool canReplace = dialogs.thesaurusHasWord &&
+                                      dialogs.thesaurusSelected >= 0 &&
+                                      static_cast<std::size_t>(dialogs.thesaurusSelected) <
+                                          dialogs.thesaurusSynonyms.size();
+                    if (button(ctx, mk(rightCol.ent(), 1),
+                        ah_win95::win95DialogButtonStyle(canReplace)
+                            .with_debug_name("thesaurus_replace")
+                            .with_label("Replace")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        if (canReplace) cmd::thesaurusReplace(doc, dialogs);
+                    }
+                    if (button(ctx, mk(rightCol.ent(), 2),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("thesaurus_close")
+                            .with_label("Close")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showThesaurusDialog = false;
+                    }
+                }  // rightCol
+                }  // bodyRow
+            }
+        }
+
         // AutoCorrect dialog (Tools > AutoCorrect...) - genuine
         // Word 95 layout: 3 option checkboxes, a scrollable sunken
         // Replace/With list, editable Replace:/With: fields with

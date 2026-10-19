@@ -272,7 +272,9 @@ inline std::vector<win95::Menu> createMenuBar(
         {"", "", false, true, nullptr},                          // 7 Separator
         {"Mail Merge...", "", false, false, nullptr},           // 8 DISABLED: no merge engine / data source, grayed like Word shows unavailable commands
         {"", "", false, true, nullptr},                          // 9 Separator
-        {"Options...", "", true, false, nullptr}                // 10
+        {"Options...", "", true, false, nullptr},               // 10
+        {"", "", false, true, nullptr},                         // 11 Separator
+        {"Thesaurus...", "Shift+F7", true, false, nullptr}      // 12
     };
     menus.push_back(toolsMenu);    // Index 5: Tools
 

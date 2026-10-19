@@ -266,7 +266,9 @@ inline std::vector<MenuData> createMenuBarData() {
                        {"", "", false, true},  // Separator
                        {"Mail Merge...", "", false, false},
                        {"", "", false, true},  // Separator
-                       {"Options...", "", true, false}};
+                       {"Options...", "", true, false},
+                       {"", "", false, true},  // Separator
+                       {"Thesaurus...", "Shift+F7", true, false}};
     menus.push_back(toolsMenu);
 
     return menus;

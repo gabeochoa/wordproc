@@ -449,6 +449,20 @@ static void setupCallbacksEx(
         if (prop == "print_requested") return dialogState.printRequested ? "true" : "false";
         if (prop == "print_pdf_exists") return dialogState.printPdfExists ? "true" : "false";
         if (prop == "grammar_error_count") return std::to_string(dialogState.grammarErrors.size());
+        // Thesaurus dialog state: current word, synonym count, and
+        // comma-joined synonyms (for the Replace target + list).
+        if (prop == "thesaurus_current") return dialogState.thesaurusCurrentWord;
+        if (prop == "thesaurus_lookup") return dialogState.thesaurusLookupStr;
+        if (prop == "thesaurus_synonym_count")
+            return std::to_string(dialogState.thesaurusSynonyms.size());
+        if (prop == "thesaurus_synonyms") {
+            std::string out;
+            for (const auto& syn : dialogState.thesaurusSynonyms) {
+                if (!out.empty()) out += ",";
+                out += syn;
+            }
+            return out;
+        }
         // grammar_context_span=start:length — the offending span
         // INSIDE the dialog's In-context sentence (not the document
         // offset), e.g. 0:7 for "The the" in "The the cat sat.".
@@ -500,6 +514,7 @@ static void setupCallbacksEx(
             if (dialogState.showWordCountDialog) return "WordCount";
             if (dialogState.showSpellingDialog) return "Spelling";
             if (dialogState.showGrammarDialog) return "Grammar";
+            if (dialogState.showThesaurusDialog) return "Thesaurus";
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
             if (dialogState.showTemplateDialog) return "Template";
             if (dialogState.showFontDialog) return "Font";
@@ -1198,6 +1213,15 @@ static void setupCallbacksEx(
         dialogState.grammarIndex = 0;
         dialogState.grammarIgnored.clear();
         dialogState.grammarNoErrors = false;
+        dialogState.showThesaurusDialog = false;
+        dialogState.thesaurusEntries.clear();
+        dialogState.thesaurusCurrentWord.clear();
+        dialogState.thesaurusLookupStr.clear();
+        dialogState.thesaurusSynonyms.clear();
+        dialogState.thesaurusSelected = -1;
+        dialogState.thesaurusWordOffset = 0;
+        dialogState.thesaurusWordLength = 0;
+        dialogState.thesaurusHasWord = false;
         dialogState.showSpellingDialog = false;
         dialogState.spellSearchOffset = 0;
         dialogState.spellCurrentOffset = 0;

@@ -1,0 +1,121 @@
+# Thesaurus data for Tools > Thesaurus... (Shift+F7).
+# Format: word: syn1, syn2, ...
+# All headwords and synonyms are lowercase, real English words.
+happy: joyful, cheerful, glad, delighted, pleased, content
+sad: unhappy, sorrowful, gloomy, melancholy, downcast, dejected
+big: large, huge, enormous, vast, immense
+small: little, tiny, minor, slight, compact
+fast: quick, rapid, swift, speedy, brisk
+slow: gradual, sluggish, leisurely, unhurried
+good: excellent, fine, pleasant, favorable, admirable
+bad: poor, terrible, awful, unpleasant, harmful
+begin: start, commence, initiate, open, launch
+end: finish, conclude, close, terminate, complete
+make: create, build, produce, construct, form
+show: display, exhibit, reveal, demonstrate, present
+use: employ, utilize, apply
+important: significant, crucial, vital, essential, major
+different: distinct, unlike, varied, dissimilar, diverse
+help: assist, aid, support, back, benefit
+ask: inquire, question, request, query
+tell: inform, notify, relate, disclose
+say: state, declare, utter, express, remark
+think: consider, believe, suppose, ponder, reflect
+find: discover, locate, uncover, detect
+give: provide, offer, grant, donate, present
+work: labor, toil, task, job
+place: location, site, spot, position, venue
+thing: object, item, article, entity
+idea: thought, notion, concept, plan, suggestion
+change: alter, modify, transform, adjust, vary
+move: shift, transfer, relocate, stir, advance
+live: dwell, reside, exist, survive, inhabit
+believe: trust, accept, assume, suppose
+hold: grasp, grip, clasp, retain, keep
+bring: carry, fetch, deliver, convey, transport
+happen: occur, take place, arise, transpire
+write: compose, pen, draft, record, author
+sit: rest, perch, settle
+stand: rise, stay, remain
+lose: misplace, forfeit, surrender, miss
+pay: compensate, settle, reimburse, remunerate
+meet: encounter, greet, assemble, gather, converge
+continue: persist, proceed, resume, carry on, endure
+set: place, put, position, arrange, establish
+learn: study, acquire, master, grasp, discover
+lead: guide, direct, head, command, conduct
+understand: comprehend, grasp, realize, perceive, discern
+watch: observe, view, witness, monitor, regard
+follow: pursue, chase, track, obey, succeed
+stop: halt, cease, pause, discontinue
+create: invent, design, generate, produce, originate
+speak: talk, utter, converse, address
+read: peruse, scan, study, browse
+allow: permit, authorize, let, enable, grant
+add: include, append, join, attach, supplement
+spend: expend, disburse, consume, waste
+grow: expand, increase, enlarge, develop, flourish
+open: unlock, unfasten, unfold, reveal
+walk: stroll, amble, stride, march, hike
+win: triumph, prevail, succeed, conquer, achieve
+offer: propose, present, tender, volunteer, suggest
+remember: recall, recollect, retain, reminisce
+love: adore, cherish, treasure, admire, fancy
+consider: contemplate, ponder, weigh, regard, examine
+appear: emerge, surface, materialize, show, seem
+buy: purchase, acquire, obtain, procure
+wait: await, linger, pause, remain, stay
+serve: attend, assist, cater, supply
+die: perish, expire, pass away, decease
+send: dispatch, transmit, forward, post, deliver
+expect: anticipate, await, foresee, predict, hope
+build: construct, erect, assemble, raise, establish
+stay: remain, linger, abide, dwell, rest
+fall: drop, plunge, tumble, descend, collapse
+cut: slice, sever, trim, chop, snip
+reach: attain, achieve, arrive, grasp, stretch
+kill: slay, murder, destroy, eliminate
+remain: stay, persist, endure, linger, abide
+angry: furious, enraged, irritated, annoyed, indignant
+afraid: fearful, scared, frightened, anxious, nervous
+beautiful: pretty, lovely, attractive, gorgeous, charming
+bright: shining, radiant, vivid, brilliant, luminous
+dark: dim, shadowy, murky, gloomy, obscure
+clear: obvious, evident, transparent, plain, lucid
+strong: powerful, sturdy, robust, mighty, firm
+weak: feeble, frail, fragile, faint, infirm
+rich: wealthy, affluent, prosperous, opulent
+poor: needy, destitute, impoverished, broke, penniless
+quick: fast, swift, rapid, speedy, prompt
+quiet: silent, calm, peaceful, still, hushed
+loud: noisy, deafening, boisterous, clamorous
+brave: courageous, fearless, bold, valiant, heroic
+calm: peaceful, serene, tranquil, composed, placid
+certain: sure, positive, confident, definite, convinced
+true: correct, accurate, factual, genuine, real
+false: untrue, incorrect, wrong, erroneous, fake
+easy: simple, effortless, straightforward, uncomplicated, painless
+hard: difficult, tough, challenging, arduous, strenuous
+difficult: hard, challenging, tough, demanding, complex
+simple: plain, easy, straightforward, uncomplicated, basic
+strange: odd, peculiar, weird, unusual, curious
+ancient: old, antique, age-old, archaic, primeval
+modern: current, contemporary, recent, new, up-to-date
+empty: vacant, hollow, bare, void, unoccupied
+full: complete, packed, crowded, brimming, replete
+safe: secure, protected, harmless, unharmed, sound
+dangerous: risky, hazardous, perilous, unsafe, treacherous
+early: premature, timely, prompt
+late: tardy, delayed, overdue, belated
+near: close, adjacent, nearby, proximate
+far: distant, remote, removed, faraway
+high: tall, elevated, lofty, towering
+low: short, stunted, depressed, shallow
+deep: profound, bottomless, fathomless, intense
+wide: broad, expansive, vast, spacious
+narrow: slim, slender, tight, constricted, cramped
+answer: reply, respond, retort, react
+choose: select, pick, elect, prefer
+clean: tidy, scrub, wash, purify, polish
+close: shut, seal, bar, fasten
+come: arrive, approach, advance, near

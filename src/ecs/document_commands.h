@@ -861,6 +861,104 @@ inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
     refreshSpellingDialog(doc, dialogs);
 }
 
+// --- Thesaurus dialog commands (Tools > Thesaurus..., Shift+F7) ---
+// Open seeds from the word at the caret (a caret at a word's end
+// still belongs to that word) or the selection. Look Up re-reads
+// the Look Up field against the entry map loaded on open; a miss
+// leaves an empty synonym list and the dialog shows
+// "(no thesaurus entry)". Replace swaps the stored word range for
+// the selected synonym as one undo step (replaceRange), then
+// re-seeds the dialog on the replacement (its own synonyms, which
+// may be empty). The dialog is modal, so the stored range cannot
+// go stale while it is open; Replace still verifies the text at
+// the range before writing.
+
+inline bool thesaurusWordRange(DocumentComponent& doc, std::size_t& offset,
+                               std::size_t& length, std::string& word) {
+    if (doc.buffer.hasSelection()) {
+        CaretPosition start = doc.buffer.selectionStart();
+        CaretPosition end = doc.buffer.selectionEnd();
+        offset = doc.buffer.offsetForPosition(start);
+        std::size_t endOffset = doc.buffer.offsetForPosition(end);
+        if (endOffset < offset) return false;
+        length = endOffset - offset;
+        if (length == 0) return false;
+        word = doc.buffer.getSelectedText();
+        return true;
+    }
+    std::size_t caret = doc.buffer.caretOffset();
+    std::string text = doc.buffer.getText();
+    for (const auto& [start, w] : SpellChecker::extractWords(text)) {
+        if (caret >= start && caret <= start + w.size()) {
+            offset = start;
+            length = w.size();
+            word = w;
+            return true;
+        }
+    }
+    return false;
+}
+
+inline void openThesaurusDialog(DocumentComponent& doc, DialogState& dialogs) {
+    dialogs.showThesaurusDialog = true;
+    dialogs.thesaurusEntries = thesaurus::loadDefault();
+    dialogs.thesaurusSelected = -1;
+    std::size_t offset = 0;
+    std::size_t length = 0;
+    std::string word;
+    dialogs.thesaurusHasWord = thesaurusWordRange(doc, offset, length, word);
+    if (dialogs.thesaurusHasWord) {
+        dialogs.thesaurusWordOffset = offset;
+        dialogs.thesaurusWordLength = length;
+        dialogs.thesaurusCurrentWord = word;
+        dialogs.thesaurusLookupStr = word;
+        dialogs.thesaurusSynonyms =
+            thesaurus::lookup(dialogs.thesaurusEntries, word);
+    } else {
+        dialogs.thesaurusWordOffset = 0;
+        dialogs.thesaurusWordLength = 0;
+        dialogs.thesaurusCurrentWord.clear();
+        dialogs.thesaurusLookupStr.clear();
+        dialogs.thesaurusSynonyms.clear();
+    }
+}
+
+inline void thesaurusLookup(DocumentComponent& /*doc*/, DialogState& dialogs) {
+    dialogs.thesaurusSynonyms =
+        thesaurus::lookup(dialogs.thesaurusEntries, dialogs.thesaurusLookupStr);
+    dialogs.thesaurusSelected = -1;
+}
+
+inline bool thesaurusReplace(DocumentComponent& doc, DialogState& dialogs) {
+    if (!dialogs.thesaurusHasWord || dialogs.thesaurusSelected < 0 ||
+        static_cast<std::size_t>(dialogs.thesaurusSelected) >=
+            dialogs.thesaurusSynonyms.size()) {
+        return false;
+    }
+    std::string synonym =
+        dialogs.thesaurusSynonyms[static_cast<std::size_t>(
+            dialogs.thesaurusSelected)];
+    std::size_t offset = dialogs.thesaurusWordOffset;
+    std::size_t length = dialogs.thesaurusWordLength;
+    if (offset + length > doc.buffer.textSize()) return false;
+    std::string current;
+    for (std::size_t i = 0; i < length; ++i) {
+        current.push_back(doc.buffer.charAtOffset(offset + i));
+    }
+    if (current != dialogs.thesaurusCurrentWord) return false;
+    recordDeleteRevision(doc, offset, current);
+    recordInsertRevision(doc, offset, synonym);
+    doc.buffer.replaceRange(offset, length, synonym);
+    doc.isDirty = true;
+    dialogs.thesaurusCurrentWord = synonym;
+    dialogs.thesaurusLookupStr = synonym;
+    dialogs.thesaurusWordLength = synonym.size();
+    dialogs.thesaurusSynonyms =
+        thesaurus::lookup(dialogs.thesaurusEntries, synonym);
+    dialogs.thesaurusSelected = -1;
+    return true;
+}
+
 // --- AutoFormat (Tools > AutoFormat...) ---
 // Batch pass over the whole document: the AutoCorrect replacements
 // as one undo step. Returns the number of words corrected.

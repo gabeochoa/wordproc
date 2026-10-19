@@ -308,6 +308,11 @@ struct KeyboardShortcutSystem
             cmd::openSpellingDialog(doc, dialogs);
         }
 
+        // Thesaurus (Shift+F7)
+        if (actionMap_.isActionPressed(Action::ShowThesaurus)) {
+            cmd::openThesaurusDialog(doc, dialogs);
+        }
+
         // Text formatting
         if (actionMap_.isActionPressed(Action::ToggleBold)) cmd::toggleBold(doc);
         if (actionMap_.isActionPressed(Action::ToggleItalic)) cmd::toggleItalic(doc);

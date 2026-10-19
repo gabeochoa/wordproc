@@ -15,6 +15,7 @@ validate menu_item_AutoFormat...=true
 validate menu_item_Mail Merge...=true
 validate menu_item_enabled_Mail Merge...=false
 validate menu_item_Options...=true
+validate menu_item_Thesaurus...=true
 validate menu_item_Preferences...=false
 # (UI Scale... still exists, but in View now -- the per-menu Tools
 # composition, including UI Scale's absence from Tools, is pinned by

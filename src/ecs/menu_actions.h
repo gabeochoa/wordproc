@@ -996,6 +996,9 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 10:  // Options...
                     dialogs.showOptionsDialog = true;
                     break;
+                case 12:  // Thesaurus...
+                    cmd::openThesaurusDialog(doc, dialogs);
+                    break;
                 default:
                     break;
             }

@@ -13,6 +13,7 @@
 #include "../editor/format_painter.h"
 #include "../editor/spell_squiggles.h"
 #include "../editor/spellcheck.h"
+#include "../editor/thesaurus.h"
 #include "../editor/drawing.h"
 #include "../editor/equation.h"
 #include "../editor/image.h"
@@ -248,6 +249,24 @@ struct DialogState : public afterhours::BaseComponent {
     std::size_t grammarIndex = 0;
     std::set<std::string> grammarIgnored;
     bool grammarNoErrors = false;
+
+    // Thesaurus dialog (Tools > Thesaurus..., Shift+F7):
+    // thesaurusEntries is the parsed resources/thesaurus.txt map
+    // (loaded on open); thesaurusCurrentWord is the word in the
+    // document at thesaurusWordOffset/length (the Replace target);
+    // thesaurusLookupStr is the Look Up field; thesaurusSelected
+    // indexes thesaurusSynonyms (-1 = none). A lookup that misses
+    // leaves thesaurusSynonyms empty and the list shows
+    // "(no thesaurus entry)".
+    bool showThesaurusDialog = false;
+    std::map<std::string, std::vector<std::string>> thesaurusEntries;
+    std::string thesaurusCurrentWord;
+    std::string thesaurusLookupStr;
+    std::vector<std::string> thesaurusSynonyms;
+    int thesaurusSelected = -1;
+    std::size_t thesaurusWordOffset = 0;
+    std::size_t thesaurusWordLength = 0;
+    bool thesaurusHasWord = false;
 
     // Spelling dialog (Tools > Spelling..., F7)
     bool showSpellingDialog = false;
