@@ -40,17 +40,3 @@ extern "C" void metal_minimize_window() {
 extern "C" void metal_take_screenshot(const char* /*filename*/) {
     // No-op on web
 }
-
-#include <afterhours/src/backends/sokol/image_decode.h>
-
-#include <emscripten/html5.h>
-
-extern "C" void metal_set_window_size(int width, int height) {
-    emscripten_set_element_css_size("#canvas", width, height);
-    emscripten_set_canvas_element_size("#canvas", width, height);
-}
-
-extern "C" const void* metal_create_system_device() { return nullptr; }
-extern "C" bool metal_capture_render_texture(uint32_t, int, int, const char*) {
-    return false;
-}

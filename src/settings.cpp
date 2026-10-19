@@ -199,10 +199,19 @@ void Settings::write_save_file() {
         save_path = "settings.json";
     }
 
-    nlohmann::json settingsJSON = *data;
-    if (!files::write_string_atomic(save_path, settingsJSON.dump(4))) {
-        log_error("Could not save settings to {}", save_path);
+    std::ofstream ofs(save_path);
+    if (!ofs.good()) {
+        std::cerr << "write_json_config_file error: Couldn't open file "
+                     "for writing: "
+                  << save_path << std::endl;
         return;
     }
     data->loaded_from = save_path;
+
+    log_info("Saving to {}", data->loaded_from);
+
+    nlohmann::json settingsJSON = *data;
+
+    ofs << settingsJSON.dump(4);
+    ofs.close();
 }

@@ -13,6 +13,7 @@ enum class InputAction {
     WidgetMod,
     WidgetBack,
     MenuBack,
+    PauseButton,
     ToggleUIDebug,
     ToggleUILayoutDebug,
     // Text input actions (required by afterhours text_input)
@@ -21,12 +22,8 @@ enum class InputAction {
     TextHome,
     TextEnd,
     TextSelectAll,
-    TextWordLeft,
-    TextWordRight,
-    TextDeleteWordBack,
-    TextDeleteWordForward,
-    TextUndo,
-    TextRedo,
+    TextSelectLeft,
+    TextSelectRight,
     TextCopy,
     TextCut,
     TextPaste,
@@ -44,16 +41,13 @@ inline bool action_matches(int action, InputAction expected) {
 
 inline auto get_mapping() {
     std::map<int, afterhours::input::ValidInputs> mapping;
-    using KC = afterhours::input::KeyChord;
 
     mapping[to_int(InputAction::WidgetLeft)] = {
         afterhours::keys::LEFT,
-        KC(afterhours::keys::LEFT, KC::MOD_SHIFT),
     };
 
     mapping[to_int(InputAction::WidgetRight)] = {
         afterhours::keys::RIGHT,
-        KC(afterhours::keys::RIGHT, KC::MOD_SHIFT),
     };
 
     mapping[to_int(InputAction::WidgetUp)] = {
@@ -85,6 +79,10 @@ inline auto get_mapping() {
         afterhours::keys::ESCAPE,
     };
 
+    mapping[to_int(InputAction::PauseButton)] = {
+        afterhours::keys::ESCAPE,
+    };
+
     mapping[to_int(InputAction::ToggleUIDebug)] = {
         afterhours::keys::GRAVE,
     };
@@ -104,37 +102,25 @@ inline auto get_mapping() {
 
     mapping[to_int(InputAction::TextHome)] = {
         afterhours::keys::HOME,
-        KC(afterhours::keys::HOME, KC::MOD_SHIFT),
     };
 
     mapping[to_int(InputAction::TextEnd)] = {
         afterhours::keys::END,
-        KC(afterhours::keys::END, KC::MOD_SHIFT),
     };
+
+    using KC = afterhours::input::KeyChord;
 
     mapping[to_int(InputAction::TextSelectAll)] = {
         KC(afterhours::keys::A, KC::MOD_CTRL),
     };
 
-    mapping[to_int(InputAction::TextWordLeft)] = {
-        KC(afterhours::keys::LEFT, KC::MOD_ALT),
-        KC(afterhours::keys::LEFT, KC::MOD_CTRL),
-    };
-    mapping[to_int(InputAction::TextWordRight)] = {
-        KC(afterhours::keys::RIGHT, KC::MOD_ALT),
-        KC(afterhours::keys::RIGHT, KC::MOD_CTRL),
-    };
-    mapping[to_int(InputAction::TextDeleteWordBack)] = {
-        KC(afterhours::keys::BACKSPACE, KC::MOD_ALT),
-        KC(afterhours::keys::BACKSPACE, KC::MOD_CTRL),
-    };
-    mapping[to_int(InputAction::TextDeleteWordForward)] = {
-        KC(afterhours::keys::DELETE_KEY, KC::MOD_ALT),
-        KC(afterhours::keys::DELETE_KEY, KC::MOD_CTRL),
+    mapping[to_int(InputAction::TextSelectLeft)] = {
+        KC(afterhours::keys::LEFT, KC::MOD_SHIFT),
     };
 
-    mapping[to_int(InputAction::TextUndo)] = {KC(afterhours::keys::Z, KC::MOD_CTRL)};
-    mapping[to_int(InputAction::TextRedo)] = {KC(afterhours::keys::Z, KC::MOD_CTRL | KC::MOD_SHIFT)};
+    mapping[to_int(InputAction::TextSelectRight)] = {
+        KC(afterhours::keys::RIGHT, KC::MOD_SHIFT),
+    };
 
     mapping[to_int(InputAction::TextCopy)] = {
         KC(afterhours::keys::C, KC::MOD_CTRL),

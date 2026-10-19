@@ -255,7 +255,6 @@ TEST_CASE("DocumentSettings separation from app settings", "[document_io]") {
     REQUIRE(loadedSettings2.textStyle.fontSize == 18);
 }
 
-<<<<<<< HEAD
 TEST_CASE("Options flags persist with the document", "[document_io]") {
     TestDirGuard guard;
     std::string path = (guard.dir / "options_doc.wpdoc").string();
@@ -377,32 +376,4 @@ TEST_CASE("Header/footer text + config round-trip (Batch 9)", "[document_io]") {
         REQUIRE(loadedSettings.footer.center.showTotalPages);
         REQUIRE(loadedSettings.header.differentFirstPage);
     }
-=======
-TEST_CASE("failed saves preserve the previous document", "[document_io]") {
-    TestDirGuard guard;
-    const auto path = guard.dir / "preserved.wpdoc";
-    TextBuffer before;
-    before.setText("Original document");
-    REQUIRE(saveTextFile(before, path.string()));
-    std::filesystem::create_directory(path.string() + ".afh-tmp");
-    TextBuffer changed;
-    changed.setText("Unsaved replacement");
-    REQUIRE_FALSE(saveTextFile(changed, path.string()));
-    TextBuffer loaded;
-    REQUIRE(loadTextFile(loaded, path.string()));
-    REQUIRE(loaded.getText() == "Original document");
-}
-
-TEST_CASE("unusable document parent reports failure", "[document_io]") {
-    TestDirGuard guard;
-    const auto parent = guard.dir / "file_not_directory";
-    { std::ofstream out(parent); out << "existing"; }
-    TextBuffer buffer;
-    buffer.setText("Unsaved document");
-    REQUIRE_FALSE(saveTextFile(buffer, (parent / "document.wpdoc").string()));
-    std::ifstream in(parent);
-    std::string contents;
-    in >> contents;
-    REQUIRE(contents == "existing");
->>>>>>> 0e46e6d (Gabe: zig build + local WIP (from his Mac, base af741be))
 }

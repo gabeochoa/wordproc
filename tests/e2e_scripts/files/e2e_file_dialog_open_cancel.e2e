@@ -6,7 +6,7 @@ type "keep this content"
 wait 1
 validate text=keep this content
 
-file_dialog_set_path ""
+# Don't queue a path (simulates user pressing Cancel -- returns empty string)
 # Trigger File > Open via menu
 menu_open File
 wait 1

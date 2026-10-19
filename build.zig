@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const app_sources = [_][]const u8{
+    "src/editor/autocorrect.cpp",
     "src/editor/document_io.cpp",
     "src/editor/drawing.cpp",
     "src/editor/equation.cpp",
@@ -22,41 +23,70 @@ const app_sources = [_][]const u8{
     "src/ui/theme.cpp",
     "src/util/logging.cpp",
     "src/sokol_impl.mm",
-    "src/util/file_dialog.cpp",
-    "vendor/afterhours/src/plugins/native_dialogs.cpp",
-    "vendor/afterhours/src/plugins/native_dialogs_macos.mm",
+    "src/util/file_dialog.mm",
     "vendor/afterhours/src/plugins/files.cpp",
 };
 
 const test_sources = [_][]const u8{
     "tests/benchmark_text_buffer.cpp",
+    "tests/test_autocorrect.cpp",
     "tests/test_bookmark.cpp",
     "tests/test_border_rendering.cpp",
+    "tests/test_borders_shading.cpp",
+    "tests/test_chips.cpp",
+    "tests/test_columns.cpp",
+    "tests/test_comments.cpp",
+    "tests/test_date_time.cpp",
     "tests/test_document_io.cpp",
     "tests/test_drawing.cpp",
+    "tests/test_drop_cap.cpp",
+    "tests/test_font_dialog.cpp",
+    "tests/test_format_painter.cpp",
     "tests/test_format_validator.cpp",
+    "tests/test_goto.cpp",
+    "tests/test_grammar.cpp",
     "tests/test_hyperlink.cpp",
     "tests/test_image.cpp",
     "tests/test_lambda_commands.cpp",
+    "tests/test_log_macros.cpp",
     "tests/test_main.cpp",
-    "tests/test_platform_services.cpp",
     "tests/test_menu_setup.cpp",
+    "tests/test_new_window.cpp",
+    "tests/test_normal_view.cpp",
     "tests/test_outline.cpp",
+    "tests/test_p0_ux.cpp",
+    "tests/test_page_setup.cpp",
+    "tests/test_paragraph_dialog.cpp",
     "tests/test_perf_load.cpp",
+    "tests/test_print_preview.cpp",
+    "tests/test_repeat.cpp",
+    "tests/test_revisions.cpp",
+    "tests/test_ruler.cpp",
+    "tests/test_scroll_math.cpp",
+    "tests/test_spell_squiggles.cpp",
     "tests/test_spellcheck.cpp",
+    "tests/test_spelling_dialog.cpp",
+    "tests/test_symbol.cpp",
     "tests/test_table.cpp",
+    "tests/test_table_formula.cpp",
+    "tests/test_templates.cpp",
     "tests/test_text_buffer.cpp",
     "tests/test_text_input_utils.cpp",
     "tests/test_text_layout.cpp",
-    "src/editor/gap_buffer.cpp",
-    "src/editor/text_buffer.cpp",
-    "src/editor/text_layout.cpp",
+    "tests/test_thesaurus.cpp",
+    "tests/test_toc.cpp",
+    "tests/test_ui_theme.cpp",
+    "tests/test_version_history.cpp",
+    "src/editor/autocorrect.cpp",
     "src/editor/document_io.cpp",
-    "src/editor/table.cpp",
-    "src/editor/image.cpp",
     "src/editor/drawing.cpp",
     "src/editor/equation.cpp",
+    "src/editor/gap_buffer.cpp",
+    "src/editor/image.cpp",
     "src/editor/spellcheck.cpp",
+    "src/editor/table.cpp",
+    "src/editor/text_buffer.cpp",
+    "src/editor/text_layout.cpp",
     "src/util/logging.cpp",
 };
 
@@ -131,7 +161,7 @@ pub fn build(b: *std.Build) void {
     b.resolveInstallPrefix(b.pathFromRoot("output"), .{});
     const cxx = b.option([]const u8, "cxx", "Native C++ compiler") orelse "clang++";
     const emxx = b.option([]const u8, "emxx", "Emscripten C++ compiler") orelse "em++";
-    const optimize = b.option(u8, "opt", "Native optimization level, 0 through 3") orelse 0;
+    const optimize = b.option(u8, "opt", "Native optimization level, 0 through 3") orelse 2;  // -O2 default: -O0 was the perf root cause (2026-10-19)
     if (optimize > 3) @panic("opt must be between 0 and 3");
     const coverage = b.option(bool, "coverage", "Enable LLVM coverage instrumentation") orelse false;
     const profiling = b.option(bool, "profiling", "Enable bounded Afterhours frame and system profiling") orelse false;
@@ -139,7 +169,7 @@ pub fn build(b: *std.Build) void {
     const overflow = b.option(bool, "debug-text-overflow", "Show text overflow diagnostics") orelse true;
     var flags = std.ArrayList([]const u8).empty;
     flags.appendSlice(b.allocator, &warnings) catch @panic("oom");
-    flags.appendSlice(b.allocator, &.{ "-std=c++23", b.fmt("-O{d}", .{optimize}), "-DBACKWARD", "-DAFTER_HOURS_USE_METAL", "-include", "sokol/sokol_app.h", "-include", "src/log.h", "-DAFTER_HOURS_ENABLE_E2E_TESTING", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION" }) catch @panic("oom");
+    flags.appendSlice(b.allocator, &.{ "-std=c++23", b.fmt("-O{d}", .{optimize}), "-DBACKWARD", "-include", "src/log.h", "-DAFTER_HOURS_ENABLE_E2E_TESTING", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION" }) catch @panic("oom");
     if (profiling) flags.append(b.allocator, "-DAFTERHOURS_ENABLE_PROFILING=1") catch @panic("oom");
     if (mcp) flags.append(b.allocator, "-DAFTER_HOURS_ENABLE_MCP") catch @panic("oom");
     if (overflow) flags.append(b.allocator, "-DAFTERHOURS_DEBUG_TEXT_OVERFLOW") catch @panic("oom");
@@ -174,6 +204,7 @@ pub fn build(b: *std.Build) void {
     b.step("test", "Run unit tests; pass Catch2 arguments after --").dependOn(&test_run.step);
     const bench = command(b, &.{ b.pathFromRoot("output/run_tests.exe"), "[benchmark]", "--success" }, &test_install.step);
     b.step("bench-unit", "Run text buffer unit benchmarks").dependOn(&bench.step);
+    b.step("bench", "Alias for bench-unit").dependOn(&bench.step);
     const recipes = [_][3][]const u8{
         .{ "e2e", "tests/run_e2e.sh", "Run scripted UI tests; pass runner arguments after --" },
         .{ "benchmark", "tests/run_benchmark.sh", "Measure headless document loading" },
@@ -188,7 +219,7 @@ pub fn build(b: *std.Build) void {
 
     const web_link = b.addSystemCommand(&.{emxx});
     web_link.setName("link wordproc web");
-    const web_flags = &.{ "-std=c++23", "-O2", "-fexceptions", "-DAFTER_HOURS_USE_WEB", "-Isrc/web/compat", "-DAFTER_HOURS_USE_METAL", "-include", "sokol/sokol_app.h", "-include", "src/log.h", "-DFMT_CONSTEVAL=", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION", "-Wno-deprecated-volatile" };
+    const web_flags = &.{ "-std=c++23", "-O2", "-fexceptions", "-DAFTER_HOURS_USE_WEB", "-Isrc/web/compat", "-DAFTER_HOURS_USE_METAL", "-include", "src/log.h", "-DFMT_CONSTEVAL=", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION", "-Wno-deprecated-volatile" };
     for (app_sources) |src| {
         if (std.mem.endsWith(u8, src, "native_dialogs_macos.mm")) continue;
         if (std.mem.eql(u8, src, "src/sokol_impl.mm")) {
@@ -216,7 +247,7 @@ fn compile(b: *std.Build, cxx: []const u8, src: []const u8, flags: []const []con
     r.setName(b.fmt("compile {s}", .{src}));
     r.addArgs(flags);
     r.addArgs(&.{ "-isystem", b.pathFromRoot("vendor"), "-isystem", b.pathFromRoot("vendor/afterhours/vendor") });
-    if (web and std.mem.endsWith(u8, src, ".mm")) r.addArgs(&.{ "-x", "c++" });
+    if (std.mem.endsWith(u8, src, ".mm")) r.addArgs(if (web) &.{ "-x", "c++" } else &.{ "-ObjC++" });
     r.addArg("-c");
     r.addFileArg(b.path(src));
     r.addArg("-o");

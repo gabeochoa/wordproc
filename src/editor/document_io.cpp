@@ -1,4 +1,3 @@
-#include <afterhours/src/plugins/files.h>
 #include "document_io.h"
 
 #include <algorithm>
@@ -328,6 +327,17 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
                               const std::string &path) {
     DocumentResult result;
 
+    std::filesystem::path output_path(path);
+    if (!output_path.parent_path().empty()) {
+        std::filesystem::create_directories(output_path.parent_path());
+    }
+
+    std::ofstream ofs(output_path);
+    if (!ofs.is_open()) {
+        result.error = "Could not open file for writing: " + path;
+        return result;
+    }
+
     const TextStyle &style = settings.textStyle;
     const PageSettings &page = settings.pageSettings;
 
@@ -450,7 +460,8 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         doc["fontRequirements"] = fonts_array;
     }
 
-    if (!afterhours::files::write_string_atomic(path, doc.dump(2))) {
+    ofs << doc.dump(2);
+    if (!ofs.good()) {
         result.error = "Failed to write to file: " + path;
         return result;
     }
@@ -761,6 +772,17 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                                       const TextBuffer *footerBuffer) {
     DocumentResult result;
 
+    std::filesystem::path output_path(path);
+    if (!output_path.parent_path().empty()) {
+        std::filesystem::create_directories(output_path.parent_path());
+    }
+
+    std::ofstream ofs(output_path);
+    if (!ofs.is_open()) {
+        result.error = "Could not open file for writing: " + path;
+        return result;
+    }
+
     const TextStyle &style = settings.textStyle;
     const PageSettings &page = settings.pageSettings;
 
@@ -895,7 +917,8 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
         doc["tables"] = tables_array;
     }
 
-    if (!afterhours::files::write_string_atomic(path, doc.dump(2))) {
+    ofs << doc.dump(2);
+    if (!ofs.good()) {
         result.error = "Failed to write to file: " + path;
         return result;
     }

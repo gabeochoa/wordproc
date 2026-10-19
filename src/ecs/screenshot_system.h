@@ -1,4 +1,3 @@
-#include "../util/screenshot.h"
 #pragma once
 
 #include <filesystem>
@@ -20,7 +19,7 @@ struct ScreenshotSystem : public afterhours::System<TestConfigComponent> {
         if (testConfig.frameCount == 1) {
             std::filesystem::create_directories(testConfig.screenshotDir);
             std::string path = testConfig.screenshotDir + "/01_startup.png";
-            app::capture::request(path.c_str());
+            afterhours::graphics::take_screenshot(path.c_str());
         }
     }
 
