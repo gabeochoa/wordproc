@@ -34,15 +34,16 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"Open...", "Ctrl+O", true, false, nullptr},          // 2
                       {"Save", "Ctrl+S", true, false, nullptr},             // 3
                       {"Save As...", "F12", true, false, nullptr},           // 4
-                      {"", "", false, true, nullptr},                       // 5 Separator
-                      {"Export PDF...", "", true, false, nullptr},          // 6
-                      {"Export HTML...", "", true, false, nullptr},         // 7
-                      {"Export RTF...", "", true, false, nullptr},          // 8
-                      {"", "", false, true, nullptr},                       // 9 Separator
-                      {"Page Setup...", "", true, false, nullptr},          // 10
-                      {"Print Preview", "", true, false, nullptr},         // 11
-                      {"Print...", "Ctrl+P", true, false, nullptr},        // 12
-                      {"", "", false, true, nullptr}};                      // 13 Separator
+                      {"Version History...", "", true, false, nullptr},    // 5 (Docs-era)
+                      {"", "", false, true, nullptr},                       // 6 Separator
+                      {"Export PDF...", "", true, false, nullptr},          // 7
+                      {"Export HTML...", "", true, false, nullptr},         // 8
+                      {"Export RTF...", "", true, false, nullptr},          // 9
+                      {"", "", false, true, nullptr},                       // 10 Separator
+                      {"Page Setup...", "", true, false, nullptr},          // 11
+                      {"Print Preview", "", true, false, nullptr},         // 12
+                      {"Print...", "Ctrl+P", true, false, nullptr},        // 13
+                      {"", "", false, true, nullptr}};                      // 14 Separator
 
     if (!recentFiles.empty()) {
         for (const auto& path : recentFiles) {

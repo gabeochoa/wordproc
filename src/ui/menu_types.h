@@ -35,6 +35,7 @@ inline std::vector<MenuData> createMenuBarData() {
         {"Open...", "Ctrl+O", true, false},
         {"Save", "Ctrl+S", true, false},
         {"Save As...", "", true, false},
+        {"Version History...", "", true, false},
         {"", "", false, true},  // Separator
         {"Export PDF...", "", true, false},
         {"Export HTML...", "", true, false},

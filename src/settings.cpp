@@ -180,6 +180,18 @@ bool Settings::load_save_file(int width, int height) {
     }
 }
 
+std::filesystem::path Settings::settings_dir() const {
+    if (!data->loaded_from.empty()) {
+        std::filesystem::path parent =
+            std::filesystem::path(data->loaded_from).parent_path();
+        if (!parent.empty()) return parent;
+    }
+    if (files::get_provider() != nullptr) {
+        return files::get_save_path();
+    }
+    return std::filesystem::current_path();
+}
+
 void Settings::write_save_file() {
     // If no settings file was loaded, use default path
     std::string save_path = data->loaded_from;

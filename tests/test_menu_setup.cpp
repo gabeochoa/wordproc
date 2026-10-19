@@ -192,6 +192,23 @@ TEST_CASE("File menu has Print Preview + Print after Page Setup", "[menu][print]
     REQUIRE(items[print].enabled == true);
 }
 
+TEST_CASE("File menu has Version History... right after Save As...",
+            "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* file = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "File") file = &m;
+    }
+    REQUIRE(file != nullptr);
+    std::size_t saveAs = file->items.size(), history = file->items.size();
+    for (std::size_t i = 0; i < file->items.size(); ++i) {
+        if (file->items[i].label == "Save As...") saveAs = i;
+        if (file->items[i].label == "Version History...") history = i;
+    }
+    REQUIRE(saveAs < file->items.size());
+    REQUIRE(history == saveAs + 1);
+}
+
 TEST_CASE("Format menu ends with Columns...", "[menu]") {
     auto menus = createMenuBarData();
     const MenuData* format = nullptr;

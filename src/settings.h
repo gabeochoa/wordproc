@@ -10,6 +10,7 @@
 #include <afterhours/src/plugins/window_manager.h>
 #include <afterhours/src/singleton.h>
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -30,6 +31,14 @@ struct Settings {
 
     bool load_save_file(int, int);
     void write_save_file();
+
+    // Directory holding settings.json (parent of the loaded file,
+    // or the platform save dir / CWD before anything was loaded).
+    // Version History snapshots live under settings_dir() /
+    // "wordproc_versions"; in test mode the command layer overrides
+    // this with output/wordproc_versions so tests never write into
+    // the checkout.
+    std::filesystem::path settings_dir() const;
 
     void reset();
     void refresh_settings();

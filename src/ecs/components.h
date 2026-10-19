@@ -8,6 +8,7 @@
 #include "../editor/autocorrect.h"
 #include "../editor/chips.h"
 #include "../editor/document_settings.h"
+#include "../editor/version_history.h"
 #include "../editor/font_dialog.h"
 #include "../editor/format_painter.h"
 #include "../editor/spell_squiggles.h"
@@ -276,6 +277,13 @@ struct DialogState : public afterhours::BaseComponent {
     bool showChipPopup = false;
     std::size_t chipPopupAtOffset = 0;
     int chipPopupSelected = 0;
+
+    // Version History (File > Version History...): snapshots are
+    // refreshed when the dialog opens; versionHistorySelected
+    // indexes versionHistorySnapshots; -1 = none selected.
+    bool showVersionHistoryDialog = false;
+    int versionHistorySelected = -1;
+    std::vector<version_history::VersionSnapshot> versionHistorySnapshots;
 
     // AutoCorrect dialog (Tools > AutoCorrect...)
     bool showAutoCorrectDialog = false;

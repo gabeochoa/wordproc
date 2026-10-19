@@ -11,6 +11,7 @@
 #include "../editor/date_time.h"
 #include "../editor/document_io.h"
 #include "../editor/revisions.h"
+#include "../editor/version_history.h"
 #include "../editor/outline_view.h"
 #include "../editor/templates.h"
 #include "../editor/export/export_pdf.h"
@@ -183,6 +184,48 @@ inline bool eraseChipAtCaret(DocumentComponent& doc) {
     return false;
 }
 
+// --- Version History (Docs-era) ---
+// Snapshots live under settings_dir()/wordproc_versions, except in
+// test mode, where they go to output/wordproc_versions (the same
+// CWD-relative output convention as the test-mode print PDF, so
+// tests never write snapshots into the checkout).
+
+inline std::filesystem::path versionHistoryBaseDir() {
+    if (test_input::test_mode) {
+        return std::filesystem::path("output") / "wordproc_versions";
+    }
+    return Settings::get().settings_dir() / "wordproc_versions";
+}
+
+inline std::string versionDocName(const DocumentComponent& doc) {
+    if (doc.filePath.empty()) return "Untitled";
+    return std::filesystem::path(doc.filePath).stem().string();
+}
+
+inline std::vector<version_history::VersionSnapshot> versionSnapshots(
+    const DocumentComponent& doc) {
+    return version_history::listSnapshots(
+        versionHistoryBaseDir() /
+        version_history::sanitizeDocName(versionDocName(doc)));
+}
+
+// Write one snapshot of the current buffer (called on every
+// successful Save / Save As).
+inline void snapshotVersionHistory(const DocumentComponent& doc) {
+    version_history::writeSnapshot(versionHistoryBaseDir(),
+                                   versionDocName(doc),
+                                   doc.buffer.getText(),
+                                   std::time(nullptr));
+}
+
+// Restore a snapshot through the command layer: one undo step,
+// marks dirty.
+inline void restoreVersion(DocumentComponent& doc,
+                           const std::string& snapshotText) {
+    doc.buffer.replaceRange(0, doc.buffer.textSize(), snapshotText);
+    doc.isDirty = true;
+}
+
 // --- Layout <-> DocumentSettings sync ---
 
 inline void syncLayoutToSettings(DocumentComponent& doc, LayoutComponent& layout) {
@@ -285,6 +328,7 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
             std::filesystem::remove(doc.autoSavePath);
         }
         refreshMenuBar(menu, doc, savePath);
+        snapshotVersionHistory(doc);
         toast_notify::success(
             "Saved: " +
             std::filesystem::path(savePath).filename().string());
@@ -305,6 +349,7 @@ inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
             std::filesystem::remove(doc.autoSavePath);
         }
         refreshMenuBar(menu, doc, path);
+        snapshotVersionHistory(doc);
         toast_notify::success(
             "Saved as: " +
             std::filesystem::path(path).filename().string());

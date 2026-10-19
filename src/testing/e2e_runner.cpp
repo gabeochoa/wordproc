@@ -6,6 +6,7 @@
 #include "deferred_screenshot.h"
 #include "../editor/document_settings.h"
 #include "../editor/outline_view.h"
+#include "../editor/version_history.h"
 #include "../input_mapping.h"
 #include "../rl.h"
 #include "../../vendor/afterhours/src/plugins/modal.h"
@@ -455,6 +456,7 @@ static void setupCallbacksEx(
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
             if (dialogState.showRevisionsDialog) return "Revisions";
+            if (dialogState.showVersionHistoryDialog) return "VersionHistory";
             return "false";
         }
         if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";
@@ -502,6 +504,20 @@ static void setupCallbacksEx(
         if (prop == "comment_count") return std::to_string(docComp.comments.size());
         if (prop == "chip_count") return std::to_string(docComp.chips.size());
         if (prop == "chip_popup_open") return dialogState.showChipPopup ? "true" : "false";
+        // version_count: snapshots for the current doc. E2E always
+        // runs in test mode, where snapshots live under
+        // output/wordproc_versions (see cmd::versionHistoryBaseDir).
+        if (prop == "version_count") {
+            std::string name =
+                docComp.filePath.empty()
+                    ? "Untitled"
+                    : std::filesystem::path(docComp.filePath).stem().string();
+            std::filesystem::path dir =
+                std::filesystem::path("output") / "wordproc_versions" /
+                version_history::sanitizeDocName(name);
+            return std::to_string(
+                version_history::listSnapshots(dir).size());
+        }
         if (prop == "track_changes_enabled") return docComp.trackChangesEnabled ? "true" : "false";
         if (prop == "revision_count") return std::to_string(docComp.revisions.size());
         if (prop == "tab_width") return std::to_string(docComp.docSettings.tabWidth);
@@ -1090,6 +1106,9 @@ static void setupCallbacksEx(
         dialogState.showChipPopup = false;
         dialogState.chipPopupAtOffset = 0;
         dialogState.chipPopupSelected = 0;
+        dialogState.showVersionHistoryDialog = false;
+        dialogState.versionHistorySelected = -1;
+        dialogState.versionHistorySnapshots.clear();
         docComp.autoCorrect = AutoCorrect{};
         dialogState.printRequested = false;
         dialogState.printPdfPath.clear();

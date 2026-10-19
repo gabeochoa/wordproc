@@ -71,7 +71,14 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 4:  // Save As...
                     menu.pendingDialog = MenuComponent::PendingDialog::SaveAs;
                     break;
-                case 6:  // Export PDF
+                case 5:  // Version History... (Docs-era)
+                    dialogs.showVersionHistoryDialog = true;
+                    dialogs.versionHistorySnapshots =
+                        cmd::versionSnapshots(doc);
+                    dialogs.versionHistorySelected =
+                        dialogs.versionHistorySnapshots.empty() ? -1 : 0;
+                    break;
+                case 7:  // Export PDF
                 {
                     std::filesystem::path basePath =
                         doc.filePath.empty() ? doc.defaultPath : doc.filePath;
@@ -85,7 +92,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         toast_notify::error("Export PDF failed: " + result.error);
                     }
                 } break;
-                case 7:  // Export HTML
+                case 8:  // Export HTML
                 {
                     std::filesystem::path basePath =
                         doc.filePath.empty() ? doc.defaultPath : doc.filePath;
@@ -99,7 +106,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         toast_notify::error("Export HTML failed: " + result.error);
                     }
                 } break;
-                case 8:  // Export RTF
+                case 9:  // Export RTF
                 {
                     std::filesystem::path basePath =
                         doc.filePath.empty() ? doc.defaultPath : doc.filePath;
@@ -113,14 +120,14 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         toast_notify::error("Export RTF failed: " + result.error);
                     }
                 } break;
-                case 10:  // Page Setup
+                case 11:  // Page Setup
                 {
                     dialogs.showPageSetup = !dialogs.showPageSetup;
                 } break;
-                case 11:  // Print Preview
+                case 12:  // Print Preview
                     cmd::openPrintPreview(doc, layout);
                     break;
-                case 12:  // Print...
+                case 13:  // Print...
                     cmd::requestPrint(doc, dialogs);
                     break;
                 default:
