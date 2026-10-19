@@ -1,0 +1,24 @@
+# Test: Tracked inserts render green + underlined, beating the squiggle
+# Regression (Batch 5): typing with Track Changes on recorded the
+# revisions but rendered plain black text with a red spell squiggle
+# and only a 1px green underline beside it. The span must render
+# GREEN glyphs + green underline, and the squiggle must not draw
+# under a tracked span. "hello" is a real word (no squiggle);
+# "wrold" is misspelled (its squiggle must lose to the span).
+# Pixel-verified from the revisions_inline screenshot: green
+# (0,128,0) glyph + underline pixels in the text row, no red
+# (255,0,0) squiggle pixels there. The TRK field highlights bold
+# while tracking is on.
+
+menu_open Edit
+wait_frames 12
+menu_select "Track Changes"
+wait_frames 12
+validate track_changes_enabled=true
+
+type "hello wrold"
+wait_frames 12
+validate revision_count=11
+validate text=hello wrold
+
+screenshot revisions_inline

@@ -127,6 +127,28 @@ TEST_CASE("Revision accept/reject (suggesting mode)", "[revisions]") {
         REQUIRE(revisions::excerpt(insertRev(0, "line1\nline2")) ==
                 "line1 line2");
     }
+    SECTION("verified insert ranges classify only matching inserts") {
+        TextBuffer buffer;
+        buffer.setText("abc");
+        std::vector<Revision> revs{insertRev(2, "c"),
+                                   deleteRev(0, "a"),
+                                   insertRev(0, "z")};
+        auto ranges = revisions::verifiedInsertRanges(buffer, revs);
+        REQUIRE(ranges.size() == 1);
+        REQUIRE(ranges[0].first == 2);
+        REQUIRE(ranges[0].second == 3);
+        // Boundaries: start is inside, end is outside.
+        REQUIRE(revisions::offsetInInsertRanges(2, ranges));
+        REQUIRE_FALSE(revisions::offsetInInsertRanges(3, ranges));
+        REQUIRE_FALSE(revisions::offsetInInsertRanges(1, ranges));
+        REQUIRE_FALSE(revisions::offsetInInsertRanges(0, ranges));
+    }
+    SECTION("verified ranges are empty with no revisions") {
+        TextBuffer buffer;
+        buffer.setText("abc");
+        std::vector<Revision> revs;
+        REQUIRE(revisions::verifiedInsertRanges(buffer, revs).empty());
+    }
     SECTION("out-of-range index is a no-op false") {
         TextBuffer buffer;
         buffer.setText("abc");

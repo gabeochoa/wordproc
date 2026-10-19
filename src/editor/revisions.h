@@ -75,6 +75,39 @@ inline std::string excerpt(const Revision& rev,
     return out;
 }
 
+// Render classification for tracked inserts: the render pass draws
+// text inside a verified Insert span in revision green (#008000)
+// with a green underline, and spell squiggles lose to the span
+// (a squiggle overlapping a span is skipped, like selection wins
+// over squiggles). A span is verified only when its text still
+// matches the buffer at its offset; deletes never classify (they
+// have no in-text render), and a stale insert classifies nothing
+// rather than colouring the wrong text.
+inline std::vector<std::pair<std::size_t, std::size_t>>
+verifiedInsertRanges(const TextBuffer& buffer,
+                     const std::vector<Revision>& revs) {
+    std::vector<std::pair<std::size_t, std::size_t>> out;
+    for (const auto& rev : revs) {
+        if (rev.type != RevisionType::Insert) continue;
+        if (bufferMatchesAt(buffer, rev.startOffset, rev.text)) {
+            out.emplace_back(rev.startOffset,
+                             rev.startOffset + rev.text.size());
+        }
+    }
+    return out;
+}
+
+// Is buffer offset `off` inside any verified insert range
+// ([first, second) — the end offset itself is outside)?
+inline bool offsetInInsertRanges(
+    std::size_t off,
+    const std::vector<std::pair<std::size_t, std::size_t>>& ranges) {
+    for (const auto& range : ranges) {
+        if (off >= range.first && off < range.second) return true;
+    }
+    return false;
+}
+
 // Dialog row label: Insert — Gabe — "abc".
 inline std::string label(const Revision& rev) {
     return std::string(rev.type == RevisionType::Insert ? "Insert"

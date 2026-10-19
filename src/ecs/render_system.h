@@ -258,18 +258,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
     // Verified tracked inserts, computed once per render (not per
     // line): only revisions whose text still matches the buffer at
     // their offset render; a stale revision draws nothing rather
-    // than underlining the wrong text.
-    std::vector<std::pair<std::size_t, std::size_t>> verifiedInserts;
-    if (revisions) {
-        for (const auto& rev : *revisions) {
-            if (rev.type != RevisionType::Insert) continue;
-            if (revisions::bufferMatchesAt(buffer, rev.startOffset,
-                                           rev.text)) {
-                verifiedInserts.emplace_back(
-                    rev.startOffset, rev.startOffset + rev.text.size());
-            }
-        }
-    }
+    // than colouring the wrong text. Classification lives in
+    // revisions::verifiedInsertRanges / offsetInInsertRanges so
+    // unit tests pin it without rendering.
+    const std::vector<std::pair<std::size_t, std::size_t>>
+        verifiedInserts =
+            revisions
+                ? revisions::verifiedInsertRanges(buffer, *revisions)
+                : std::vector<std::pair<std::size_t, std::size_t>>{};
 
     // Verified chips, same once-per-render pattern: only chips
     // whose label still matches the buffer render a box.
@@ -803,25 +799,131 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 }
             }
 
-            // For headings and titles, draw bold text (simulated by drawing twice with offset)
-            if (paragraphStyleIsBold(paraStyle) || globalStyle.bold) {
-                // Draw bold effect by drawing text twice with 1px offset
-                afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
-                afterhours::draw_text(textToDraw.c_str(), x + 1, y + textYOffset, textFontSize, textColor);
-            } else if (paragraphStyleIsItalic(paraStyle) || globalStyle.italic) {
-                // For subtitle italic style, draw in a slightly different shade
-                afterhours::Color italicColor = {static_cast<unsigned char>(textColor.r / 2 + 64),
-                                             static_cast<unsigned char>(textColor.g / 2 + 64),
-                                             static_cast<unsigned char>(textColor.b / 2 + 64), textColor.a};
-                afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, italicColor);
+            // Tracked inserts render GREEN (#008000, Word revision
+            // colour) + underlined, winning over the spell squiggle
+            // (the squiggle pass below skips spans). Drop-cap lines
+            // keep the old whole-line draw: their x/text are
+            // shifted, so per-segment math would misalign there.
+            // A 1px green underline alone was invisible next to the
+            // red squiggle (the pre-fix screenshot) — the green
+            // glyphs are what makes the span visible.
+            const afterhours::Color revisionGreen{0, 128, 0, 255};
+            const bool isBold =
+                paragraphStyleIsBold(paraStyle) || globalStyle.bold;
+            const bool isItalic =
+                paragraphStyleIsItalic(paraStyle) || globalStyle.italic;
+            const afterhours::Color italicColor = {
+                static_cast<unsigned char>(textColor.r / 2 + 64),
+                static_cast<unsigned char>(textColor.g / 2 + 64),
+                static_cast<unsigned char>(textColor.b / 2 + 64),
+                textColor.a};
+            if (span.hasDropCap) {
+                // For headings and titles, draw bold text (simulated by drawing twice with offset)
+                if (isBold) {
+                    afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
+                    afterhours::draw_text(textToDraw.c_str(), x + 1, y + textYOffset, textFontSize, textColor);
+                } else if (isItalic) {
+                    afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, italicColor);
+                } else {
+                    afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
+                }
+
+                // Draw underline if enabled
+                if (globalStyle.underline) {
+                    int underlineY = y + lineFontSize + 1;
+                    afterhours::draw_line(x, underlineY, x + textWidth, underlineY, textColor);
+                }
+            } else if (!verifiedInserts.empty()) {
+                // Split the line into insert / non-insert segments.
+                // Each display char maps to the buffer offset of the
+                // raw char it came from (a tab's expanded spaces all
+                // map to the tab itself), mirroring expandTabs above.
+                std::vector<std::size_t> displayOffsets;
+                displayOffsets.reserve(displayLine.size());
+                if (tabWidth <= 0) {
+                    for (std::size_t i = 0; i < lineLen; ++i) {
+                        displayOffsets.push_back(span.offset + i);
+                    }
+                } else {
+                    int col = 0;
+                    for (std::size_t i = 0; i < lineLen; ++i) {
+                        if (lineData[i] == '\t') {
+                            int spaces = tabWidth - (col % tabWidth);
+                            for (int s = 0; s < spaces; ++s) {
+                                displayOffsets.push_back(span.offset + i);
+                            }
+                            col += spaces;
+                        } else {
+                            displayOffsets.push_back(span.offset + i);
+                            ++col;
+                        }
+                    }
+                }
+                const std::size_t segCount =
+                    std::min(displayOffsets.size(), displayLine.size());
+                std::size_t segStart = 0;
+                while (segStart < segCount) {
+                    const bool segInsert =
+                        revisions::offsetInInsertRanges(
+                            displayOffsets[segStart], verifiedInserts);
+                    std::size_t segEnd = segStart + 1;
+                    while (segEnd < segCount &&
+                           revisions::offsetInInsertRanges(
+                               displayOffsets[segEnd], verifiedInserts) ==
+                                   segInsert) {
+                        ++segEnd;
+                    }
+                    const std::string segText = displayLine.substr(
+                        segStart, segEnd - segStart);
+                    const int segX =
+                        x + afterhours::graphics::measure_text(
+                                displayLine.substr(0, segStart).c_str(),
+                                textFontSize);
+                    const afterhours::Color segColor =
+                        segInsert ? revisionGreen
+                                  : (isItalic ? italicColor : textColor);
+                    if (isBold) {
+                        afterhours::draw_text(segText.c_str(), segX,
+                                              y + textYOffset, textFontSize,
+                                              segColor);
+                        afterhours::draw_text(segText.c_str(), segX + 1,
+                                              y + textYOffset, textFontSize,
+                                              segColor);
+                    } else {
+                        afterhours::draw_text(segText.c_str(), segX,
+                                              y + textYOffset, textFontSize,
+                                              segColor);
+                    }
+                    // Insert spans are always underlined (green);
+                    // other segments follow the global underline flag.
+                    if (segInsert || globalStyle.underline) {
+                        const int underlineY = y + lineFontSize + 1;
+                        const int segW =
+                            afterhours::graphics::measure_text(
+                                segText.c_str(), textFontSize);
+                        afterhours::draw_line(segX, underlineY, segX + segW,
+                                              underlineY, segColor);
+                    }
+                    segStart = segEnd;
+                }
             } else {
-                afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
-            }
-            
-            // Draw underline if enabled
-            if (globalStyle.underline) {
-                int underlineY = y + lineFontSize + 1;
-                afterhours::draw_line(x, underlineY, x + textWidth, underlineY, textColor);
+                // No tracked inserts on this line: the old whole-line draw.
+                if (isBold) {
+                    // Draw bold effect by drawing text twice with 1px offset
+                    afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
+                    afterhours::draw_text(textToDraw.c_str(), x + 1, y + textYOffset, textFontSize, textColor);
+                } else if (isItalic) {
+                    // For subtitle italic style, draw in a slightly different shade
+                    afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, italicColor);
+                } else {
+                    afterhours::draw_text(textToDraw.c_str(), x, y + textYOffset, textFontSize, textColor);
+                }
+
+                // Draw underline if enabled
+                if (globalStyle.underline) {
+                    int underlineY = y + lineFontSize + 1;
+                    afterhours::draw_line(x, underlineY, x + textWidth, underlineY, textColor);
+                }
             }
             
             // Draw strikethrough if enabled
@@ -904,6 +1006,28 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             while (squiggleIdx < squiggles->size() &&
                    (*squiggles)[squiggleIdx].row == row) {
                 const SpellSquiggle& sq = (*squiggles)[squiggleIdx];
+                // Tracked inserts win over squiggles: skip any
+                // squiggle overlapping a verified insert span on
+                // this row — the span already renders green +
+                // underlined, and a red squiggle under it was the
+                // pre-fix screenshot (black text + red squiggle,
+                // green 1px line invisible beside it).
+                if (!verifiedInserts.empty()) {
+                    const std::size_t sqBegin = span.offset + sq.startCol;
+                    const std::size_t sqEnd = span.offset + sq.endCol;
+                    bool overlapsInsert = false;
+                    for (const auto& range : verifiedInserts) {
+                        if (sqBegin < range.second &&
+                            sqEnd > range.first) {
+                            overlapsInsert = true;
+                            break;
+                        }
+                    }
+                    if (overlapsInsert) {
+                        ++squiggleIdx;
+                        continue;
+                    }
+                }
                 // Selection wins over squiggles: skip any squiggle that
                 // overlaps the selected range on this row.
                 if (hasSelection && row >= selStart.row && row <= selEnd.row) {
@@ -938,43 +1062,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
 
-        // Draw green underlines under tracked inserts (suggesting
-        // mode). Same origin/column mapping as the squiggles above;
-        // drop-cap lines are skipped for the same shift reason.
-        if (!verifiedInserts.empty() && !span.hasDropCap) {
-            const int underlineY = y + lineFontSize + 1;
-            const afterhours::Color green{0, 128, 0, 255};
-            for (const auto& range : verifiedInserts) {
-                std::size_t segBegin =
-                    std::max(range.first, span.offset);
-                std::size_t segEnd =
-                    std::min(range.second, span.offset + span.length);
-                if (segBegin >= segEnd) continue;
-                std::size_t dispBegin = rawColumnToDisplayColumn(
-                    lineData, lineLen, segBegin - span.offset, tabWidth);
-                std::size_t dispEnd = rawColumnToDisplayColumn(
-                    lineData, lineLen, segEnd - span.offset, tabWidth);
-                dispBegin = std::min(dispBegin, displayLine.size());
-                dispEnd = std::min(std::max(dispEnd, dispBegin),
-                                   displayLine.size());
-                if (dispBegin >= dispEnd) continue;
-                float x1 = static_cast<float>(layoutTextX) +
-                           static_cast<float>(
-                               afterhours::graphics::measure_text(
-                                   displayLine.substr(0, dispBegin).c_str(),
-                                   lineFontSize));
-                float x2 = static_cast<float>(layoutTextX) +
-                           static_cast<float>(
-                               afterhours::graphics::measure_text(
-                                   displayLine.substr(0, dispEnd).c_str(),
-                                   lineFontSize));
-                if (x2 > x1) {
-                    afterhours::draw_line(static_cast<int>(x1), underlineY,
-                                          static_cast<int>(x2), underlineY,
-                                          green);
-                }
-            }
-        }
+        // (Tracked-insert underlines are drawn with the segmented
+        // text above, in the same pass as the green glyphs — the
+        // old separate underline block drew a 1px line that was
+        // invisible next to the red squiggle.)
 
         // Draw caret
         if (caretVisible && row == caret.row) {
