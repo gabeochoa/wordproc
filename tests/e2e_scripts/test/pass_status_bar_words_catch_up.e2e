@@ -1,0 +1,10 @@
+# Test: status-bar word count catches up after typing.
+# stats() is O(lines), so the status bar recomputes at most once
+# per 250ms of wall time while typing, or as soon as the buffer
+# has been still for 5 frames (settle). Either way the bar must
+# be fresh shortly after typing stops; wait_frames 3000 covers
+# both the settle and the 250ms window with room to spare.
+
+type "hello world"
+wait_frames 3000
+expect_text "Words: 2"

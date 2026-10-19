@@ -35,13 +35,26 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
     EditorEntityCache cache_;
 
     // Cached buffer stats (lines/words/chars). TextBuffer::stats() is
-    // O(n); the status bar renders every frame, so recompute only
-    // when the buffer version changes (any content or style edit).
-    // The cache lives on the system object, which the app constructs
-    // once, so it persists across frames.
+    // O(n) — ~4.9 ms on War and Peace — and the bar repaints every
+    // frame, so a typing burst used to recompute it once per
+    // keystroke: a keystroke's work was ~5 ms on War, nearly a
+    // third of a 60 Hz frame, just for the "Words: N" segment.
+    // Recompute at most once per 250 ms of wall time while typing
+    // (a burst recomputes ~4x/second instead of once per key),
+    // but recompute as soon as the buffer has been still for a few
+    // frames: pauses between keys, and the end of any burst, show
+    // fresh counts without waiting out the window. The cache lives
+    // on the system object, which the app constructs once, so it
+    // persists across frames.
     std::uint64_t cachedStatsVersion_ =
         std::numeric_limits<std::uint64_t>::max();
     TextStats cachedStats_{};
+    double lastStatsRecomputeTime_ = -1.0;
+    static constexpr double kStatsRecomputeIntervalSeconds = 0.25;
+    std::uint64_t lastSeenVersion_ =
+        std::numeric_limits<std::uint64_t>::max();
+    int framesSinceVersionChange_ = 0;
+    static constexpr int kStatsSettleFrames = 5;
 
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
         cache_.resolve();
@@ -77,12 +90,26 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
         } else {
             CaretPosition caretPos = doc.buffer.caret();
             // stats() is O(n): recompute only when the buffer version
-            // changed (see cachedStatsVersion_). The "Words: N"
-            // segment below reads the same cached stats, as does the
-            // line count in the 3rd field.
-            if (cachedStatsVersion_ != doc.buffer.version()) {
+            // changed (see cachedStatsVersion_) and either the
+            // throttle window elapsed or the buffer has been still
+            // for a few frames. The "Words: N" segment below reads
+            // the same cached stats, as does the line count in the
+            // 3rd field.
+            if (doc.buffer.version() != lastSeenVersion_) {
+                lastSeenVersion_ = doc.buffer.version();
+                framesSinceVersionChange_ = 0;
+            } else {
+                ++framesSinceVersionChange_;
+            }
+            double nowSeconds = afterhours::graphics::get_time();
+            if (cachedStatsVersion_ != doc.buffer.version() &&
+                (lastStatsRecomputeTime_ < 0.0 ||
+                 nowSeconds - lastStatsRecomputeTime_ >=
+                     kStatsRecomputeIntervalSeconds ||
+                 framesSinceVersionChange_ >= kStatsSettleFrames)) {
                 cachedStats_ = doc.buffer.stats();
                 cachedStatsVersion_ = doc.buffer.version();
+                lastStatsRecomputeTime_ = nowSeconds;
             }
             TextStats stats = cachedStats_;
 

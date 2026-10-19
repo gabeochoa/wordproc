@@ -50,7 +50,17 @@ inline afterhours::Color toAhColor(const afterhours::Color& color) {
 // Queries only for UIContext singleton, then manually finds MenuComponent entities
 struct MenuUISystem : System<UIContext<InputAction>> {
     EditorEntityCache cache_;
-    
+
+    // Word Count dialog stats cache: stats() is O(lines) (~4.9 ms
+    // on War and Peace) and the dialog repaints every frame while
+    // open, so it recomputed the same numbers every frame. The
+    // document cannot change under the modal, so a version gate
+    // recomputes exactly once per open (and again if the version
+    // ever moves) instead of once per frame.
+    std::uint64_t cachedWordCountVersion_ =
+        std::numeric_limits<std::uint64_t>::max();
+    TextStats cachedWordCountStats_{};
+
     void for_each_with(Entity& /*ctxEntity*/, UIContext<InputAction>& ctx, float) override {
         cache_.resolve();
         if (!cache_.resolved()) return;
@@ -764,7 +774,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // Word Count dialog - Win95 shell: rows of label + right-aligned value
         if (dialogs.showWordCountDialog) {
             {
-                TextStats stats = doc.buffer.stats();
+                // Version-gated (see cachedWordCountVersion_): the
+                // dialog repaints every frame while open, and the
+                // document cannot change under the modal.
+                if (cachedWordCountVersion_ != doc.buffer.version()) {
+                    cachedWordCountStats_ = doc.buffer.stats();
+                    cachedWordCountVersion_ = doc.buffer.version();
+                }
+                TextStats stats = cachedWordCountStats_;
                 std::size_t linesPerPage =
                     layout.linesPerPage > 0
                         ? static_cast<std::size_t>(layout.linesPerPage)
