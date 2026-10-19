@@ -269,22 +269,57 @@ inline void restoreVersion(DocumentComponent& doc,
 }
 
 // --- Layout <-> DocumentSettings sync ---
+// DocumentSettings.pageSettings is the source of truth; the layout
+// is its display mirror. settings->layout copies the WHOLE page
+// block — size, orientation, dims, per-side margins, line-width
+// limit — so no field can silently stay stale (Page Setup used
+// to write only mode/dims/one margin, and the renderer never saw
+// orientation or per-side margins). layout->settings copies back
+// the layout-owned fields (mode, dims, margins); size/orientation
+// are mirrors, never origins (see below).
+// pageMargin (legacy uniform) is NOT synced: per-side margins are
+// authoritative, and a single value cannot represent them. The
+// Page Setup dialog keeps it mirroring the left margin on OK;
+// document_io fills per-side margins from it for legacy files.
 
 inline void syncLayoutToSettings(DocumentComponent& doc, LayoutComponent& layout) {
     doc.docSettings.textStyle = doc.buffer.textStyle();
     doc.docSettings.pageSettings.mode = layout.pageMode;
+    // size / orientation are NOT copied back: the layout mirrors
+    // them but never originates them, so copying back could
+    // clobber settings loaded through a path that does not sync
+    // the layout (e.g. the E2E open_file handler).
     doc.docSettings.pageSettings.pageWidth = layout.pageWidth;
     doc.docSettings.pageSettings.pageHeight = layout.pageHeight;
-    doc.docSettings.pageSettings.pageMargin = layout.pageMargin;
+    doc.docSettings.pageSettings.marginTop = layout.marginTop;
+    doc.docSettings.pageSettings.marginBottom = layout.marginBottom;
+    doc.docSettings.pageSettings.marginLeft = layout.marginLeft;
+    doc.docSettings.pageSettings.marginRight = layout.marginRight;
     doc.docSettings.pageSettings.lineWidthLimit = layout.lineWidthLimit;
 }
 
 inline void syncSettingsToLayout(DocumentComponent& doc, LayoutComponent& layout) {
     layout.pageMode = doc.docSettings.pageSettings.mode;
+    layout.pageSize = doc.docSettings.pageSettings.size;
+    layout.pageOrientation = doc.docSettings.pageSettings.orientation;
     layout.pageWidth = doc.docSettings.pageSettings.pageWidth;
     layout.pageHeight = doc.docSettings.pageSettings.pageHeight;
-    layout.pageMargin = doc.docSettings.pageSettings.pageMargin;
+    layout.marginTop = doc.docSettings.pageSettings.marginTop;
+    layout.marginBottom = doc.docSettings.pageSettings.marginBottom;
+    layout.marginLeft = doc.docSettings.pageSettings.marginLeft;
+    layout.marginRight = doc.docSettings.pageSettings.marginRight;
     layout.lineWidthLimit = doc.docSettings.pageSettings.lineWidthLimit;
+}
+
+// Apply the document's page settings to the display layout and
+// recompute the derived geometry (page fit, display size, text
+// area) in one call. The Page Setup dialog OK, and any other
+// settings->layout push, goes through here so the paged renderer,
+// ruler, hit-test, and Print Preview pagination all consume the
+// same values from the next frame.
+inline void applyPageSettings(DocumentComponent& doc, LayoutComponent& layout) {
+    syncSettingsToLayout(doc, layout);
+    layout::updateLayout(layout, layout.screenWidth, layout.screenHeight);
 }
 
 // Refresh the menu bar after a file operation (updates recent files list

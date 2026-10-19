@@ -78,42 +78,46 @@ inline void drawPageBackground(const LayoutComponent& layout,
 
     // Margin boundary guides (Word 95 "Text boundaries"): faint
     // lines at the text-area edges. Drawn only when the option is
-    // on — by default the page is plain white. Margin from the ONE
-    // scale source: pageMargin(points) * displayScale, so the
-    // margin lines sit exactly on the ruler's 1" marks.
+    // on — by default the page is plain white. Margins from the ONE
+    // scale source: margin(points) * displayScale, so the margin
+    // lines sit exactly on the ruler's inch marks.
     if (!showTextBoundaries) return;
-    float marginScaled = layout.pageMargin * layout::displayScale(layout);
+    float ds = layout::displayScale(layout);
+    float leftScaled = layout.marginLeft * ds;
+    float rightScaled = layout.marginRight * ds;
+    float topScaled = layout.marginTop * ds;
+    float bottomScaled = layout.marginBottom * ds;
     afterhours::Color marginColor = afterhours::Color{200, 200, 200, 100};
 
     // Left margin
-    afterhours::draw_line(static_cast<int>(layout.pageOffsetX + marginScaled),
+    afterhours::draw_line(static_cast<int>(layout.pageOffsetX + leftScaled),
                      static_cast<int>(pageY),
-                     static_cast<int>(layout.pageOffsetX + marginScaled),
+                     static_cast<int>(layout.pageOffsetX + leftScaled),
                      static_cast<int>(pageY + layout.pageDisplayHeight),
                      marginColor);
 
     // Right margin
     afterhours::draw_line(static_cast<int>(layout.pageOffsetX +
-                                      layout.pageDisplayWidth - marginScaled),
+                                      layout.pageDisplayWidth - rightScaled),
                      static_cast<int>(pageY),
                      static_cast<int>(layout.pageOffsetX +
-                                      layout.pageDisplayWidth - marginScaled),
+                                      layout.pageDisplayWidth - rightScaled),
                      static_cast<int>(pageY + layout.pageDisplayHeight),
                      marginColor);
 
     // Top margin
     afterhours::draw_line(
         static_cast<int>(layout.pageOffsetX),
-        static_cast<int>(pageY + marginScaled),
+        static_cast<int>(pageY + topScaled),
         static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth),
-        static_cast<int>(pageY + marginScaled), marginColor);
+        static_cast<int>(pageY + topScaled), marginColor);
 
     // Bottom margin
     afterhours::draw_line(
         static_cast<int>(layout.pageOffsetX),
-        static_cast<int>(pageY + layout.pageDisplayHeight - marginScaled),
+        static_cast<int>(pageY + layout.pageDisplayHeight - bottomScaled),
         static_cast<int>(layout.pageOffsetX + layout.pageDisplayWidth),
-        static_cast<int>(pageY + layout.pageDisplayHeight - marginScaled),
+        static_cast<int>(pageY + layout.pageDisplayHeight - bottomScaled),
         marginColor);
 }
 
@@ -1497,7 +1501,8 @@ struct EditorRenderSystem
             doc.docSettings.pageSettings.columnCount > 1;
         int columnsLinesPerPage = static_cast<int>(
             columns_math::linesPerColumnForPage(
-                layout.pageHeight, layout.pageMargin, ds, lineHeight));
+                layout.pageHeight, layout.marginTop, layout.marginBottom,
+                ds, lineHeight));
         float columnsSpacingPx =
             columnsActive
                 ? doc.docSettings.pageSettings.columnSpacing * ds

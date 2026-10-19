@@ -1,0 +1,122 @@
+# Test: File > Page Setup... Landscape + 0.5in margins honored end-to-end.
+# Dialog OK writes DocumentSettings.pageSettings; the paged renderer,
+# ruler, and Print Preview pagination all consume the same layout
+# values: Letter landscape = 11" x 8.5" (110 x 85), 0.5in margins = 36pt.
+# The preview leg: 45 lines at landscape + 0.5in margins paginate to
+# 2 estimated pages (25-26 lines/page). With stale 1in margins the
+# estimate would be 3 pages (22 lines/page), so 2 pins the new margins.
+
+fill_lines 45 Preview line
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select "Paged Mode"
+wait_frames 12
+validate page_mode=paged
+
+# Baseline: portrait Letter, 1in margins.
+validate page_size=letter
+validate page_orientation=portrait
+validate page_width_inches_x10=85
+validate page_height_inches_x10=110
+validate margin_left=72.000000
+validate margin_right=72.000000
+
+screenshot page_setup_portrait
+
+menu_open File
+wait_frames 12
+menu_select "Page Setup..."
+wait_frames 12
+
+validate dialog_open=PageSetup
+expect_text "Paper size:"
+expect_text "Orientation:"
+expect_text "Margins (inches):"
+expect_input_text pagesetup_margin_left_input "1"
+
+click_ui pagesetup_orientation_landscape
+wait_frames 12
+
+focus_ui pagesetup_margin_top_input
+wait_frames 12
+key END
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+type "0.5"
+wait_frames 12
+expect_input_text pagesetup_margin_top_input "0.5"
+
+focus_ui pagesetup_margin_bottom_input
+wait_frames 12
+key END
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+type "0.5"
+wait_frames 12
+expect_input_text pagesetup_margin_bottom_input "0.5"
+
+focus_ui pagesetup_margin_left_input
+wait_frames 12
+key END
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+type "0.5"
+wait_frames 12
+expect_input_text pagesetup_margin_left_input "0.5"
+
+focus_ui pagesetup_margin_right_input
+wait_frames 12
+key END
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+type "0.5"
+wait_frames 12
+expect_input_text pagesetup_margin_right_input "0.5"
+
+click_ui pagesetup_ok
+wait_frames 12
+
+validate dialog_open=false
+validate page_orientation=landscape
+validate page_size=letter
+validate margin_top=36.000000
+validate margin_bottom=36.000000
+validate margin_left=36.000000
+validate margin_right=36.000000
+validate page_width_inches_x10=110
+validate page_height_inches_x10=85
+
+# Print Preview consumes the same layout values: 45 lines at the new
+# margins estimate 2 pages (see header).
+menu_open File
+wait_frames 12
+menu_select "Print Preview"
+wait_frames 12
+
+validate preview_mode=true
+validate preview_page_count=2
+expect_text "Page 1 of"
+
+click_ui btn_preview_close
+wait_frames 12
+validate preview_mode=false
+
+screenshot page_setup_landscape

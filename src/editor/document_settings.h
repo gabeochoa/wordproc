@@ -390,6 +390,42 @@ inline const char* pageSizeName(PageSize size) {
     }
 }
 
+// Stable ids for the file format ("letter", "landscape", ...),
+// shared by document_io and the Page Setup dialog.
+inline const char* pageSizeId(PageSize size) {
+    switch (size) {
+        case PageSize::Letter: return "letter";
+        case PageSize::Legal: return "legal";
+        case PageSize::Tabloid: return "tabloid";
+        case PageSize::A4: return "a4";
+        case PageSize::A5: return "a5";
+        case PageSize::B5: return "b5";
+        case PageSize::Executive: return "executive";
+        case PageSize::Custom: return "custom";
+        default: return "letter";
+    }
+}
+
+inline PageSize pageSizeFromId(const std::string& id) {
+    if (id == "legal") return PageSize::Legal;
+    if (id == "tabloid") return PageSize::Tabloid;
+    if (id == "a4") return PageSize::A4;
+    if (id == "a5") return PageSize::A5;
+    if (id == "b5") return PageSize::B5;
+    if (id == "executive") return PageSize::Executive;
+    if (id == "custom") return PageSize::Custom;
+    return PageSize::Letter;
+}
+
+inline const char* pageOrientationId(PageOrientation orient) {
+    return orient == PageOrientation::Landscape ? "landscape" : "portrait";
+}
+
+inline PageOrientation pageOrientationFromId(const std::string& id) {
+    if (id == "landscape") return PageOrientation::Landscape;
+    return PageOrientation::Portrait;
+}
+
 // Get page dimensions in points for a page size (portrait orientation)
 inline void getPageDimensions(PageSize size, float& width, float& height) {
     switch (size) {
@@ -521,6 +557,26 @@ struct PageSettings {
             orientation = PageOrientation::Portrait;
         }
         std::swap(pageWidth, pageHeight);
+    }
+
+    // Set orientation explicitly (no-op when unchanged): swaps
+    // width/height on a real change, so Letter landscape is
+    // 792 x 612 points (11" x 8.5"). The Page Setup dialog uses
+    // this (not toggle) so re-applying the same orientation is safe.
+    void setOrientation(PageOrientation newOrientation) {
+        if (newOrientation == orientation) return;
+        orientation = newOrientation;
+        std::swap(pageWidth, pageHeight);
+    }
+
+    // Effective text area in points: page size minus the per-side
+    // margins. The numbers the paged renderer, ruler, and Print
+    // Preview pagination all derive from (via the layout sync).
+    float textWidthPoints() const {
+        return pageWidth - marginLeft - marginRight;
+    }
+    float textHeightPoints() const {
+        return pageHeight - marginTop - marginBottom;
     }
     
     // Set all margins uniformly

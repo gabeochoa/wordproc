@@ -351,14 +351,17 @@ struct DialogState : public afterhours::BaseComponent {
     char tabWidthInputBuffer[16] = {0};
     std::string tabWidthInputStr;
 
-    // Page Setup
+    // Page Setup (File > Page Setup...): the working selection.
+    // Seeded from DocumentSettings when the dialog opens (see
+    // menu_actions); OK writes it back to pageSettings and syncs
+    // the layout. Margin fields are inches of text, "1" = 1 inch.
     bool showPageSetup = false;
     PageSize selectedPageSize = PageSize::Letter;
     PageOrientation selectedOrientation = PageOrientation::Portrait;
-    int marginTopMm = 25;
-    int marginBottomMm = 25;
-    int marginLeftMm = 25;
-    int marginRightMm = 25;
+    std::string pageSetupTopStr = "1";
+    std::string pageSetupBottomStr = "1";
+    std::string pageSetupLeftStr = "1";
+    std::string pageSetupRightStr = "1";
 
     // Save As
     bool showSaveAsDialog = false;
@@ -412,12 +415,23 @@ struct LayoutComponent : public afterhours::BaseComponent {
     bool splitViewEnabled = false;
     bool splitViewHorizontal = true;
 
-    // Page mode settings
+    // Page mode settings. The per-side margins are the single
+    // source the renderer, ruler, hit-test, and Print Preview
+    // pagination read (see component_helpers effectiveTextArea).
+    // There is no single pageMargin: Page Setup margins are
+    // per-side, and a uniform value cannot represent them.
+    // PageSettings.pageMargin survives only as a legacy file-format
+    // field (see document_io); nothing renders from it.
     PageMode pageMode =
         PageMode::Pageless;     // Default to pageless continuous flow
+    PageSize pageSize = PageSize::Letter;
+    PageOrientation pageOrientation = PageOrientation::Portrait;
     float pageWidth = 612.0f;   // Letter size in points (8.5" x 72)
     float pageHeight = 792.0f;  // Letter size in points (11" x 72)
-    float pageMargin = 72.0f;   // 1 inch margins
+    float marginTop = 72.0f;    // Top margin in points
+    float marginBottom = 72.0f; // Bottom margin in points
+    float marginLeft = 72.0f;   // Left margin in points
+    float marginRight = 72.0f;  // Right margin in points
     float lineWidthLimit =
         0.0f;  // 0 = no limit, otherwise max chars per line in pageless mode
     int linesPerPage = 50;  // Approximate lines per page for paged mode

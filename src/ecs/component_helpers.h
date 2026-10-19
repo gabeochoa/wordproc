@@ -192,16 +192,19 @@ inline void setEffectiveZoom(LayoutComponent& layout, float effective) {
 }
 
 inline LayoutComponent::Rect effectiveTextArea(const LayoutComponent& layout) {
-    // Margin in display pixels: pageMargin is in points (72/in), so
-    // marginPx = (pageMargin/72) * pixelsPerInch =
-    // pageMargin * displayScale — the same scale as the page, ruler,
-    // and indents. Pageless therefore also gets a real margin band:
+    // Margins in display pixels: margin points (72/in), so
+    // marginPx = (margin/72) * pixelsPerInch =
+    // margin * displayScale — the same scale as the page, ruler,
+    // and indents. Per-side: left/right set x/width, top/bottom
+    // set y/height. Pageless therefore also gets a real margin band:
     // the ruler is gray outside it, white inside it, instead of
     // white edge-to-edge.
-    float marginPx = layout.pageMargin * displayScale(layout);
+    float ds = displayScale(layout);
+    float leftPx = layout.marginLeft * ds;
+    float rightPx = layout.marginRight * ds;
     if (layout.pageMode == PageMode::Pageless) {
-        float x = layout.textArea.x + marginPx;
-        float w = layout.textArea.width - 2.0f * marginPx;
+        float x = layout.textArea.x + leftPx;
+        float w = layout.textArea.width - leftPx - rightPx;
         if (w < 0.0f) w = 0.0f;
         // Apply line width limit if set, centered inside the margins.
         if (layout.lineWidthLimit > 0.0f) {
@@ -217,10 +220,12 @@ inline LayoutComponent::Rect effectiveTextArea(const LayoutComponent& layout) {
     }
 
     // Paged mode: return area within page margins
-    return {layout.pageOffsetX + marginPx,
-            layout.textArea.y + 10.0f + marginPx,  // 10px for page shadow
-            layout.pageDisplayWidth - 2.0f * marginPx,
-            layout.pageDisplayHeight - 2.0f * marginPx};
+    float topPx = layout.marginTop * ds;
+    float bottomPx = layout.marginBottom * ds;
+    return {layout.pageOffsetX + leftPx,
+            layout.textArea.y + 10.0f + topPx,  // 10px for page shadow
+            layout.pageDisplayWidth - leftPx - rightPx,
+            layout.pageDisplayHeight - topPx - bottomPx};
 }
 
 }  // namespace layout
@@ -297,8 +302,9 @@ inline void refreshPreviewPagination(LayoutComponent& layout,
     // line height. Uses the Normal-paragraph font; headings/spacing
     // shift individual breaks (estimate, not pagination).
     float ds = displayScale(layout);
-    float textHeightPx = layout.pageDisplayHeight -
-                         2.0f * layout.pageMargin * ds;
+    float textHeightPx =
+        layout.pageDisplayHeight -
+        (layout.marginTop + layout.marginBottom) * ds;
     int fontSize = ruler_math::scaledFontSize(baseFontSize, ds);
     int lineHeight = fontSize + 4;
     layout.previewLinesPerPage =

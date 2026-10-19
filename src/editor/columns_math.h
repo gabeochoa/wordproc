@@ -69,17 +69,29 @@ inline float columnLineOriginX(float textAreaX, float textPadding,
 // height minus top/bottom margins, in points, converted to display
 // px) divided by the line height, at least one. The renderer and
 // the hit-test both use this, so a click on a column lands on the
-// line the renderer drew there.
+// line the renderer drew there. The top+bottom form is the real
+// one (Page Setup margins are per-side); the single-margin form
+// is a uniform-margin shorthand that delegates to it.
 inline std::size_t linesPerColumnForPage(float pageHeightPoints,
-                                         float marginPoints,
+                                         float marginTopPoints,
+                                         float marginBottomPoints,
                                          float displayScale,
                                          int lineHeightPx) {
-    float textHeightPx =
-        (pageHeightPoints - 2.0f * marginPoints) * displayScale;
+    float textHeightPx = (pageHeightPoints - marginTopPoints -
+                          marginBottomPoints) *
+                         displayScale;
     if (lineHeightPx <= 0) return 1;
     std::size_t lines = static_cast<std::size_t>(
         textHeightPx / static_cast<float>(lineHeightPx));
     return std::max<std::size_t>(lines, 1);
+}
+
+inline std::size_t linesPerColumnForPage(float pageHeightPoints,
+                                         float marginPoints,
+                                         float displayScale,
+                                         int lineHeightPx) {
+    return linesPerColumnForPage(pageHeightPoints, marginPoints,
+                                 marginPoints, displayScale, lineHeightPx);
 }
 
 // Format a spacing in points as inches for the dialog field

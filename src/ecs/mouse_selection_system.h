@@ -223,7 +223,8 @@ struct MouseSelectionSystem
             doc.docSettings.pageSettings.columnSpacing * ds;
         int columnsLinesPerPage = static_cast<int>(
             columns_math::linesPerColumnForPage(
-                layout.pageHeight, layout.pageMargin, ds, lineHeight));
+                layout.pageHeight, layout.marginTop, layout.marginBottom,
+                ds, lineHeight));
         LayoutComponent::Rect area = layout::effectiveTextArea(layout);
         float sbX = layout.textArea.x + layout.textArea.width - scroll_math::SCROLLBAR_WIDTH;
 

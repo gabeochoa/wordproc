@@ -595,6 +595,15 @@ static void setupCallbacksEx(
             return std::to_string(static_cast<int>(std::lround(
                 layoutComp.pageDisplayWidth / ppi * 10.0f)));
         }
+        // Landscape portrait check: Letter landscape is 11" wide
+        // (110) and 8.5" tall (85); portrait is 85 wide, 110 tall.
+        if (prop == "page_height_inches_x10") {
+            if (layoutComp.pageMode != PageMode::Paged) return "0";
+            float ppi = ecs::layout::pixelsPerInch(layoutComp);
+            if (ppi <= 0.0f) return "0";
+            return std::to_string(static_cast<int>(std::lround(
+                layoutComp.pageDisplayHeight / ppi * 10.0f)));
+        }
         // Ruler white band = effective (margin) area; in pageless it
         // must be inset from the text area by the 1\" margins, not
         // edge-to-edge.
@@ -1078,6 +1087,12 @@ static void setupCallbacksEx(
         dialogState.tabWidthInputBuffer[0] = '\0';
         dialogState.tabWidthInputStr.clear();
         dialogState.showPageSetup = false;
+        dialogState.selectedPageSize = PageSize::Letter;
+        dialogState.selectedOrientation = PageOrientation::Portrait;
+        dialogState.pageSetupTopStr = "1";
+        dialogState.pageSetupBottomStr = "1";
+        dialogState.pageSetupLeftStr = "1";
+        dialogState.pageSetupRightStr = "1";
         dialogState.showSaveAsDialog = false;
         std::memset(dialogState.saveAsInputBuffer, 0, sizeof(dialogState.saveAsInputBuffer));
         dialogState.saveAsInputStr.clear();
@@ -1129,6 +1144,18 @@ static void setupCallbacksEx(
         layoutComp.focusMode = false;
         layoutComp.showRuler = true;
         layoutComp.pageMode = PageMode::Pageless;
+        // Page Setup state must not leak: a landscape test would
+        // otherwise leave the next test's page landscape (the
+        // layout used to carry no per-side margins at all, so a
+        // stale page size leaked the same way).
+        layoutComp.pageSize = PageSize::Letter;
+        layoutComp.pageOrientation = PageOrientation::Portrait;
+        layoutComp.pageWidth = 612.0f;
+        layoutComp.pageHeight = 792.0f;
+        layoutComp.marginTop = 72.0f;
+        layoutComp.marginBottom = 72.0f;
+        layoutComp.marginLeft = 72.0f;
+        layoutComp.marginRight = 72.0f;
         layoutComp.previewMode = false;
         layoutComp.previewPrevPageMode = PageMode::Pageless;
         layoutComp.previewPrevZoomLevel = 1.0f;

@@ -305,12 +305,21 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         {"spellCheckAsYouType", settings.spellCheckAsYouType}
     };
 
-    // Page layout settings (document-specific, saved with file)
+    // Page layout settings (document-specific, saved with file).
+    // pageSize / orientation / per-side margins are the Page Setup
+    // fields; pageMargin stays for legacy readers and mirrors the
+    // left margin for files written before per-side margins existed.
     doc["pageLayout"] = {
         {"mode", pageModeToString(page.mode)},
+        {"pageSize", pageSizeId(page.size)},
+        {"orientation", pageOrientationId(page.orientation)},
         {"pageWidth", page.pageWidth},
         {"pageHeight", page.pageHeight},
         {"pageMargin", page.pageMargin},
+        {"marginTop", page.marginTop},
+        {"marginBottom", page.marginBottom},
+        {"marginLeft", page.marginLeft},
+        {"marginRight", page.marginRight},
         {"lineWidthLimit", page.lineWidthLimit},
         {"columns", page.columnCount},
         {"columnSpacing", page.columnSpacing},
@@ -508,6 +517,14 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                 page.mode =
                     pageModeFromString(page_json.at("mode").get<std::string>());
             }
+            if (page_json.contains("pageSize")) {
+                page.size = pageSizeFromId(
+                    page_json.at("pageSize").get<std::string>());
+            }
+            if (page_json.contains("orientation")) {
+                page.orientation = pageOrientationFromId(
+                    page_json.at("orientation").get<std::string>());
+            }
             if (page_json.contains("pageWidth")) {
                 page.pageWidth = page_json.at("pageWidth").get<float>();
             }
@@ -516,6 +533,31 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             }
             if (page_json.contains("pageMargin")) {
                 page.pageMargin = page_json.at("pageMargin").get<float>();
+            }
+            // Per-side margins: legacy files (written before they
+            // existed) carry only pageMargin, so a missing side
+            // falls back to it instead of the 72pt default.
+            if (page_json.contains("marginTop")) {
+                page.marginTop = page_json.at("marginTop").get<float>();
+            } else {
+                page.marginTop = page.pageMargin;
+            }
+            if (page_json.contains("marginBottom")) {
+                page.marginBottom =
+                    page_json.at("marginBottom").get<float>();
+            } else {
+                page.marginBottom = page.pageMargin;
+            }
+            if (page_json.contains("marginLeft")) {
+                page.marginLeft = page_json.at("marginLeft").get<float>();
+            } else {
+                page.marginLeft = page.pageMargin;
+            }
+            if (page_json.contains("marginRight")) {
+                page.marginRight =
+                    page_json.at("marginRight").get<float>();
+            } else {
+                page.marginRight = page.pageMargin;
             }
             if (page_json.contains("lineWidthLimit")) {
                 page.lineWidthLimit =
@@ -622,12 +664,18 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                             {"b", style.highlightColor.b}, {"a", style.highlightColor.a}}},
     };
 
-    // Page layout settings
+    // Page layout settings (see saveDocumentEx above).
     doc["pageLayout"] = {
         {"mode", pageModeToString(page.mode)},
+        {"pageSize", pageSizeId(page.size)},
+        {"orientation", pageOrientationId(page.orientation)},
         {"pageWidth", page.pageWidth},
         {"pageHeight", page.pageHeight},
         {"pageMargin", page.pageMargin},
+        {"marginTop", page.marginTop},
+        {"marginBottom", page.marginBottom},
+        {"marginLeft", page.marginLeft},
+        {"marginRight", page.marginRight},
         {"lineWidthLimit", page.lineWidthLimit},
         {"columns", page.columnCount},
         {"columnSpacing", page.columnSpacing},

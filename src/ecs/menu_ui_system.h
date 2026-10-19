@@ -2876,6 +2876,278 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Page Setup dialog (File > Page Setup...) - Win95 shell:
+        // paper-size presets, Portrait/Landscape, four margin
+        // fields in inches. OK writes the whole block to
+        // docSettings.pageSettings and pushes it to the layout
+        // (cmd::applyPageSettings), so the paged renderer, ruler,
+        // hit-test, and Print Preview pagination all consume the
+        // same values. Cancel leaves the document untouched. A
+        // cleared/unknowable margin field keeps its current value.
+        if (dialogs.showPageSetup) {
+            constexpr int PAGE_SETUP_MODAL_ID = 50018;
+            auto result = afterhours::modal(ctx, mk(entity, PAGE_SETUP_MODAL_ID),
+                dialogs.showPageSetup,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(500), afterhours::ui::h720(400),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Page Setup", CONTENT_LAYER);
+
+                test_input::register_visible_text("Paper size:");
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Paper size:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                struct PageSizeOption {
+                    PageSize size;
+                    const char* name;
+                    const char* debug;
+                };
+                static const PageSizeOption kPageSizes[8] = {
+                    {PageSize::Letter, "Letter", "pagesetup_size_letter"},
+                    {PageSize::Legal, "Legal", "pagesetup_size_legal"},
+                    {PageSize::Tabloid, "Tabloid", "pagesetup_size_tabloid"},
+                    {PageSize::A4, "A4", "pagesetup_size_a4"},
+                    {PageSize::A5, "A5", "pagesetup_size_a5"},
+                    {PageSize::B5, "B5", "pagesetup_size_b5"},
+                    {PageSize::Executive, "Executive",
+                     "pagesetup_size_executive"},
+                    {PageSize::Custom, "Custom", "pagesetup_size_custom"},
+                };
+                for (int row = 0; row < 2; ++row) {
+                    auto sizeRow = div(ctx, mk(result.ent(), 902 + row),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(32)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (sizeRow) {
+                        for (int i = 0; i < 4; ++i) {
+                            const auto& opt = kPageSizes[row * 4 + i];
+                            bool selected =
+                                dialogs.selectedPageSize == opt.size;
+                            test_input::register_visible_text(opt.name);
+                            if (button(ctx, mk(sizeRow.ent(), 100 + i),
+                                ComponentConfig{}
+                                    .with_debug_name(opt.debug)
+                                    .with_label(opt.name)
+                                    .with_size(ComponentSize{w1280(96), h720(28)})
+                                    .with_roundness(0.0f)
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_border(ui_imm::win95_colors::TEXT,
+                                                 selected ? 2.0f : 1.0f)
+                                    .with_cursor(afterhours::ui::CursorType::Pointer)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.selectedPageSize = opt.size;
+                            }
+                        }
+                    }
+                }
+
+                test_input::register_visible_text("Orientation:");
+                div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_label("Orientation:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto orientRow = div(ctx, mk(result.ent(), 905),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (orientRow) {
+                    static const struct {
+                        PageOrientation orient;
+                        const char* name;
+                        const char* debug;
+                    } kOrients[2] = {
+                        {PageOrientation::Portrait, "Portrait",
+                         "pagesetup_orientation_portrait"},
+                        {PageOrientation::Landscape, "Landscape",
+                         "pagesetup_orientation_landscape"},
+                    };
+                    for (int i = 0; i < 2; ++i) {
+                        bool selected =
+                            dialogs.selectedOrientation == kOrients[i].orient;
+                        test_input::register_visible_text(kOrients[i].name);
+                        if (button(ctx, mk(orientRow.ent(), 100 + i),
+                            ComponentConfig{}
+                                .with_debug_name(kOrients[i].debug)
+                                .with_label(kOrients[i].name)
+                                .with_size(ComponentSize{w1280(96), h720(28)})
+                                .with_roundness(0.0f)
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_border(ui_imm::win95_colors::TEXT,
+                                             selected ? 2.0f : 1.0f)
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.selectedOrientation = kOrients[i].orient;
+                        }
+                    }
+                }
+
+                test_input::register_visible_text("Margins (inches):");
+                div(ctx, mk(result.ent(), 906),
+                    ComponentConfig{}
+                        .with_label("Margins (inches):")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                struct MarginField {
+                    const char* label;
+                    const char* debug;
+                    std::string* value;
+                };
+                MarginField marginFields[4] = {
+                    {"Top:", "pagesetup_margin_top_input",
+                     &dialogs.pageSetupTopStr},
+                    {"Bottom:", "pagesetup_margin_bottom_input",
+                     &dialogs.pageSetupBottomStr},
+                    {"Left:", "pagesetup_margin_left_input",
+                     &dialogs.pageSetupLeftStr},
+                    {"Right:", "pagesetup_margin_right_input",
+                     &dialogs.pageSetupRightStr},
+                };
+                for (int i = 0; i < 4; ++i) {
+                    auto marginRow = div(ctx, mk(result.ent(), 907 + i),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (marginRow) {
+                        test_input::register_visible_text(
+                            marginFields[i].label);
+                        div(ctx, mk(marginRow.ent(), 0),
+                            ComponentConfig{}
+                                .with_label(marginFields[i].label)
+                                .with_size(ComponentSize{w1280(70), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        afterhours::text_input::text_input(
+                            ctx, mk(marginRow.ent(), 1),
+                            *marginFields[i].value,
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name(marginFields[i].debug)
+                                .with_size(ComponentSize{w1280(80), h720(24)})
+                                .with_render_layer(CONTENT_LAYER));
+                    }
+                }
+
+                auto buttonRow = div(ctx, mk(result.ent(), 911),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("pagesetup_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        auto parseMarginInches = [](const std::string& text,
+                                                    float fallbackPoints) {
+                            if (text.empty()) return fallbackPoints;
+                            char* end = nullptr;
+                            double inches =
+                                std::strtod(text.c_str(), &end);
+                            // No digits, NaN, or absurd: keep current.
+                            if (end == text.c_str() || inches != inches ||
+                                inches > 1000.0 || inches < -1000.0) {
+                                return fallbackPoints;
+                            }
+                            return std::clamp(
+                                       static_cast<float>(inches), 0.0f,
+                                       4.0f) *
+                                   72.0f;
+                        };
+                        PageSettings& ps = doc.docSettings.pageSettings;
+                        // Custom keeps its current dims (no width/height
+                        // fields in this dialog); a preset re-derives
+                        // them from the size + orientation below.
+                        if (dialogs.selectedPageSize != PageSize::Custom) {
+                            ps.applyPageSize(dialogs.selectedPageSize);
+                        } else {
+                            ps.size = PageSize::Custom;
+                        }
+                        ps.setOrientation(dialogs.selectedOrientation);
+                        ps.marginTop = parseMarginInches(
+                            dialogs.pageSetupTopStr, ps.marginTop);
+                        ps.marginBottom = parseMarginInches(
+                            dialogs.pageSetupBottomStr, ps.marginBottom);
+                        ps.marginLeft = parseMarginInches(
+                            dialogs.pageSetupLeftStr, ps.marginLeft);
+                        ps.marginRight = parseMarginInches(
+                            dialogs.pageSetupRightStr, ps.marginRight);
+                        // Legacy uniform field mirrors the left margin.
+                        ps.pageMargin = ps.marginLeft;
+                        doc.isDirty = true;
+                        dialogs.showPageSetup = false;
+                        cmd::applyPageSettings(doc, layout);
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("pagesetup_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showPageSetup = false;
+                    }
+                }
+            }
+        }
+
         // Tab Width input dialog
         if (dialogs.showTabWidthDialog) {
             constexpr int TABWIDTH_MODAL_ID = 50004;

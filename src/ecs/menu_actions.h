@@ -122,7 +122,27 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 } break;
                 case 11:  // Page Setup
                 {
-                    dialogs.showPageSetup = !dialogs.showPageSetup;
+                    // Open (not toggle) and seed the working selection
+                    // from the document, so the dialog shows the current
+                    // paper/orientation/margins and Cancel leaves them
+                    // untouched. OK writes back + syncs the layout.
+                    dialogs.showPageSetup = true;
+                    dialogs.selectedPageSize =
+                        doc.docSettings.pageSettings.size;
+                    dialogs.selectedOrientation =
+                        doc.docSettings.pageSettings.orientation;
+                    dialogs.pageSetupTopStr =
+                        columns_math::pointsToInchesString(
+                            doc.docSettings.pageSettings.marginTop);
+                    dialogs.pageSetupBottomStr =
+                        columns_math::pointsToInchesString(
+                            doc.docSettings.pageSettings.marginBottom);
+                    dialogs.pageSetupLeftStr =
+                        columns_math::pointsToInchesString(
+                            doc.docSettings.pageSettings.marginLeft);
+                    dialogs.pageSetupRightStr =
+                        columns_math::pointsToInchesString(
+                            doc.docSettings.pageSettings.marginRight);
                 } break;
                 case 12:  // Print Preview
                     cmd::openPrintPreview(doc, layout);
@@ -226,6 +246,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 0:  // Pageless Mode (preview owns pageMode: ignored)
                     if (layout.previewMode) break;
                     cmd::exitOutlineMode(layout, scroll);
+                    // The View switch is a real mode change: write it
+                    // to the document settings too, or the next
+                    // settings->layout sync (Page Setup OK, Open)
+                    // would resurrect the old mode from settings.
+                    // Preview / Outline switches stay layout-only:
+                    // they are transient and must not rewrite the doc.
+                    doc.docSettings.pageSettings.mode = PageMode::Pageless;
                     layout.pageMode = PageMode::Pageless;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
@@ -238,6 +265,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 1:  // Paged Mode (preview owns pageMode: ignored)
                     if (layout.previewMode) break;
                     cmd::exitOutlineMode(layout, scroll);
+                    // See Pageless above: the View switch persists.
+                    doc.docSettings.pageSettings.mode = PageMode::Paged;
                     layout.pageMode = PageMode::Paged;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
