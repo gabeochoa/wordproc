@@ -59,6 +59,15 @@ inline void register_e2e_systems(SystemManager &sm, const E2EConfig &config) {
   // Phase 5: App-specific command handlers
   e2e_commands::register_app_commands(sm, config.doc_comp, config.menu_comp, config.dialog_state, config.scroll_comp);
 
+#if AFTERHOURS_ENABLE_PROFILING
+  // Phase 5b: profiling commands (dump_profile / expect_fps_above /
+  // expect_p99_below) + collector start. Without this the
+  // -Dprofiling=true build collects nothing: the collector is never
+  // started and no frame is ever ended.
+  perf_commands::builtin_profile::enable();
+  perf_commands::register_perf_commands(sm);
+#endif
+
   // Phase 6: Unknown command handler + Cleanup (must be last)
   register_unknown_handler(sm);
   register_cleanup(sm);

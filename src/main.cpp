@@ -42,6 +42,10 @@
 // Include afterhours ECS
 #include "../vendor/afterhours/src/ecs.h"
 
+#if AFTERHOURS_ENABLE_PROFILING
+#include <afterhours/src/plugins/profiling.h>
+#endif
+
 #ifdef AFTER_HOURS_ENABLE_MCP
 bool g_mcp_mode = false;
 int g_saved_stdout_fd = -1;
@@ -449,6 +453,15 @@ static void app_frame() {
     if (in_frame) return;
     in_frame = true;
     struct FrameGuard { ~FrameGuard() { in_frame = false; } } _guard;
+#if AFTERHOURS_ENABLE_PROFILING
+    // End the profiling frame on every exit path below (RAII: app_frame
+    // returns early on script finish / frame limit / quit).
+    struct ProfileFrameGuard {
+      ~ProfileFrameGuard() {
+        afterhours::profiling::default_collector().end_frame();
+      }
+    } _profile_guard;
+#endif
 
     // ── Handle pending native file dialogs ──
     // These are deferred from menu/shortcut systems so that the blocking

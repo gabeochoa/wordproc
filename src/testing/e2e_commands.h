@@ -10,6 +10,10 @@
 
 #include <afterhours/src/plugins/e2e_testing/e2e_testing.h>
 
+#if AFTERHOURS_ENABLE_PROFILING
+#include <afterhours/src/plugins/profiling.h>
+#endif
+
 #include <fstream>
 
 namespace e2e_commands {
@@ -713,6 +717,20 @@ struct HandleFileDialogSetPathCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+#if AFTERHOURS_ENABLE_PROFILING
+// Handle 'profile_reset' - clears the profiling collector so a script can
+// isolate one window (e.g. setup, profile_reset, 100 keys, dump_profile).
+struct HandleProfileResetCommand : System<testing::PendingE2ECommand> {
+  void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                     float) override {
+    if (cmd.is_consumed() || !cmd.is("profile_reset")) return;
+    profiling::default_collector().reset();
+    profiling::default_collector().start();
+    cmd.consume();
+  }
+};
+#endif
+
 // Register all app-specific commands
 inline void register_app_commands(
     SystemManager &sm,
@@ -788,6 +806,10 @@ inline void register_app_commands(
   auto fill_lines = std::make_unique<HandleFillLinesCommand>();
   fill_lines->doc_comp = doc_comp;
   sm.register_update_system(std::move(fill_lines));
+
+#if AFTERHOURS_ENABLE_PROFILING
+  sm.register_update_system(std::make_unique<HandleProfileResetCommand>());
+#endif
 
 }
 
