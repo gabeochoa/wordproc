@@ -4634,153 +4634,293 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // field, Go To jumps (and flashes when the name does
         // not exist). The dialog stays open after a jump so
         // the user can jump again; Close / Esc dismisses it.
+        // Win95 shell (Batch 9 fix round): square BUTTON_FACE
+        // panel, navy caption, no backdrop dim, sunken list /
+        // field, raised 90px buttons — the Batch 1 dialog
+        // shell, not the default modal.
         if (dialogs.showGoToDialog) {
             constexpr int GO_TO_MODAL_ID = 50007;
+            // Height fits the content (title 20 + body 122 +
+            // panel padding 8 + a little slack = 160); the
+            // Bookmark names list grows it, capped at the
+            // 3-row list below. A fixed 240 left ~90px of
+            // empty panel under the buttons.
+            float goToHeight = 160.0f;
+            if (dialogs.goToTarget == 2) {
+                std::size_t bookmarkRows = std::min<std::size_t>(
+                    doc.buffer.bookmarks().size(), 3);
+                float namesHeight =
+                    bookmarkRows == 0
+                        ? 20.0f
+                        : static_cast<float>(bookmarkRows * 22 + 4);
+                goToHeight += 6.0f + namesHeight;
+            }
             auto result = afterhours::modal(ctx, mk(entity, GO_TO_MODAL_ID),
                 dialogs.showGoToDialog,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(460), afterhours::ui::h720(340))
-                    .with_title("Go To")
-                    .with_show_close_button(true));
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(340),
+                    afterhours::ui::h720(goToHeight),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
 
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
 
-                // "Go to what:" label + listbox.
-                div(ctx, mk(result.ent(), 0),
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Go To", CONTENT_LAYER);
+
+                // Body row (Word 95 layout): left "Go to what:"
+                // list, right field + stacked Go To / Close.
+                auto bodyRow = div(ctx, mk(result.ent(), 800),
                     ComponentConfig{}
-                        .with_label("Go to what:")
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_size(ComponentSize{percent(1.0f), children()})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                static const char* kGoToTargets[3] = {"Page", "Line",
-                                                      "Bookmark"};
-                static const char* kGoToTargetDebug[3] = {
-                    "goto_target_page", "goto_target_line",
-                    "goto_target_bookmark"};
-                for (int t = 0; t < 3; ++t) {
-                    bool selected = dialogs.goToTarget == t;
-                    test_input::register_visible_text(kGoToTargets[t]);
-                    if (button(ctx, mk(result.ent(), 10 + t),
+                if (bodyRow) {
+                    auto leftCol = div(ctx, mk(bodyRow.ent(), 0),
                         ComponentConfig{}
-                            .with_debug_name(kGoToTargetDebug[t])
-                            .with_label(kGoToTargets[t])
-                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_size(ComponentSize{w1280(140), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_gap(pixels(4))
                             .with_custom_background(
-                                selected ? ui_imm::win95_colors::HIGHLIGHT
-                                         : ui_imm::win95_colors::TEXT_AREA)
-                            .with_custom_text_color(
-                                selected ? ui_imm::win95_colors::TEXT_WHITE
-                                         : ui_imm::win95_colors::TEXT)
-                            .with_alignment(afterhours::ui::TextAlignment::Left)
-                            .with_text_inset(4.0f, 0.0f)
-                            .with_roundness(0.0f)
-                            .with_cursor(afterhours::ui::CursorType::Pointer)
-                            .with_render_layer(CONTENT_LAYER))) {
-                        // Switching targets clears the field:
-                        // its meaning changes (page vs line vs
-                        // name), so a stale number must not
-                        // carry over and jump somewhere odd.
-                        if (dialogs.goToTarget != t) {
-                            dialogs.goToTarget = t;
-                            dialogs.goToInputStr.clear();
-                        }
-                    }
-                }
-
-                // Number / name field, label per target.
-                const char* fieldLabel =
-                    dialogs.goToTarget == 2
-                        ? "Enter bookmark name:"
-                        : dialogs.goToTarget == 1
-                              ? "Enter line number:"
-                              : "Enter page number:";
-                div(ctx, mk(result.ent(), 20),
-                    ComponentConfig{}
-                        .with_label(fieldLabel)
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
-                        .with_margin(Margin{.top = DefaultSpacing::small()})
-                        .with_render_layer(CONTENT_LAYER));
-                afterhours::text_input::text_input(
-                    ctx, mk(result.ent(), 21), dialogs.goToInputStr,
-                    ComponentConfig{}
-                        .with_debug_name("goto_input")
-                        .with_size(ComponentSize{percent(1.0f), h720(32)})
-                        .with_background(Theme::Usage::Surface)
-                        .with_render_layer(CONTENT_LAYER));
-
-                // Bookmark names under the field (Bookmark
-                // target only): clicking one fills the field.
-                if (dialogs.goToTarget == 2) {
-                    const auto& bookmarks = doc.buffer.bookmarks();
-                    if (bookmarks.empty()) {
-                        div(ctx, mk(result.ent(), 30),
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (leftCol) {
+                        // "Go to what:" label + sunken listbox.
+                        div(ctx, mk(leftCol.ent(), 0),
                             ComponentConfig{}
-                                .with_label("No bookmarks in document")
-                                .with_size(
-                                    ComponentSize{percent(1.0f), h720(24)})
-                                .with_margin(
-                                    Margin{.top = DefaultSpacing::small()})
+                                .with_label("Go to what:")
+                                .with_size(ComponentSize{percent(1.0f),
+                                                         h720(20)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
                                 .with_render_layer(CONTENT_LAYER));
-                    } else {
-                        for (std::size_t bi = 0;
-                             bi < bookmarks.size(); ++bi) {
-                            const std::string& name = bookmarks[bi].name;
-                            test_input::register_visible_text(name);
-                            if (button(ctx, mk(result.ent(), 1000 + static_cast<int>(bi)),
-                                ComponentConfig{}
-                                    .with_debug_name("goto_bookmark_" +
-                                                   std::to_string(bi))
-                                    .with_label(name)
-                                    .with_size(ComponentSize{percent(1.0f),
-                                                             h720(26)})
-                                    .with_background(Theme::Usage::Surface)
-                                    .with_text_overflow(
-                                        afterhours::ui::TextOverflow::Ellipsis)
-                                    .with_cursor(
-                                        afterhours::ui::CursorType::Pointer)
-                                    .with_margin(Margin{.bottom = DefaultSpacing::tiny()})
-                                    .with_render_layer(CONTENT_LAYER))) {
-                                dialogs.goToInputStr = name;
+                        auto targetList = div(ctx, mk(leftCol.ent(), 1),
+                            ah_win95::win95SunkenStyle()
+                                .with_size(ComponentSize{percent(1.0f),
+                                                         h720(76)})
+                                .with_flex_direction(FlexDirection::Column)
+                                .with_padding(Padding{.top = pixels(2),
+                                                      .bottom = pixels(2)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (targetList) {
+                            static const char* kGoToTargets[3] = {
+                                "Page", "Line", "Bookmark"};
+                            static const char* kGoToTargetDebug[3] = {
+                                "goto_target_page", "goto_target_line",
+                                "goto_target_bookmark"};
+                            for (int t = 0; t < 3; ++t) {
+                                bool selected = dialogs.goToTarget == t;
+                                test_input::register_visible_text(
+                                    kGoToTargets[t]);
+                                if (button(ctx, mk(targetList.ent(), 10 + t),
+                                    ComponentConfig{}
+                                        .with_debug_name(
+                                            kGoToTargetDebug[t])
+                                        .with_label(kGoToTargets[t])
+                                        .with_size(ComponentSize{
+                                            percent(1.0f), h720(24)})
+                                        .with_custom_background(
+                                            selected
+                                                ? ui_imm::win95_colors::
+                                                      HIGHLIGHT
+                                                : ui_imm::win95_colors::
+                                                      TEXT_AREA)
+                                        .with_custom_text_color(
+                                            selected
+                                                ? ui_imm::win95_colors::
+                                                      TEXT_WHITE
+                                                : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(
+                                            afterhours::ui::TextAlignment::
+                                                Left)
+                                        .with_text_inset(4.0f, 0.0f)
+                                        .with_roundness(0.0f)
+                                        .with_cursor(
+                                            afterhours::ui::CursorType::
+                                                Pointer)
+                                        .with_render_layer(
+                                            CONTENT_LAYER))) {
+                                    // Switching targets clears
+                                    // the field: its meaning
+                                    // changes (page vs line vs
+                                    // name), so a stale number
+                                    // must not carry over and
+                                    // jump somewhere odd.
+                                    if (dialogs.goToTarget != t) {
+                                        dialogs.goToTarget = t;
+                                        dialogs.goToInputStr.clear();
+                                    }
+                                }
                             }
                         }
-                    }
-                }
+                    }  // leftCol
 
-                // Go To + Close button row.
-                auto buttonRow = div(ctx, mk(result.ent(), 40),
-                    ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(44)})
-                        .with_flex_direction(FlexDirection::Row)
-                        .with_justify_content(JustifyContent::Center)
-                        .with_align_items(AlignItems::Center)
-                        .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
-                        .with_render_layer(CONTENT_LAYER));
+                    auto rightCol = div(ctx, mk(bodyRow.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{w1280(184), children()})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_gap(pixels(6))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (rightCol) {
 
-                if (buttonRow) {
-                    if (button(ctx, mk(buttonRow.ent(), 0),
-                        ComponentConfig{}
-                            .with_debug_name("goto_go_button")
-                            .with_label("Go To")
-                            .with_size(ComponentSize{h720(100), h720(32)})
-                            .with_background(Theme::Usage::Primary)
-                            .with_cursor(afterhours::ui::CursorType::Pointer)
-                            .with_render_layer(CONTENT_LAYER))) {
-                        cmd::performGoTo(doc, layout, cache_.scroll,
-                                         dialogs);
-                    }
-                    if (button(ctx, mk(buttonRow.ent(), 1),
-                        ComponentConfig{}
-                            .with_debug_name("goto_close_button")
-                            .with_label("Close")
-                            .with_size(ComponentSize{h720(80), h720(32)})
-                            .with_cursor(afterhours::ui::CursorType::Pointer)
-                            .with_render_layer(CONTENT_LAYER))) {
-                        dialogs.showGoToDialog = false;
-                    }
-                }
+                        // Number / name field, label per target.
+                        const char* fieldLabel =
+                            dialogs.goToTarget == 2
+                                ? "Enter bookmark name:"
+                                : dialogs.goToTarget == 1
+                                      ? "Enter line number:"
+                                      : "Enter page number:";
+                        div(ctx, mk(rightCol.ent(), 0),
+                            ComponentConfig{}
+                                .with_label(fieldLabel)
+                                .with_size(ComponentSize{percent(1.0f),
+                                                         h720(20)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        afterhours::text_input::text_input(
+                            ctx, mk(rightCol.ent(), 1), dialogs.goToInputStr,
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name("goto_input")
+                                .with_size(ComponentSize{percent(1.0f),
+                                                         h720(28)})
+                                .with_render_layer(CONTENT_LAYER));
+
+                        // Bookmark names under the field
+                        // (Bookmark target only): clicking one
+                        // fills the field. Sunken list, capped at
+                        // 3 rows (scrolls past that); the panel
+                        // height above grows with this list.
+                        if (dialogs.goToTarget == 2) {
+                            const auto& bookmarks =
+                                doc.buffer.bookmarks();
+                            if (bookmarks.empty()) {
+                                div(ctx, mk(rightCol.ent(), 2),
+                                    ComponentConfig{}
+                                        .with_label(
+                                            "No bookmarks in document")
+                                        .with_size(ComponentSize{
+                                            percent(1.0f), h720(20)})
+                                        .with_custom_background(
+                                            ui_imm::win95_colors::BUTTON_FACE)
+                                        .with_custom_text_color(
+                                            ui_imm::win95_colors::TEXT)
+                                        .with_alignment(
+                                            afterhours::ui::TextAlignment::
+                                                Left)
+                                        .with_render_layer(CONTENT_LAYER));
+                            } else {
+                                std::size_t visibleRows =
+                                    std::min<std::size_t>(bookmarks.size(),
+                                                           3);
+                                auto bookmarkList =
+                                    div(ctx, mk(rightCol.ent(), 2),
+                                        ah_win95::win95SunkenStyle()
+                                            .with_size(ComponentSize{
+                                                percent(1.0f),
+                                                h720(static_cast<float>(
+                                                    visibleRows * 22 + 4))})
+                                            .with_flex_direction(
+                                                FlexDirection::Column)
+                                            .with_padding(
+                                                Padding{.top = pixels(2),
+                                                        .bottom = pixels(2)})
+                                            .with_overflow(
+                                                afterhours::ui::Overflow::
+                                                    Auto)
+                                            .with_render_layer(
+                                                CONTENT_LAYER));
+                                if (bookmarkList) {
+                                    for (std::size_t bi = 0;
+                                         bi < bookmarks.size(); ++bi) {
+                                        const std::string& name =
+                                            bookmarks[bi].name;
+                                        test_input::register_visible_text(
+                                            name);
+                                        if (button(
+                                                ctx,
+                                                mk(bookmarkList.ent(),
+                                                   1000 + static_cast<int>(
+                                                              bi)),
+                                                ComponentConfig{}
+                                                    .with_debug_name(
+                                                        "goto_bookmark_" +
+                                                        std::to_string(bi))
+                                                    .with_label(name)
+                                                    .with_size(
+                                                        ComponentSize{
+                                                            percent(1.0f),
+                                                            h720(22)})
+                                                    .with_custom_background(
+                                                        ui_imm::win95_colors::
+                                                            TEXT_AREA)
+                                                    .with_custom_text_color(
+                                                        ui_imm::win95_colors::
+                                                            TEXT)
+                                                    .with_alignment(
+                                                        afterhours::ui::
+                                                            TextAlignment::
+                                                                Left)
+                                                    .with_padding(
+                                                        Padding{.left =
+                                                                    pixels(
+                                                                        4)})
+                                                    .with_text_overflow(
+                                                        afterhours::ui::
+                                                            TextOverflow::
+                                                                Ellipsis)
+                                                    .with_cursor(
+                                                        afterhours::ui::
+                                                            CursorType::
+                                                                Pointer)
+                                                    .with_roundness(0.0f)
+                                                    .with_render_layer(
+                                                        CONTENT_LAYER))) {
+                                            dialogs.goToInputStr = name;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Go To + Close, stacked under the
+                        // field (Word 95): raised rectangular
+                        // ~90px buttons, Go To the default.
+                        if (button(ctx, mk(rightCol.ent(), 3),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("goto_go_button")
+                                .with_label("Go To")
+                                .with_border(
+                                    ui_imm::win95_colors::TEXT, 1.0f)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            cmd::performGoTo(doc, layout, cache_.scroll,
+                                             dialogs);
+                        }
+                        if (button(ctx, mk(rightCol.ent(), 4),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("goto_close_button")
+                                .with_label("Close")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.showGoToDialog = false;
+                        }
+                    }  // rightCol
+                }  // bodyRow
             }
         }
         
