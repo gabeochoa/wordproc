@@ -232,6 +232,21 @@ bool TextBuffer::deleteSelection() {
         }
     }
 
+    // Incremental stats: paragraphs of the touched lines before
+    // the erase, vs the single merged line after it.
+    std::size_t oldParagraphs = 0;
+    for (std::size_t row = start.row; row <= end.row; ++row) {
+        if (line_spans_[row].length > 0) {
+            ++oldParagraphs;
+        }
+    }
+    const std::size_t mergedLength =
+        start.column + (line_spans_[end.row].length - end.column);
+    const std::ptrdiff_t paragraphDelta =
+        static_cast<std::ptrdiff_t>(mergedLength > 0 ? 1 : 0) -
+        static_cast<std::ptrdiff_t>(oldParagraphs);
+    noteStatsRangeErased(startOffset, deleteCount, paragraphDelta);
+
     // Erase the selected range
     chars_.erase(startOffset, deleteCount);
     stats_.total_deletes += deleteCount;
@@ -411,8 +426,26 @@ void TextBuffer::insertChar(char ch) {
     version_++;  // Content changed - invalidate render cache
 
     std::size_t offset = positionToOffset(caret_);
+    // Incremental stats: paragraphs of the split line before vs
+    // the two pieces after (a newline), or +1 when a char lands
+    // in an empty line.
+    {
+        const std::size_t oldLength = line_spans_[caret_.row].length;
+        std::ptrdiff_t paragraphDelta = 0;
+        if (ch == '\n') {
+            const std::size_t first = caret_.column;
+            const std::size_t second = oldLength - first;
+            paragraphDelta =
+                static_cast<std::ptrdiff_t>((first > 0 ? 1 : 0) +
+                                            (second > 0 ? 1 : 0) -
+                                            (oldLength > 0 ? 1 : 0));
+        } else if (oldLength == 0) {
+            paragraphDelta = 1;
+        }
+        noteStatsCharInserted(offset, ch, paragraphDelta);
+    }
     chars_.insert(offset, ch);
-    
+
     // Adjust hyperlink and bookmark offsets for the inserted character
     adjustHyperlinkOffsets(offset, 1);
     adjustBookmarkOffsets(offset, 1);
@@ -539,6 +572,10 @@ void TextBuffer::setText(const std::string& text) {
         line_spans_.push_back({0, 0});
     }
 
+    // Incremental stats: mark dirty only — the first stats()
+    // call or mutator after this rebuilds once (see header).
+    statsDirty_ = true;
+
     // Move caret to end
     if (!line_spans_.empty()) {
         caret_.row = line_spans_.size() - 1;
@@ -555,39 +592,189 @@ void TextBuffer::writeTextTo(std::ostream& out) const { chars_.writeTo(out); }
 
 std::size_t TextBuffer::textSize() const { return chars_.size(); }
 
-TextStats TextBuffer::stats() const {
-    TextStats stats;
-    stats.lines = line_spans_.size();
+bool TextBuffer::isStatsWordChar(char ch) {
+    return std::isalnum(static_cast<unsigned char>(ch)) != 0;
+}
 
-    // Iterate directly over gap buffer regions — no allocation, no copy
+bool TextBuffer::isStatsSentenceEnd(char ch) {
+    return ch == '.' || ch == '!' || ch == '?';
+}
+
+bool TextBuffer::startsStatsWord(char ch, bool hasPrev, char prev) {
+    return isStatsWordChar(ch) && (!hasPrev || !isStatsWordChar(prev));
+}
+
+namespace {
+
+// Apply a signed paragraph delta to an unsigned counter without
+// wrapping: callers compute deltas in [-lines, +1].
+void applyParagraphDelta(std::size_t& count, std::ptrdiff_t delta) {
+    if (delta >= 0) {
+        count += static_cast<std::size_t>(delta);
+    } else {
+        count -= static_cast<std::size_t>(-delta);
+    }
+}
+
+}  // namespace
+
+void TextBuffer::ensureStatsValid() const {
+    if (statsDirty_) {
+        rebuildStatsFromScratch();
+    }
+}
+
+void TextBuffer::noteStatsCharInserted(std::size_t offset, char ch,
+                                       std::ptrdiff_t paragraphDelta) {
+    ensureStatsValid();
+    // Neighbours before the insert: only the inserted char's own
+    // word start and the right neighbour's word start can change.
+    const bool hasLeft = offset > 0;
+    const char left = hasLeft ? chars_.at(offset - 1) : '\0';
+    const bool hasRight = offset < chars_.size();
+    if (hasRight) {
+        const char right = chars_.at(offset);
+        if (startsStatsWord(ch, hasLeft, left)) {
+            ++cachedWordCount_;
+        }
+        if (startsStatsWord(right, true, ch)) {
+            ++cachedWordCount_;
+        }
+        if (startsStatsWord(right, hasLeft, left)) {
+            --cachedWordCount_;
+        }
+    } else if (startsStatsWord(ch, hasLeft, left)) {
+        ++cachedWordCount_;
+    }
+    if (isStatsSentenceEnd(ch)) {
+        ++cachedSentenceCount_;
+    }
+    applyParagraphDelta(cachedParagraphCount_, paragraphDelta);
+}
+
+void TextBuffer::noteStatsCharErased(std::size_t offset,
+                                     std::ptrdiff_t paragraphDelta) {
+    ensureStatsValid();
+    // The erased char is still in the buffer: neighbours are
+    // pre-erase.
+    const char ch = chars_.at(offset);
+    const bool hasLeft = offset > 0;
+    const char left = hasLeft ? chars_.at(offset - 1) : '\0';
+    const bool hasRight = offset + 1 < chars_.size();
+    if (startsStatsWord(ch, hasLeft, left)) {
+        --cachedWordCount_;
+    }
+    if (hasRight) {
+        const char right = chars_.at(offset + 1);
+        if (startsStatsWord(right, true, ch)) {
+            --cachedWordCount_;
+        }
+        if (startsStatsWord(right, hasLeft, left)) {
+            ++cachedWordCount_;
+        }
+    }
+    if (isStatsSentenceEnd(ch)) {
+        --cachedSentenceCount_;
+    }
+    applyParagraphDelta(cachedParagraphCount_, paragraphDelta);
+}
+
+void TextBuffer::noteStatsRangeErased(std::size_t startOffset,
+                                     std::size_t count,
+                                     std::ptrdiff_t paragraphDelta) {
+    if (count == 0) {
+        return;
+    }
+    ensureStatsValid();  // Rebuilds from the pre-erase text.
+    // Word starts inside the range, with the char before the range
+    // as the initial previous char (a range-leading alnum char
+    // that continues a word is not a start).
+    const bool hasBefore = startOffset > 0;
+    const char before = hasBefore ? chars_.at(startOffset - 1) : '\0';
+    bool hasPrev = hasBefore;
+    char prev = before;
+    std::size_t lostWordStarts = 0;
+    std::size_t lostSentences = 0;
+    for (std::size_t i = 0; i < count; ++i) {
+        const char ch = chars_.at(startOffset + i);
+        if (startsStatsWord(ch, hasPrev, prev)) {
+            ++lostWordStarts;
+        }
+        if (isStatsSentenceEnd(ch)) {
+            ++lostSentences;
+        }
+        hasPrev = true;
+        prev = ch;
+    }
+    cachedWordCount_ -= lostWordStarts;
+    cachedSentenceCount_ -= lostSentences;
+    // The char after the range (if any) had its word start against
+    // the range's last char; after the erase it starts against the
+    // char before the range.
+    const std::size_t endOffset = startOffset + count;
+    if (endOffset < chars_.size()) {
+        const char right = chars_.at(endOffset);
+        if (startsStatsWord(right, true, prev)) {
+            --cachedWordCount_;
+        }
+        if (startsStatsWord(right, hasBefore, before)) {
+            ++cachedWordCount_;
+        }
+    }
+    applyParagraphDelta(cachedParagraphCount_, paragraphDelta);
+}
+
+void TextBuffer::rebuildStatsFromScratch() const {
+    statsDirty_ = false;
+    cachedWordCount_ = 0;
+    cachedSentenceCount_ = 0;
+    cachedParagraphCount_ = 0;
+    // Iterate directly over gap buffer regions — no allocation, no copy.
+    // inWord / lineLength persist across the gap boundary.
     bool inWord = false;
+    std::size_t lineLength = 0;
     chars_.forEachRegion([&](const char* data, std::size_t len) {
         for (std::size_t i = 0; i < len; ++i) {
-            char ch = data[i];
-            if (ch != '\n') {
-                stats.characters++;
-            }
-            if (std::isalnum(static_cast<unsigned char>(ch))) {
-                if (!inWord) {
-                    stats.words++;
-                    inWord = true;
+            const char ch = data[i];
+            if (ch == '\n') {
+                if (lineLength > 0) {
+                    ++cachedParagraphCount_;
                 }
-            } else {
+                lineLength = 0;
                 inWord = false;
+            } else {
+                ++lineLength;
+                if (isStatsWordChar(ch)) {
+                    if (!inWord) {
+                        ++cachedWordCount_;
+                        inWord = true;
+                    }
+                } else {
+                    inWord = false;
+                }
             }
-            if (ch == '.' || ch == '!' || ch == '?') {
-                stats.sentences++;
+            if (isStatsSentenceEnd(ch)) {
+                ++cachedSentenceCount_;
             }
         }
     });
-
-    // Paragraphs: count non-empty lines
-    for (const auto& span : line_spans_) {
-        if (span.length > 0) {
-            stats.paragraphs++;
-        }
+    if (lineLength > 0) {
+        ++cachedParagraphCount_;
     }
+}
 
+TextStats TextBuffer::stats() const {
+    ensureStatsValid();
+    TextStats stats;
+    stats.lines = line_spans_.size();
+    // Every span except possibly the last ends with exactly one
+    // '\n', so newlines = lines - 1 (no newlines when empty).
+    const std::size_t newlines =
+        line_spans_.empty() ? 0 : line_spans_.size() - 1;
+    stats.characters = chars_.size() - newlines;
+    stats.words = cachedWordCount_;
+    stats.sentences = cachedSentenceCount_;
+    stats.paragraphs = cachedParagraphCount_;
     return stats;
 }
 
@@ -875,6 +1062,10 @@ void TextBuffer::swapAdjacentLineRanges(std::size_t firstStart,
         }
         swapped = secondSeg + "\n" + firstSeg;
     }
+    // Incremental stats: no update. The swap reorders whole
+    // lines (and reassigns the trailing terminator when the range
+    // ends at the document end), so the multiset of line strings
+    // — hence words, sentences, and paragraphs — is unchanged.
     chars_.erase(startOffset, endOffset - startOffset);
     if (!swapped.empty()) {
         chars_.insertString(startOffset, swapped.data(), swapped.size());
@@ -1221,10 +1412,15 @@ void TextBuffer::backspace() {
         char deletedChar = chars_.at(offset - 1);
         CaretPosition deletePos = {caret_.row, caret_.column - 1};
 
+        // Incremental stats: deleting the line's last char
+        // removes its paragraph.
+        const std::ptrdiff_t paragraphDelta =
+            line_spans_[caret_.row].length == 1 ? -1 : 0;
+        noteStatsCharErased(offset - 1, paragraphDelta);
         chars_.erase(offset - 1, 1);
         stats_.total_deletes++;
         version_++;  // Content changed - invalidate render cache
-        
+
         // Adjust hyperlink and bookmark offsets for the deleted character
         adjustHyperlinkOffsets(offset - 1, -1);
         adjustBookmarkOffsets(offset - 1, -1);
@@ -1252,10 +1448,22 @@ void TextBuffer::backspace() {
         line_spans_[caret_.row - 1].offset + prev_line_len;
     CaretPosition deletePos = {caret_.row - 1, prev_line_len};
 
+    // Incremental stats: merging the previous line (a) with the
+    // current line (b) drops to one paragraph iff the join is
+    // non-empty.
+    {
+        const std::size_t first = prev_line_len;
+        const std::size_t second = line_spans_[caret_.row].length;
+        const std::ptrdiff_t paragraphDelta =
+            static_cast<std::ptrdiff_t>((first + second > 0 ? 1 : 0) -
+                                        (first > 0 ? 1 : 0) -
+                                        (second > 0 ? 1 : 0));
+        noteStatsCharErased(newline_offset, paragraphDelta);
+    }
     chars_.erase(newline_offset, 1);
     stats_.total_deletes++;
     version_++;
-    
+
     // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
     adjustBookmarkOffsets(newline_offset, -1);
@@ -1289,10 +1497,15 @@ void TextBuffer::del() {
         char deletedChar = chars_.at(offset);
         CaretPosition deletePos = caret_;
 
+        // Incremental stats: deleting the line's last char
+        // removes its paragraph.
+        const std::ptrdiff_t paragraphDelta =
+            line_spans_[caret_.row].length == 1 ? -1 : 0;
+        noteStatsCharErased(offset, paragraphDelta);
         chars_.erase(offset, 1);
         stats_.total_deletes++;
         version_++;
-        
+
         // Adjust hyperlink and bookmark offsets for the deleted character
         adjustHyperlinkOffsets(offset, -1);
         adjustBookmarkOffsets(offset, -1);
@@ -1317,10 +1530,23 @@ void TextBuffer::del() {
     std::size_t newline_offset = span.offset + span.length;
     CaretPosition deletePos = caret_;
 
+    // Incremental stats: merging the current line (a) with the
+    // next line (b) drops to one paragraph iff the join is
+    // non-empty.
+    {
+        const std::size_t first = span.length;
+        const std::size_t second =
+            line_spans_[caret_.row + 1].length;
+        const std::ptrdiff_t paragraphDelta =
+            static_cast<std::ptrdiff_t>((first + second > 0 ? 1 : 0) -
+                                        (first > 0 ? 1 : 0) -
+                                        (second > 0 ? 1 : 0));
+        noteStatsCharErased(newline_offset, paragraphDelta);
+    }
     chars_.erase(newline_offset, 1);
     stats_.total_deletes++;
     version_++;
-    
+
     // Adjust hyperlink and bookmark offsets for the deleted newline
     adjustHyperlinkOffsets(newline_offset, -1);
     adjustBookmarkOffsets(newline_offset, -1);
@@ -1616,6 +1842,23 @@ void TextBuffer::redo() {
 void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
     setCaret(pos);
     std::size_t offset = positionToOffset(pos);
+    // Incremental stats: same split/empty-line paragraph math as
+    // insertChar.
+    {
+        const std::size_t oldLength = line_spans_[caret_.row].length;
+        std::ptrdiff_t paragraphDelta = 0;
+        if (ch == '\n') {
+            const std::size_t first = caret_.column;
+            const std::size_t second = oldLength - first;
+            paragraphDelta =
+                static_cast<std::ptrdiff_t>((first > 0 ? 1 : 0) +
+                                            (second > 0 ? 1 : 0) -
+                                            (oldLength > 0 ? 1 : 0));
+        } else if (oldLength == 0) {
+            paragraphDelta = 1;
+        }
+        noteStatsCharInserted(offset, ch, paragraphDelta);
+    }
     chars_.insert(offset, ch);
     version_++;
 
@@ -1656,7 +1899,12 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
 
     const LineSpan& span = line_spans_[pos.row];
     if (pos.column < span.length) {
+        // Incremental stats: deleting the line's last char
+        // removes its paragraph.
+        const std::ptrdiff_t paragraphDelta =
+            span.length == 1 ? -1 : 0;
         std::size_t offset = positionToOffset(pos);
+        noteStatsCharErased(offset, paragraphDelta);
         chars_.erase(offset, 1);
         version_++;
         line_spans_[pos.row].length -= 1;
@@ -1664,6 +1912,18 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
     } else if (pos.row + 1 < line_spans_.size()) {
         // Deleting newline at end of line - merge with next line
         std::size_t offset = span.offset + span.length;
+        // Incremental stats: merging this line (a) with the next
+        // line (b) drops to one paragraph iff the join is
+        // non-empty.
+        {
+            const std::size_t first = span.length;
+            const std::size_t second = line_spans_[pos.row + 1].length;
+            const std::ptrdiff_t paragraphDelta =
+                static_cast<std::ptrdiff_t>(
+                    (first + second > 0 ? 1 : 0) - (first > 0 ? 1 : 0) -
+                    (second > 0 ? 1 : 0));
+            noteStatsCharErased(offset, paragraphDelta);
+        }
         chars_.erase(offset, 1);
         version_++;
         

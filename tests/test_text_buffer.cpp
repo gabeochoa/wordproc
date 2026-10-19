@@ -2146,3 +2146,270 @@ TEST_CASE("Word navigation - Edge cases", "[text_buffer][word_navigation][edge]"
         REQUIRE(buffer.caret().column == 5);
     }
 }
+
+namespace {
+
+bool isStatsWordChar(char ch) {
+    return std::isalnum(static_cast<unsigned char>(ch)) != 0;
+}
+
+// Independent reimplementation of the stats() rules over the
+// buffer's plain text: the oracle the incremental stats() cache
+// is checked against after every mutator below.
+TextStats statsFromScratch(const TextBuffer& buffer) {
+    const std::string text = buffer.getText();
+    TextStats stats;
+    stats.lines = 1;
+    bool inWord = false;
+    std::size_t lineLength = 0;
+    for (char ch : text) {
+        if (ch == '\n') {
+            stats.lines++;
+            if (lineLength > 0) stats.paragraphs++;
+            lineLength = 0;
+            inWord = false;
+        } else {
+            stats.characters++;
+            lineLength++;
+            if (isStatsWordChar(ch)) {
+                if (!inWord) {
+                    stats.words++;
+                    inWord = true;
+                }
+            } else {
+                inWord = false;
+            }
+        }
+        if (ch == '.' || ch == '!' || ch == '?') stats.sentences++;
+    }
+    if (lineLength > 0) stats.paragraphs++;
+    return stats;
+}
+
+void requireStatsMatch(const TextBuffer& buffer) {
+    const TextStats actual = buffer.stats();
+    const TextStats expected = statsFromScratch(buffer);
+    REQUIRE(actual.lines == expected.lines);
+    REQUIRE(actual.characters == expected.characters);
+    REQUIRE(actual.words == expected.words);
+    REQUIRE(actual.paragraphs == expected.paragraphs);
+    REQUIRE(actual.sentences == expected.sentences);
+}
+
+}  // namespace
+
+// stats() is O(1) per call: words / sentences / paragraphs are
+// maintained incrementally by the mutators (lines / characters
+// are O(1) reads of the span count / gap size), so a per-key
+// status-bar recompute stays cheap on a large document. Every
+// mutator below must keep the cache exact: this case checks
+// stats() against a from-scratch scan after each operation,
+// including the word-boundary joins/splits (typing into a word,
+// deleting the space between two words, merging lines).
+TEST_CASE("TextBuffer stats stay exact across edits", "[text_buffer][stats]") {
+    SECTION("empty buffer") {
+        TextBuffer buffer;
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("insertChar, incl. newline split and typing into a word") {
+        TextBuffer buffer;
+        buffer.insertText("hello world. How are you?");
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 5});
+        buffer.insertChar('X');  // "helloX world..." — word joins
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 0});
+        buffer.insertChar('\n');  // split before the first word
+        requireStatsMatch(buffer);
+        buffer.setCaret({1, 0});
+        buffer.insertChar('\n');  // split an empty line: no new paragraph
+        requireStatsMatch(buffer);
+        buffer.insertChar('!');  // sentence on an empty line
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("backspace char, backspace newline merge, del char, del newline") {
+        TextBuffer buffer;
+        buffer.setText("hello world\nsecond line here.");
+        buffer.setCaret({0, 6});
+        buffer.backspace();  // delete the space: "helloworld"
+        requireStatsMatch(buffer);
+        buffer.backspace();  // delete 'o': "hellworld"
+        requireStatsMatch(buffer);
+        buffer.setCaret({1, 0});
+        buffer.backspace();  // merge lines: "hellworldsecond line here."
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 0});
+        buffer.del();  // delete 'h'
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 7});
+        buffer.del();  // delete 'd' at the word join "hellworld"
+        requireStatsMatch(buffer);
+        buffer.setText("ab\ncd");
+        buffer.setCaret({1, 0});
+        buffer.backspace();  // merge to "abcd": 2 words -> 1
+        requireStatsMatch(buffer);
+        buffer.setText("ab\ncd");
+        buffer.setCaret({0, 2});
+        buffer.del();  // delete the newline: same merge
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("deleteSelection within a line, across lines, whole doc") {
+        TextBuffer buffer;
+        buffer.setText("hello world. Foo bar!");
+        buffer.setSelectionAnchor({0, 6});
+        buffer.setCaret({0, 11});
+        buffer.updateSelectionToCaret();
+        REQUIRE(buffer.deleteSelection());
+        requireStatsMatch(buffer);  // "hello . Foo bar!"
+        buffer.setText("one two\nthree four\nfive six");
+        buffer.setSelectionAnchor({0, 4});
+        buffer.setCaret({2, 4});
+        buffer.updateSelectionToCaret();
+        REQUIRE(buffer.deleteSelection());
+        requireStatsMatch(buffer);  // "one six"
+        buffer.selectAll();
+        buffer.deleteSelection();
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("insertText paste, incl. multi-line, and typing over a selection") {
+        TextBuffer buffer;
+        buffer.setText("start end.");
+        buffer.setCaret({0, 6});
+        buffer.insertText("mid\ndle words! ");
+        requireStatsMatch(buffer);
+        buffer.setSelectionAnchor({0, 0});
+        buffer.setCaret({0, 5});
+        buffer.updateSelectionToCaret();
+        buffer.insertChar('X');  // typing replaces the selection
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("setText replaces everything, incl. empty and trailing newline") {
+        TextBuffer buffer;
+        buffer.insertText("old text here.");
+        buffer.setText("new\n\ntext! two words?");
+        requireStatsMatch(buffer);
+        buffer.setText("");
+        requireStatsMatch(buffer);
+        buffer.setText("trailing\n");
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("setText then edits before any stats() call (lazy rebuild)") {
+        // setText only marks the cache dirty; the first mutator
+        // must rebuild from the new text before applying its
+        // delta, so stats() stays exact without an eager scan.
+        TextBuffer buffer;
+        buffer.setText("hello world. Foo?");
+        buffer.insertChar('!');  // no stats() in between
+        buffer.backspace();
+        buffer.setCaret({0, 5});
+        buffer.insertChar('\n');
+        requireStatsMatch(buffer);
+        buffer.setText("one two three");
+        buffer.setSelectionAnchor({0, 4});
+        buffer.setCaret({0, 7});
+        buffer.updateSelectionToCaret();
+        REQUIRE(buffer.deleteSelection());  // no stats() in between
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("low-level insertCharAt / deleteCharAt / insertTextAt") {
+        TextBuffer buffer;
+        buffer.setText("hello world");
+        buffer.insertCharAt({0, 5}, ',');  // "hello, world"
+        requireStatsMatch(buffer);
+        buffer.insertCharAt({0, 0}, '\n');  // split before "hello"
+        requireStatsMatch(buffer);
+        buffer.deleteCharAt({1, 5});  // delete the ','
+        requireStatsMatch(buffer);
+        buffer.deleteCharAt({1, 0});  // delete 'h' on the merged line
+        requireStatsMatch(buffer);
+        buffer.insertTextAt({0, 0}, "Say: ");
+        requireStatsMatch(buffer);
+        buffer.deleteCharAt({0, 3});  // delete ':' -> "Say  ..."
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("replaceRange / replaceRanges / replaceAll") {
+        TextBuffer buffer;
+        buffer.setText("hello world, hello War!");
+        buffer.replaceRange(6, 5, "there");  // word swap, same length
+        requireStatsMatch(buffer);
+        buffer.replaceRange(0, 5, "hi");  // shrink a word
+        requireStatsMatch(buffer);
+        buffer.replaceRanges({{{0, 0}, "hi", "hello"},
+                              {{0, 6}, "there", "brave new world"}});
+        requireStatsMatch(buffer);
+        buffer.replaceAll("hello", "bye");
+        requireStatsMatch(buffer);
+        buffer.replaceAll("bye", "");  // delete all occurrences
+        requireStatsMatch(buffer);
+        buffer.replaceAll("missing", "nothing");  // no-op
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("undo / redo restore stats") {
+        TextBuffer buffer;
+        buffer.setText("hello world");
+        buffer.clearHistory();
+        buffer.setCaret({0, 5});
+        buffer.insertChar('!');
+        requireStatsMatch(buffer);
+        buffer.undo();
+        requireStatsMatch(buffer);
+        buffer.redo();
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 0});
+        buffer.del();
+        requireStatsMatch(buffer);
+        buffer.undo();
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 6});
+        buffer.backspace();
+        requireStatsMatch(buffer);
+        buffer.undo();
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("swapAdjacentLineRanges keeps stats") {
+        TextBuffer buffer;
+        buffer.setText("one two\nthree four\nfive six");
+        buffer.swapAdjacentLineRanges(0, 1, 2);
+        requireStatsMatch(buffer);
+        buffer.swapAdjacentLineRanges(1, 2, 3);  // swap to the doc end
+        requireStatsMatch(buffer);
+        buffer.undo();
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("insertTableOfContents and its undo") {
+        TextBuffer buffer;
+        buffer.setText("Doc Title\nIntro\nBody\nChapter Two\nMore");
+        buffer.setCaret({0, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Title);
+        buffer.setCaret({1, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+        buffer.setCaret({3, 0});
+        buffer.setCurrentParagraphStyle(ParagraphStyle::Heading2);
+        REQUIRE(buffer.insertTableOfContents(50));
+        requireStatsMatch(buffer);
+        buffer.undo();
+        requireStatsMatch(buffer);
+    }
+
+    SECTION("digits, punctuation and empty-line paragraphs") {
+        TextBuffer buffer;
+        buffer.setText("abc123 45.6! x? y_z\n\n\t\nlast...");
+        requireStatsMatch(buffer);
+        buffer.setCaret({0, 0});
+        buffer.insertChar('7');  // joins "abc123": no new word
+        requireStatsMatch(buffer);
+        buffer.insertChar(' ');  // splits "7" off: +1 word
+        requireStatsMatch(buffer);
+    }
+}
