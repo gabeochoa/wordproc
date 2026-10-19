@@ -57,6 +57,21 @@ inline void flashStatusConfirmation(const std::string& msg,
     status::flash(status, msg, afterhours::graphics::get_time(), duration);
 }
 
+// Clear a live transient flash: the status bar reverts to the
+// caret/stats line. Same lookup as flashStatusConfirmation —
+// the command layer has no status handle — and the same no-op
+// in contexts without one (unit tests). Called from the typed
+// insert commands only, so typing (not Backspace/Delete/paste)
+// ends a flash.
+inline void clearStatusFlash() {
+    auto entities = afterhours::EntityQuery({.force_merge = true})
+                        .whereHasComponent<StatusComponent>()
+                        .gen();
+    if (entities.empty()) return;
+    auto& status = entities[0].get().get<StatusComponent>();
+    status::clearFlash(status);
+}
+
 // --- Revision tracking helpers (moved here as single source of truth) ---
 
 inline void recordInsertRevision(DocumentComponent& doc, std::size_t offset,
@@ -603,6 +618,10 @@ inline void insertTypedText(DocumentComponent& doc, const std::string& text) {
     recordInsertRevision(doc, offset, text);
     doc.buffer.insertText(text);
     doc.isDirty = true;
+    // A typed character ends any transient status-bar flash: the
+    // bar shows the caret/stats line while editing, not a stale
+    // confirmation waiting out its 3s timer.
+    clearStatusFlash();
 }
 
 inline void insertTypedChar(DocumentComponent& doc, char ch) {
@@ -735,6 +754,9 @@ inline bool insertCellText(DocumentComponent& doc,
     recordCellEdit(doc, doc.cellEdit.tableIndex,
                    doc.tables[doc.cellEdit.tableIndex].first,
                    before, table, true);
+    // A typed character ends any transient status-bar flash (same
+    // as the body path): the bar shows the stats line while editing.
+    clearStatusFlash();
     return true;
 }
 

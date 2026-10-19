@@ -1,0 +1,41 @@
+# Test: transient status-bar flashes expire on the next keystroke,
+# not only after their 3s timer. While editing, the bar must show
+# the normal Page/Sec/Ln/Col/Words stats line. Covers both typed
+# paths: cell typing (after the "Inserted 3x3 table" flash) and
+# body typing (after a "Page Layout" mode flash). After each typed
+# char the flash is gone (status_text empty) and the stats line is
+# the registered status text (expect_text "Words:").
+# Geometry (1280x720): cell (0,0) centre (130,173), as in
+# pass_table_cell_editing.e2e.
+
+# Cell path: inserting the table flashes; typing in the cell clears it.
+menu_open Table
+wait_frames 12
+menu_select "Insert Table..."
+wait_frames 12
+validate has_table=true
+validate status_text=Inserted 3x3 table
+mouse_down 130 173
+wait_frames 2
+mouse_up
+wait_frames 6
+validate cell_editing=true
+type "x"
+wait_frames 12
+validate status_text=
+expect_text "Words:"
+
+# Body path: a View mode switch flashes; typing in the body clears it.
+key ESCAPE
+wait_frames 6
+validate cell_editing=false
+menu_open View
+wait_frames 12
+menu_select "Page Layout"
+wait_frames 12
+validate status_text=Page Layout
+type "y"
+wait_frames 12
+validate status_text=
+expect_text "Words:"
+validate text_contains_y=true

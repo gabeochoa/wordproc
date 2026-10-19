@@ -72,6 +72,17 @@ inline void flash(StatusComponent& status, const std::string& msg,
     status.expiresAt = now + duration;
 }
 
+// Clear a live flash on the next keystroke, so the bar reverts
+// to the caret/stats line at once instead of waiting out the
+// 3s timer. Idempotent: clearing an already-empty status is a
+// no-op (the channel is flash-only — status::set has no callers
+// and isError is never rendered — so nothing persistent is lost).
+inline void clearFlash(StatusComponent& status) {
+    status.text.clear();
+    status.expiresAt = 0.0;
+    status.isError = false;
+}
+
 }  // namespace status
 
 namespace layout {
