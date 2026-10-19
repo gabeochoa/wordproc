@@ -701,11 +701,14 @@ class TextBuffer {
     // insert/update when there are no headings (update with no
     // headings erases an existing block and clears the mark).
     std::string generateTableOfContents(
-        int linesPerPage = toc::kDefaultLinesPerPage) const;
+        int linesPerPage = toc::kDefaultLinesPerPage,
+        const toc::Layout& tocLayout = toc::Layout{}) const;
     bool insertTableOfContents(
-        int linesPerPage = toc::kDefaultLinesPerPage);
+        int linesPerPage = toc::kDefaultLinesPerPage,
+        const toc::Layout& tocLayout = toc::Layout{});
     bool updateTableOfContents(
-        int linesPerPage = toc::kDefaultLinesPerPage);
+        int linesPerPage = toc::kDefaultLinesPerPage,
+        const toc::Layout& tocLayout = toc::Layout{});
 
     // The marked TOC region (DocumentComponent/docSettings
     // persistence: document_io writes these as the

@@ -40,6 +40,12 @@ validate text_contains_First Heading=true
 validate text_contains_Second Heading=true
 validate text_contains_Third Heading=true
 
+# Leaders are measured to the text area's right edge, not the
+# old 44-character column: an entry leader is far longer than
+# the old maximum (44 - 15 = 29 dots for "First Heading").
+# A 50-dot run exists post-fix and cannot exist pre-fix.
+validate text_contains_..................................................=true
+
 # Inserting again replaces the block: still one block, 3 entries.
 menu_open Insert
 wait_frames 12

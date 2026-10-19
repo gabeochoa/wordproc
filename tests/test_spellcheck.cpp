@@ -52,6 +52,15 @@ TEST_CASE("SpellChecker - Basic word checking", "[spellcheck]") {
         REQUIRE(checker.checkText("Column line").empty());
     }
 
+    SECTION("Contents is correct (Batch 11 fix round)") {
+        // Pinned: "Contents" in the TOC title earned a squiggle —
+        // "contents" was genuinely missing from en_basic.txt
+        // ("table" was already present).
+        REQUIRE(checker.isCorrect("contents"));
+        REQUIRE(checker.isCorrect("Contents"));
+        REQUIRE(checker.checkText("Table of Contents").empty());
+    }
+
     SECTION("Normal / neighbor are correct (Batch 6 fix round)") {
         // Pinned: "normal" earned a squiggle in the Normal-view
         // screenshot and "neighbor" in the Borders screenshot.

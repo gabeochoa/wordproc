@@ -1035,11 +1035,43 @@ inline int tocLinesPerPage(const DocumentComponent& doc,
         lineHeight));
 }
 
+// Measured TOC layout: the dot leaders are counted in pixels
+// against the tab stop at the text area's right edge, so the page
+// number lands flush right instead of floating mid-line after a
+// fixed character column. The target is the effective text area's
+// text span (effective width minus the 8px text padding on each
+// side and the line-number gutter when shown — the same span the
+// ruler geometry uses); the measure is theme::MeasureUIText at
+// the renderer's body font size (the global font size scaled by
+// displayScale, the baseFontSize the render pass gives Normal
+// rows). Recomputed on every insert / update / save-refresh, so
+// a resize, zoom, or margin change re-flows the leaders.
+inline toc::Layout tocLayout(const DocumentComponent& doc,
+                             const LayoutComponent& layout) {
+    const auto effective = layout::effectiveTextArea(layout);
+    const float gutter = layout.showLineNumbers && !layout.previewMode
+                             ? layout.lineNumberGutterWidth
+                             : 0.0f;
+    const int target =
+        static_cast<int>(effective.width) -
+        2 * static_cast<int>(ruler_math::TEXT_PADDING) -
+        static_cast<int>(gutter);
+    const int bodyPx = ruler_math::scaledFontSize(
+        doc.buffer.textStyle().fontSize, layout::displayScale(layout));
+    toc::Layout result;
+    result.targetWidthPx = std::max(0, target);
+    result.measure = [bodyPx](const std::string& text) {
+        return theme::MeasureUIText(text.c_str(), bodyPx);
+    };
+    return result;
+}
+
 // Insert > Table of Contents: inserts at the caret, or replaces
 // the existing marked block when one exists. One undo step.
 inline bool insertToc(DocumentComponent& doc,
                       const LayoutComponent& layout) {
-    if (!doc.buffer.insertTableOfContents(tocLinesPerPage(doc, layout))) {
+    if (!doc.buffer.insertTableOfContents(tocLinesPerPage(doc, layout),
+                                          tocLayout(doc, layout))) {
         flashStatusConfirmation("No headings for a table of contents");
         return false;
     }
@@ -1057,7 +1089,8 @@ inline bool updateToc(DocumentComponent& doc,
         flashStatusConfirmation("No table of contents to update");
         return false;
     }
-    doc.buffer.updateTableOfContents(tocLinesPerPage(doc, layout));
+    doc.buffer.updateTableOfContents(tocLinesPerPage(doc, layout),
+                                     tocLayout(doc, layout));
     doc.isDirty = true;
     flashStatusConfirmation(!doc.buffer.hasToc()
                                 ? "Table of Contents removed (no headings)"
@@ -1072,7 +1105,8 @@ inline bool updateToc(DocumentComponent& doc,
 inline void refreshTocForSave(DocumentComponent& doc,
                               const LayoutComponent& layout) {
     if (doc.buffer.hasToc()) {
-        doc.buffer.updateTableOfContents(tocLinesPerPage(doc, layout));
+        doc.buffer.updateTableOfContents(tocLinesPerPage(doc, layout),
+                                         tocLayout(doc, layout));
     }
 }
 

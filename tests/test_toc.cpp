@@ -76,6 +76,80 @@ TEST_CASE("TOC entry formatting", "[toc]") {
     }
 }
 
+TEST_CASE("TOC entry formatting with a measured layout", "[toc]") {
+    // Fixed-width stand-in: every character is 10px.
+    auto fixed = [](const std::string& s) {
+        return static_cast<int>(s.size()) * 10;
+    };
+
+    SECTION("measured line lands exactly on the tab stop") {
+        toc::Layout layout{200, fixed};
+        std::string line = toc::entryLine(1, "Intro", 3, layout);
+        // Prefix "  Intro" = 70px, " " = 10px, "3" = 10px: room
+        // 110px = 11 dots, total 200px.
+        REQUIRE(line == "  Intro" + std::string(11, '.') + " 3");
+        REQUIRE(fixed(line) == 200);
+        REQUIRE(toc::isEntryLine(line));
+    }
+
+    SECTION("proportional measure: page ends flush, within one dot") {
+        auto proportional = [](const std::string& s) {
+            int w = 0;
+            for (char ch : s) {
+                if (ch == '.') w += 3;
+                else if (ch == ' ') w += 5;
+                else if (ch >= '0' && ch <= '9') w += 8;
+                else w += 10;
+            }
+            return w;
+        };
+        toc::Layout layout{300, proportional};
+        std::string line = toc::entryLine(1, "Intro", 12, layout);
+        int width = proportional(line);
+        REQUIRE(width <= 300);
+        REQUIRE(width > 300 - 3);  // Within one dot width.
+        REQUIRE(line.substr(line.size() - 2) == "12");
+        REQUIRE(line.substr(line.size() - 3, 1) == " ");
+        REQUIRE(toc::isEntryLine(line));
+    }
+
+    SECTION("long heading keeps at least three dots, still parses") {
+        toc::Layout layout{200, fixed};
+        std::string line = toc::entryLine(0, std::string(50, 'x'), 1, layout);
+        REQUIRE(line.substr(50, 3) == "...");
+        REQUIRE(toc::isEntryLine(line));
+    }
+
+    SECTION("no layout falls back to the character column") {
+        std::string line = toc::entryLine(1, "Intro", 3);
+        REQUIRE(line.size() == 7 + 37 + 2);
+    }
+
+    SECTION("regeneration recomputes the leaders for a new width") {
+        TextBuffer buffer = headedDoc();
+        buffer.setCaret({0, 0});
+        toc::Layout narrow{200, fixed};
+        toc::Layout wide{400, fixed};
+        REQUIRE(buffer.insertTableOfContents(50, narrow));
+        std::string narrowBlock = buffer.getText().substr(
+            0, buffer.tocEndOffset());
+        REQUIRE(buffer.updateTableOfContents(50, wide));
+        std::string wideBlock = buffer.getText().substr(
+            0, buffer.tocEndOffset());
+        REQUIRE(narrowBlock != wideBlock);
+        // Every entry line in the wide block measures 400px.
+        std::size_t pos = 0;
+        while ((pos = wideBlock.find('\n', pos)) != std::string::npos) {
+            ++pos;
+            std::size_t end = wideBlock.find('\n', pos);
+            if (end == std::string::npos) break;
+            std::string entry = wideBlock.substr(pos, end - pos);
+            if (toc::isEntryLine(entry)) REQUIRE(fixed(entry) == 400);
+            pos = end;
+        }
+    }
+}
+
 TEST_CASE("TOC insert marks a generated region", "[toc]") {
     TextBuffer buffer = headedDoc();
     buffer.setCaret({0, 0});

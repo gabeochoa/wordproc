@@ -2756,18 +2756,19 @@ std::vector<toc::Entry> TextBuffer::tocEntriesForBlock(
 }
 
 std::string TextBuffer::generateTableOfContents(
-    int linesPerPage) const {
+    int linesPerPage, const toc::Layout& tocLayout) const {
     if (line_spans_.empty()) return "";
     auto entries = tocEntriesForBlock(
         line_spans_.size(), 0, 0, 0, false, linesPerPage);
     if (entries.empty()) return "";
-    return toc::blockText(entries);
+    return toc::blockText(entries, tocLayout);
 }
 
-bool TextBuffer::insertTableOfContents(int linesPerPage) {
+bool TextBuffer::insertTableOfContents(int linesPerPage,
+                                       const toc::Layout& tocLayout) {
     // Replacing the existing block is the same operation with
     // the old range as the replaced span.
-    if (tocHasMark_) return updateTableOfContents(linesPerPage);
+    if (tocHasMark_) return updateTableOfContents(linesPerPage, tocLayout);
 
     std::size_t insertOffset = caretOffset();
     std::size_t insertLine = caret_.row;
@@ -2779,7 +2780,7 @@ bool TextBuffer::insertTableOfContents(int linesPerPage) {
     const std::size_t blockLines = entries.size() + 1;
     entries = tocEntriesForBlock(insertLine, blockLines, 0, 0, false,
                                  linesPerPage);
-    std::string block = toc::blockText(entries);
+    std::string block = toc::blockText(entries, tocLayout);
 
     // The block must occupy whole lines, or the mark's first
     // line would be a fragment of the caret line. A leading /
@@ -2826,7 +2827,8 @@ bool TextBuffer::insertTableOfContents(int linesPerPage) {
     return true;
 }
 
-bool TextBuffer::updateTableOfContents(int linesPerPage) {
+bool TextBuffer::updateTableOfContents(int linesPerPage,
+                                       const toc::Layout& tocLayout) {
     std::size_t oldStart = 0;
     std::size_t oldEnd = 0;
     if (!resolveTocRange(oldStart, oldEnd)) return false;
@@ -2888,7 +2890,7 @@ bool TextBuffer::updateTableOfContents(int linesPerPage) {
                                      oldStartLine, oldEndLine, true,
                                      linesPerPage);
     }
-    std::string block = toc::blockText(entries);
+    std::string block = toc::blockText(entries, tocLayout);
     if (block == oldText) return true;  // Already fresh: no undo step
     history_.execute(
         std::make_unique<TocReplaceCommand>(

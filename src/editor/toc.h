@@ -9,11 +9,22 @@
 // Format (one line per Title / Heading 1-3 paragraph):
 //   <indent><heading text><dot leader> <page>
 // Indent is two spaces per outline level (Title 0, Heading 1 -> 2,
-// Heading 2 -> 4, Heading 3 -> 6). The dot leader pads the entry to
-// kEntryColumn so the page numbers line up; a heading longer than
-// the column still gets at least three dots. Page numbers are the
-// Batch 6 estimate: heading row / linesPerPage + 1 (1-based).
+// Heading 2 -> 4, Heading 3 -> 6). The dot leader fills from the
+// end of the heading text to the tab stop at the text area's
+// right edge, so the page number is right-aligned: with a
+// Layout (measured at generation time) the dots are counted in
+// pixels — measure(prefix + dots + " " + page) lands within one
+// dot width of Layout::targetWidthPx, never over it (except a
+// heading so long that even the minimum three dots overshoot).
+// Without a Layout the legacy kEntryColumn character column is
+// used, so callers that cannot measure (unit tests for the other
+// TOC mechanics, save/load) keep the old deterministic output.
+// Regeneration recomputes the layout from the current text area,
+// so a resize / zoom / margin change re-flows the leaders on the
+// next Update Table of Contents. Page numbers are the Batch 6
+// estimate: heading row / linesPerPage + 1 (1-based).
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -30,6 +41,17 @@ struct Entry {
     int page = 1;                  // Estimated page (1-based)
 };
 
+// Measured generation layout: the tab-stop width in pixels and
+// the measure to count dots against. measure maps a string to
+// its pixel width at the body (Normal) font size — production
+// passes theme::MeasureUIText bound to that size; tests pass a
+// stand-in. targetWidthPx <= 0 or an empty measure means
+// "no layout": the legacy character column applies.
+struct Layout {
+    int targetWidthPx = 0;
+    std::function<int(const std::string&)> measure;
+};
+
 // Estimated page for a buffer row: row / linesPerPage + 1.
 // linesPerPage <= 0 means one line per page.
 inline int pageForLine(std::size_t line, int linesPerPage) {
@@ -39,21 +61,37 @@ inline int pageForLine(std::size_t line, int linesPerPage) {
 }
 
 // One generated entry line: indent + text + dot leader + " " + page.
-inline std::string entryLine(int level, const std::string& text, int page) {
+inline std::string entryLine(int level, const std::string& text, int page,
+                             const Layout& layout = Layout{}) {
     std::string content(static_cast<std::size_t>(level * 2), ' ');
     content += text;
+    const std::string pageStr = std::to_string(page);
     std::size_t dots = 3;
-    if (content.size() < static_cast<std::size_t>(kEntryColumn)) {
+    if (layout.measure && layout.targetWidthPx > 0) {
+        const int dotW = layout.measure(".");
+        if (dotW > 0) {
+            const int used = layout.measure(content) +
+                             layout.measure(" ") + layout.measure(pageStr);
+            const int room = layout.targetWidthPx - used;
+            if (room >= 0) {
+                dots = static_cast<std::size_t>(room / dotW);
+            } else {
+                dots = 0;
+            }
+            if (dots < 3) dots = 3;
+        }
+    } else if (content.size() < static_cast<std::size_t>(kEntryColumn)) {
         dots = static_cast<std::size_t>(kEntryColumn) - content.size();
     }
     content.append(dots, '.');
     content += ' ';
-    content += std::to_string(page);
+    content += pageStr;
     return content;
 }
 
-inline std::string entryLine(const Entry& entry) {
-    return entryLine(entry.level, entry.text, entry.page);
+inline std::string entryLine(const Entry& entry,
+                             const Layout& layout = Layout{}) {
+    return entryLine(entry.level, entry.text, entry.page, layout);
 }
 
 // Does this line look like a generated TOC entry? At least three
@@ -86,10 +124,11 @@ inline bool isEntryLine(const std::string& line) {
 // Every line ends with '\n', including the last entry, so the block
 // is a whole number of lines and its end offset sits at the start
 // of the following line (or EOF).
-inline std::string blockText(const std::vector<Entry>& entries) {
+inline std::string blockText(const std::vector<Entry>& entries,
+                             const Layout& layout = Layout{}) {
     std::string out = std::string(kTitle) + '\n';
     for (const auto& entry : entries) {
-        out += entryLine(entry);
+        out += entryLine(entry, layout);
         out += '\n';
     }
     return out;
