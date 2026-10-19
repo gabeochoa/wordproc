@@ -124,3 +124,9 @@ green underline existed but squiggle masked it), Revisions dialog
 Version History 4->7.5, @ popup 7.5. **Batch 5 PASS.**
 Timezone note: chips/history use OS localtime; review host is ET,
 owner PT — format judged, zone not penalized.
+
+## 2026-10-19 — Batch 6 (Page Setup, Paragraph, Borders, Normal, Status)
+
+Page Setup 8, Paragraph 4.5->7.5, Borders 7->7.5, Normal 4.5->8,
+Status 6->8.5. **Batch 6 PASS.** Dictionary grew +403 words mined by
+frequency from the public-domain test books.
