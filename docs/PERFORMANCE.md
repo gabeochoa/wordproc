@@ -960,6 +960,180 @@ consteval path) compiles and runs clean under Apple clang
 17.0.0 and the zig-bundled clang (zig 0.16.0). **No fmt bump
 needed.**
 
+## Perf Round 6 — 2026-10-19 (headless, menu first-open warm-up)
+
+Target from Round 4: first menu open +2.0 ms one-time (reopen
+free). Round 5's `MeasureCache` fronts `graphics::measure_text`
+on the document render path — which the menu never calls — so the
+question this round answers is whether the measure cache fixed the
+menu anyway. It did not: re-measured before this round's fix,
+first-open still cost 1.2–1.9 ms/menu.
+
+### Method
+
+Frame-time sampler, cold process per run, median of 3 runs
+(`WORDPROC_FRAME_TIMES=1`, `--frame-time-log`, scripts in
+`/tmp/perf6b`, not committed). First-open script: `wait_frames 20`,
+`menu_open X`, `wait_frames 30` — the open frame is 23 in every
+probe; first-open cost = frame 23 − median(frames 8..19, closed
+steady, same run). Reopen script: open, `wait_frames 20`, `key
+ESCAPE`, `wait_frames 20`, open again, `wait_frames 30` — the
+second open lands on frame 73 (ESC closes ~frame 48); reopen cost
+= frame 73 − median(frames 52..70, same run). A second menu
+opened after a first (switch scripts) uses the same frame-73
+slot. Script-mode registration overhead (~5 ms/frame absolute)
+cancels in these within-run differentials; only the differentials
+are quoted.
+
+### Before: first-open still cold, reopen free
+
+| Menu | First-open cost (ms) | Reopen cost (ms) |
+|---|---|---|
+| File | 1.49 | 0.04 |
+| Edit | 1.29 | 0.05 |
+| View | 1.42 | 0.13 |
+| Insert | 1.71 | 0.07 |
+| Format | 1.94 | 0.34 |
+| Tools | 1.37 | 0.08 |
+| Table | 1.39 | 0.10 |
+| Window | 1.31 | −0.05 |
+| Help | 1.21 | −0.05 |
+
+(Format's reopen 0.34 is its steady-open cost — 60+ items laid
+out/drawn every frame while open — not a spike.) A switch probe
+discriminated per-menu vs shared cost: Help opened *after*
+Format still cost ~0.75 ms, Format after Help ~1.5 ms — the
+cost is largely per-menu, not one shared warm-up.
+
+### Fix, part 1: measure warming — necessary, not sufficient
+
+New `menu_warm::warmMenuMeasures` (`src/ui/menu_warm.h`), called
+in `app_init` right after `createMenuBar` (fonts are loaded by
+then) and after every rebuild (`refreshMenuBar`, the
+`MenuUISystem` rebuild check — rebuilds introduce strings the
+startup pass never saw: new recent paths, new document name).
+The enumeration (`menu_geometry::forEachMenuWarmString`, pure,
+unit-tested) emits every (string, site) pair the dropdown
+measures:
+
+- titles at the `MeasureUIText` size (base 16) and at the drawn
+  size (14); first-char mnemonics the same;
+- every item label with **every** mark prefix (`"  "`, `"√ "`,
+  `"• "`, `"- "`) — the button draws `markPrefix + showLabel`
+  and marks change at runtime (View checkmarks, Track Changes),
+  so warming only the current prefix would leave the checked
+  form cold — with the display label (ellipsized recent path)
+  preferred, exactly as the dropdown measures;
+- shortcuts at the `MeasureUIText` size (base 14) and at 14.
+
+Two size conventions must both be covered: `MeasureUIText`
+applies the Settings UI scale (titles 16 → 19, shortcuts 14 →
+16 at the default 1.2 scale) while autolayout/renderer measure
+at 14 (Proportional scaling, no Settings scale). The mark
+prefix literals now live in one place
+(`menu_geometry::MARK_PREFIX_*`, used by both the renderer and
+the enumeration) so the warm set cannot drift from what the
+dropdown draws. Warming goes through the persistent backend
+`measure_memo` — the app-facing `TextMeasureCache` in front of
+it prunes entries unused for 120 frames, so warming only that
+cache would evaporate before a real user opens a menu.
+
+Measured cost: **0.75 ms** (`Warm menu measure cache` timer,
+median of the trivial-open runs). But Format first-open after
+measure-warming alone stayed at **2.43 ms** — the measure cache
+was not the (whole) cost.
+
+### Fix, part 2: glyph-raster warming — the missing ~1.6 ms
+
+`fonsTextAdvance` (the measure path) only computes advances; it
+never rasterizes. `fonsDrawText` rasterizes each new glyph into
+the fontstash atlas (and a dirty atlas is re-uploaded whole via
+`sg_update_image` at pass end). First-open was paying that
+rasterization for the dropdown's glyphs. New
+`menu_warm::warmMenuDraws`: draws each unique Drawn-site string
+once, offscreen (−10000, −10000), alpha 0, at the exact size
+the dropdown draws at (14, via the same `draw_text_ex` the UI
+renderer uses). It runs once, in `app_frame` on the **second**
+frame — after the first paint, so first paint pays none of it,
+and before any menu can open (a click takes longer than one
+frame). Cost: **1.02 ms** (`Warm menu glyph draw` timer).
+Total warm: **1.77 ms**, under the 2 ms cold-open budget and the
+5 ms warm budget.
+
+### After: first-open ≈ reopen
+
+| Menu | First-open cost (ms) | Reopen cost (ms) |
+|---|---|---|
+| File | 0.07 | −0.03 |
+| Edit | 0.09 | 0.22 |
+| View | 0.04 | −0.02 |
+| Insert | 0.07 | 0.08 |
+| Format | 0.44 | 0.45 |
+| Tools | −0.03 | 0.18 |
+| Table | −0.01 | −0.10 |
+| Window | −0.07 | −0.08 |
+| Help | −0.07 | −0.09 |
+
+Every menu's first-open now equals its reopen within noise
+(Format's 0.44 first / 0.45 reopen is its steady-open cost).
+Cross-menu switching is free too: Help opened after Format
+0.49–0.52 ms absolute (its steady-open level), Format after
+Help 0.74–0.97 ms absolute (its steady-open level) — the
+startup warm covers all menus, which a per-menu lazy warm
+could not. The hover-lazy fallback from the brief was not
+needed: the full warm fits the budget.
+
+### Cold-open wall
+
+Trivial script (screenshot + `wait_frames 1`,
+`--frame-limit=30`), medians of 5: wall 80 ms → 90 ms,
+`Startup` 37 ms → 33 ms. The wall delta is run-to-run noise
+(ranges overlap: before 70–250 ms, after 90–120 ms); the
+binding evidence is the in-app timers: total added warm work
+**1.77 ms** (0.75 measure + 1.02 draw), within the ≤ 2 ms
+regression budget. `Startup` itself excludes the frame-2 draw
+warm (it is logged at the end of `app_init`).
+
+### Toolbar / status strings — evidence only, no warm
+
+Toolbar and status-bar strings share the first-paint path but
+need no warming for menu-open: they render every frame from
+frame 1, so their glyphs are rasterized on the first frame and
+their measures are warm long before any menu opens (the
+closed-steady frames 8..19 sit flat at ~0.35–0.45 ms). The
+toolbar has no text labels (icons only); the status bar draws
+every frame. Nothing added for them.
+
+### Guards
+
+`make test` green (9927 assertions, 337 cases, incl. new
+`tests/test_menu_warm.cpp`: the exact (string, site) sequence
+for a synthetic menu, display-label-over-raw-path, separator
+emits nothing; verified red-on-revert — dropping the radio
+prefix variant fails it). `make bench-unit` typing burst
+0.182 µs/keystroke, within the 0.151–0.183 run-to-run range.
+Zero new warnings (full rebuild grep-clean). Headless E2E
+spot (direct binary, never `run_e2e.sh`): all `menu/*`
+scripts, `pass_p0_tooltip`, `pass_basic_typing`,
+`pass_menu_switching`, `pass_edit_menu_dropdown`,
+`pass_window_menu`, `pass_p0_file_menu_width` exit 0, except
+4 pre-existing failures that reproduce identically on clean
+HEAD (`e2e_menu_edit_find_next` / `find_previous`:
+`selected_text=apple` vs `Apple`; `reject_changes`:
+`revision_count=6` vs `7`; `e2e_menu_view_outline`: stale
+`'Show Outline'` script name vs `'Outline'`).
+`scripts/check_e2e.py` and `scripts/check_no_raylib.sh` ok
+(no `.e2e` files changed).
+
+### Vendored fmt (addendum recheck, 2026-10-19)
+
+Still `FMT_VERSION 110200` (11.2.0) — the version mailboy
+bumped to for the newer-clang consteval break; kart-afterhours
+still vendors 8.0.1 (`FMT_VERSION 80001` in `vendor/fmt/core.h`
+— old layout, no `base.h`). An app-shaped TU (`log.h` + `FMT_COMPILE`
+consteval path) compiles and runs clean under Apple clang
+17.0.0 and the zig-bundled clang. **No fmt bump needed.**
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage

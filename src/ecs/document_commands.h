@@ -22,6 +22,7 @@
 #include "../settings.h"
 #include "../ui/ui_context.h"
 #include "../ui/menu_setup.h"
+#include "../ui/menu_warm.h"
 #include "component_helpers.h"
 #include "components.h"
 
@@ -540,6 +541,8 @@ inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
     if (addRecent) Settings::get().add_recent_file(filePath);
     menu.menus = menu_setup::createMenuBar(
         Settings::get().get_recent_files(), doc.filePath);
+    // Rebuild introduced strings the startup warm never saw.
+    menu_warm::warmMenuMeasures(menu.menus);
     menu.windowDocLabel = menu_setup::windowDocLabel(doc.filePath);
     menu.recentFilesCount = static_cast<int>(
         Settings::get().get_recent_files().size());

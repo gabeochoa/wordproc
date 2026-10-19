@@ -42,6 +42,62 @@ inline constexpr float MAX_DROPDOWN_WIDTH = 400.0f;
 // 8 ("Recent: ") + 40 chars at ~7px + 50px slack ≈ 386px < the cap.
 inline constexpr std::size_t RECENT_PATH_MAX_CHARS = 40;
 
+// Mark prefixes the dropdown button draws in front of a label
+// (MenuUISystem builds the same strings). One source of truth so the
+// warm-measure enumeration below cannot drift from what the dropdown
+// actually measures: "  " reserves the mark column for an unmarked
+// item, "\xE2\x88\x9A " is the U+221A checkmark, "\xE2\x80\xA2 " the
+// U+2022 radio bullet, "- " the dash.
+inline constexpr const char* MARK_PREFIX_NONE = "  ";
+inline constexpr const char* MARK_PREFIX_CHECKMARK = "\xE2\x88\x9A ";
+inline constexpr const char* MARK_PREFIX_RADIO = "\xE2\x80\xA2 ";
+inline constexpr const char* MARK_PREFIX_DASH = "- ";
+
+// Where the dropdown measures a string (Perf Round 6). The menu bar
+// measures the same string at two size conventions, so a warm pass
+// must cover both or the first open still pays a fontstash walk:
+// - HeaderWidth / MnemonicWidth / ShortcutWidth: MenuUISystem's own
+//   theme::MeasureUIText calls (base sizes 16/16/14, Settings-scaled).
+// - Drawn: the autolayout + renderer size, 14 (Proportional scaling,
+//   no Settings scale), for every label the button actually draws.
+enum class MenuWarmSite { HeaderWidth, MnemonicWidth, ShortcutWidth, Drawn };
+
+// Every (string, site) pair the dropdown measures for these menus,
+// for the startup warm pass. Pure / backend-free so unit tests can
+// pin the exact set: item labels are emitted with every mark prefix
+// (the button draws markPrefix + showLabel, and marks change at
+// runtime — View checkmarks, Track Changes — so warming only the
+// current prefix would leave the checked form cold), with the
+// display label (ellipsized recent path) preferred over the raw
+// label, exactly as the dropdown measures. Separators measure
+// nothing. Menus is duck-typed ({.label, .items[] with .label,
+// .shortcut, .separator, .displayLabel}) so tests need no win95 types.
+template <typename Menus, typename Fn>
+void forEachMenuWarmString(const Menus& menus, Fn&& fn) {
+    const char* prefixes[] = {MARK_PREFIX_NONE, MARK_PREFIX_CHECKMARK,
+                              MARK_PREFIX_RADIO, MARK_PREFIX_DASH};
+    for (const auto& menu : menus) {
+        fn(menu.label, MenuWarmSite::HeaderWidth);
+        if (!menu.label.empty()) {
+            fn(menu.label.substr(0, 1), MenuWarmSite::MnemonicWidth);
+            fn(menu.label.substr(0, 1), MenuWarmSite::Drawn);
+        }
+        fn(menu.label, MenuWarmSite::Drawn);
+        for (const auto& item : menu.items) {
+            if (item.separator) continue;
+            const std::string& show =
+                item.displayLabel.empty() ? item.label : item.displayLabel;
+            for (const char* prefix : prefixes) {
+                fn(std::string(prefix) + show, MenuWarmSite::Drawn);
+            }
+            if (!item.shortcut.empty()) {
+                fn(item.shortcut, MenuWarmSite::ShortcutWidth);
+                fn(item.shortcut, MenuWarmSite::Drawn);
+            }
+        }
+    }
+}
+
 // Dropdown width: label + shortcut + insets, capped (see File menu cap).
 inline float dropdownWidth(float labelWidth, float shortcutWidth,
                            float scaledPaddingX, float maxWidth) {

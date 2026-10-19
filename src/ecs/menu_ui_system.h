@@ -27,6 +27,7 @@
 #include "../ui/theme.h"
 #include "../ui/ui_context.h"  // For ui_imm::getUIRootEntity()
 #include "../ui/menu_setup.h"
+#include "../ui/menu_warm.h"
 #include "../settings.h"
 #include "cached_measure.h"
 
@@ -98,6 +99,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (static_cast<int>(recentFiles.size()) != menu.recentFilesCount ||
             menu.windowDocLabel != expectedWindowLabel) {
             menu.menus = menu_setup::createMenuBar(recentFiles, doc.filePath);
+            // Rebuild introduced strings the startup warm never saw
+            // (new recent paths / document name): warm them now.
+            menu_warm::warmMenuMeasures(menu.menus);
             menu.recentFilesCount = static_cast<int>(recentFiles.size());
             menu.windowDocLabel = expectedWindowLabel;
 
@@ -430,14 +434,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             // Window's "1 <doc>") looked unchecked.
                             // Roboto does have U+221A (glyph 391),
                             // which reads as a checkmark at menu size.
-                            case win95::MenuMark::Checkmark: markPrefix = "\xE2\x88\x9A "; break;
-                            case win95::MenuMark::Radio:     markPrefix = "\xE2\x80\xA2 "; break;
-                            case win95::MenuMark::Dash:      markPrefix = "- "; break;
+                            case win95::MenuMark::Checkmark: markPrefix = menu_geometry::MARK_PREFIX_CHECKMARK; break;
+                            case win95::MenuMark::Radio:     markPrefix = menu_geometry::MARK_PREFIX_RADIO; break;
+                            case win95::MenuMark::Dash:      markPrefix = menu_geometry::MARK_PREFIX_DASH; break;
                             case win95::MenuMark::None: break;
                             default: break;
                         }
                     } else {
-                        markPrefix = "  ";  // Reserve space for mark column
+                        markPrefix = menu_geometry::MARK_PREFIX_NONE;  // Reserve space for mark column
                     }
                     
                     // Display label (ellipsized for recent paths).

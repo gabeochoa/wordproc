@@ -31,6 +31,7 @@
 #include "testing/e2e_runner.h"
 #include "testing/deferred_screenshot.h"
 #include "ui/menu_setup.h"
+#include "ui/menu_warm.h"
 #include "ui/theme.h"
 #include "ui/ui_context.h"
 #include <afterhours/src/plugins/ui/validation_systems.h>
@@ -222,6 +223,10 @@ static void app_init() {
         menuComp.windowDocLabel =
             menu_setup::windowDocLabel(docComp.filePath);
     }
+    // Perf Round 6: warm the measure memo with every string the
+    // dropdown will measure, so the first menu open hits the cache.
+    // Fonts are loaded (Preload ran above); cost is timed inside.
+    menu_warm::warmMenuMeasures(menuComp.menus);
     menuComp.recentFilesCount =
         static_cast<int>(Settings::get().get_recent_files().size());
     menuComp.exePath = app_state::exePath;
@@ -579,7 +584,19 @@ static void app_frame() {
     // This includes EditorRenderSystem (document/ruler/text) and
     // RenderImm (UI buttons, divs, title bar, etc.)
     app_state::systemManager->run(dt);
-    
+
+    // Perf Round 6: rasterize the menu glyphs once, offscreen, on
+    // the second frame — after the first paint, before any menu can
+    // open. The measure warm in app_init covers memo entries; this
+    // covers the glyph atlas (measure never rasterizes).
+    if (app_state::loopFrames > 1) {
+        static bool warmDrawDone = false;
+        if (!warmDrawDone && app_state::menuComp) {
+            warmDrawDone =
+                menu_warm::warmMenuDraws(app_state::menuComp->menus);
+        }
+    }
+
     // Execute E2E script AFTER systems run (visible text is now registered for validation)
     auto* runner = app_state::scriptRunner;
     if (runner->hasCommands() && !runner->isFinished()) {
