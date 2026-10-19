@@ -158,6 +158,46 @@ inline std::string writeSnapshot(const std::filesystem::path& base,
     return path.string();
 }
 
+// Dialog layout (menu_ui_system.h renders from these, so the
+// accounting and the rendering can never drift apart again):
+// - Consecutive rows land 28px apart (measured from rendered
+//   dialogs; the rows declare h720(26)), so list height is rows
+//   * 28 + 4 sunken padding, capped at 6 visible rows (the list
+//   scrolls past that).
+// - The dialog must cover every child: title 20 + list +
+//   warning gap 8 + warning 28 + button-row margin 24
+//   (DefaultSpacing::medium) + buttons 44 + panel padding 8
+//   (4 top + 4 bottom) + breathing 8. The old accounting used
+//   26px rows and never counted the button margin, so the panel
+//   came up ~20px short, flex shrank the list, and the warning
+//   painted over the bottom row.
+inline constexpr int kRowPitch = 28;
+inline constexpr int kListPadding = 4;
+inline constexpr int kMaxVisibleRows = 6;
+inline constexpr int kTitleHeight = 20;
+inline constexpr int kWarningHeight = 28;
+inline constexpr int kWarningTopGap = 8;
+inline constexpr int kButtonRowHeight = 44;
+inline constexpr int kButtonRowTopMargin = 24;
+inline constexpr int kPanelPadding = 8;
+inline constexpr int kBottomBreathing = 8;
+
+inline std::size_t visibleRowCount(std::size_t snapshotCount) {
+    return std::min<std::size_t>(
+        kMaxVisibleRows, std::max<std::size_t>(snapshotCount, 1));
+}
+
+inline int listHeightForCount(std::size_t snapshotCount) {
+    return static_cast<int>(visibleRowCount(snapshotCount)) * kRowPitch +
+           kListPadding;
+}
+
+inline int dialogHeightForCount(std::size_t snapshotCount) {
+    return kTitleHeight + listHeightForCount(snapshotCount) +
+           kWarningTopGap + kWarningHeight + kButtonRowTopMargin +
+           kButtonRowHeight + kPanelPadding + kBottomBreathing;
+}
+
 // Human dialog row label: "Oct 18, 2026, 9:20 PM — 128 words".
 // Parses the "YYYYmmdd-HHMMSS" stem. The timestamp is stored in
 // local time (see timestampLabel), so the parsed fields ARE the

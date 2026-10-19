@@ -140,6 +140,40 @@ TEST_CASE("Version history timestamps use LOCAL time, not UTC",
 
 #endif
 
+TEST_CASE("Version history dialog layout (no warning overlap)",
+          "[version_history]") {
+    SECTION("list height fits rows at 28px pitch, at least one row") {
+        REQUIRE(version_history::listHeightForCount(0) == 32);
+        REQUIRE(version_history::listHeightForCount(1) == 32);
+        REQUIRE(version_history::listHeightForCount(5) == 144);
+        REQUIRE(version_history::listHeightForCount(6) == 172);
+    }
+    SECTION("list height caps at 6 visible rows and scrolls past that") {
+        REQUIRE(version_history::listHeightForCount(9) == 172);
+        REQUIRE(version_history::listHeightForCount(100) == 172);
+        REQUIRE(version_history::visibleRowCount(9) == 6);
+    }
+    SECTION("dialog covers every child: title + list + gap + warning + margin + buttons + padding + breathing") {
+        // Fixed chrome around the list, identical at any row count.
+        constexpr int kChrome = 20 + 8 + 28 + 24 + 44 + 8 + 8;
+        REQUIRE(version_history::dialogHeightForCount(1) ==
+                kChrome + version_history::listHeightForCount(1));
+        REQUIRE(version_history::dialogHeightForCount(5) ==
+                kChrome + version_history::listHeightForCount(5));
+        REQUIRE(version_history::dialogHeightForCount(6) ==
+                kChrome + version_history::listHeightForCount(6));
+        REQUIRE(version_history::dialogHeightForCount(1) == 172);
+        REQUIRE(version_history::dialogHeightForCount(5) == 284);
+        REQUIRE(version_history::dialogHeightForCount(6) == 312);
+        // The dialog grows with the list, so the warning (which
+        // sits below the list) can never cover the bottom row.
+        REQUIRE(version_history::dialogHeightForCount(5) >
+                version_history::dialogHeightForCount(1));
+        REQUIRE(version_history::dialogHeightForCount(6) >
+                version_history::dialogHeightForCount(5));
+    }
+}
+
 TEST_CASE("Version history snapshot write/list", "[version_history]") {
     TempDir tmp;
     const std::time_t t1 = makeTime(2026, 10, 19, 9, 0, 0);

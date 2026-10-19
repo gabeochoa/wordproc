@@ -3568,16 +3568,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // Restore + Undo.
         if (dialogs.showVersionHistoryDialog) {
             constexpr int VERSION_HISTORY_MODAL_ID = 50014;
-            // Height fits content (Date and Time accounting): title
-            // 20 + list (rows x 26 + 4 sunken padding, capped at 6
-            // rows / 160, at least one row) + footer 28 + buttons
-            // 44 + panel padding 8 + 12 breathing room. The old
-            // fixed 320 left a huge empty gray band below the list.
-            const int versionListH = static_cast<int>(std::min<std::size_t>(
-                160, std::max<std::size_t>(
-                          dialogs.versionHistorySnapshots.size(), 1) * 26 +
-                          4));
-            const int versionModalH = 20 + versionListH + 28 + 44 + 20;
+            // Height fits content via version_history layout
+            // constants (see version_history.h): the list shrinks
+            // to its rows and the dialog grows to cover every
+            // child, so the restore-warning always sits BELOW
+            // the list with an 8px gap — the old 26px-row
+            // accounting plus the uncounted 24px button margin
+            // left the panel ~20px short and the warning
+            // painted over the bottom row.
+            const int versionListH = version_history::listHeightForCount(
+                dialogs.versionHistorySnapshots.size());
+            const int versionModalH =
+                version_history::dialogHeightForCount(
+                    dialogs.versionHistorySnapshots.size());
             auto result = afterhours::modal(ctx, mk(entity, VERSION_HISTORY_MODAL_ID),
                 dialogs.showVersionHistoryDialog,
                 ah_win95::win95DialogConfig(
@@ -3601,7 +3604,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_flex_direction(FlexDirection::Column)
                         .with_overflow(afterhours::ui::Overflow::Auto)
                         .with_padding(Padding{.top = pixels(2),
-                                              .bottom = pixels(2)})
+                                              .bottom = pixels(2),
+                                              .left = pixels(2),
+                                              .right = pixels(2)})
                         .with_render_layer(CONTENT_LAYER));
                 if (listBox) {
                     if (dialogs.versionHistorySnapshots.empty()) {
@@ -3613,7 +3618,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                     ui_imm::win95_colors::TEXT_AREA)
                                 .with_custom_text_color(
                                     ui_imm::win95_colors::TEXT)
-                                .with_padding(Padding{.left = pixels(4)})
+                                .with_text_inset(5.0f, 0.0f)
                                 .with_render_layer(CONTENT_LAYER));
                     }
                     for (std::size_t i = 0; i < dialogs.versionHistorySnapshots.size(); ++i) {
@@ -3637,7 +3642,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                     ? ui_imm::win95_colors::TEXT_WHITE
                                     : ui_imm::win95_colors::TEXT)
                                 .with_alignment(afterhours::ui::TextAlignment::Left)
-                                .with_padding(Padding{.left = pixels(4)})
+                                .with_text_inset(5.0f, 0.0f)
                                 .with_cursor(afterhours::ui::CursorType::Pointer)
                                 .with_render_layer(CONTENT_LAYER))) {
                             dialogs.versionHistorySelected = static_cast<int>(i);
@@ -3645,10 +3650,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                 }
 
+                // Restore warning: BELOW the list with an 8px gap
+                // (kWarningTopGap, counted in dialogHeightForCount),
+                // never overlapping the bottom row.
                 div(ctx, mk(result.ent(), 3),
                     ComponentConfig{}
                         .with_label("Restore replaces the document. Undo (Ctrl+Z) returns to the current text.")
                         .with_size(ComponentSize{percent(1.0f), h720(28)})
+                        .with_margin(Margin{.top = pixels(8)})
                         .with_text_overflow(afterhours::ui::TextOverflow::Wrap)
                         .with_render_layer(CONTENT_LAYER));
 
