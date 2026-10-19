@@ -250,6 +250,31 @@ E2E spot-checks headless on the new default build all exit 0:
 `e2e_menu_format_fonts.e2e` (font switching), `e2e_large_doc_scroll.e2e`
 (War and Peace scroll), `pass_status_bar_text.e2e`.
 
+### Fix 2: parse each startup TTF once, share the fontstash handle — `src/preload.cpp`
+
+`Font` is just a fontstash id, but `load_font(name, path)` re-read and
+re-parsed the file on every call (fontstash has no dedup by path).
+Roboto was parsed 3× (`DEFAULT_FONT`, `SYMBOL_FONT`, `UI_FONT`) and
+Gaegu-Bold 2× (`Gaegu-Bold`, `Gaegu`). Now each file loads once and
+the same handle registers under every name. Garamond stays loaded at
+startup: at `-O2` it costs 0.45 ms, and deferring it would need
+ensure-loaded wiring at every font-switch site for no measurable win
+(see "Not worth fixing").
+
+| Timer (medians, 3x, no-file first-open) | Before (Fix 1) | After (Fix 2) |
+|---|---|---|
+| `Load fonts` | 3.59 ms | 2.24 ms |
+| Gaegu (`Gaegu-Bold` + `Gaegu`) | 2.61 ms (2 parses) | 1.61 ms (1 parse) |
+| Roboto (`DEFAULT_FONT` + `SYMBOL_FONT` + `UI_FONT`) | ~0.52 ms (3 parses) | 0.21 ms (1 parse) |
+| `Startup time` / wall | 37 ms / 80.6 ms | 39 ms / 88.1 ms (within run-to-run noise; the in-app timers are the signal) |
+
+Side benefit: fontstash now holds one copy of the 2.8 MB Gaegu file
+instead of two, and one Roboto instead of three.
+
+Verification: headless E2E `pass_font_dialog_pending.e2e` (Font dialog
+preview, incl. Gaegu), `e2e_menu_format_fonts.e2e` (Gaegu/Garamond
+switching), `pass_toolbar_font_dropdown.e2e` — all exit 0.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage

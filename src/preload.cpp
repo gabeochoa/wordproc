@@ -97,13 +97,20 @@ Preload &Preload::make_singleton() {
 
         {
             SCOPED_TIMER("Load fonts");
+            // Each TTF file is parsed exactly once: a Font is just a
+            // fontstash id, so one load can be registered under every
+            // name that refers to it. Before, Roboto was parsed 3x
+            // (DEFAULT_FONT, SYMBOL_FONT, UI_FONT) and Gaegu-Bold 2x
+            // (Gaegu-Bold, Gaegu) — fontstash does not dedup by path,
+            // so each load re-read and re-parsed the whole file.
             {
-                SCOPED_TIMER("  font: DEFAULT_FONT (Roboto)");
-                fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, ui_font_path.c_str());
-            }
-            {
-                SCOPED_TIMER("  font: SYMBOL_FONT (Roboto)");
-                fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, ui_font_path.c_str());
+                SCOPED_TIMER("  font: Roboto (DEFAULT_FONT + SYMBOL_FONT + UI_FONT)");
+                afterhours::Font roboto =
+                    afterhours::load_font_from_file(ui_font_path.c_str());
+                fontMgr.load_font(ui::UIComponent::DEFAULT_FONT, roboto);
+                fontMgr.load_font(ui::UIComponent::SYMBOL_FONT, roboto);
+                theme::UI_FONT = roboto;
+                theme::UI_FONT_LOADED = true;
             }
             {
                 SCOPED_TIMER("  font: Garamond");
@@ -115,20 +122,17 @@ Preload &Preload::make_singleton() {
                 // face -- not just a FontLoader id (loadStartupFonts
                 // only records ids): with_font("Gaegu-Bold") fell back
                 // to the default face, so the Font dialog preview
-                // never rendered in Gaegu-Bold. "Gaegu" loads the same
+                // never rendered in Gaegu-Bold. "Gaegu" is the same
                 // file: it is the only shipped Gaegu face, and the
                 // toolbar offers both names.
-                SCOPED_TIMER("  font: Gaegu-Bold / Gaegu");
+                SCOPED_TIMER("  font: Gaegu-Bold / Gaegu (one load)");
                 std::string gaeguPath =
                     files::get_resource_path("fonts", "Gaegu-Bold.ttf")
                         .string();
-                fontMgr.load_font("Gaegu-Bold", gaeguPath.c_str());
-                fontMgr.load_font("Gaegu", gaeguPath.c_str());
-            }
-            {
-                SCOPED_TIMER("  font: UI_FONT (manual load)");
-                theme::UI_FONT = afterhours::load_font_from_file(ui_font_path.c_str());
-                theme::UI_FONT_LOADED = true;
+                afterhours::Font gaegu =
+                    afterhours::load_font_from_file(gaeguPath.c_str());
+                fontMgr.load_font("Gaegu-Bold", gaegu);
+                fontMgr.load_font("Gaegu", gaegu);
             }
         }
 
