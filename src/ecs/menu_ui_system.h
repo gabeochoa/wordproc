@@ -13,6 +13,7 @@
 
 #include "components.h"
 #include "../editor/comments.h"
+#include "../editor/symbol.h"
 #include "toolbar_icons.h"
 #include "editor_entity_cache.h"
 #include "scrollbar_system.h"  // anyModalDialogOpen for the no-UI focus guard
@@ -2451,6 +2452,155 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_label("Cancel")
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.showDateTimeDialog = false;
+                    }
+                }
+            }
+        }
+
+        // Special Character dialog (Insert > Special Character...):
+        // Win95 shell, a grid of symbol::entries() (8 columns) plus
+        // a name line for the selection. A grid click selects; a
+        // second click on the selected cell (a double-click) or
+        // the Insert button inserts that character at the caret
+        // through cmd::insertSymbol as one undo step. The grid
+        // draws with the UI font (Roboto), which carries every
+        // entry — see symbol.h.
+        if (dialogs.showSymbolDialog) {
+            constexpr int SYMBOL_MODAL_ID = 50022;
+            // Height fits content: title 20 + label 20 + grid
+            // (6 rows x 30) + name line 20 + buttons 44 + panel
+            // padding 8 = 312; width fits 8 x 44 cells + padding.
+            auto result = afterhours::modal(ctx, mk(entity, SYMBOL_MODAL_ID),
+                dialogs.showSymbolDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(400), afterhours::ui::h720(312),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+                const auto& entries = symbol::entries();
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Special Character",
+                                              CONTENT_LAYER);
+
+                test_input::register_visible_text("Select a character:");
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Select a character:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                const std::size_t cols = symbol::kColumns;
+                const std::size_t rows =
+                    (entries.size() + cols - 1) / cols;
+                for (std::size_t r = 0; r < rows; ++r) {
+                    auto rowDiv = div(ctx, mk(result.ent(), 910 + static_cast<int>(r)),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(30)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_justify_content(JustifyContent::Center)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(2))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (!rowDiv) continue;
+                    for (std::size_t c = 0; c < cols; ++c) {
+                        std::size_t idx = r * cols + c;
+                        if (idx >= entries.size()) break;
+                        const auto& entry = entries[idx];
+                        bool selected = static_cast<int>(idx) ==
+                                        dialogs.symbolSelected;
+                        test_input::register_visible_text(entry.character);
+                        if (button(ctx, mk(rowDiv.ent(), static_cast<int>(idx)),
+                            ComponentConfig{}
+                                .with_debug_name(
+                                    std::string("symbol_char_") + entry.slug)
+                                .with_label(entry.character)
+                                .with_size(ComponentSize{pixels(44), h720(28)})
+                                .with_roundness(0.0f)
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::TEXT_AREA)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Center)
+                                .with_cursor(
+                                    afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            if (selected) {
+                                cmd::insertSymbol(doc, entry.character);
+                                dialogs.showSymbolDialog = false;
+                            } else {
+                                dialogs.symbolSelected =
+                                    static_cast<int>(idx);
+                            }
+                        }
+                    }
+                }
+
+                // Selected character name line.
+                std::string nameLine = " ";
+                if (dialogs.symbolSelected >= 0 &&
+                    dialogs.symbolSelected < static_cast<int>(entries.size())) {
+                    const auto& sel = entries[static_cast<std::size_t>(
+                        dialogs.symbolSelected)];
+                    nameLine = std::string(sel.character) + "  " + sel.name;
+                }
+                test_input::register_visible_text(nameLine);
+                div(ctx, mk(result.ent(), 930),
+                    ComponentConfig{}
+                        .with_label(nameLine)
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Center)
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto buttonRow = div(ctx, mk(result.ent(), 931),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("symbol_insert")
+                            .with_label("Insert")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        if (dialogs.symbolSelected >= 0 &&
+                            dialogs.symbolSelected < static_cast<int>(
+                                entries.size())) {
+                            cmd::insertSymbol(
+                                doc,
+                                entries[static_cast<std::size_t>(
+                                    dialogs.symbolSelected)].character);
+                        }
+                        dialogs.showSymbolDialog = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("symbol_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showSymbolDialog = false;
                     }
                 }
             }
@@ -6148,7 +6298,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
-            !dialogs.showDateTimeDialog && !dialogs.showFontDialog &&
+            !dialogs.showDateTimeDialog && !dialogs.showSymbolDialog &&
+            !dialogs.showDropCapDialog && !dialogs.showFontDialog &&
             !dialogs.showColumnsDialog && !dialogs.showParagraphDialog &&
             !dialogs.showBordersShadingDialog &&
             !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&

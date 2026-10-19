@@ -835,6 +835,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     dialogs.dateTimeSelected = 0;
                     dialogs.dateTimeUpdateAutomatically = false;
                     break;
+                case 24:  // Special Character...
+                    dialogs.showSymbolDialog = true;
+                    dialogs.symbolSelected = 0;
+                    break;
                 case 26:  // Header — enter header editing
                     // (the "[HEADER]" body-text placeholder is gone:
                     // headers are a real buffer now, Batch 9).

@@ -1,34 +1,55 @@
-# Test: Special character insertion
-# Validates special characters can be inserted
+# Test: Special character insertion via the grid dialog.
+# Insert > Special Character... opens a Win95 dialog with a grid
+# of symbols; a click on a cell selects it, a second click (or the
+# Insert button) inserts it at the caret through the command layer
+# as one undo step. The dialog renders in the document font, which
+# carries every grid glyph (see symbol.h).
 
-# Type some text
-type "Mathematical formula: "
-wait 2
+type "Price: "
+wait_frames 12
 
-# Open Insert menu for special characters
 menu_open Insert
-wait 2
+wait_frames 12
 menu_select "Special Character..."
-wait 2
+wait_frames 12
 
-# Select a Greek letter (alpha)
-type "alpha"
-key ENTER
-wait 2
+validate dialog_open=Symbol
+expect_text "Select a character:"
+expect_text "Copyright"
 
-# Validate special character was inserted
-validate text_contains=α
+screenshot symbol_dialog
 
-# Insert another character (pi)
+# © is the default selection (first cell): one click inserts it.
+click_ui symbol_char_copyright
+wait_frames 12
+validate dialog_open=false
+validate text_contains_©=true
+
+# € via select-then-Insert: first click selects, Insert inserts.
 menu_open Insert
-wait 2
+wait_frames 12
 menu_select "Special Character..."
-wait 2
-type "pi"
-key ENTER
-wait 2
+wait_frames 12
+click_ui symbol_char_euro
+wait_frames 12
+validate dialog_open=Symbol
+validate text_contains_€=false
+click_ui symbol_insert
+wait_frames 12
+validate dialog_open=false
+validate text_contains_€=true
 
-validate text_contains=π
+# One undo step removes the whole (multi-byte) character.
+key CTRL+Z
+wait_frames 12
+validate text_contains_€=false
 
-screenshot e2e_special_characters
-
+# Re-insert to show the characters rendered in the document.
+menu_open Insert
+wait_frames 12
+menu_select "Special Character..."
+wait_frames 12
+click_ui symbol_char_copyright
+wait_frames 12
+validate text_contains_©=true
+screenshot symbol_inserted

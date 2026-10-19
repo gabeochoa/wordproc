@@ -667,6 +667,8 @@ static void setupCallbacksEx(
             if (dialogState.showParagraphDialog) return "Paragraph";
             if (dialogState.showBordersShadingDialog) return "BordersShading";
             if (dialogState.showDateTimeDialog) return "DateTime";
+            if (dialogState.showSymbolDialog) return "Symbol";
+            if (dialogState.showDropCapDialog) return "DropCap";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
             if (dialogState.showRevisionsDialog) return "Revisions";

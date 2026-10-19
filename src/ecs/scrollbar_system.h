@@ -39,7 +39,8 @@ struct ScrollbarSystem : public afterhours::System<DocumentComponent, ScrollComp
                dialogs.showSettingsDialog || dialogs.showGoToDialog ||
                dialogs.showSaveAsDialog || dialogs.showPageSetup ||
                dialogs.showOptionsDialog || dialogs.showMailMergeDialog ||
-               dialogs.showDateTimeDialog || dialogs.showFontDialog ||
+               dialogs.showDateTimeDialog || dialogs.showSymbolDialog ||
+               dialogs.showDropCapDialog || dialogs.showFontDialog ||
                dialogs.showColumnsDialog ||
                dialogs.showParagraphDialog ||
                dialogs.showBordersShadingDialog ||

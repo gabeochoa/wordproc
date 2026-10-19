@@ -397,6 +397,22 @@ struct DialogState : public afterhours::BaseComponent {
     int dateTimeSelected = 0;
     bool dateTimeUpdateAutomatically = false;
 
+    // Special Character (Insert > Special Character...): the grid
+    // in symbol::entries(); symbolSelected indexes it. A grid
+    // click selects; a second click on the selected cell (or the
+    // Insert button) inserts that character at the caret through
+    // the command layer as one undo step.
+    bool showSymbolDialog = false;
+    int symbolSelected = 0;
+
+    // Drop Cap (Format > Drop Cap): the dialog's working copy.
+    // dropCapPosition 0 = None, 1 = Dropped; dropCapLines is the
+    // span in lines (2-4) when dropped. Seeded from the caret
+    // paragraph when the dialog opens (see menu_actions).
+    bool showDropCapDialog = false;
+    int dropCapPosition = 0;
+    int dropCapLines = 2;
+
     // Font dialog (Format > Font...): the working selection plus the
     // custom-size field text. fontDialogInitialized seeds them from
     // the current style on the first frame the dialog is open.
