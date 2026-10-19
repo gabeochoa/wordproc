@@ -990,7 +990,22 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
             float hfX = buttonPadding;
             float hfBtnY = formattingBarY + buttonPadding;
-            float hfBtnH = theme::layout::scale(22);
+            // Standard toolbar button height (Batch 9 fix
+            // round): the strip buttons used a custom 22px
+            // instead of the toolbar standard. Note the
+            // brief's "28px" is the BAR height
+            // (TOOLBAR_HEIGHT / FORMATTING_BAR_HEIGHT); the
+            // button standard is TOOLBAR_BUTTON_SIZE (24)
+            // with the 2px padding above, exactly like every
+            // Standard-toolbar button — a 28px button + 2px
+            // padding would overflow the 28px bar. Style
+            // kept: always-raised Win95, text labels kept
+            // (this strip's sibling, the Outlining bar, is
+            // raised the same way; the flat-until-hover
+            // Standard-bar style is for icon buttons, not
+            // these text actions).
+            float hfBtnH = theme::layout::scale(
+                theme::layout::TOOLBAR_BUTTON_SIZE);
             int hfBtnId = 2600;
             auto hfButton = [&](float x, float w, const std::string& label,
                                 const std::string& debug, bool pressed = false) {

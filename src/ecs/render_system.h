@@ -128,6 +128,36 @@ inline void drawPageBackground(const LayoutComponent& layout,
         marginColor);
 }
 
+// Dashed rectangle outline (Word 95 header/footer editing
+// boundary): 6px-on / 4px-off segments via draw_line, the
+// same segmented-line technique as drawTableGridlineEdge
+// below, but dashes (not dots) and a caller-chosen color.
+// Far edges sit 1px inside the rect, matching a 1px
+// draw_rectangle_outline of the same rect.
+inline void drawDashedRectOutline(float x, float y, float w, float h,
+                                  afterhours::Color color) {
+    float x2 = x + w - 1.0f;
+    float y2 = y + h - 1.0f;
+    for (float px = x; px < x2; px += 10.0f) {
+        float end = std::min(px + 6.0f, x2);
+        afterhours::draw_line(static_cast<int>(px), static_cast<int>(y),
+                              static_cast<int>(end), static_cast<int>(y),
+                              color);
+        afterhours::draw_line(static_cast<int>(px), static_cast<int>(y2),
+                              static_cast<int>(end), static_cast<int>(y2),
+                              color);
+    }
+    for (float py = y; py < y2; py += 10.0f) {
+        float end = std::min(py + 6.0f, y2);
+        afterhours::draw_line(static_cast<int>(x), static_cast<int>(py),
+                              static_cast<int>(x), static_cast<int>(end),
+                              color);
+        afterhours::draw_line(static_cast<int>(x2), static_cast<int>(py),
+                              static_cast<int>(x2), static_cast<int>(end),
+                              color);
+    }
+}
+
 // Draw one header / footer band (Batch 9): the buffer's text,
 // wrapped at the band width (cell_edit::wrapCellText, the same
 // wrap the mouse hit-test uses), left-aligned in the margin
@@ -139,9 +169,9 @@ inline void drawPageBackground(const LayoutComponent& layout,
 // not on its own line after the text. differentFirstPage
 // skips the band on page 1 — except the ACTIVE band while
 // editing it (typing into an invisible band would be
-// unusable). While editing, the active band gets a gray
-// outline, the selection highlight, and the blinking caret.
-// Pageless / Normal never reach here (the
+// unusable). While editing, the active band gets a dashed
+// light-gray outline, the selection highlight, and the
+// blinking caret. Pageless / Normal never reach here (the
 // caller gates on pageMode == Paged): Word Normal shows
 // headers/footers only in Page Layout.
 inline void renderHeaderFooter(const DocumentComponent& doc,
@@ -303,9 +333,12 @@ inline void renderHeaderFooter(const DocumentComponent& doc,
                                  textColor);
         }
         if (editing) {
-            afterhours::draw_rectangle_outline(
-                Rectangle{band.x, band.y, band.width, band.height},
-                afterhours::Color{128, 128, 128, 255}, 1.0f);
+            // Word 95 shows the active header/footer area
+            // with a light dashed boundary, not a hard
+            // rectangle.
+            drawDashedRectOutline(band.x, band.y, band.width,
+                                  band.height,
+                                  afterhours::Color{160, 160, 160, 255});
         }
         if (editing && caretVisible) {
             std::size_t caretOff = hfBuffer.caretOffset();
