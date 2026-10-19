@@ -12,6 +12,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include <afterhours/src/drawing_helpers.h>
+#include "../editor/columns_math.h"
 #include "../editor/outline_view.h"
 #include "../editor/scroll_math.h"
 #include "../editor/table.h"
@@ -229,7 +230,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              float indentScale = 1.0f,
                              bool suppressSelection = false,
                              bool showParagraphMarks = false,
-                             bool outlineMode = false) {
+                             bool outlineMode = false,
+                             int columnCount = 1,
+                             float columnSpacingPx = 0.0f,
+                             int linesPerColumn = 50) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
@@ -244,10 +248,51 @@ inline void renderTextBuffer(const TextBuffer& buffer,
     CaretPosition selStart = buffer.selectionStart();
     CaretPosition selEnd = buffer.selectionEnd();
     
-    // Calculate gutter offset for text
-    int gutterOffset = showLineNumbers ? static_cast<int>(lineNumberGutterWidth) : 0;
+    // Columns (paged mode only; Outline wins when both are on,
+    // which cannot happen through the menus — Outline forces
+    // Pageless): the page's lines flow column by column. Scroll
+    // shows the page containing scrollOffset, page-at-a-time.
+    bool columnsActive = !outlineMode && columnCount > 1;
+    if (linesPerColumn < 1) linesPerColumn = 1;
+    if (columnSpacingPx < 0.0f) columnSpacingPx = 0.0f;
+    std::vector<std::pair<std::size_t, int>> columnOrder;
+    if (columnsActive) {
+        std::size_t pageSize = static_cast<std::size_t>(linesPerColumn) *
+                               static_cast<std::size_t>(columnCount);
+        std::size_t pageFirst =
+            (static_cast<std::size_t>(scrollOffset) / pageSize) * pageSize;
+        std::size_t pageEnd =
+            std::min(lineCount, pageFirst + pageSize);
+        for (int col = 0; col < columnCount; ++col) {
+            std::size_t colFirst = pageFirst +
+                static_cast<std::size_t>(col) *
+                    static_cast<std::size_t>(linesPerColumn);
+            std::size_t colEnd = std::min(
+                pageEnd,
+                colFirst + static_cast<std::size_t>(linesPerColumn));
+            for (std::size_t r = colFirst; r < colEnd; ++r) {
+                columnOrder.emplace_back(r, col);
+            }
+        }
+    }
+    int availableWidthBase =
+        static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
+    int columnWidthPx =
+        columnsActive
+            ? static_cast<int>(columns_math::columnWidth(
+                  static_cast<float>(availableWidthBase), columnCount,
+                  columnSpacingPx))
+            : availableWidthBase;
+
+    // Calculate gutter offset for text (line numbers are suppressed
+    // in columns mode: the gutter would collide across columns).
+    int gutterOffset =
+        (showLineNumbers && !columnsActive)
+            ? static_cast<int>(lineNumberGutterWidth)
+            : 0;
 
     int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING;
+    const int startY = y;
 
     // Outline mode: iterate the heading rows only (Title /
     // Subtitle / Heading 1-6); scrollOffset counts visible heading
@@ -260,18 +305,48 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
     }
-    std::size_t visibleCount = outlineMode ? outlineRows.size() : lineCount;
+    std::size_t visibleCount = columnsActive
+                                     ? columnOrder.size()
+                                     : (outlineMode ? outlineRows.size()
+                                                    : lineCount);
     std::size_t startVisible = static_cast<std::size_t>(scrollOffset);
     if (startVisible >= visibleCount) {
         startVisible = visibleCount > 0 ? visibleCount - 1 : 0;
     }
+    if (columnsActive) startVisible = 0;
+    int prevColumn = -1;
 
     for (std::size_t visibleIndex = startVisible;
          visibleIndex < visibleCount; ++visibleIndex) {
-        std::size_t row = outlineMode ? outlineRows[visibleIndex] : visibleIndex;
+        std::size_t row = columnsActive
+                              ? columnOrder[visibleIndex].first
+                              : (outlineMode ? outlineRows[visibleIndex]
+                                             : visibleIndex);
+        int column = columnsActive ? columnOrder[visibleIndex].second : 0;
+        // A new column restarts at the top of the page; the squiggle
+        // cursor (rows ascending within a column) re-seeks to this
+        // column's first row.
+        if (columnsActive && column != prevColumn) {
+            y = startY;
+            prevColumn = column;
+            squiggleIdx = 0;
+            if (squiggles) {
+                while (squiggleIdx < squiggles->size() &&
+                       (*squiggles)[squiggleIdx].row < row) {
+                    ++squiggleIdx;
+                }
+            }
+        }
         LineSpan span = buffer.lineSpan(row);
-        int baseX = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING + gutterOffset;
-        int availableWidth = static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
+        int baseX = static_cast<int>(textArea.x) +
+                    theme::layout::TEXT_PADDING + gutterOffset +
+                    (columnsActive
+                         ? static_cast<int>(columns_math::columnXOffset(
+                               column, static_cast<float>(columnWidthPx),
+                               columnSpacingPx))
+                         : 0);
+        int availableWidth =
+            columnsActive ? columnWidthPx : availableWidthBase;
 
         // Zero-copy line access: use lineView() to avoid allocation on most lines.
         // Only the line currently being edited (where the gap is) needs a copy.
@@ -368,8 +443,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             y += 20;  // Add space for the page break indicator
         }
         
-        // Draw line number in gutter if enabled
-        if (showLineNumbers) {
+        // Draw line number in gutter if enabled (not in columns
+        // mode: the gutter would collide across columns).
+        if (showLineNumbers && !columnsActive) {
             int lineNum = static_cast<int>(row + 1);  // 1-based line numbers
             char lineNumStr[16];
             std::snprintf(lineNumStr, sizeof(lineNumStr), "%d", lineNum);
@@ -676,6 +752,9 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         y += lineHeight + paragraphSpaceAfter;
 
         if (y > static_cast<int>(textArea.y + textArea.height)) {
+            // In columns mode an overflowing row (e.g. a tall heading)
+            // must not drop the remaining columns.
+            if (columnsActive) continue;
             break;
         }
     }
@@ -1007,6 +1086,18 @@ struct EditorRenderSystem
         // Outline mode: heading rows only (not in Print Preview:
         // preview shows printable content, not the outline).
         bool outlineMode = layout.showOutline && !layout.previewMode;
+        // Columns (Format > Columns...): paged editing view only,
+        // never Print Preview (which uses its own line stride).
+        bool columnsActive =
+            layout.pageMode == PageMode::Paged && !layout.previewMode &&
+            doc.docSettings.pageSettings.columnCount > 1;
+        int columnsLinesPerPage = static_cast<int>(
+            columns_math::linesPerColumnForPage(
+                layout.pageHeight, layout.pageMargin, ds, lineHeight));
+        float columnsSpacingPx =
+            columnsActive
+                ? doc.docSettings.pageSettings.columnSpacing * ds
+                : 0.0f;
 
         if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
@@ -1019,13 +1110,17 @@ struct EditorRenderSystem
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode, showParagraphMarks, outlineMode);
+                             layout.previewMode, showParagraphMarks, outlineMode,
+                             columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
+                             columnsSpacingPx, columnsLinesPerPage);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode, showParagraphMarks, outlineMode);
+                             layout.previewMode, showParagraphMarks, outlineMode,
+                             columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
+                             columnsSpacingPx, columnsLinesPerPage);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1039,7 +1134,9 @@ struct EditorRenderSystem
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode, showParagraphMarks, outlineMode);
+                             layout.previewMode, showParagraphMarks, outlineMode,
+                             columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
+                             columnsSpacingPx, columnsLinesPerPage);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

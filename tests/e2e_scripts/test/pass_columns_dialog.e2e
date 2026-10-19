@@ -1,0 +1,47 @@
+# Test: Format > Columns... sets 2 columns in the paged view.
+# 60 lines at ~29 lines per column: column 1 holds lines 0-28,
+# column 2 holds lines 29-57. A click in column 1 lands on line 0;
+# a click in column 2 (x ~700) lands on line 29 (caret_row 30) —
+# the hit-test respects the column x-offsets. Pageless is unchanged
+# (columns only apply in the paged renderer).
+
+fill_lines 60 Column line
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select "Paged Mode"
+wait_frames 12
+validate page_mode=paged
+
+menu_open Format
+wait_frames 12
+menu_select "Columns..."
+wait_frames 12
+
+validate dialog_open=Columns
+expect_text "Equal column width"
+expect_text "Presets:"
+
+click_ui columns_preset_2
+wait_frames 12
+click_ui columns_ok
+wait_frames 12
+
+validate dialog_open=false
+validate column_count=2
+validate column_spacing=36
+
+screenshot columns_paged
+
+mouse_down 550 215
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=1
+
+mouse_down 700 215
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=30

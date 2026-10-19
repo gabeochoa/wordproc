@@ -312,6 +312,8 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         {"pageHeight", page.pageHeight},
         {"pageMargin", page.pageMargin},
         {"lineWidthLimit", page.lineWidthLimit},
+        {"columns", page.columnCount},
+        {"columnSpacing", page.columnSpacing},
     };
 
     // Font requirements - which fonts and scripts the document needs
@@ -519,6 +521,16 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
                 page.lineWidthLimit =
                     page_json.at("lineWidthLimit").get<float>();
             }
+            if (page_json.contains("columns")) {
+                page.columnCount = std::max(
+                    1, std::min(4, page_json.at("columns").get<int>()));
+            }
+            if (page_json.contains("columnSpacing")) {
+                page.columnSpacing = std::max(
+                    0.0f,
+                    std::min(144.0f,
+                             page_json.at("columnSpacing").get<float>()));
+            }
         }
 
         // Load font requirements (for lazy CJK font loading)
@@ -617,6 +629,8 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
         {"pageHeight", page.pageHeight},
         {"pageMargin", page.pageMargin},
         {"lineWidthLimit", page.lineWidthLimit},
+        {"columns", page.columnCount},
+        {"columnSpacing", page.columnSpacing},
     };
 
     // Font requirements

@@ -171,7 +171,8 @@ inline std::vector<MenuData> createMenuBarData() {
                         {"Decrease Space After", "Ctrl+Shift+Alt+Down", true, false},
                         {"", "", false, true},
                         {"Drop Cap", "", true, false},
-                        {"Tab Width...", "", true, false}};
+                        {"Tab Width...", "", true, false},
+                        {"Columns...", "", true, false}};
     menus.push_back(formatMenu);
 
     // Insert menu

@@ -2389,6 +2389,145 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Columns dialog (Format > Columns...) - Win95 shell:
+        // preset buttons (One / Two / Three / Four), "Equal column
+        // width" fixed on (the columns are always equal width),
+        // spacing field in inches (default 0.5), OK/Cancel.
+        if (dialogs.showColumnsDialog) {
+            constexpr int COLUMNS_MODAL_ID = 50017;
+            auto result = afterhours::modal(ctx, mk(entity, COLUMNS_MODAL_ID),
+                dialogs.showColumnsDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(420), afterhours::ui::h720(300),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Columns", CONTENT_LAYER);
+
+                test_input::register_visible_text("Presets:");
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Presets:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                static const char* kPresetNames[4] = {
+                    "One", "Two", "Three", "Four"};
+                auto presetRow = div(ctx, mk(result.ent(), 902),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(32)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (presetRow) {
+                    for (int i = 0; i < 4; ++i) {
+                        bool selected = i + 1 == dialogs.columnsSelected;
+                        test_input::register_visible_text(kPresetNames[i]);
+                        if (button(ctx, mk(presetRow.ent(), 100 + i),
+                            ComponentConfig{}
+                                .with_debug_name("columns_preset_" +
+                                                std::to_string(i + 1))
+                                .with_label(kPresetNames[i])
+                                .with_size(ComponentSize{w1280(70), h720(28)})
+                                .with_roundness(0.0f)
+                                .with_custom_background(selected
+                                    ? ui_imm::win95_colors::HIGHLIGHT
+                                    : ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(selected
+                                    ? ui_imm::win95_colors::TEXT_WHITE
+                                    : ui_imm::win95_colors::TEXT)
+                                .with_border(ui_imm::win95_colors::TEXT,
+                                             selected ? 2.0f : 1.0f)
+                                .with_cursor(afterhours::ui::CursorType::Pointer)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.columnsSelected = i + 1;
+                        }
+                    }
+                }
+
+                // Equal column width is fixed on: the layout math
+                // always splits the text width equally, so this is
+                // a label, not a toggle.
+                test_input::register_visible_text(
+                    "Equal column width");
+                div(ctx, mk(result.ent(), 903),
+                    ComponentConfig{}
+                        .with_label("[X] Equal column width")
+                        .with_size(ComponentSize{percent(1.0f), h720(22)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+
+                test_input::register_visible_text("Spacing (inches):");
+                div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_label("Spacing (inches):")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 905),
+                    dialogs.columnsSpacingStr,
+                    ah_win95::win95SunkenStyle()
+                        .with_debug_name("columns_spacing_input")
+                        .with_size(ComponentSize{w1280(80), h720(28)})
+                        .with_render_layer(CONTENT_LAYER));
+
+                auto buttonRow = div(ctx, mk(result.ent(), 906),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("columns_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        float inches = std::atof(
+                            dialogs.columnsSpacingStr.c_str());
+                        if (inches < 0.0f) inches = 0.0f;
+                        if (inches > 2.0f) inches = 2.0f;
+                        doc.docSettings.pageSettings.columnCount =
+                            std::clamp(dialogs.columnsSelected, 1, 4);
+                        doc.docSettings.pageSettings.columnSpacing =
+                            inches * 72.0f;
+                        doc.isDirty = true;
+                        dialogs.showColumnsDialog = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("columns_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showColumnsDialog = false;
+                    }
+                }
+            }
+        }
+
         // Tab Width input dialog
         if (dialogs.showTabWidthDialog) {
             constexpr int TABWIDTH_MODAL_ID = 50004;
@@ -2907,6 +3046,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
             !dialogs.showDateTimeDialog && !dialogs.showFontDialog &&
+            !dialogs.showColumnsDialog &&
             !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&
             !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&

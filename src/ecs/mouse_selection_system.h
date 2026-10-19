@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "../../vendor/afterhours/src/core/system.h"
+#include "../editor/columns_math.h"
 #include "../editor/outline_view.h"
 #include "../editor/scroll_math.h"
 #include "../editor/text_layout.h"
@@ -47,7 +48,9 @@ struct MouseSelectionSystem
 
     CaretPosition hitTest(const TextBuffer& buffer, const LayoutComponent& layout,
                           const LayoutComponent::Rect& area, float mx, float my,
-                          int scrollOffset, int fontSize, int lineHeight) const {
+                          int scrollOffset, int fontSize, int lineHeight,
+                          int columnCount = 1, float columnSpacingPx = 0.0f,
+                          int linesPerColumn = 50) const {
         float relY = my - area.y - static_cast<float>(theme::layout::TEXT_PADDING);
         float baseX = area.x + static_cast<float>(theme::layout::TEXT_PADDING);
         if (layout.showLineNumbers) baseX += layout.lineNumberGutterWidth;
@@ -86,6 +89,53 @@ struct MouseSelectionSystem
             std::size_t col = hitTestColumn(line, mx - indentedX, measure);
             return {row, col};
         }
+        // Columns (paged mode): the click's column comes from its x
+        // (column width + spacing, same math as the renderer), the
+        // row-in-column from its y, and the real row is pageFirst +
+        // column * linesPerColumn + rowInColumn. This is first-page
+        // correct and page-consistent for later pages (the renderer
+        // shows the page containing scrollOffset).
+        if (layout.pageMode == PageMode::Paged && !layout.showOutline &&
+            columnCount > 1 && linesPerColumn > 0) {
+            int availableWidth = static_cast<int>(area.width) -
+                                 2 * theme::layout::TEXT_PADDING;
+            float colWidth = columns_math::columnWidth(
+                static_cast<float>(availableWidth), columnCount,
+                columnSpacingPx);
+            float stride = colWidth + columnSpacingPx;
+            int column = 0;
+            if (stride > 0.0f) {
+                column = static_cast<int>(std::floor(
+                    (mx - area.x - static_cast<float>(
+                                     theme::layout::TEXT_PADDING)) /
+                    stride));
+            }
+            column = std::clamp(column, 0, columnCount - 1);
+            float columnX = area.x +
+                            static_cast<float>(theme::layout::TEXT_PADDING) +
+                            columns_math::columnXOffset(column, colWidth,
+                                                        columnSpacingPx);
+            int rowInColumn = static_cast<int>(
+                std::floor(relY / static_cast<float>(lineHeight)));
+            if (rowInColumn < 0) rowInColumn = 0;
+            std::size_t pageSize = static_cast<std::size_t>(linesPerColumn) *
+                                   static_cast<std::size_t>(columnCount);
+            std::size_t pageFirst =
+                (static_cast<std::size_t>(std::max(0, scrollOffset)) /
+                 pageSize) *
+                pageSize;
+            std::size_t realRow =
+                pageFirst +
+                static_cast<std::size_t>(column) *
+                    static_cast<std::size_t>(linesPerColumn) +
+                static_cast<std::size_t>(rowInColumn);
+            std::size_t lineCount = buffer.lineCount();
+            if (lineCount == 0) return {0, 0};
+            if (realRow >= lineCount) realRow = lineCount - 1;
+            std::string line = buffer.lineString(realRow);
+            std::size_t col = hitTestColumn(line, mx - columnX, measure);
+            return {realRow, col};
+        }
         int row = scrollOffset + static_cast<int>(std::floor(relY / static_cast<float>(lineHeight)));
         int lineCount = static_cast<int>(buffer.lineCount());
         if (row < 0) row = 0;
@@ -121,6 +171,14 @@ struct MouseSelectionSystem
         float ds = layout::displayScale(layout);
         int fontSize = ruler_math::scaledFontSize(style.fontSize, ds);
         int lineHeight = fontSize + 4;
+        // Column geometry for the hit-test (same helpers as the
+        // renderer, so a click lands on the line drawn at that x).
+        int columnCount = doc.docSettings.pageSettings.columnCount;
+        float columnSpacingPx =
+            doc.docSettings.pageSettings.columnSpacing * ds;
+        int columnsLinesPerPage = static_cast<int>(
+            columns_math::linesPerColumnForPage(
+                layout.pageHeight, layout.pageMargin, ds, lineHeight));
         LayoutComponent::Rect area = layout::effectiveTextArea(layout);
         float sbX = layout.textArea.x + layout.textArea.width - scroll_math::SCROLLBAR_WIDTH;
 
@@ -141,7 +199,9 @@ struct MouseSelectionSystem
             bool shiftDown = test_input::is_key_down(afterhours::keys::LEFT_SHIFT) ||
                              test_input::is_key_down(afterhours::keys::RIGHT_SHIFT);
             CaretPosition pos = hitTest(doc.buffer, layout, area, mouse.x, mouse.y,
-                                        scroll.offset, fontSize, lineHeight);
+                                        scroll.offset, fontSize, lineHeight,
+                                        columnCount, columnSpacingPx,
+                                        columnsLinesPerPage);
 
             // Multi-click: second press within 0.5s near the same point.
             double now = afterhours::graphics::get_time();
@@ -212,7 +272,9 @@ struct MouseSelectionSystem
                     std::clamp(mouse.y, area.y, area.y + area.height - 1.0f);
                 CaretPosition pos = hitTest(doc.buffer, layout, area, mouse.x,
                                             clampedY, scroll.offset, fontSize,
-                                            lineHeight);
+                                            lineHeight, columnCount,
+                                            columnSpacingPx,
+                                            columnsLinesPerPage);
                 if (!doc.buffer.hasSelection()) {
                     doc.buffer.setCaret(dragAnchor_);
                     doc.buffer.setSelectionAnchor(dragAnchor_);
@@ -243,7 +305,9 @@ struct MouseSelectionSystem
             }
             float clampedY = std::clamp(mouse.y, area.y, area.y + area.height - 1.0f);
             CaretPosition pos = hitTest(doc.buffer, layout, area, mouse.x, clampedY,
-                                        scroll.offset, fontSize, lineHeight);
+                                        scroll.offset, fontSize, lineHeight,
+                                        columnCount, columnSpacingPx,
+                                        columnsLinesPerPage);
             // First drag move after a plain click: open the selection at
             // the stored anchor. Shift-click already opened it.
             if (!doc.buffer.hasSelection()) {

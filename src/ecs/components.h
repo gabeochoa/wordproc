@@ -291,6 +291,12 @@ struct DialogState : public afterhours::BaseComponent {
     font_dialog::FontDialogSelection fontDialogSelection;
     std::string fontDialogCustomSize;
 
+    // Columns dialog (Format > Columns...): the preset being picked
+    // (1-4) and the spacing field text in inches.
+    bool showColumnsDialog = false;
+    int columnsSelected = 1;
+    std::string columnsSpacingStr = "0.5";
+
     // Tab Width
     bool showTabWidthDialog = false;
     char tabWidthInputBuffer[16] = {0};

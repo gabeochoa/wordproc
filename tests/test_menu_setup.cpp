@@ -192,6 +192,17 @@ TEST_CASE("File menu has Print Preview + Print after Page Setup", "[menu][print]
     REQUIRE(items[print].enabled == true);
 }
 
+TEST_CASE("Format menu ends with Columns...", "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* format = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "Format") format = &m;
+    }
+    REQUIRE(format != nullptr);
+    REQUIRE_FALSE(format->items.empty());
+    REQUIRE(format->items.back().label == "Columns...");
+}
+
 TEST_CASE("Insert menu has Date and Time before Special Character", "[menu]") {
     auto menus = createMenuBarData();
     const MenuData* insert = nullptr;

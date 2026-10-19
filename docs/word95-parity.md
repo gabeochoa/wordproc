@@ -67,7 +67,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Bullets & Numbering | Have | P0 | multi-level list indent |
 | Paragraph... (spacing/line spacing) | Partial | P1 | menu increments, no full dialog |
 | Borders and Shading... | Missing | P1 | table borders render; no dialog |
-| Columns... | Missing | P1 | |
+| Columns... | Have | P1 | Format menu (last item): Win95 dialog with 1/2/3/4 presets, Equal column width fixed on, spacing field in inches (default 0.5, saved/loaded with the document in `pageLayout.columns` / `columnSpacing`). Paged renderer flows the page's lines through N columns (column width = (textWidth - (N-1)*spacing)/N, column 1 fills linesPerColumn top-to-bottom, then column 2...); caret rendering, click hit-test, and squiggles use the same column offsets (unit-tested math + E2E clicks in column 1/2). Honest partials: scrolling in columns is page-at-a-time (the page containing the scroll offset); Print Preview ignores columns (its own line stride); pageless is unchanged |
 | Styles (Normal/Title/Headings 1-6) | Have | P0 | style dropdown + Ctrl+Alt+n |
 | Drop Cap | Partial | P2 | menu entry exists |
 
@@ -113,7 +113,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 43 · Partial 14 · Missing 9** (after Batch 4 item 4, Outline view) (66 grouped rows; several rows bundle
+**Have 44 · Partial 14 · Missing 8** (after Batch 4 item 5, Columns) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

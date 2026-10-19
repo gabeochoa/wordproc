@@ -197,7 +197,8 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Decrease Space After", "Ctrl+Shift+Alt+Down", true, false, nullptr},
         {"", "", false, true, nullptr},  // Separator
         {"Drop Cap", "", true, false, nullptr},
-        {"Tab Width...", "", true, false, nullptr}
+        {"Tab Width...", "", true, false, nullptr},
+        {"Columns...", "", true, false, nullptr}
     };
     // formatMenu pushed later in correct order (Index 4)
 

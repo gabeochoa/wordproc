@@ -5,6 +5,7 @@
 #include <format>
 
 #include "../util/clipboard.h"
+#include "../editor/columns_math.h"
 #include "../editor/document_io.h"
 #include "../editor/export/export_html.h"
 #include "../editor/export/export_pdf.h"
@@ -520,6 +521,15 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 70:  // Tab Width...
                     dialogs.showTabWidthDialog = true;
+                    break;
+                case 71:  // Columns...
+                    dialogs.showColumnsDialog = true;
+                    dialogs.columnsSelected =
+                        std::clamp(doc.docSettings.pageSettings.columnCount,
+                                   1, 4);
+                    dialogs.columnsSpacingStr =
+                        columns_math::pointsToInchesString(
+                            doc.docSettings.pageSettings.columnSpacing);
                     break;
                 default:
                     break;

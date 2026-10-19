@@ -419,6 +419,7 @@ static void setupCallbacksEx(
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
             if (dialogState.showTemplateDialog) return "Template";
             if (dialogState.showFontDialog) return "Font";
+            if (dialogState.showColumnsDialog) return "Columns";
             if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
@@ -660,6 +661,11 @@ static void setupCallbacksEx(
             return docComp.docSettings.pageSettings.orientation == PageOrientation::Portrait 
                 ? "portrait" : "landscape";
         }
+        if (prop == "column_count")
+            return std::to_string(docComp.docSettings.pageSettings.columnCount);
+        if (prop == "column_spacing")
+            return std::to_string(static_cast<int>(std::lround(
+                docComp.docSettings.pageSettings.columnSpacing)));
         if (prop == "margin_left") return std::to_string(docComp.docSettings.pageSettings.marginLeft);
         if (prop == "margin_right") return std::to_string(docComp.docSettings.pageSettings.marginRight);
         if (prop == "margin_top") return std::to_string(docComp.docSettings.pageSettings.marginTop);
@@ -987,6 +993,9 @@ static void setupCallbacksEx(
         dialogState.fontDialogInitialized = false;
         dialogState.fontDialogSelection = font_dialog::FontDialogSelection{};
         dialogState.fontDialogCustomSize.clear();
+        dialogState.showColumnsDialog = false;
+        dialogState.columnsSelected = 1;
+        dialogState.columnsSpacingStr = "0.5";
         dialogState.showTabWidthDialog = false;
         dialogState.tabWidthInputBuffer[0] = '\0';
         dialogState.tabWidthInputStr.clear();

@@ -487,6 +487,13 @@ struct PageSettings {
     float marginBottom = 72.0f; // Bottom margin in points
     float marginLeft = 72.0f;   // Left margin in points
     float marginRight = 72.0f;  // Right margin in points
+
+    // Columns (Format > Columns...): number of text columns in the
+    // paged renderer (1 = single column) and the gutter between
+    // them in points (36pt = 0.5in default). Equal column width is
+    // always on (Word's default when the checkbox is checked).
+    int columnCount = 1;
+    float columnSpacing = 36.0f;
     float lineWidthLimit =
         0.0f;  // 0 = no limit, otherwise max chars per line in pageless mode
     TextColor pageColor = TextColors::White;  // Page background color
