@@ -36,6 +36,10 @@ validate text_area_height=572
 expect_text "Line one"
 expect_text "Line two"
 
+# Capture here: Formatting hidden ONLY — Standard visible,
+# ruler/text shifted up exactly one bar (y 153 -> 120).
+screenshot toolbars_hidden
+
 # Hide the Standard toolbar too (Formatting still hidden).
 menu_open View
 wait_frames 12
@@ -48,8 +52,6 @@ validate formatting_toolbar_visible=false
 validate menu_item_checked_Standard Toolbar=false
 validate text_area_y=86
 validate text_area_height=606
-
-screenshot toolbars_hidden
 
 # Restore both, one at a time.
 menu_open View
