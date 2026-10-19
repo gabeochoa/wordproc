@@ -553,7 +553,7 @@ TEST_CASE("Benchmark: 100K-word mid-document edit latency",
 
     std::printf("\n=== 100K-Word Mid-Document Edit Benchmark ===\n");
     std::printf("  Operation: insertChar + backspace at line %zu (middle)\n",
-                5000 / 2);
+                static_cast<std::size_t>(5000) / 2);
     std::printf("  Median: %.3f us/pair (runs %.3f, %.3f, %.3f us)\n",
                 editMedian.median_ms * 1000.0,
                 editMedian.runs_ms[0] * 1000.0,

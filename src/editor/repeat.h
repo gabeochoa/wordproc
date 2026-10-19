@@ -199,6 +199,8 @@ inline void apply(TextBuffer& buffer, const ActionRecord& record) {
         case RepeatKind::SetSpaceAfter:
             buffer.setCurrentSpaceAfter(record.intValue);
             return;
+        default:
+            return;
     }
 }
 
@@ -248,6 +250,7 @@ inline const char* kindName(const ActionRecord& record) {
         case RepeatKind::SetLineSpacing: return "spacing";
         case RepeatKind::SetSpaceBefore: return "space_before";
         case RepeatKind::SetSpaceAfter: return "space_after";
+        default: break;
     }
     return "none";
 }

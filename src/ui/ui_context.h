@@ -3,7 +3,17 @@
 #include "../../vendor/afterhours/src/plugins/ui.h"
 #include "../../vendor/afterhours/src/plugins/window_manager.h"
 #include "../../vendor/afterhours/src/plugins/toast.h"
+// Vendored afterhours: not ours to fix. Its modal/text_input headers emit
+// -Wswitch-default, and this relative-path include is not an -isystem
+// system header, so clang diagnoses it. Scope the suppression here.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-default"
+#endif
 #include "../../vendor/afterhours/src/plugins/modal.h"
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 #include "../rl.h"
 #include "../input_mapping.h"  // Use global InputAction enum
 #include "win95_theme.h"       // win95_colors + createWin95Theme

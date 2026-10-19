@@ -68,4 +68,10 @@ struct ScopedTimer {
 #define LOG_INFO(...) logging::info(__VA_ARGS__)
 #define LOG_WARNING(...) logging::warning(__VA_ARGS__)
 #define LOG_ERROR(...) logging::error(__VA_ARGS__)
-#define SCOPED_TIMER(name) logging::ScopedTimer _timer_##__LINE__(name)
+// Two-level paste: __LINE__ must expand before ##, or every
+// SCOPED_TIMER declares the same _timer___LINE__ name and a nested
+// timer shadows the enclosing one (-Wshadow).
+#define WORDPROC_CONCAT_IMPL(a, b) a##b
+#define WORDPROC_CONCAT(a, b) WORDPROC_CONCAT_IMPL(a, b)
+#define SCOPED_TIMER(name) \
+    logging::ScopedTimer WORDPROC_CONCAT(_timer_, __LINE__)(name)

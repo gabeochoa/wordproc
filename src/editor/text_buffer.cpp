@@ -6,8 +6,17 @@
 #include <ostream>
 #include <regex>
 
-// Afterhours text utilities for word navigation
+// Afterhours text utilities for word navigation.
+// Vendored afterhours: not ours to fix. See ui_context.h for why the
+// -Wswitch-default suppression is scoped around this include.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-default"
+#endif
 #include "../vendor/afterhours/src/plugins/ui/text_input/utils.h"
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 // ============================================================================
 // TextBuffer implementation (SoA with gap buffer)
@@ -2736,6 +2745,14 @@ std::vector<toc::Entry> TextBuffer::tocEntriesForBlock(
             case ParagraphStyle::Heading1: level = 1; break;
             case ParagraphStyle::Heading2: level = 2; break;
             case ParagraphStyle::Heading3: level = 3; break;
+            // Non-heading styles (and the Count sentinel) are not
+            // TOC entries: same fall-through as the old default.
+            case ParagraphStyle::Normal:
+            case ParagraphStyle::Subtitle:
+            case ParagraphStyle::Heading4:
+            case ParagraphStyle::Heading5:
+            case ParagraphStyle::Heading6:
+            case ParagraphStyle::Count:
             default: break;
         }
         if (level < 0) continue;

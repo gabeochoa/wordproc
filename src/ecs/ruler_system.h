@@ -59,6 +59,8 @@ struct RulerSystem : public afterhours::System<DocumentComponent, LayoutComponen
             }
             case ruler_math::Marker::None:
                 break;
+            default:
+                break;
         }
         if (!(next == currentIndents_)) {
             currentIndents_ = next;

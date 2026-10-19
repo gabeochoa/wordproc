@@ -11,7 +11,16 @@
 #include "../editor/version_history.h"
 #include "../input_mapping.h"
 #include "../rl.h"
+// Vendored afterhours: not ours to fix. See ui_context.h for why the
+// -Wswitch-default suppression is scoped around this include.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-default"
+#endif
 #include "../../vendor/afterhours/src/plugins/modal.h"
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 #include "../settings.h"
 #include "../ui/theme.h"
 #include "../util/logging.h"

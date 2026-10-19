@@ -520,10 +520,6 @@ TEST_CASE("Scroll viewport validation", "[text_buffer][scroll]") {
         buffer.insertText("Line 0\nLine 1\nLine 2\nLine 3\nLine 4");
         REQUIRE(buffer.lineCount() == 5);
 
-        // Simulate scroll near end
-        int scrollOffset = 3;
-        int visibleLines = 5;  // Would show lines 3-7, but only 3-4 exist
-
         // Should be able to access lines 3 and 4
         LineSpan span3 = buffer.lineSpan(3);
         LineSpan span4 = buffer.lineSpan(4);
@@ -1641,12 +1637,13 @@ TEST_CASE("Find and replace", "[text_buffer][find]") {
     }
     
     SECTION("replace all occurrences") {
-        std::size_t count = buffer.replaceAll("Hello", "Hi");
+        // Return values unchecked: this section only exercises the calls.
+        (void)buffer.replaceAll("Hello", "Hi");
         // Case insensitive by default, should match 2 "Hello" instances
         // (first and last - the middle one is lowercase "hello")
         FindOptions opts;
         opts.caseSensitive = false;
-        count = buffer.replaceAll("hi", "yo", opts);
+        (void)buffer.replaceAll("hi", "yo", opts);
         // At this point we've already replaced, let's reset and test fresh
     }
     

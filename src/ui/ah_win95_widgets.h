@@ -235,6 +235,11 @@ inline afterhours::ModalConfig win95DialogConfig(
             case afterhours::ui::Dim::ScreenPercent:
                 return size.value * screenHeight;
             case afterhours::ui::Dim::Percent: return size.value * screenWidth;
+            // Unresolved dims keep the raw value: same as the old default.
+            case afterhours::ui::Dim::None:
+            case afterhours::ui::Dim::Text:
+            case afterhours::ui::Dim::Children:
+            case afterhours::ui::Dim::Expand:
             default: return size.value;
         }
     };
