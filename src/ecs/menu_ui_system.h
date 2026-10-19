@@ -5063,7 +5063,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             auto result = afterhours::modal(ctx, mk(entity, HELP_MODAL_ID),
                 dialogs.showHelpWindow,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(500), afterhours::ui::h720(480),
+                    afterhours::ui::h720(500), afterhours::ui::h720(488),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -5082,10 +5082,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
 
                 // Sunken bindings list (AutoCorrect pattern): the
                 // outer box carries the sunken bevel, the inner area
-                // scrolls (Overflow::Auto).
+                // scrolls (Overflow::Auto). Every vertical size here
+                // must survive grid snapping: ScreenPercent sizes
+                // snap to the 4px grid (nearest), so a 22px row
+                // computes to 24 and a 372px viewport held 15.5 rows
+                // — the last visible row was clipped mid-row at the
+                // panel bottom. Rows are 24 and the viewport is
+                // 16 rows (384), so the viewport always cuts between
+                // rows: listBox = padding(4) + header(24) + 384 = 412,
+                // dialog = title(20) + 412 + buttonRow(44) + margin(4)
+                // + panel padding(8) = 488.
                 auto listBox = div(ctx, mk(result.ent(), 0),
                     ah_win95::win95SunkenStyle()
-                        .with_size(ComponentSize{percent(1.0f), h720(400)})
+                        .with_size(ComponentSize{percent(1.0f), h720(412)})
                         .with_flex_direction(FlexDirection::Column)
                         .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                         .with_render_layer(CONTENT_LAYER));
@@ -5119,10 +5128,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         headerCell(1, "Shortcut");
                     }
 
-                    // Bindings list
+                    // Bindings list: 16 whole rows (see listBox
+                    // comment: rows are 24, viewport 384).
                     auto scrollArea = div(ctx, mk(listBox.ent(), 1),
                         ComponentConfig{}
-                            .with_size(ComponentSize{percent(1.0f), h720(372)})
+                            .with_size(ComponentSize{percent(1.0f), h720(384)})
                             .with_flex_direction(FlexDirection::Column)
                             .with_overflow(afterhours::ui::Overflow::Auto)
                             .with_custom_background(
@@ -5133,7 +5143,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             const auto& binding = bindings[i];
                             auto bindingRow = div(ctx, mk(scrollArea.ent(), static_cast<int>(i)),
                                 ComponentConfig{}
-                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                    .with_size(ComponentSize{percent(1.0f), h720(24)})
                                     .with_flex_direction(FlexDirection::Row)
                                     .with_custom_background(
                                         ui_imm::win95_colors::TEXT_AREA)
@@ -5144,7 +5154,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                     div(ctx, mk(bindingRow.ent(), id),
                                         ComponentConfig{}
                                             .with_label(text)
-                                            .with_size(ComponentSize{percent(0.5f), h720(18)})
+                                            .with_size(ComponentSize{percent(0.5f), h720(20)})
                                             .with_custom_background(
                                                 ui_imm::win95_colors::TEXT_AREA)
                                             .with_custom_text_color(

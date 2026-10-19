@@ -1,0 +1,75 @@
+# Test: Help (Keyboard Shortcuts) list scrolled to the bottom
+# Opens Help, wheels the bindings list to its bottom, screenshots.
+# The list viewport is a whole number of 22px rows (AutoCorrect
+# pattern), so the last row at the bottom is fully visible, not
+# clipped. Batch 10 fix round: the old 372px viewport showed
+# 16.9 rows and clipped the last visible row.
+# Red-on-revert is the screenshot: on pre-fix bytes the bottom row
+# is cut off mid-row (see batch10_fix_summary.md).
+
+# Open help window via Help menu
+menu_open Help
+wait_frames 12
+menu_select "Keyboard Shortcuts..."
+wait_frames 18
+
+validate help_window_visible=true
+
+# Wheel the list to the bottom: mouse over the list area (the dialog
+# is 500x480 centered, so (640, 350) is inside the scroll area), then
+# repeated wheel-down events; the scroll view clamps at the bottom.
+mouse_move 640 350
+wait_frames 6
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+scroll_wheel 0 -10
+wait_frames 2
+
+# Last row fully visible at the bottom of the list.
+screenshot help_list_scrolled_bottom
