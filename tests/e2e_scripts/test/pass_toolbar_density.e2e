@@ -1,6 +1,10 @@
 # Test: Standard toolbar density (Batch 3 fix round).
 # - Show/Hide ¶ toggles paragraph marks.
-# - Zoom dropdown at the right end sets the zoom.
+# - Zoom dropdown immediately after the ¶ group sets the zoom
+#   (NOT pinned to the right edge — verified in the screenshot).
+# - Insert group (Hyperlink / Image / Table) is wired: Hyperlink
+#   adds a link to the selection, Image inserts a placeholder,
+#   Table opens the Table menu dropdown.
 # - Format Painter copies the current style, arms, and the next
 #   click in the text applies it and disarms. Spelling's new ABC +
 #   check icon is verified visually in the screenshot.
@@ -52,3 +56,25 @@ mouse_up
 wait_frames 12
 validate bold=true
 validate format_painter_armed=false
+
+# Insert Hyperlink: same command as Insert > Hyperlink... — needs
+# a selection; select_all then the toolbar button adds the link.
+select_all
+wait_frames 12
+click_ui btn_insert_hyperlink
+wait_frames 12
+validate has_hyperlink=true
+validate hyperlink_url=https://example.com
+
+# Insert Image: same command as Insert > Image... — placeholder.
+click_ui btn_insert_image
+wait_frames 12
+validate has_image=true
+validate image_count=1
+
+# Insert Table: opens the Table menu dropdown via the existing
+# menu-open mechanism (MenuUISystem renders it). Regression: on
+# pre-fix bytes there is no such button, so click_ui fails.
+click_ui btn_insert_table
+wait_frames 12
+validate menu_open=Table

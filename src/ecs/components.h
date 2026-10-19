@@ -422,7 +422,8 @@ enum class ToolbarIcon {
     None, New, Open, Save, Print, PrintPreview, Spelling,
     Cut, Copy, Paste, FormatPainter, Undo, Redo,
     ShowParagraph,
-    AlignLeft, AlignCenter, AlignRight, AlignJustify
+    AlignLeft, AlignCenter, AlignRight, AlignJustify,
+    Hyperlink, Image, InsertTable
 };
 
 struct ToolbarComponent : public afterhours::BaseComponent {

@@ -527,14 +527,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     toast_notify::info("Section break inserted");
                     break;
                 case 3:  // Hyperlink...
-                    if (doc.buffer.hasSelection()) {
-                        if (doc.buffer.addHyperlink("https://example.com")) {
-                            doc.isDirty = true;
-                            toast_notify::info("Hyperlink added (edit URL)");
-                        }
-                    } else {
-                        toast_notify::error("Select text first");
-                    }
+                    cmd::insertHyperlink(doc);
                     break;
                 case 4:  // Remove Hyperlink
                     if (doc.buffer.hyperlinkAtCaret()) {
@@ -579,22 +572,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 }
                 case 9:  // Image...
-                {
-                    DocumentImage img;
-                    img.anchorLine = doc.buffer.caret().row;
-                    img.anchorColumn = doc.buffer.caret().column;
-                    img.layoutMode = ImageLayoutMode::Inline;
-                    img.displayWidth = 200.0f;
-                    img.displayHeight = 150.0f;
-                    img.originalWidth = 200.0f;
-                    img.originalHeight = 150.0f;
-                    img.altText = "Inserted image";
-                    img.filename = "placeholder.png";
-                    doc.images.addImage(img);
-                    doc.isDirty = true;
-                    toast_notify::info("Image placeholder inserted");
+                    cmd::insertImagePlaceholder(doc);
                     break;
-                }
                 case 13:  // Shape: Line
                 case 14:  // Shape: Rectangle
                 case 15:  // Shape: Circle

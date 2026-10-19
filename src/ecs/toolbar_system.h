@@ -586,11 +586,13 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         trackTooltip(curX, btnY, "Show/Hide Paragraph Marks");
         curX += buttonSize + buttonPadding;
 
-        // Zoom control at the right end of the Standard toolbar:
-        // dropdown showing the current zoom %, wired to zoomLevel.
+        // Zoom control immediately after the last Standard group
+        // (¶), NOT pinned to the window's right edge: dropdown
+        // showing the current zoom %, wired to zoomLevel.
         float zoomBtnW = theme::layout::scale(76);
-        float zoomBtnX = screenWidth - zoomBtnW - buttonPadding;
+        float zoomBtnX = curX;
         float zoomBtnY = btnY;
+        curX += zoomBtnW + buttonPadding;
         std::string zoomLabel =
             std::to_string(static_cast<int>(std::lround(
                 layout.zoomLevel * 100.0f))) + "%";
@@ -636,10 +638,65 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_debug_name("zoom_item_" + std::to_string(pct)))) {
                     layout.zoomLevel = static_cast<float>(pct) / 100.0f;
                     toolbar.zoomDropdownOpen = false;
+                    // Dropdown item dies; stale focus recycles to File.
+                    ctx.set_focus(ctx.ROOT);
                 }
             }
         }
-        
+
+        // Separator (etched) before the Insert group.
+        drawEtchedSeparator(ctx, uiRoot, btnId, curX + sepPadding / 2, btnY, buttonSize - 4);
+        btnId += 2;
+        curX += sepWidth + sepPadding;
+
+        // === Insert group (Word order: Hyperlink, Image, Table) ===
+        // All three are wired, no dead buttons: Hyperlink and Image
+        // run the same cmd:: commands as Insert > Hyperlink... /
+        // Image...; Table opens the Table menu dropdown via the
+        // existing menu-open mechanism (MenuUISystem renders the
+        // dropdown for whichever menu has open=true).
+        int hyperlinkBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, hyperlinkBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Hyperlink).with_label("").with_debug_name("btn_insert_hyperlink"))) {
+            cmd::insertHyperlink(doc);
+        }
+        trackTooltip(curX, btnY, "Insert Hyperlink (Ctrl+K)");
+        curX += buttonSize + buttonPadding;
+
+        int imageBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, imageBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::Image).with_label("").with_debug_name("btn_insert_image"))) {
+            cmd::insertImagePlaceholder(doc);
+        }
+        trackTooltip(curX, btnY, "Insert Image");
+        curX += buttonSize + buttonPadding;
+
+        int tableBtnId = btnId++;
+        if (button(ctx, mk(uiRoot, tableBtnId),
+            absToolbarButton(curX, btnY, buttonSize, true, false, isMouseOver(curX, btnY), ToolbarIcon::InsertTable).with_label("").with_debug_name("btn_insert_table"))) {
+            // Toggle the Table menu dropdown (same mechanism as
+            // clicking the Table header / E2E menu_open Table).
+            if (cache_.menu) {
+                int tableIdx = -1;
+                bool wasOpen = false;
+                for (std::size_t m = 0; m < cache_.menu->menus.size(); ++m) {
+                    if (cache_.menu->menus[m].label == "Table") {
+                        tableIdx = static_cast<int>(m);
+                        wasOpen = cache_.menu->menus[m].open;
+                    }
+                    cache_.menu->menus[m].open = false;
+                }
+                if (tableIdx >= 0 && !wasOpen) {
+                    cache_.menu->menus[static_cast<std::size_t>(tableIdx)].open = true;
+                    cache_.menu->activeMenuIndex = tableIdx;
+                } else {
+                    cache_.menu->activeMenuIndex = -1;
+                }
+            }
+        }
+        trackTooltip(curX, btnY, "Insert Table");
+        curX += buttonSize + buttonPadding;
+
         // === Formatting Toolbar Background ===
         div(ctx, mk(uiRoot, 2000),
             ComponentConfig{}
@@ -701,6 +758,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_debug_name("style_item_" + std::to_string(i)))) {
                     toolbar.currentStyle = toolbar.styles[i];
                     toolbar.styleDropdownOpen = false;
+                    ctx.set_focus(ctx.ROOT);
                 }
             }
         }
@@ -749,6 +807,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_debug_name("font_item_" + std::to_string(i)))) {
                     toolbar.currentFont = toolbar.fonts[i];
                     toolbar.fontDropdownOpen = false;
+                    ctx.set_focus(ctx.ROOT);
                     TextStyle style = doc.buffer.textStyle();
                     style.font = toolbar.currentFont;
                     doc.buffer.setTextStyle(style);
@@ -802,6 +861,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                         .with_debug_name("size_item_" + std::to_string(i)))) {
                     toolbar.currentFontSize = toolbar.fontSizes[i];
                     toolbar.fontSizeDropdownOpen = false;
+                    ctx.set_focus(ctx.ROOT);
                     TextStyle style = doc.buffer.textStyle();
                     style.fontSize = toolbar.currentFontSize;
                     doc.buffer.setTextStyle(style);

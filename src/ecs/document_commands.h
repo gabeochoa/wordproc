@@ -216,6 +216,39 @@ inline void selectAll(DocumentComponent& doc) {
     doc.buffer.selectAll();
 }
 
+// --- Insert commands (Insert menu + Standard toolbar share these) ---
+
+// Insert > Hyperlink... (Ctrl+K): applies the default URL to the
+// selection; with no selection it reports instead of inserting.
+inline void insertHyperlink(DocumentComponent& doc) {
+    if (doc.buffer.hasSelection()) {
+        if (doc.buffer.addHyperlink("https://example.com")) {
+            doc.isDirty = true;
+            toast_notify::info("Hyperlink added (edit URL)");
+        }
+    } else {
+        toast_notify::error("Select text first");
+    }
+}
+
+// Insert > Image...: placeholder image at the caret (no file
+// picker exists yet — same honest placeholder the menu inserts).
+inline void insertImagePlaceholder(DocumentComponent& doc) {
+    DocumentImage img;
+    img.anchorLine = doc.buffer.caret().row;
+    img.anchorColumn = doc.buffer.caret().column;
+    img.layoutMode = ImageLayoutMode::Inline;
+    img.displayWidth = 200.0f;
+    img.displayHeight = 150.0f;
+    img.originalWidth = 200.0f;
+    img.originalHeight = 150.0f;
+    img.altText = "Inserted image";
+    img.filename = "placeholder.png";
+    doc.images.addImage(img);
+    doc.isDirty = true;
+    toast_notify::info("Image placeholder inserted");
+}
+
 // --- Print Preview / Print (File menu, Ctrl+P) ---
 
 inline void openPrintPreview(DocumentComponent& doc, LayoutComponent& layout) {

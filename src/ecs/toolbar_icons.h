@@ -323,6 +323,57 @@ inline void drawToolbarIcon(ToolbarIcon icon, float cx, float cy, float size, bo
             }
             break;
         }
+        case ToolbarIcon::Hyperlink: {
+            // Chain-link: two interlocking loops + a diagonal link.
+            afterhours::draw_circle_lines(static_cast<int>(x0 + iw * 0.28f),
+                                          static_cast<int>(y0 + ih * 0.5f),
+                                          iw * 0.22f, fg);
+            afterhours::draw_circle_lines(static_cast<int>(x0 + iw * 0.72f),
+                                          static_cast<int>(y0 + ih * 0.5f),
+                                          iw * 0.22f, fg);
+            afterhours::draw_line(static_cast<int>(x0 + iw * 0.38f),
+                                  static_cast<int>(y0 + ih * 0.5f),
+                                  static_cast<int>(x0 + iw * 0.62f),
+                                  static_cast<int>(y0 + ih * 0.5f), fg);
+            break;
+        }
+        case ToolbarIcon::Image: {
+            // Picture: frame, mountain, sun (classic picture icon).
+            afterhours::draw_rectangle(
+                Rectangle{x0, y0, iw, ih},
+                afterhours::Color{255, 255, 255, 255});
+            afterhours::draw_rectangle_outline(
+                Rectangle{x0, y0, iw, ih}, fg);
+            afterhours::draw_circle(static_cast<int>(x0 + iw * 0.28f),
+                                    static_cast<int>(y0 + ih * 0.3f),
+                                    iw * 0.1f, fg);
+            afterhours::draw_line(static_cast<int>(x0 + 1),
+                                  static_cast<int>(y0 + ih - 2),
+                                  static_cast<int>(x0 + iw * 0.5f),
+                                  static_cast<int>(y0 + ih * 0.45f), fg);
+            afterhours::draw_line(static_cast<int>(x0 + iw * 0.5f),
+                                  static_cast<int>(y0 + ih * 0.45f),
+                                  static_cast<int>(x0 + iw - 1),
+                                  static_cast<int>(y0 + ih - 2), fg);
+            break;
+        }
+        case ToolbarIcon::InsertTable: {
+            // Grid: outer frame + one vertical + one horizontal rule.
+            afterhours::draw_rectangle(
+                Rectangle{x0, y0, iw, ih},
+                afterhours::Color{255, 255, 255, 255});
+            afterhours::draw_rectangle_outline(
+                Rectangle{x0, y0, iw, ih}, fg);
+            afterhours::draw_line(static_cast<int>(x0 + iw * 0.5f),
+                                  static_cast<int>(y0),
+                                  static_cast<int>(x0 + iw * 0.5f),
+                                  static_cast<int>(y0 + ih), fg);
+            afterhours::draw_line(static_cast<int>(x0),
+                                  static_cast<int>(y0 + ih * 0.5f),
+                                  static_cast<int>(x0 + iw),
+                                  static_cast<int>(y0 + ih * 0.5f), fg);
+            break;
+        }
         case ToolbarIcon::None:
             break;
     }
