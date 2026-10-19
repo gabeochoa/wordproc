@@ -4557,35 +4557,45 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
-        // UI Settings dialog
+        // UI Settings dialog - Win95 shell: square BUTTON_FACE
+        // panel, navy caption, no backdrop dim, sunken field,
+        // raised 90px buttons.
         if (dialogs.showSettingsDialog) {
             constexpr int SETTINGS_MODAL_ID = 50005;
             auto result = afterhours::modal(ctx, mk(entity, SETTINGS_MODAL_ID),
                 dialogs.showSettingsDialog,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(380), afterhours::ui::h720(220))
-                    .with_title("UI Settings"));
-            
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(380), afterhours::ui::h720(130),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
-                
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "UI Settings", CONTENT_LAYER);
+
                 // Prompt label
                 div(ctx, mk(result.ent(), 0),
                     ComponentConfig{}
                         .with_label("UI Scale (50% - 200%):")
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     dialogs.uiScaleInputStr,
-                    ComponentConfig{}
-                        .with_size(ComponentSize{h720(100), h720(32)})
-                        .with_background(Theme::Usage::Surface)
+                    ah_win95::win95SunkenStyle()
+                        .with_debug_name("ui_scale_input")
+                        .with_size(ComponentSize{w1280(100), h720(28)})
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 // Button row
                 auto buttonRow = div(ctx, mk(result.ent(), 2),
                     ComponentConfig{}
@@ -4594,15 +4604,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
                         .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 if (button(ctx, mk(buttonRow.ent(), 0),
-                    ComponentConfig{}
+                    ah_win95::win95DialogButtonStyle()
+                        .with_debug_name("settings_ok")
                         .with_label("OK")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_background(Theme::Usage::Primary)
-                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                        .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set UI scale
                     if (!dialogs.uiScaleInputStr.empty()) {
@@ -4620,19 +4631,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
-                    ComponentConfig{}
+                    ah_win95::win95DialogButtonStyle()
+                        .with_debug_name("settings_cancel")
                         .with_label("Cancel")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_cursor(afterhours::ui::CursorType::Pointer)
                         .with_render_layer(CONTENT_LAYER))) {
                     dialogs.uiScaleInputStr.clear();
                     dialogs.showSettingsDialog = false;
                 }
-                
+
                 if (button(ctx, mk(buttonRow.ent(), 2),
-                    ComponentConfig{}
+                    ah_win95::win95DialogButtonStyle()
+                        .with_debug_name("settings_reset")
                         .with_label("Reset")
-                        .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
                     Settings::get().set_ui_scale(1.0f);
                     dialogs.uiScaleInputStr = "100";
