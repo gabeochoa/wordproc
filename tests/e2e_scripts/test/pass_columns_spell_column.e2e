@@ -1,0 +1,64 @@
+# Test: spell squiggles in 2-column paged mode, "Column" edition.
+# Root cause (Batch 4 fix round 2): "column" was genuinely
+# missing from en_basic.txt, so every "Column line" squiggled in
+# both columns. Case is not the cause (the checker lowercases),
+# and the cache + renderer both cover row 0 -- a probe returned
+# squiggle rows 0..57 for the 60-line doc and the screenshot has
+# 29 red groups per column for 29 text rows, so the "clean row
+# 1" reading was the squiggle's low offset (waveY sits between
+# lines), not a first-row exception. The regression test covers
+# all three readings: the repeated word is clean everywhere,
+# and a real typo on row 0 AND on the first row of column 2
+# (row 29, after the column break) is each flagged exactly once.
+# RED-ON-REVERT: without "column" in the dictionary,
+# spell_error_count reads 60 at the first validate.
+
+fill_lines 60 Column line
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select "Paged Mode"
+wait_frames 12
+validate page_mode=paged
+
+menu_open Format
+wait_frames 12
+menu_select "Columns..."
+wait_frames 12
+
+click_ui columns_preset_2
+wait_frames 12
+click_ui columns_ok
+wait_frames 12
+
+validate column_count=2
+validate spell_error_count=0
+validate squiggle_count=0
+
+# Typo on row 0 (column 1's first row): flagged exactly once.
+mouse_down 550 215
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=0
+type " wrold"
+wait_frames 12
+validate spell_error_count=1
+validate squiggle_count=1
+validate squiggle_rows=0
+
+# Typo on row 29 (column 2's first row, after the column break):
+# flagged exactly once, under the typo, at the column-2 x.
+mouse_down 700 215
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=29
+type " wrold"
+wait_frames 12
+validate spell_error_count=2
+validate squiggle_count=2
+validate squiggle_rows=0,29
+
+screenshot columns_spell_column

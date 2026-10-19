@@ -851,6 +851,8 @@ cold
 collection
 college
 color
+column
+columns
 commercial
 common
 compare

@@ -33,6 +33,25 @@ TEST_CASE("SpellChecker - Basic word checking", "[spellcheck]") {
         REQUIRE(checker.isCorrect("Heading"));
     }
 
+    SECTION("Column / columns are correct (Batch 4 fix round 2)") {
+        // Root cause of the columns squiggle: "column" was
+        // genuinely missing from en_basic.txt (grep: no entry,
+        // while "line" / "text" / "page" are present), so every
+        // "Column line" squiggled in both columns. Case is NOT
+        // the cause: isCorrect lowercases ("Column" == "column").
+        // The cache and the renderer both cover row 0 (a probe
+        // returned squiggle rows 0..57 for the 60-line doc, and
+        // the screenshot has 29 red groups per column for 29
+        // text rows), so there was no row-1 exception -- the
+        // "clean row 1" reading was the squiggle's low offset
+        // (waveY = y + lineFontSize + 2 sits between lines).
+        REQUIRE(checker.isCorrect("column"));
+        REQUIRE(checker.isCorrect("Column"));
+        REQUIRE(checker.isCorrect("columns"));
+        REQUIRE(checker.isCorrect("Columns"));
+        REQUIRE(checker.checkText("Column line").empty());
+    }
+
     SECTION("Top-1000 g-z delta (Batch 3 fix round 2)") {
         // Pinned: "sat" earned a squiggle in the Grammar screenshot.
         REQUIRE(checker.isCorrect("sat"));
