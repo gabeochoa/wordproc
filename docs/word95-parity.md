@@ -29,7 +29,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Go To / Bookmarks | Partial | P1 | bookmark dialog + Go To Bookmark |
 | Track Changes (revise mode) | Partial | P1 | Batch 5: toggle + Accept/Reject All + per-revision Accept/Reject in Tools > Revisions...; typed inserts record Insert revisions and render green-underlined while matching; deletes are records only (see Docs-era row). Reject All reverse-applies through the command layer (one undo step per revision), replacing the old history-less baseline restore |
 | AutoCorrect | Have | P0 | replace-as-type + TWo-caps + sentence cap; Tools dialog (Batch 1) |
-| Repeat (F4) | Missing | P2 | |
+| Repeat (F4) | Partial | P2 | Batch 7: Edit > Repeat (F4, end of Edit menu, static label). Closure-free ActionRecord (enum + payload) records the last repeatable action: typing runs (coalesced while the caret stays at the run's end), paste, formatting applications (bold/italic/underline/strike/super/sub, style, size, font, text/highlight color, alignment, indent, list, spacing) — formatting captures the resulting value, so re-applying is idempotent. Backspace/Delete/Cut clear the record; Undo/Redo leave it. Empty history = no-op + "Nothing to repeat" status flash. Ctrl+Y stays Redo (now bound on the macOS preset too, where the menu labeled it Redo but only Cmd+Shift+Z was bound). Not covered: Paragraph/Font dialog applications, Format Painter, table ops |
 
 ## View
 | Feature | Status | Priority | Notes |
@@ -39,7 +39,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Outline view | Have | P1 | View > Outline (checkable): renderer shows ONLY Title/Subtitle/Heading 1-6 paragraphs, indented (level-1)*24px; body paragraphs hidden; scroll counts visible heading rows; click maps a visible row to the heading's real row; entering forces Pageless, exiting restores the previous page mode + scroll; choosing Pageless/Paged exits Outline (scroll restored). Honest partials: arrow-key navigation can still move the caret onto a hidden body row (caret hidden until it returns to a heading); the click row estimate uses the global line height, so deep outlines with tall headings may map a click to a nearby heading (clamped, never a body row) |
 | Zoom (in/out/reset, %) | Have | P0 | Ctrl+Alt +/-/0 |
 | Ruler (indents/tabs draggable) | Have | P0 | Word 95 ruler: gray outside margins, white between (pageless too — 1in margins inset the effective area), inch ticks at the ONE display ppi, indent markers beveled (pale face, dark edges, hourglass pair + rectangle base + right triangle, apexes toward centre) at the same scale as text indents; left/first-line/right markers drag to set indents (one undo step per drag); View > Ruler toggles; tab-stop marks at default stops (not draggable) |
-| Toolbars show/hide | Missing | P2 | Standard+Formatting always on |
+| Toolbars show/hide | Partial | P2 | Batch 7: checkable View > Standard Toolbar / Formatting Toolbar (both start shown). A hidden bar reclaims its scaled height in updateLayout (one at a time and both); the Formatting bar slides up under the menu bar when Standard is hidden; the Outlining bar occupies the Formatting slot, so hiding Formatting hides it too. Still no other Word 95 toolbars, no drag-to-reorder, no floating toolbars |
 | Status bar | Have | P0 | Word 6-style; Page is computed from the scroll offset (first visible line / effective lines-per-page, clamped to the page count — the same lines-per-page estimate Print Preview and the Normal-view break lines use, times the column count in the paged columns view), Sec stays 1 (single section), Ln/Col real. The middle field is a Word 95 page fraction "Page <cur>   Sec 1   <curPage>/<totalPages>" (totalPages from the same page math, via previewPageCount), not the old row/total-lines fraction. Transient StatusComponent messages (e.g. "Normal view" / "Page Layout" after a View switch) replace the stats line for 3s — no floating toast for mode switches |
 | Header/Footer view | Partial | P1 | Insert Header/Footer entries exist |
 
@@ -80,7 +80,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Grammar check | Have | P2 | Batch 3 + fix round: Tools > Grammar... is a real checker mirroring the Spelling dialog — one issue at a time (sunken In context: sentence with the offending phrase; Issue: human wording, never the enum name, e.g. "Repeated word"; Suggestion: the suggestion), right column Ignore Once (advance), Ignore All (session-ignore that rule+phrase), Change (applies the suggestion through the command layer as one undo step; disabled with no suggestion), Close. Pinned: "The the cat sat." Change -> "The cat sat." (unit + E2E). Grammar issues have NO underlines: GrammarChecker has no render path — the old screenshot's wave under "sat." was a spell squiggle ("sat" was missing from the dictionary; added in fix round 2's top-1000 g–z delta). Engine covers repeated word, capitalization, double space, common errors. Fix round 2: the In-context offending span is navy-bg/white-text (sentence-relative offset/length, unit + E2E `grammar_context_span`); dialog height fits content (215 issue / 120 complete, was a fixed 300 with ~95px empty bottom) |
 | AutoCorrect engine | Have | P0 | Batch 1 |
 | AutoFormat... | Have | P2 | Fix round: Tools > AutoFormat... runs the AutoCorrect replacements as a batch pass over the whole document through the command layer, one undo step (unit + E2E) |
-| Thesaurus | Missing | P2 | |
+| Thesaurus | Partial | P2 | Batch 7: Tools > Thesaurus... (Shift+F7). resources/thesaurus.txt holds 118 entries (word: syn1, syn2, ...). Win95 dialog, Spelling pattern: current word at caret/selection, synonyms sunken list, Look Up field, Replace (one undo step, re-seeds on the replacement), Close. Missing word shows "(no thesaurus entry)". One static entry list (no parts of speech, no Meanings grouping) |
 | Mail Merge... | Partial | P2 | Fix round 2: DISABLED (grayed, enabled=false) — no merge engine / data source, so Word-style unavailable, not a stub promising behavior. Dispatch removed; the old Helper dialog code stays unreachable while disabled |
 | Options/Preferences | Have | P2 | Fix round: Tools > Options... is a real Win95 dialog with live checkboxes: "Show text boundaries" (docSettings.showTextBoundaries), "Spell check as you type" (new toggle gating squiggle render/cache; Spelling dialog unaffected), "AutoCorrect as you type" (existing AutoCorrect flag). Options flags persist with the document |
 
@@ -90,7 +90,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Insert/Delete rows & columns | Have | P0 | |
 | Merge / Split cells | Have | P1 | |
 | Table borders rendering | Have | P1 | test_border_rendering |
-| Sort / Formula / AutoFormat | Missing | P2 | |
+| Sort / Formula / AutoFormat | Partial | P2 | Batch 7: Table > Sort Ascending/Descending sorts ALL rows by the caret's column (no header concept in the model, so no row pinned) — numeric-aware, numbers before text, case-insensitive text, stable, merged tables refuse. Table > Formula... opens a dialog prefilled =SUM(ABOVE), supports SUM/AVERAGE/COUNT over ABOVE/LEFT, skipping gaps and non-numeric cells, writing the result into the caret cell. Each is one undo step (before/after snapshot, consumed only while still the latest action; no table redo). Tables now render in the document (renderDocumentTables was dead code). Not covered: typing into cells (pre-existing; E2E seeds cells with test-only set_cell_content / set_table_cell), MIN/MAX, cell references, multi-column sort, header pinning |
 
 ## Window
 | Feature | Status | Priority | Notes |
@@ -126,9 +126,11 @@ honest about Word 95 itself.
 | Version History | Have | P1 | Batch 5 item 4: every successful Save / Save As also writes a snapshot `<settings dir>/wordproc_versions/<sanitized doc name>/<YYYYmmdd-HHMMSS>.txt` (same-second saves get a `-1`/`-2` suffix, never overwrite) plus an index line (time, words, chars) in the doc dir's `index.txt`. File > Version History... (after Save As) lists snapshots newest-first (time + word count); Restore replaces the buffer through the command layer (one undo), marks dirty; Close. Footer documents the flow: viewing old text = Restore + Undo. In test mode snapshots go to `output/wordproc_versions` (never into the checkout). Unit: naming/sanitize/index/same-second/list; E2E `pass_version_history.e2e` (save, type more, restore, original text back) |
 | Live word count | Have | P1 | Batch 5 item 5: status bar left cluster gains a "Words: N" segment after the Ln/Col group, updating as you type, from buffer stats. The O(n) `TextBuffer::stats()` is cached on the status-bar system and recomputed only when the buffer version changes, so the per-frame status render stays O(1). Bench guard: `make bench-unit` class unchanged (no benchmark touched). E2E `pass_live_word_count.e2e` (type 3 words -> "Words: 3", add a word, delete it) |
 
-## Counts (from tables above, 2026-10-18)
-**Have 50 · Partial 10 · Missing 6** (after Batch 6 item 5, status bar Page) (66 grouped rows; several rows bundle
-e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
+## Counts (from tables above, 2026-10-19)
+**Have 50 · Partial 14 · Missing 2** (after Batch 7, P2 sweep: Thesaurus,
+Repeat, Toolbars show/hide, Table Sort/Formula all move Missing ->
+Partial) (66 grouped rows; several rows bundle e.g. Cut/Copy/Paste).
+Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95
 ruler + drag, paged framing verify, Window menu). Batch 3 = Print Preview +
@@ -140,3 +142,8 @@ Also Batch 3: vendored fmt (11.2.0) verified compiling on system clang 17
 and zig-bundled clang 21.1.8 (header + format-inl.h) — already newer than
 the kart-afterhours sibling (8.0.1), no bump needed; the mailboy
 consteval breakage does not affect it.
+Batch 7 re-verified the same: vendored fmt 11.2.0 (same as the mailboy
+sibling; kart uses an older fmt with no base.h) compiles clean as
+header-only (FMT_HEADER_ONLY, as the app consumes it) with system
+clang++ and with `zig c++` (bundled clang 21.1.8) — no consteval
+errors, no bump. One commit per item, no push.
