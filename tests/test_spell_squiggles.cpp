@@ -114,6 +114,50 @@ TEST_CASE("SpellSquiggleCache - Invalidates on edit, not per frame",
     }
 }
 
+TEST_CASE("SpellSquiggleCache - Scroll checks only newly-visible rows",
+          "[spellcheck][squiggles]") {
+    SpellChecker checker;
+    REQUIRE(checker.dictionarySize() > 0);
+    TextBuffer buffer;
+    buffer.setText("wrold one\nteh two\nhello three\nwrold four");
+    SpellSquiggleCache cache;
+
+    // Window [0, 3): checks 3 rows, finds typos on rows 0 and 1.
+    REQUIRE(cache.update(buffer, checker, 0, 3));
+    REQUIRE(cache.rowsChecked == 3);
+    REQUIRE(cache.squiggles.size() == 2);
+    REQUIRE(cache.squiggles[0].row == 0);
+    REQUIRE(cache.squiggles[1].row == 1);
+
+    // Scroll one row to [1, 4): only row 3 is new. Row 0 drops out,
+    // rows 1-2 are reused unchecked, row 3's typo appears.
+    REQUIRE(cache.update(buffer, checker, 1, 4));
+    REQUIRE(cache.rowsChecked == 4);
+    REQUIRE(cache.recheckCount == 2);
+    REQUIRE(cache.squiggles.size() == 2);
+    REQUIRE(cache.squiggles[0].row == 1);
+    REQUIRE(cache.squiggles[1].row == 3);
+
+    // Same window again: no-op, nothing rechecked.
+    REQUIRE_FALSE(cache.update(buffer, checker, 1, 4));
+    REQUIRE(cache.rowsChecked == 4);
+
+    // Scroll back to [0, 3): row 0 re-enters and is checked once;
+    // rows 1-2 are reused.
+    REQUIRE(cache.update(buffer, checker, 0, 3));
+    REQUIRE(cache.rowsChecked == 5);
+    REQUIRE(cache.squiggles.size() == 2);
+    REQUIRE(cache.squiggles[0].row == 0);
+    REQUIRE(cache.squiggles[1].row == 1);
+
+    // Any edit bumps the version, so the whole window is rechecked
+    // (an edit can split/join lines and shift later rows).
+    buffer.setText("wrold one\nteh two\nhello three\nwrold four");
+    REQUIRE(cache.update(buffer, checker, 0, 3));
+    REQUIRE(cache.rowsChecked == 8);
+    REQUIRE(cache.squiggles.size() == 2);
+}
+
 TEST_CASE("rawColumnToDisplayColumn - Tab expansion",
           "[spellcheck][squiggles]") {
     SECTION("No tabs") {

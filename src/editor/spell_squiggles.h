@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -48,32 +49,59 @@ struct SpellSquiggleCache {
     std::uint64_t version = UINT64_MAX;  // Buffer version last checked
     std::vector<SpellSquiggle> squiggles;  // Sorted by (row, startCol)
     std::size_t recheckCount = 0;           // Rechecks performed (tests)
+    std::size_t rowsChecked = 0;  // Cumulative rows actually spell-checked
 
     // Recompute squiggles for rows [firstRow, lastRow) if the buffer
     // version or the visible range changed since the last call.
     // Returns true when a recheck ran. No-op when nothing changed, so
     // calling this every frame allocates nothing.
+    //
+    // Scrolling only checks the rows that entered the window: results
+    // are kept per row, rows that scrolled out are dropped, and rows
+    // still visible are reused untouched. A buffer-version change
+    // (any edit — an edit can split/join lines and shift every later
+    // row) discards all per-row results and rechecks the whole window.
     bool update(const TextBuffer& buffer, const SpellChecker& checker,
                 std::size_t firstRow, std::size_t lastRow) {
         if (buffer.version() == version && firstRow == firstRow_ &&
             lastRow == lastRow_) {
             return false;
         }
+        const bool versionChanged = buffer.version() != version;
         version = buffer.version();
         firstRow_ = firstRow;
         lastRow_ = lastRow;
         ++recheckCount;
 
-        squiggles.clear();
         // No dictionary, no squiggles: if the dictionary file failed to
         // load (e.g. wrong working directory) every word would otherwise
         // be flagged as misspelled.
-        if (checker.dictionarySize() == 0) return true;
+        if (checker.dictionarySize() == 0) {
+            squiggles.clear();
+            byRow_.clear();
+            return true;
+        }
+
+        if (versionChanged) {
+            byRow_.clear();
+        } else {
+            // Drop rows that scrolled out of the window; keep the rest.
+            for (auto it = byRow_.begin(); it != byRow_.end();) {
+                if (it->first < firstRow || it->first >= lastRow) {
+                    it = byRow_.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
 
         std::size_t lineCount = buffer.lineCount();
         std::size_t begin = std::min(firstRow, lineCount);
         std::size_t end = std::min(lastRow, lineCount);
         for (std::size_t row = begin; row < end; ++row) {
+            if (byRow_.find(row) != byRow_.end()) continue;  // Still visible: reuse.
+            ++rowsChecked;
+            std::vector<SpellSquiggle> rowSquiggles;
             auto view = buffer.lineView(row);
             std::string lineStorage;
             const char* data = nullptr;
@@ -94,9 +122,20 @@ struct SpellSquiggleCache {
                 while (i < len && SpellChecker::isWordChar(data[i])) ++i;
                 std::string word(data + start, i - start);
                 if (!checker.isCorrect(word)) {
-                    squiggles.push_back({row, start, i});
+                    rowSquiggles.push_back({row, start, i});
                 }
             }
+            byRow_[row] = std::move(rowSquiggles);
+        }
+
+        // Rebuild the flat list in (row, startCol) order from the
+        // per-row results (std::map iterates rows ascending, and each
+        // row's squiggles were scanned left to right).
+        squiggles.clear();
+        for (const auto& [row, rowSquiggles] : byRow_) {
+            (void)row;
+            squiggles.insert(squiggles.end(), rowSquiggles.begin(),
+                             rowSquiggles.end());
         }
         return true;
     }
@@ -104,6 +143,8 @@ struct SpellSquiggleCache {
     const std::vector<SpellSquiggle>& all() const { return squiggles; }
 
    private:
+    // Per-row squiggles for the last checked window, keyed by row.
+    std::map<std::size_t, std::vector<SpellSquiggle>> byRow_;
     std::size_t firstRow_ = 0;
     std::size_t lastRow_ = 0;
 };

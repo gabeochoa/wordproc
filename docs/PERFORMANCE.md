@@ -275,6 +275,34 @@ Verification: headless E2E `pass_font_dialog_pending.e2e` (Font dialog
 preview, incl. Gaegu), `e2e_menu_format_fonts.e2e` (Gaegu/Garamond
 switching), `pass_toolbar_font_dropdown.e2e` — all exit 0.
 
+### Fix 3: spell squiggles recheck only newly-visible rows on scroll — `src/editor/spell_squiggles.h`, `tests/test_spell_squiggles.cpp`
+
+`SpellSquiggleCache::update()` rechecked the whole visible window on
+every scroll frame (visible range changes every frame while scrolling).
+It now keeps squiggles per row: scrolling drops rows that left the
+window, reuses rows still visible, and checks only the rows that
+entered. A buffer-version change (any edit — an edit can split/join
+lines and shift later rows) still discards everything and rechecks
+the whole window. A `rowsChecked` counter (cumulative rows actually
+spell-checked) makes the behavior testable.
+
+| Measurement | Before | After |
+|---|---|---|
+| Rows checked, 200 scroll steps × 30-row window, stride 3, War and Peace (`/tmp/perf/squiggle_bench.cpp`, `-O2`, medians) | 6,000 (30/step) | 627 (30 + 199×3) — 9.6× fewer |
+| Same bench, wall time for 200 steps | 0.21 ms | 0.135 ms |
+| End-to-end scroll, fps-test 600 vs 60 frames | 0.58 ms/frame | 0.62 ms/frame — no measurable change (within run-to-run noise) |
+
+Reading: the absolute win is sub-µs/frame on this doc (War and Peace
+rows are nearly all correctly spelled, so the per-row check is cheap)
+— the fix removes redundant work, it does not move the fps-test
+needle. Kept because it is small, safe, and covered by a test that
+fails on revert (verified: forcing a full recheck makes the new test
+fail `rowsChecked == 4`).
+
+Verification: `make test` all pass (2931 assertions, 254 cases, incl.
+the new `Scroll checks only newly-visible rows` case); headless
+`e2e_large_doc_scroll.e2e` exits 0.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
