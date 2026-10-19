@@ -1,5 +1,6 @@
 #include <argh.h>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <future>
@@ -363,6 +364,7 @@ static void app_init() {
     }
     
     // Initialize E2E script runner if script specified
+    SCOPED_TIMER("E2E runner init + tail");
     static e2e::ScriptRunner runner;
     app_state::scriptRunner = &runner;
     if (!app_state::testScriptDir.empty()) {
@@ -693,6 +695,14 @@ int main(int argc, char* argv[]) {
     // Headless benchmark mode - measures file load time without opening window
     app_state::benchmarkMode = cmdl["--benchmark"];
 
+    // Frame-time sampler (headless only): times each app_frame() call
+    // with steady_clock and reports the distribution (p50/p95/p99/max)
+    // at exit, skipping the first 5 warmup frames. Wall-time
+    // differentials between processes are unusable on a loaded box
+    // (spawn/scheduling jitter swamps sub-ms frame costs); sampling
+    // inside one process is the honest measurement. Off by default.
+    bool frameTimeLog = cmdl["--frame-time-log"];
+
     cmdl(1, "") >> app_state::loadFile;  // First positional argument is file to open
 
     // Track startup time
@@ -796,20 +806,74 @@ int main(int argc, char* argv[]) {
         hcfg.width = cfg.width;
         hcfg.height = cfg.height;
         hcfg.title = cfg.title;
-        if (!afterhours::graphics::init(hcfg)) return 1;
-        app_init();
-        int maxFrames = app_state::frameLimit > 0 ? app_state::frameLimit : 2000;
-        for (int i = 0; i < maxFrames; i++) {
-            app_frame();
-            if (app_state::scriptRunner && app_state::scriptRunner->isFinished())
-                break;
-            // Quit requested (title-bar X / File > Exit): app_frame
-            // already called request_quit; stop the manual loop.
-            if (app_state::dialogState && app_state::dialogState->quitRequested)
-                break;
+        {
+            SCOPED_TIMER("graphics::init");
+            if (!afterhours::graphics::init(hcfg)) return 1;
         }
-        app_cleanup();
-        afterhours::graphics::shutdown();
+        app_init();
+        {
+            SCOPED_TIMER("Frame loop");
+            int maxFrames = app_state::frameLimit > 0 ? app_state::frameLimit : 2000;
+            std::vector<double> frameTimes;
+            if (frameTimeLog) frameTimes.reserve(static_cast<size_t>(maxFrames));
+            // WORDPROC_FRAME_TIMES=1: log every frame's ms (headless
+            // only, off by default) so one frame — e.g. the first frame
+            // after menu_open — can be read exactly.
+            static const bool frameTimesVerbose =
+                std::getenv("WORDPROC_FRAME_TIMES") != nullptr;
+            for (int i = 0; i < maxFrames; i++) {
+                auto frameStart = std::chrono::steady_clock::now();
+                app_frame();
+                if (frameTimeLog && i >= 5) {
+                    auto frameEnd = std::chrono::steady_clock::now();
+                    double frameMs =
+                        std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+                    frameTimes.push_back(frameMs);
+                    if (frameTimesVerbose) {
+                        LOG_INFO("frame %d %.3f ms", i, frameMs);
+                    }
+                }
+                if (app_state::scriptRunner && app_state::scriptRunner->isFinished())
+                    break;
+                // Quit requested (title-bar X / File > Exit): app_frame
+                // already called request_quit; stop the manual loop.
+                if (app_state::dialogState && app_state::dialogState->quitRequested)
+                    break;
+            }
+            if (frameTimeLog && !frameTimes.empty()) {
+                std::sort(frameTimes.begin(), frameTimes.end());
+                auto pct = [&](double p) {
+                    size_t idx = static_cast<size_t>(p * static_cast<double>(frameTimes.size() - 1));
+                    return frameTimes[idx];
+                };
+                double sum = 0.0;
+                for (double t : frameTimes) sum += t;
+                LOG_INFO("Frame time sampler: n=%zu mean=%.3f ms p50=%.3f ms p95=%.3f ms p99=%.3f ms max=%.3f ms",
+                         frameTimes.size(), sum / static_cast<double>(frameTimes.size()),
+                         pct(0.50), pct(0.95), pct(0.99), frameTimes.back());
+                // Slowest frames with their loop indices, so a spike can
+                // be attributed to the script step running on that frame
+                // (e.g. the first frame after menu_open).
+                std::vector<std::pair<double, int>> byTime;
+                for (size_t i = 0; i < frameTimes.size(); i++) {
+                    byTime.emplace_back(frameTimes[i], static_cast<int>(i) + 5);
+                }
+                std::sort(byTime.begin(), byTime.end(),
+                          [](const auto& a, const auto& b) { return a.first > b.first; });
+                std::string slowest;
+                for (size_t i = 0; i < byTime.size() && i < 5; i++) {
+                    if (i > 0) slowest += ", ";
+                    slowest += "#" + std::to_string(byTime[i].second) + " " +
+                               std::to_string(byTime[i].first) + "ms";
+                }
+                LOG_INFO("Frame time sampler slowest: %s", slowest.c_str());
+            }
+        }
+        {
+            SCOPED_TIMER("Cleanup + shutdown");
+            app_cleanup();
+            afterhours::graphics::shutdown();
+        }
         return app_state::returnCode;
     }
 
