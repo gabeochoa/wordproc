@@ -114,3 +114,13 @@ single-column window (columns), Font pending-state desync, outline
 level indent unused, "column" simply missing from the dictionary.
 Process note: one review round was graded on STALE /tmp captures —
 always upload from the round's own screenshot dir.
+
+## 2026-10-18 — Batch 5 (Docs-era features, Win95-styled)
+
+Rounds: comments 4->7.5, inline revisions 1->8 (glyphs were black;
+green underline existed but squiggle masked it), Revisions dialog
+4->4.5->7.5 (list ran under buttons; rows now grouped), chips 5.5->7
+(adjacent chips merged into one box; popup click never fired),
+Version History 4->7.5, @ popup 7.5. **Batch 5 PASS.**
+Timezone note: chips/history use OS localtime; review host is ET,
+owner PT — format judged, zone not penalized.
