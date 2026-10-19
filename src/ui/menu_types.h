@@ -92,7 +92,7 @@ inline std::vector<MenuData> createMenuBarData() {
                       {"Line Width: Wide", "", true, false},
                       {"", "", false, true},  // Separator
                       {"Show Line Numbers", "", true, false},
-                      {"Show Outline", "", true, false},
+                      {"Outline", "", true, false},
                       {"", "", false, true},  // Separator
                       {"UI Scale...", "", true, false}};
     menus.push_back(viewMenu);

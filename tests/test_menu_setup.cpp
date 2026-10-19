@@ -239,12 +239,12 @@ TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
         REQUIRE(item.label != "Preferences...");
     }
 
-    // View: UI Scale... is the last item, after Show Outline.
+    // View: UI Scale... is the last item, after Outline.
     REQUIRE(!view->items.empty());
     REQUIRE(view->items.back().label == "UI Scale...");
     std::size_t outline = view->items.size();
     for (std::size_t i = 0; i < view->items.size(); ++i) {
-        if (view->items[i].label == "Show Outline") outline = i;
+        if (view->items[i].label == "Outline") outline = i;
     }
     REQUIRE(outline < view->items.size());
     REQUIRE(view->items.back().label == "UI Scale...");

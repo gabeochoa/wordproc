@@ -36,7 +36,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 |---|---|---|---|
 | Normal view | Missing | P1 | only pageless/paged |
 | Page Layout view | Have | P0 | Paged Mode; framing verified headless screenshot 2026-10-18 (white Letter page, gray workspace, text inside 1in margins). ONE scale (Batch 2 fix round): page width = 8.5 × ruler ppi, ppi = 72 × (fit × zoom), margins/page/ruler/indents all derive from it; mode switch flashes transient status-bar text, not a toast |
-| Outline view | Partial | P1 | Show Outline pane exists; not a Word outline view |
+| Outline view | Have | P1 | View > Outline (checkable): renderer shows ONLY Title/Subtitle/Heading 1-6 paragraphs, indented (level-1)*24px; body paragraphs hidden; scroll counts visible heading rows; click maps a visible row to the heading's real row; entering forces Pageless, exiting restores the previous page mode + scroll; choosing Pageless/Paged exits Outline (scroll restored). Honest partials: arrow-key navigation can still move the caret onto a hidden body row (caret hidden until it returns to a heading); the click row estimate uses the global line height, so deep outlines with tall headings may map a click to a nearby heading (clamped, never a body row) |
 | Zoom (in/out/reset, %) | Have | P0 | Ctrl+Alt +/-/0 |
 | Ruler (indents/tabs draggable) | Have | P0 | Word 95 ruler: gray outside margins, white between (pageless too — 1in margins inset the effective area), inch ticks at the ONE display ppi, indent markers beveled (pale face, dark edges, hourglass pair + rectangle base + right triangle, apexes toward centre) at the same scale as text indents; left/first-line/right markers drag to set indents (one undo step per drag); View > Ruler toggles; tab-stop marks at default stops (not draggable) |
 | Toolbars show/hide | Missing | P2 | Standard+Formatting always on |
@@ -113,7 +113,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 42 · Partial 15 · Missing 9** (after Batch 4 item 3, Font dialog) (66 grouped rows; several rows bundle
+**Have 43 · Partial 14 · Missing 9** (after Batch 4 item 4, Outline view) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

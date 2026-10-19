@@ -1,3 +1,4 @@
+#include "../src/editor/outline_view.h"
 #include "../src/editor/text_buffer.h"
 #include "catch2/catch.hpp"
 
@@ -214,5 +215,54 @@ TEST_CASE("Table of contents generation", "[text_buffer][outline][toc]") {
         
         std::string text = buffer.getText();
         REQUIRE(text.find("Table of Contents") != std::string::npos);
+    }
+}
+
+TEST_CASE("Outline view visible-rows mapping", "[outline][outline_view]") {
+    using namespace outline_view;
+    std::vector<ParagraphStyle> styles = {
+        ParagraphStyle::Title, ParagraphStyle::Normal,
+        ParagraphStyle::Heading1, ParagraphStyle::Normal,
+        ParagraphStyle::Heading2, ParagraphStyle::Subtitle,
+        ParagraphStyle::Heading6, ParagraphStyle::Normal};
+
+    SECTION("levels match getOutline") {
+        REQUIRE(outlineLevel(ParagraphStyle::Title) == 0);
+        REQUIRE(outlineLevel(ParagraphStyle::Subtitle) == 1);
+        REQUIRE(outlineLevel(ParagraphStyle::Heading1) == 1);
+        REQUIRE(outlineLevel(ParagraphStyle::Heading2) == 2);
+        REQUIRE(outlineLevel(ParagraphStyle::Heading6) == 6);
+        REQUIRE(outlineLevel(ParagraphStyle::Normal) == -1);
+        REQUIRE_FALSE(isHeadingStyle(ParagraphStyle::Normal));
+        REQUIRE(isHeadingStyle(ParagraphStyle::Heading3));
+    }
+
+    SECTION("visible rows skip body paragraphs") {
+        auto rows = outlineVisibleRows(styles);
+        REQUIRE(rows.size() == 5);
+        REQUIRE(rows[0] == 0);  // Title
+        REQUIRE(rows[1] == 2);  // Heading 1
+        REQUIRE(rows[2] == 4);  // Heading 2
+        REQUIRE(rows[3] == 5);  // Subtitle
+        REQUIRE(rows[4] == 6);  // Heading 6
+    }
+
+    SECTION("visible index maps to the heading's real row, clamped") {
+        auto rows = outlineVisibleRows(styles);
+        REQUIRE(outlineRealRowForVisible(rows, 0, styles.size()) == 0);
+        REQUIRE(outlineRealRowForVisible(rows, 2, styles.size()) == 4);
+        // Past the end clamps to the last heading, never a body row.
+        REQUIRE(outlineRealRowForVisible(rows, 99, styles.size()) == 6);
+        // No headings: no such row.
+        REQUIRE(outlineRealRowForVisible({}, 0, styles.size()) == styles.size());
+    }
+
+    SECTION("indent is (level - 1) * 24px") {
+        REQUIRE(outlineIndentPx(ParagraphStyle::Title) == 0);
+        REQUIRE(outlineIndentPx(ParagraphStyle::Heading1) == 0);
+        REQUIRE(outlineIndentPx(ParagraphStyle::Heading2) == 24);
+        REQUIRE(outlineIndentPx(ParagraphStyle::Heading3) == 48);
+        REQUIRE(outlineIndentPx(ParagraphStyle::Heading6) == 120);
+        REQUIRE(outlineIndentPx(ParagraphStyle::Normal) == 0);
     }
 }

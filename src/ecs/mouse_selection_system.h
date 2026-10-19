@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "../../vendor/afterhours/src/core/system.h"
+#include "../editor/outline_view.h"
 #include "../editor/scroll_math.h"
 #include "../editor/text_layout.h"
 #include "../rl.h"
@@ -48,17 +49,48 @@ struct MouseSelectionSystem
                           const LayoutComponent::Rect& area, float mx, float my,
                           int scrollOffset, int fontSize, int lineHeight) const {
         float relY = my - area.y - static_cast<float>(theme::layout::TEXT_PADDING);
-        int row = scrollOffset + static_cast<int>(std::floor(relY / static_cast<float>(lineHeight)));
-        int lineCount = static_cast<int>(buffer.lineCount());
-        if (row < 0) row = 0;
-        if (row > lineCount - 1) row = lineCount - 1;
         float baseX = area.x + static_cast<float>(theme::layout::TEXT_PADDING);
         if (layout.showLineNumbers) baseX += layout.lineNumberGutterWidth;
-        std::string line = buffer.lineString(static_cast<std::size_t>(row));
         auto measure = [fontSize](const std::string& prefix) {
             return static_cast<float>(
                 afterhours::graphics::measure_text(prefix.c_str(), fontSize));
         };
+        // Outline mode: the visible row is a heading row; map it to
+        // the heading's real buffer row (body rows are not targets).
+        // The visible-row estimate uses the same global line height
+        // as normal hit-testing (the renderer draws headings taller,
+        // so this is approximate for deep outlines — the row mapping
+        // clamps to the last heading rather than landing on a body
+        // row). The column is measured from the heading's indented
+        // start, matching where the renderer draws its text.
+        if (layout.showOutline) {
+            std::vector<ParagraphStyle> styles;
+            for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+                styles.push_back(buffer.lineParagraphStyle(i));
+            }
+            std::vector<std::size_t> visible =
+                outline_view::outlineVisibleRows(styles);
+            if (visible.empty()) return {0, 0};
+            int rawVisibleIndex =
+                scrollOffset +
+                static_cast<int>(
+                    std::floor(relY / static_cast<float>(lineHeight)));
+            if (rawVisibleIndex < 0) rawVisibleIndex = 0;
+            std::size_t row = outline_view::outlineRealRowForVisible(
+                visible, static_cast<std::size_t>(rawVisibleIndex),
+                buffer.lineCount());
+            ParagraphStyle style = buffer.lineParagraphStyle(row);
+            float indentedX =
+                baseX + static_cast<float>(outline_view::outlineIndentPx(style));
+            std::string line = buffer.lineString(row);
+            std::size_t col = hitTestColumn(line, mx - indentedX, measure);
+            return {row, col};
+        }
+        int row = scrollOffset + static_cast<int>(std::floor(relY / static_cast<float>(lineHeight)));
+        int lineCount = static_cast<int>(buffer.lineCount());
+        if (row < 0) row = 0;
+        if (row > lineCount - 1) row = lineCount - 1;
+        std::string line = buffer.lineString(static_cast<std::size_t>(row));
         std::size_t col = hitTestColumn(line, mx - baseX, measure);
         return {static_cast<std::size_t>(row), col};
     }

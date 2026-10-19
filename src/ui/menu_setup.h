@@ -104,7 +104,7 @@ inline std::vector<win95::Menu> createMenuBar(
                       {"Line Width: Wide", "", true, false, nullptr},    // 15
                       {"", "", false, true, nullptr},                    // 16 Separator
                       {"Show Line Numbers", "", true, false, nullptr},   // 17
-                      {"Show Outline", "", true, false, nullptr},        // 18
+                      {"Outline", "", true, false, nullptr},             // 18 (checkmark = outline mode)
                       {"", "", false, true, nullptr},                    // 19 Separator
                       {"UI Scale...", "", true, false, nullptr}};        // 20 (moved from Tools)
     menus.push_back(viewMenu);

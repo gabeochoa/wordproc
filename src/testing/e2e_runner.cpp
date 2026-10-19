@@ -1043,6 +1043,8 @@ static void setupCallbacksEx(
         layoutComp.showLineNumbers = false;
         layoutComp.showParagraphMarks = false;
         layoutComp.showOutline = false;
+        layoutComp.outlinePrevPageMode = PageMode::Pageless;
+        layoutComp.outlinePrevScroll = 0;
         layoutComp.splitViewEnabled = false;
         layoutComp.splitViewHorizontal = true;
         // Window menu doc label rebuilds from the cleared filePath on

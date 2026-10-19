@@ -390,9 +390,16 @@ struct LayoutComponent : public afterhours::BaseComponent {
     bool showLineNumbers = false;    // Toggle line number display in gutter
     float lineNumberGutterWidth = 50.0f;  // Width of line number gutter in pixels
     
-    // Outline panel
-    bool showOutline = false;        // Toggle outline panel display
+    // Outline view (View > Outline): when on, the renderer shows
+    // only Title/Subtitle/Heading paragraphs (see outline_view.h)
+    // and scroll counts visible heading rows, not buffer rows.
+    // outlinePrevPageMode / outlinePrevScroll are the page mode and
+    // scroll offset saved on entry, restored on exit. Entering
+    // Outline forces Pageless (an outline is a continuous list).
+    bool showOutline = false;
     float outlinePanelWidth = 200.0f;  // Width of outline panel in pixels
+    PageMode outlinePrevPageMode = PageMode::Pageless;
+    int outlinePrevScroll = 0;
 
     // Print Preview (File > Print Preview): a read-only mode showing one
     // paged page at a time. Entering forces pageMode=Paged (the paged

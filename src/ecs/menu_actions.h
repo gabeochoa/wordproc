@@ -27,7 +27,8 @@ namespace ecs {
 inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                           MenuComponent& menu, DialogState& dialogs,
                           LayoutComponent& layout,
-                          StatusComponent* statusComp = nullptr) {
+                          StatusComponent* statusComp = nullptr,
+                          ScrollComponent* scroll = nullptr) {
         int menuIndex = menuResult / 100;
         int itemIndex = menuResult % 100;
 
@@ -211,6 +212,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             switch (itemIndex) {
                 case 0:  // Pageless Mode (preview owns pageMode: ignored)
                     if (layout.previewMode) break;
+                    cmd::exitOutlineMode(layout, scroll);
                     layout.pageMode = PageMode::Pageless;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
@@ -222,6 +224,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 1:  // Paged Mode (preview owns pageMode: ignored)
                     if (layout.previewMode) break;
+                    cmd::exitOutlineMode(layout, scroll);
                     layout.pageMode = PageMode::Paged;
                     layout::updateLayout(layout, layout.screenWidth,
                                          layout.screenHeight);
@@ -280,9 +283,8 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     layout.showLineNumbers = !layout.showLineNumbers;
                     toast_notify::info(layout.showLineNumbers ? "Line numbers: On" : "Line numbers: Off");
                     break;
-                case 18:  // Show Outline
-                    layout.showOutline = !layout.showOutline;
-                    toast_notify::info(layout.showOutline ? "Outline: On" : "Outline: Off");
+                case 18:  // Outline
+                    cmd::toggleOutlineMode(doc, layout, scroll);
                     break;
                 case 20:  // UI Scale... (moved from Tools)
                     dialogs.showSettingsDialog = true;

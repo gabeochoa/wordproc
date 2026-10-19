@@ -12,6 +12,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include <afterhours/src/drawing_helpers.h>
+#include "../editor/outline_view.h"
 #include "../editor/scroll_math.h"
 #include "../editor/table.h"
 #include "../input/action_map.h"
@@ -227,7 +228,8 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              const SpellSquiggleCache* spellCache = nullptr,
                              float indentScale = 1.0f,
                              bool suppressSelection = false,
-                             bool showParagraphMarks = false) {
+                             bool showParagraphMarks = false,
+                             bool outlineMode = false) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
@@ -247,10 +249,26 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
     int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING;
 
-    std::size_t startRow = static_cast<std::size_t>(scrollOffset);
-    if (startRow >= lineCount) startRow = lineCount > 0 ? lineCount - 1 : 0;
+    // Outline mode: iterate the heading rows only (Title /
+    // Subtitle / Heading 1-6); scrollOffset counts visible heading
+    // rows, not buffer rows, so body paragraphs are never drawn.
+    std::vector<std::size_t> outlineRows;
+    if (outlineMode) {
+        for (std::size_t i = 0; i < lineCount; ++i) {
+            if (outline_view::isHeadingStyle(buffer.lineParagraphStyle(i))) {
+                outlineRows.push_back(i);
+            }
+        }
+    }
+    std::size_t visibleCount = outlineMode ? outlineRows.size() : lineCount;
+    std::size_t startVisible = static_cast<std::size_t>(scrollOffset);
+    if (startVisible >= visibleCount) {
+        startVisible = visibleCount > 0 ? visibleCount - 1 : 0;
+    }
 
-    for (std::size_t row = startRow; row < lineCount; ++row) {
+    for (std::size_t visibleIndex = startVisible;
+         visibleIndex < visibleCount; ++visibleIndex) {
+        std::size_t row = outlineMode ? outlineRows[visibleIndex] : visibleIndex;
         LineSpan span = buffer.lineSpan(row);
         int baseX = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING + gutterOffset;
         int availableWidth = static_cast<int>(textArea.width) - 2 * theme::layout::TEXT_PADDING;
@@ -386,9 +404,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Calculate list marker indent (each level adds 20px)
         int listIndent = (listType != ListType::None) ? (listLevel + 1) * 20 : 0;
         
-        int indentedBaseX = baseX + totalIndent + listIndent;
+        // Outline indent: (level - 1) * 24px on top of the
+        // paragraph's own indents.
+        int outlineIndent =
+            outlineMode ? outline_view::outlineIndentPx(paraStyle) : 0;
+        int indentedBaseX = baseX + totalIndent + listIndent + outlineIndent;
         int indentedWidth =
-            std::max(0, availableWidth - totalIndent - listIndent - rightIndent);
+            std::max(0, availableWidth - totalIndent - listIndent -
+                            rightIndent - outlineIndent);
         
         // Calculate text width for alignment
         int textWidth = displayLine.empty() ? 0 : afterhours::graphics::measure_text(displayLine.c_str(), lineFontSize);
@@ -981,6 +1004,9 @@ struct EditorRenderSystem
         // Same for ¶ marks: shown only in the editing view.
         bool showParagraphMarks =
             layout.showParagraphMarks && !layout.previewMode;
+        // Outline mode: heading rows only (not in Print Preview:
+        // preview shows printable content, not the outline).
+        bool outlineMode = layout.showOutline && !layout.previewMode;
 
         if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
@@ -993,13 +1019,13 @@ struct EditorRenderSystem
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode, showParagraphMarks);
+                             layout.previewMode, showParagraphMarks, outlineMode);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode, showParagraphMarks);
+                             layout.previewMode, showParagraphMarks, outlineMode);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1013,7 +1039,7 @@ struct EditorRenderSystem
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
                              ds, squiggleCache,
                              layout::displayScale(layout),
-                             layout.previewMode, showParagraphMarks);
+                             layout.previewMode, showParagraphMarks, outlineMode);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

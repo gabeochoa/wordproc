@@ -8,6 +8,7 @@
 #include "../util/clipboard.h"
 #include "../editor/date_time.h"
 #include "../editor/document_io.h"
+#include "../editor/outline_view.h"
 #include "../editor/templates.h"
 #include "../editor/export/export_pdf.h"
 #include "../editor/spell_session.h"
@@ -691,6 +692,69 @@ inline bool applyFormatPainter(DocumentComponent& doc,
     if (!toolbar.formatPainter.apply(doc.buffer)) return false;
     doc.isDirty = true;
     return true;
+}
+
+// --- Outline view (View > Outline) ---
+// Entering saves the page mode + scroll offset, forces Pageless, and
+// parks the caret on a heading (the first heading at-or-after the
+// caret row, else the first heading): in Outline the caret can only
+// sit on a rendered row. Exiting restores the saved page mode +
+// scroll. When the document has no headings, entering is still a
+// mode switch (the view is simply empty) and the caret stays put.
+inline void toggleOutlineMode(DocumentComponent& doc,
+                              LayoutComponent& layout,
+                              ScrollComponent* scroll) {
+    if (!layout.showOutline) {
+        layout.outlinePrevPageMode = layout.pageMode;
+        layout.outlinePrevScroll = scroll ? scroll->offset : 0;
+        layout.showOutline = true;
+        layout.pageMode = PageMode::Pageless;
+        if (scroll) scroll->offset = 0;
+        if (!outline_view::isHeadingStyle(
+                doc.buffer.lineParagraphStyle(doc.buffer.caret().row))) {
+            std::size_t rows = doc.buffer.lineCount();
+            std::size_t target = rows;
+            for (std::size_t i = doc.buffer.caret().row; i < rows; ++i) {
+                if (outline_view::isHeadingStyle(
+                        doc.buffer.lineParagraphStyle(i))) {
+                    target = i;
+                    break;
+                }
+            }
+            if (target == rows) {
+                for (std::size_t i = 0; i < rows; ++i) {
+                    if (outline_view::isHeadingStyle(
+                            doc.buffer.lineParagraphStyle(i))) {
+                        target = i;
+                        break;
+                    }
+                }
+            }
+            if (target != rows) {
+                doc.buffer.setCaret({target, 0});
+                doc.buffer.clearSelection();
+            }
+        }
+        toast_notify::info("Outline: On");
+    } else {
+        layout.showOutline = false;
+        layout.pageMode = layout.outlinePrevPageMode;
+        if (scroll) {
+            scroll->offset =
+                std::max(0, layout.outlinePrevScroll);
+        }
+        toast_notify::info("Outline: Off");
+    }
+}
+
+// Leave Outline for an explicit page-mode choice (View > Pageless /
+// Paged Mode): restore the saved scroll, then the caller sets the
+// chosen page mode.
+inline void exitOutlineMode(LayoutComponent& layout,
+                            ScrollComponent* scroll) {
+    if (!layout.showOutline) return;
+    layout.showOutline = false;
+    if (scroll) scroll->offset = std::max(0, layout.outlinePrevScroll);
 }
 
 // --- Format toggles ---

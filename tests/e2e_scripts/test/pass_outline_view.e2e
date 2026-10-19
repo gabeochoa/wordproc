@@ -1,0 +1,59 @@
+# Test: View > Outline shows ONLY heading paragraphs (body hidden),
+# scroll maps over visible heading rows, and a click on a visible row
+# lands on the heading's real buffer row. Toggling off restores the
+# previous page mode (Paged here) + scroll.
+# Proof body rows are not targets: the second click is aimed at the
+# SECOND visible row (y ~215) and lands on buffer row 2 (Heading
+# Two), skipping the body row 1 — in the normal view the same y
+# would land on the body paragraph.
+
+type "Heading One"
+key CTRL+ALT+1
+key ENTER
+wait_frames 6
+type "Body text here"
+key ENTER
+wait_frames 6
+type "Heading Two"
+key CTRL+ALT+1
+key ENTER
+wait_frames 6
+type "More body"
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select "Paged Mode"
+wait_frames 12
+validate page_mode=paged
+
+menu_open View
+wait_frames 12
+menu_select "Outline"
+wait_frames 12
+
+validate outline_visible=true
+validate outline_items=2
+validate page_mode=pageless
+
+screenshot outline_view
+
+mouse_down 300 175
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=1
+
+mouse_down 300 215
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=3
+
+menu_open View
+wait_frames 12
+menu_select "Outline"
+wait_frames 12
+
+validate outline_visible=false
+validate page_mode=paged

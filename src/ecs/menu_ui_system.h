@@ -79,14 +79,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Keep the View > Ruler checkmark in sync: any menu rebuild
-        // resets marks to the createMenuBar defaults.
+        // Keep the View > Ruler / Outline checkmarks in sync: any
+        // menu rebuild resets marks to the createMenuBar defaults.
         for (auto& m : menu.menus) {
             if (m.label != "View") continue;
             for (auto& item : m.items) {
                 if (item.label == "Ruler") {
                     item.mark = layout.showRuler ? win95::MenuMark::Checkmark
                                                  : win95::MenuMark::None;
+                }
+                if (item.label == "Outline") {
+                    item.mark = layout.showOutline ? win95::MenuMark::Checkmark
+                                                   : win95::MenuMark::None;
                 }
             }
         }
@@ -2973,7 +2977,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             int menuResult = menu.consumeClickedResult();
             if (menuResult >= 0) {
                 handleMenuActionImpl(menuResult, doc, menu, dialogs, layout,
-                                     cache_.status);
+                                     cache_.status, cache_.scroll);
                 // Entering Print Preview from a menu (or E2E
                 // menu_select, which does not clear
                 // activeMenuIndex): no menu may stay open or
