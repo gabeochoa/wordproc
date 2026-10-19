@@ -239,6 +239,128 @@ column per the documented no-wrap renderer).
   second count suggests on small docs — size `wait_frames` by wall
   time, not frames.
 
+## Perf Round 3 — 2026-10-19 (profiling build, typing on War and Peace)
+
+Continues Round 2 on the profiling build (`zig build
+-Dprofiling=true`, commit `ac5c91d` — it wires the afterhours
+collector, `profile_reset`, and `dump_profile`). Same doc, same
+paired-typing idea, but the collector now ranks systems per window
+instead of inferring from wall differentials. Scripts in
+`/tmp/perf3` (not committed): setup is Paged mode + GoTo line
+33000 (caret mid-document), then `profile_reset`, then the typing
+window, then `dump_profile 40`. Typing window: 100× `type "a"` +
+`wait_frames 3`. Control: each `type` replaced by `wait_frames 3`.
+
+Frame accounting (measured, not assumed): `type "a"` occupies 5
+frames (1 dispatch + 3 of its own wait + 1 extra frame vs
+`wait_frames`), `wait_frames 3` occupies 4. So the typing window
+is 902 frames, the control 802 — the 100 extra frames are a
+harness artifact (~5.2 ms/frame of script-mode per-frame work:
+registration 3.52 + UI bridge 1.33 + editor 0.25 + …), and
+`dump_profile`'s `mean` is total/calls, so per-system totals are
+`mean × calls` and the artifact-free per-key cost is
+`(total_typing − total_control − 100 × control_per_frame) / 100`.
+Medians of 3 interleaved pairs; machine load 35–51, so small
+residuals (±0.1–0.5 ms/key) are noise.
+
+### (1) Where the typing frame's ~6 ms goes
+
+Round 2's "after fix 6.57 ms/key, artifact-free ~1" was a
+dense-cadence artifact: its 1-key-per-3-frames script never let
+the status bar's 5-still-frames settle rule fire. At human-like
+cadence the true cost is ~4.9 ms/key, ~90% of it one system:
+
+| System | Before: artifact-free ms/key | After: artifact-free ms/key |
+|---|---|---|
+| `StatusBarSystem` | 4.42 (460 ms total) | ~0.00 (9 ms total) |
+| `UIPluginRenderBridge` | 0.18 | −0.27 (noise) |
+| `DocumentTextRegistration` | 0.09 | −0.54 (noise) |
+| `EditorRenderSystem` | 0.09 | 0.09 (noise) |
+| `TextInputSystem` | 0.09 | 0.09 (real insert path, at floor) |
+| Others (toolbar, menu, post-update, …) | ~0.00 | ~0.00 |
+| **Total artifact-free** | **4.87** | **~0 (median sum −0.8, noise)** |
+| Raw incl. 100-extra-frame artifact | 10.09 | 4.44 |
+
+Mechanism, proved by cadence: dense typing (5 frames/key, still
+gap < 5) totals 55 ms in `StatusBarSystem`; slow typing (36
+frames/key) totals 504 ms — one `stats()` per key each time the
+settle rule fires. `stats()` scanned the whole gap buffer
+(~4.9 ms on War). A wall-time throttle cannot bound this for
+human typing (keys arrive ~200 ms apart, so a 250 ms throttle
+still fires about every other key), and the live-update E2E
+(`pass_live_word_count`, fresh count within 12 frames) requires
+per-pause freshness — so the fix had to make `stats()` itself
+cheap, not retime it.
+
+Fix (commit `6ab7b52`): `TextBuffer::stats()` is incremental.
+Words / sentences / paragraphs are maintained by the mutators: a
+single-char edit changes word starts only at the edit point and
+its right neighbour, sentences only for the char itself,
+paragraphs only for the touched line(s); a range erase scans only
+the erased range; `swapAdjacentLineRanges` needs no update (it
+reorders whole lines). `setText` only marks the cache dirty — an
+eager rebuild pushed War `setText` 3.2 ms → 10.5 ms and broke the
+10 ms load gate (`[perf][load]`, HEAD-verified); the first
+`stats()` call or mutator after a `setText` rebuilds once. Lines /
+characters stay O(1) live reads. The status-bar
+throttle/settle logic is unchanged; it was never the bug.
+Regression test: `TextBuffer stats stay exact across edits`
+compares `stats()` against a from-scratch scan after every
+mutator (inserts, backspace/del incl. newline merges, selections,
+replace, undo/redo, swap, TOC insert, lazy-rebuild path).
+
+After the fix, slow-cadence typing totals 36 ms in
+`StatusBarSystem` (was 504 ms), and the dense/slow distinction
+is gone.
+
+### Investigated and left alone (no second fix)
+
+No second real cost exists: after the fix no system shows a
+residual above the noise floor except `TextInputSystem` (+0.09
+ms/key, the actual `insertChar` path: gap move + line-offset
+shift, at the bench-unit floor).
+
+- Per-keystroke rewrap — dead. The body renderer draws each
+  buffer row as one line; wrapping exists only in table-cell
+  text (`cell_edit::wrapCellText`, header/footer) and drop-cap
+  indent math, not on the per-keystroke path.
+- Squiggle recheck — dead. `SpellSquiggleCache` rechecks the
+  whole window on a version change, required by line-shift
+  semantics (Round 2: 0.023 ms/window); scroll reuses rows.
+- Measure-cache misses — dead. `TextMeasureCache` is a
+  persistent 4096-entry LRU; the UI bridge's typing residual is
+  ±noise (−0.27 ms/key).
+- Imm UI rebuild per frame — at floor. `UIPluginRenderBridge`
+  costs 1.32 ms/frame idle and typing adds nothing measurable;
+  retaining UI across frames is the big/risky change Round 1
+  already rejected.
+
+### Guards
+
+`make test` green (9518 assertions, 320 cases, incl. the new
+stats case and `[perf][load]`). `make bench-unit` typing burst
+0.175 µs/keystroke vs 0.149 on HEAD on the same box — the delta
+is the one-time lazy rebuild amortized over the 500-key burst
+(warm-cache probe: 0.163 µs/key; `stats()` itself 2 ns/call on
+a 6,000-char doc). Zero new clang warnings (old vs new
+`text_buffer.cpp` under the app flags — identical output).
+Headless E2E spot on the normal build, all exit 0:
+`pass_live_word_count`, `pass_status_bar_words_catch_up`,
+`e2e_word_count`, `e2e_large_doc_scroll` (War and Peace).
+
+### Vendored fmt (addendum recheck, 2026-10-19)
+
+Wordproc's vendored fmt is `FMT_VERSION 110200` (11.2.0) — same
+as mailboy; kart-afterhours still vendors 8.0.1 (kart's
+exposure, not wordproc's). A TU shaped like the app
+(`-include src/log.h` + `<fmt/compile.h>` `FMT_COMPILE`
+consteval path) compiles and runs clean under the system clang
+(Apple clang 17.0.0) and the zig-bundled clang (`zig c++`).
+**No fmt bump needed.** (A bare `zig c++` probe without
+`log.h` fails on undeclared `malloc`/`free` — a probe-shape
+artifact, not the consteval break: the app always pre-includes
+`log.h`.)
+
 
 ## Perf Lane Baseline — 2026-10-19 (headless, interaction feel)
 
