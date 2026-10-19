@@ -4950,83 +4950,112 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
-        // Help Window (Keyboard Shortcuts)
+        // Help Window (Keyboard Shortcuts) - Win95 shell: square
+        // BUTTON_FACE panel, navy caption, no backdrop dim, sunken
+        // scrollable bindings list, raised 90px OK button. ESC
+        // still dismisses via the modal's CloseRequest default.
         if (dialogs.showHelpWindow) {
             constexpr int HELP_MODAL_ID = 50008;
             auto result = afterhours::modal(ctx, mk(entity, HELP_MODAL_ID),
                 dialogs.showHelpWindow,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(500), afterhours::ui::h720(500))
-                    .with_title("Keyboard Shortcuts")
-                    .with_show_close_button(true));
-            
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(500), afterhours::ui::h720(480),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
-                
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Keyboard Shortcuts",
+                                              CONTENT_LAYER);
+
                 // Get keybindings
                 input::ActionMap defaultMap = input::createDefaultActionMap();
                 auto bindings = input::getBindingsList(defaultMap);
-                
-                // Create scrollable container for keybindings list
-                auto scrollContainer = div(ctx, mk(result.ent(), 0),
-                    ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(380)})
-                        .with_overflow(afterhours::ui::Overflow::Auto)
-                        .with_padding(Spacing::sm)
+
+                // Sunken bindings list (AutoCorrect pattern): the
+                // outer box carries the sunken bevel, the inner area
+                // scrolls (Overflow::Auto).
+                auto listBox = div(ctx, mk(result.ent(), 0),
+                    ah_win95::win95SunkenStyle()
+                        .with_size(ComponentSize{percent(1.0f), h720(400)})
+                        .with_flex_direction(FlexDirection::Column)
+                        .with_padding(Padding{.top = pixels(2), .bottom = pixels(2)})
                         .with_render_layer(CONTENT_LAYER));
-                if (scrollContainer) {
+                if (listBox) {
                     // Header row
-                    auto headerRow = div(ctx, mk(scrollContainer.ent(), 0),
+                    auto headerRow = div(ctx, mk(listBox.ent(), 0),
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(1.0f), h720(24)})
                             .with_flex_direction(FlexDirection::Row)
-                            .with_padding(Spacing::xs)
+                            .with_custom_background(
+                                ui_imm::win95_colors::TEXT_AREA)
                             .with_render_layer(CONTENT_LAYER));
-                    
+
                     if (headerRow) {
-                        div(ctx, mk(headerRow.ent(), 0),
-                            ComponentConfig{}
-                                .with_label("Action")
-                                .with_size(ComponentSize{h720(200), h720(20)})
-                                .with_custom_text_color(toAhColor(afterhours::Color{80, 80, 80, 255}))
-                                .with_render_layer(CONTENT_LAYER));
-                        
-                        div(ctx, mk(headerRow.ent(), 1),
-                            ComponentConfig{}
-                                .with_label("Shortcut")
-                                .with_size(ComponentSize{h720(200), h720(20)})
-                                .with_custom_text_color(toAhColor(afterhours::Color{80, 80, 80, 255}))
-                                .with_render_layer(CONTENT_LAYER));
+                        auto headerCell = [&](int id, const char* label) {
+                            div(ctx, mk(headerRow.ent(), id),
+                                ComponentConfig{}
+                                    .with_label(label)
+                                    .with_size(ComponentSize{percent(0.5f), h720(20)})
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::TEXT_AREA)
+                                    .with_custom_text_color(
+                                        ui_imm::win95_colors::TEXT)
+                                    .with_font_weight(afterhours::colors::FontWeight::Bold)
+                                    .with_font_size(h720(14))
+                                    .with_alignment(afterhours::ui::TextAlignment::Left)
+                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_render_layer(CONTENT_LAYER));
+                        };
+                        headerCell(0, "Action");
+                        headerCell(1, "Shortcut");
                     }
-                    
+
                     // Bindings list
-                    for (size_t i = 0; i < bindings.size(); ++i) {
-                        const auto& binding = bindings[i];
-                        auto bindingRow = div(ctx, mk(scrollContainer.ent(), static_cast<int>(i + 1)),
-                            ComponentConfig{}
-                                .with_size(ComponentSize{percent(1.0f), h720(22)})
-                                .with_flex_direction(FlexDirection::Row)
-                                .with_padding(Spacing::xs)
-                                .with_render_layer(CONTENT_LAYER));
-                        
-                        if (bindingRow) {
-                            div(ctx, mk(bindingRow.ent(), 0),
+                    auto scrollArea = div(ctx, mk(listBox.ent(), 1),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(372)})
+                            .with_flex_direction(FlexDirection::Column)
+                            .with_overflow(afterhours::ui::Overflow::Auto)
+                            .with_custom_background(
+                                ui_imm::win95_colors::TEXT_AREA)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (scrollArea) {
+                        for (size_t i = 0; i < bindings.size(); ++i) {
+                            const auto& binding = bindings[i];
+                            auto bindingRow = div(ctx, mk(scrollArea.ent(), static_cast<int>(i)),
                                 ComponentConfig{}
-                                    .with_label(binding.actionName)
-                                    .with_size(ComponentSize{h720(200), h720(18)})
+                                    .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                    .with_flex_direction(FlexDirection::Row)
+                                    .with_custom_background(
+                                        ui_imm::win95_colors::TEXT_AREA)
                                     .with_render_layer(CONTENT_LAYER));
-                            
-                            div(ctx, mk(bindingRow.ent(), 1),
-                                ComponentConfig{}
-                                    .with_label(binding.bindingStr)
-                                    .with_size(ComponentSize{h720(200), h720(18)})
-                                    .with_render_layer(CONTENT_LAYER));
+
+                            if (bindingRow) {
+                                auto bindingCell = [&](int id, const std::string& text) {
+                                    div(ctx, mk(bindingRow.ent(), id),
+                                        ComponentConfig{}
+                                            .with_label(text)
+                                            .with_size(ComponentSize{percent(0.5f), h720(18)})
+                                            .with_custom_background(
+                                                ui_imm::win95_colors::TEXT_AREA)
+                                            .with_custom_text_color(
+                                                ui_imm::win95_colors::TEXT)
+                                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                                            .with_padding(Padding{.left = pixels(4)})
+                                            .with_render_layer(CONTENT_LAYER));
+                                };
+                                bindingCell(0, binding.actionName);
+                                bindingCell(1, binding.bindingStr);
+                            }
                         }
                     }
                 }
-                
+
                 // OK button at bottom
                 auto buttonRow = div(ctx, mk(result.ent(), 1),
                     ComponentConfig{}
@@ -5035,15 +5064,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
                         .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 if (buttonRow) {
                     if (button(ctx, mk(buttonRow.ent(), 0),
-                        ComponentConfig{}
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("help_ok")
                             .with_label("OK")
-                            .with_size(ComponentSize{h720(100), h720(32)})
-                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.showHelpWindow = false;
                     }
