@@ -1060,7 +1060,13 @@ static void setupCallbacksEx(
         // the next MenuUISystem frame.
         menuComp.windowDocLabel.clear();
         
-        // Reset toolbar dropdown state
+        // Reset toolbar dropdown state, plus the font/size labels:
+        // the Font dialog syncs toolbar.currentFont/currentFontSize
+        // from the applied style, and without this the labels (e.g.
+        // a size of 18) leak into later tests that expect the
+        // defaults (the toolbar tests).
+        toolbarComp.currentFont = "Times New Roman";
+        toolbarComp.currentFontSize = 10;
         toolbarComp.styleDropdownOpen = false;
         toolbarComp.fontDropdownOpen = false;
         toolbarComp.fontSizeDropdownOpen = false;

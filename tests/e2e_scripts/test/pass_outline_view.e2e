@@ -42,13 +42,13 @@ mouse_down 300 175
 wait_frames 2
 mouse_up
 wait_frames 6
-validate caret_row=1
+validate caret_row=0
 
 mouse_down 300 215
 wait_frames 2
 mouse_up
 wait_frames 6
-validate caret_row=3
+validate caret_row=2
 
 menu_open View
 wait_frames 12

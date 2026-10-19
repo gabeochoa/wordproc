@@ -1,9 +1,9 @@
 # Test: Format > Columns... sets 2 columns in the paged view.
 # 60 lines at ~29 lines per column: column 1 holds lines 0-28,
 # column 2 holds lines 29-57. A click in column 1 lands on line 0;
-# a click in column 2 (x ~700) lands on line 29 (caret_row 30) —
-# the hit-test respects the column x-offsets. Pageless is unchanged
-# (columns only apply in the paged renderer).
+# a click in column 2 (x ~700) lands on line 29 — the hit-test
+# respects the column x-offsets. (caret_row is 0-based.) Pageless
+# is unchanged (columns only apply in the paged renderer).
 
 fill_lines 60 Column line
 wait_frames 12
@@ -38,10 +38,10 @@ mouse_down 550 215
 wait_frames 2
 mouse_up
 wait_frames 6
-validate caret_row=1
+validate caret_row=0
 
 mouse_down 700 215
 wait_frames 2
 mouse_up
 wait_frames 6
-validate caret_row=30
+validate caret_row=29
