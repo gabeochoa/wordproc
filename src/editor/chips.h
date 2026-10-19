@@ -112,6 +112,44 @@ inline std::vector<ChipItem> popupItems(const std::string& filter,
     return out;
 }
 
+// Box rect for one chip's label rect (render pass; the box is
+// drawn behind the label). `leftDist` / `rightDist` are the buffer
+// distance to the nearest verified chip on that side: 0 = touching
+// (no chars between the chips), 1 = one char between (the usual
+// single space), -1 = no neighbouring chip (or further away).
+// The box hugs the label with 2px inset padding, except a
+// neighbouring side shrinks by 2px: a one-char neighbour's box
+// ends exactly at its label edge, so the gap between the boxes is
+// that char's width; a touching neighbour's box ends 2px inside
+// its label, so the gap is 4px. Either way adjacent chips draw as
+// two distinct boxes, never one continuous raised rectangle —
+// the old fixed (labelX - 2, labelW + 4) box extended 2px into
+// the space on each side, so a single-space gap closed to ~0 and
+// the shared top/bottom edges merged visually.
+struct ChipBox {
+    int x = 0;
+    int width = 0;
+};
+
+inline ChipBox chipBoxRect(int labelX, int labelW, int leftDist,
+                           int rightDist) {
+    int x = labelX - 2;
+    int w = labelW + 4;
+    if (leftDist == 0) {
+        x += 4;
+        w -= 4;
+    } else if (leftDist == 1) {
+        x += 2;
+        w -= 2;
+    }
+    if (rightDist == 0) {
+        w -= 4;
+    } else if (rightDist == 1) {
+        w -= 2;
+    }
+    return ChipBox{x, w};
+}
+
 // Does the buffer still hold this chip's label at its offset?
 inline bool bufferMatches(const TextBuffer& buffer, const Chip& chip) {
     if (chip.endOffset < chip.startOffset) return false;

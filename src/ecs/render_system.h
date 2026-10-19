@@ -720,8 +720,19 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Draw @ chip boxes: raised BUTTON_FACE rect behind the
         // chip's label on this line (same column mapping as the
         // comment highlight above). Rendered before the text so
-        // the glyphs draw on top of the box.
+        // the glyphs draw on top of the box. Neighbouring chips
+        // get their touching sides shrunk (chips::chipBoxRect)
+        // so adjacent boxes stay visibly separate: with the old
+        // fixed inset the date + person boxes merged into one
+        // continuous rectangle.
         if (!verifiedChips.empty() && !displayLine.empty()) {
+            struct ChipSeg {
+                std::size_t begin = 0;
+                std::size_t end = 0;
+                int labelX = 0;
+                int labelW = 0;
+            };
+            std::vector<ChipSeg> chipSegs;
             for (const auto& range : verifiedChips) {
                 std::size_t lineBegin = span.offset;
                 std::size_t lineEnd = span.offset + span.length;
@@ -736,27 +747,48 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 dispEnd = std::min(std::max(dispEnd, dispBegin),
                                    displayLine.size());
                 if (dispBegin >= dispEnd) continue;
-                int boxX = x + afterhours::graphics::measure_text(
-                                  displayLine.substr(0, dispBegin).c_str(),
-                                  lineFontSize);
-                int boxW = afterhours::graphics::measure_text(
-                    displayLine.substr(dispBegin, dispEnd - dispBegin)
-                        .c_str(),
-                    lineFontSize);
-                // 2px inset padding each side: the raised box hugs
-                // the label with breathing room, not edge-to-edge.
-                boxX -= 2;
-                boxW += 4;
+                const int labelX =
+                    x + afterhours::graphics::measure_text(
+                            displayLine.substr(0, dispBegin).c_str(),
+                            lineFontSize);
+                const int labelW =
+                    afterhours::graphics::measure_text(
+                        displayLine.substr(dispBegin, dispEnd - dispBegin)
+                            .c_str(),
+                        lineFontSize);
+                chipSegs.push_back(ChipSeg{segBegin, segEnd, labelX,
+                                           labelW});
+            }
+            for (std::size_t si = 0; si < chipSegs.size(); ++si) {
+                const ChipSeg& seg = chipSegs[si];
+                int leftDist = -1;
+                int rightDist = -1;
+                for (std::size_t oi = 0; oi < chipSegs.size(); ++oi) {
+                    if (oi == si) continue;
+                    const ChipSeg& other = chipSegs[oi];
+                    if (other.end == seg.begin) {
+                        leftDist = 0;
+                    } else if (other.end + 1 == seg.begin) {
+                        leftDist = 1;
+                    }
+                    if (other.begin == seg.end) {
+                        rightDist = 0;
+                    } else if (other.begin == seg.end + 1) {
+                        rightDist = 1;
+                    }
+                }
+                const chips::ChipBox box = chips::chipBoxRect(
+                    seg.labelX, seg.labelW, leftDist, rightDist);
                 afterhours::draw_rectangle(
-                    Rectangle{static_cast<float>(boxX),
+                    Rectangle{static_cast<float>(box.x),
                               static_cast<float>(y),
-                              static_cast<float>(boxW),
+                              static_cast<float>(box.width),
                               static_cast<float>(lineHeight)},
                     theme::BUTTON_FACE);
                 afterhours::draw_rectangle_outline(
-                    Rectangle{static_cast<float>(boxX),
+                    Rectangle{static_cast<float>(box.x),
                               static_cast<float>(y),
-                              static_cast<float>(boxW),
+                              static_cast<float>(box.width),
                               static_cast<float>(lineHeight)},
                     afterhours::Color{128, 128, 128, 255}, 1.0f);
             }

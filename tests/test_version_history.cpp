@@ -1,6 +1,7 @@
 #include "../src/editor/version_history.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -78,6 +79,66 @@ TEST_CASE("Version history naming and index", "[version_history]") {
         REQUIRE(version_history::countWords("  spaced   out  ") == 2);
     }
 }
+
+#ifndef _WIN32
+namespace {
+
+// RAII TZ switch (same pattern as test_chips.cpp): restores the
+// previous TZ on destruction, so a failing REQUIRE cannot leak
+// the zone into later test cases.
+struct ScopedTZ {
+    std::string old_;
+    bool had_ = false;
+    explicit ScopedTZ(const char* tz) {
+        const char* cur = std::getenv("TZ");
+        if (cur != nullptr) {
+            old_ = cur;
+            had_ = true;
+        }
+        setenv("TZ", tz, 1);
+        tzset();
+    }
+    ~ScopedTZ() {
+        if (had_) {
+            setenv("TZ", old_.c_str(), 1);
+        } else {
+            unsetenv("TZ");
+        }
+        tzset();
+    }
+};
+
+}  // namespace
+
+TEST_CASE("Version history timestamps use LOCAL time, not UTC",
+          "[version_history]") {
+    // 2026-10-19 01:30 UTC is still 2026-10-18 21:30 in
+    // America/New_York (EDT, UTC-4). A UTC-based stamp would say
+    // 20261019-013000; the local stamp says 20261018-213000.
+    // Same instant the chip test pins — both surfaces must agree
+    // on OS-local time (no hardcoded zone anywhere).
+    std::time_t instant = 0;
+    {
+        ScopedTZ utc("UTC");
+        std::tm tm{};
+        tm.tm_year = 2026 - 1900;
+        tm.tm_mon = 9;
+        tm.tm_mday = 19;
+        tm.tm_hour = 1;
+        tm.tm_min = 30;
+        tm.tm_isdst = 0;
+        instant = std::mktime(&tm);
+    }
+    {
+        ScopedTZ eastern("America/New_York");
+        REQUIRE(version_history::timestampLabel(instant) ==
+                "20261018-213000");
+    }
+    // No gmtime anywhere: the stamp is localtime_r/s in
+    // version_history.h, as chips are in chips.h.
+}
+
+#endif
 
 TEST_CASE("Version history snapshot write/list", "[version_history]") {
     TempDir tmp;

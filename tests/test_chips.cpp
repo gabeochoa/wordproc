@@ -121,6 +121,39 @@ TEST_CASE("Chip date labels use LOCAL time, not UTC", "[chips]") {
 }
 #endif
 
+TEST_CASE("Chip box rects stay separate when adjacent", "[chips]") {
+    SECTION("no neighbour keeps the 2px inset padding") {
+        auto box = chips::chipBoxRect(100, 50, -1, -1);
+        REQUIRE(box.x == 98);
+        REQUIRE(box.width == 54);
+    }
+    SECTION("one char between (the usual space) ends boxes at the labels") {
+        auto left = chips::chipBoxRect(100, 50, -1, 1);
+        REQUIRE(left.x == 98);
+        REQUIRE(left.width == 52);  // right edge 150 = label end
+        auto right = chips::chipBoxRect(156, 40, 1, -1);
+        REQUIRE(right.x == 156);  // left edge = label start
+        REQUIRE(right.width == 42);  // right edge = label end + 2
+        // Gap between the boxes = the space width (6) >= 2.
+        REQUIRE(right.x - (left.x + left.width) == 6);
+        REQUIRE(right.x - (left.x + left.width) >= 2);
+    }
+    SECTION("touching chips get a 4px gap (2px inside each label)") {
+        auto left = chips::chipBoxRect(100, 50, -1, 0);
+        REQUIRE(left.x == 98);
+        REQUIRE(left.width == 50);  // right edge 148 = label end - 2
+        auto right = chips::chipBoxRect(150, 40, 0, -1);
+        REQUIRE(right.x == 152);  // left edge = label start + 2
+        REQUIRE(right.width == 40);  // right edge = label end + 2
+        REQUIRE(right.x - (left.x + left.width) == 4);
+    }
+    SECTION("both sides shrink independently") {
+        auto box = chips::chipBoxRect(100, 50, 1, 0);
+        REQUIRE(box.x == 100);
+        REQUIRE(box.width == 48);  // left at label, right 2 in
+    }
+}
+
 TEST_CASE("Smart chip insert/delete", "[chips]") {
     SECTION("insert replaces @ + filter with the label, one undo step") {
         TextBuffer buffer;
