@@ -24,6 +24,42 @@
 
 TextBuffer::TextBuffer() { ensureNonEmpty(); }
 
+TextBuffer& TextBuffer::operator=(TextBuffer&& other) noexcept {
+    if (this == &other) return *this;
+    // The edit-shift hook belongs to the DESTINATION's owner
+    // (its revision list), not to the text being moved in:
+    // keep it — the startup move-assign of the preloaded buffer
+    // must not drop DocumentComponent's hook. Every other
+    // member moves. (If a member is added to TextBuffer, add it
+    // here: defaulting this operator would move the hook too.)
+    EditShiftHook keptHook = std::move(editShiftHook_);
+    chars_ = std::move(other.chars_);
+    line_spans_ = std::move(other.line_spans_);
+    charStyleSpans_ = std::move(other.charStyleSpans_);
+    hyperlinks_ = std::move(other.hyperlinks_);
+    bookmarks_ = std::move(other.bookmarks_);
+    footnotes_ = std::move(other.footnotes_);
+    sections_ = std::move(other.sections_);
+    caret_ = other.caret_;
+    has_selection_ = other.has_selection_;
+    selection_anchor_ = other.selection_anchor_;
+    selection_end_ = other.selection_end_;
+    style_ = other.style_;
+    stats_ = other.stats_;
+    version_ = other.version_;
+    history_ = std::move(other.history_);
+    recordingHistory_ = other.recordingHistory_;
+    statsDirty_ = other.statsDirty_;
+    cachedWordCount_ = other.cachedWordCount_;
+    cachedSentenceCount_ = other.cachedSentenceCount_;
+    cachedParagraphCount_ = other.cachedParagraphCount_;
+    tocHasMark_ = other.tocHasMark_;
+    tocStart_ = other.tocStart_;
+    tocEnd_ = other.tocEnd_;
+    editShiftHook_ = std::move(keptHook);
+    return *this;
+}
+
 std::size_t TextBuffer::lineCount() const { return line_spans_.size(); }
 
 LineSpan TextBuffer::lineSpan(std::size_t row) const {
@@ -247,6 +283,9 @@ bool TextBuffer::deleteSelection() {
         static_cast<std::ptrdiff_t>(oldParagraphs);
     noteStatsRangeErased(startOffset, deleteCount, paragraphDelta);
 
+    // Revision marks shift BEFORE the edit, while their text
+    // still matches the pre-edit buffer (see noteEditShift).
+    noteEditShift(startOffset, -static_cast<std::ptrdiff_t>(deleteCount));
     // Erase the selected range
     chars_.erase(startOffset, deleteCount);
     stats_.total_deletes += deleteCount;
@@ -445,6 +484,7 @@ void TextBuffer::insertChar(char ch) {
         }
         noteStatsCharInserted(offset, ch, paragraphDelta);
     }
+    noteEditShift(offset, 1);
     chars_.insert(offset, ch);
 
     // Adjust hyperlink and bookmark offsets for the inserted character
@@ -1147,6 +1187,17 @@ void TextBuffer::commitParagraphIndents(std::size_t row,
         row, oldIndents, newIndents));
 }
 
+void TextBuffer::commitRevisionList(std::vector<Revision>* revs,
+                                    std::vector<Revision> before,
+                                    std::vector<Revision> after) {
+    if (revs == nullptr || before == after) return;
+    // Already applied live; record only, so the whole marking
+    // (one range, or one merged mark) is one undo step.
+    history_.push(std::make_unique<RevisionListCommand>(
+        revs, std::move(before), std::move(after)));
+    version_++;  // A mark changes the rendering (see header).
+}
+
 ParagraphFormat TextBuffer::lineParagraphFormat(std::size_t row) const {
     if (row >= line_spans_.size()) return {};
     const LineSpan& span = line_spans_[row];
@@ -1674,6 +1725,7 @@ void TextBuffer::backspace() {
         const std::ptrdiff_t paragraphDelta =
             line_spans_[caret_.row].length == 1 ? -1 : 0;
         noteStatsCharErased(offset - 1, paragraphDelta);
+        noteEditShift(offset - 1, -1);
         chars_.erase(offset - 1, 1);
         stats_.total_deletes++;
         version_++;  // Content changed - invalidate render cache
@@ -1718,6 +1770,7 @@ void TextBuffer::backspace() {
                                         (second > 0 ? 1 : 0));
         noteStatsCharErased(newline_offset, paragraphDelta);
     }
+    noteEditShift(newline_offset, -1);
     chars_.erase(newline_offset, 1);
     stats_.total_deletes++;
     version_++;
@@ -1761,6 +1814,7 @@ void TextBuffer::del() {
         const std::ptrdiff_t paragraphDelta =
             line_spans_[caret_.row].length == 1 ? -1 : 0;
         noteStatsCharErased(offset, paragraphDelta);
+        noteEditShift(offset, -1);
         chars_.erase(offset, 1);
         stats_.total_deletes++;
         version_++;
@@ -1803,6 +1857,7 @@ void TextBuffer::del() {
                                         (second > 0 ? 1 : 0));
         noteStatsCharErased(newline_offset, paragraphDelta);
     }
+    noteEditShift(newline_offset, -1);
     chars_.erase(newline_offset, 1);
     stats_.total_deletes++;
     version_++;
@@ -2120,6 +2175,7 @@ void TextBuffer::insertCharAt(CaretPosition pos, char ch) {
         }
         noteStatsCharInserted(offset, ch, paragraphDelta);
     }
+    noteEditShift(offset, 1);
     chars_.insert(offset, ch);
     version_++;
     adjustCharStyleSpans(offset, 1);
@@ -2167,6 +2223,7 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
             span.length == 1 ? -1 : 0;
         std::size_t offset = positionToOffset(pos);
         noteStatsCharErased(offset, paragraphDelta);
+        noteEditShift(offset, -1);
         chars_.erase(offset, 1);
         version_++;
         adjustCharStyleSpans(offset, -1);
@@ -2187,6 +2244,7 @@ void TextBuffer::deleteCharAt(CaretPosition pos) {
                     (second > 0 ? 1 : 0));
             noteStatsCharErased(offset, paragraphDelta);
         }
+        noteEditShift(offset, -1);
         chars_.erase(offset, 1);
         version_++;
         adjustCharStyleSpans(offset, -1);

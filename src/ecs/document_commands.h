@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <optional>
 
 #include "../external.h"
 #include "../util/clipboard.h"
@@ -97,6 +98,183 @@ inline void recordDeleteRevision(DocumentComponent& doc, std::size_t offset,
     rev.author = "Gabe";
     rev.timestamp = std::time(nullptr);
     doc.revisions.push_back(rev);
+}
+
+// --- Tracked deletions IN PLACE (Batch 14) ---
+// Mark [start, end) as a tracked deletion: the text STAYS in the
+// buffer, renders red + strikethrough, and the caret skips it.
+// Overlaps / adjacency with verified Delete marks merge into one
+// revision (union, text = the buffer substring), so repeated
+// Backspace marches one mark leftward instead of stacking
+// records, and a selection spanning a mark marks the unmarked
+// parts too. Stale Delete records are left alone (they describe
+// text that is already gone). One undo step (commitRevisionList):
+// undo unmarks. Returns the merged range, or nullopt when the
+// range is empty or was already exactly marked (no-op: no undo
+// step, no dirty churn).
+inline std::optional<std::pair<std::size_t, std::size_t>> markDeletedRange(
+    DocumentComponent& doc, std::size_t start, std::size_t end) {
+    // Merge (pure, in revisions.h) + commit (one undo step).
+    // The merge stamps timestamp 0: stamp it here, so the
+    // record carries the marking time, and commit only when
+    // the list actually changed (re-marking is a no-op).
+    std::vector<Revision> before = doc.revisions;
+    revisions::DeleteMarkResult result =
+        revisions::mergeDeleteMark(doc.buffer, before, start, end);
+    if (!result.merged) return std::nullopt;
+    if (result.revs != before) {
+        result.revs.back().timestamp = std::time(nullptr);
+        doc.revisions = result.revs;
+        doc.buffer.commitRevisionList(&doc.revisions, std::move(before),
+                                     doc.revisions);
+        doc.isDirty = true;
+    }
+    return result.merged;
+}
+
+// Selection replacement under tracking: mark the selection as a
+// tracked deletion (unmarked parts too; merges with adjacent
+// marks) and move the caret to the END of the merged mark, so
+// the replacement text inserts AFTER the struck text; clears
+// the selection so the insert does not delete it. Tracking off
+// or no selection: no-op, returns the caret offset (the caller
+// proceeds with the old replace-selection path).
+inline std::size_t markSelectionForReplacement(DocumentComponent& doc) {
+    if (!doc.trackChangesEnabled || !doc.buffer.hasSelection()) {
+        return doc.buffer.caretOffset();
+    }
+    CaretPosition s = doc.buffer.selectionStart();
+    CaretPosition e = doc.buffer.selectionEnd();
+    std::size_t start = doc.buffer.offsetForPosition(s);
+    std::size_t end = doc.buffer.offsetForPosition(e);
+    auto merged = markDeletedRange(doc, start, end);
+    doc.buffer.clearSelection();
+    if (merged) {
+        doc.buffer.setCaret(doc.buffer.positionForOffset(merged->second));
+        return merged->second;
+    }
+    return doc.buffer.caretOffset();
+}
+
+// Caret out of a live mark: after undo/redo (whose commands set
+// the caret directly, bypassing the arrow-key skip), a caret
+// that landed strictly inside a mark snaps to the nearer
+// boundary, so the next keystroke cannot insert inside it.
+inline void snapCaretOutOfDeletedMarks(DocumentComponent& doc) {
+    std::size_t off = doc.buffer.caretOffset();
+    std::size_t snapped = revisions::snapOffsetOutOfDeleteRanges(
+        doc.buffer, doc.revisions, off);
+    if (snapped != off) {
+        doc.buffer.setCaret(doc.buffer.positionForOffset(snapped));
+    }
+}
+
+// Backspace with Track Changes on: mark instead of removing.
+// - Selection: mark the whole selection, caret to the mark start.
+// - No selection: mark the previous UNMARKED char, skipping any
+//   mark that ends at the caret (caret right after a mark
+//   extends the mark leftward over the previous unmarked char);
+//   caret ends at the merged mark's start, so repeated
+//   Backspace marches left. At the document start: no-op.
+// Tracking off: the old behaviour (record + real backspace).
+inline void backspace(DocumentComponent& doc) {
+    if (doc.trackChangesEnabled) {
+        if (doc.buffer.hasSelection()) {
+            CaretPosition s = doc.buffer.selectionStart();
+            CaretPosition e = doc.buffer.selectionEnd();
+            auto merged = markDeletedRange(
+                doc, doc.buffer.offsetForPosition(s),
+                doc.buffer.offsetForPosition(e));
+            doc.buffer.clearSelection();
+            if (merged) {
+                doc.buffer.setCaret(
+                    doc.buffer.positionForOffset(merged->first));
+            }
+            return;
+        }
+        std::size_t off = doc.buffer.caretOffset();
+        if (off == 0) return;
+        std::size_t candidate = revisions::prevUnmarkedChar(
+            doc.buffer, doc.revisions, off);
+        if (candidate == static_cast<std::size_t>(-1)) return;
+        auto merged = markDeletedRange(doc, candidate, candidate + 1);
+        if (merged) {
+            doc.buffer.setCaret(
+                doc.buffer.positionForOffset(merged->first));
+        }
+        return;
+    }
+    if (doc.buffer.hasSelection()) {
+        CaretPosition start = doc.buffer.selectionStart();
+        std::size_t off = doc.buffer.offsetForPosition(start);
+        std::string selected = doc.buffer.getSelectedText();
+        doc.buffer.backspace();
+        // Record AFTER the op: the op fires the edit-shift hook,
+        // which would clip a just-recorded Delete to nothing.
+        recordDeleteRevision(doc, off, selected);
+    } else {
+        std::size_t offset = doc.buffer.caretOffset();
+        if (offset > 0) {
+            char deleted = doc.buffer.charAtOffset(offset - 1);
+            doc.buffer.backspace();
+            recordDeleteRevision(doc, offset - 1,
+                                 std::string(1, deleted));
+        } else {
+            doc.buffer.backspace();
+        }
+    }
+}
+
+// Forward Delete with Track Changes on: mark instead of removing.
+// - Selection: like Backspace (mark, caret to the mark start).
+// - No selection: mark the next UNMARKED char, skipping any mark
+//   starting at the caret (caret right before a mark extends
+//   the mark rightward over the next unmarked char); caret
+//   stays at the merged mark's start, so repeated Delete
+//   marches right. At the document end: no-op.
+// Tracking off: the old behaviour (record + real delete).
+inline void deleteForward(DocumentComponent& doc) {
+    if (doc.trackChangesEnabled) {
+        if (doc.buffer.hasSelection()) {
+            CaretPosition s = doc.buffer.selectionStart();
+            CaretPosition e = doc.buffer.selectionEnd();
+            auto merged = markDeletedRange(
+                doc, doc.buffer.offsetForPosition(s),
+                doc.buffer.offsetForPosition(e));
+            doc.buffer.clearSelection();
+            if (merged) {
+                doc.buffer.setCaret(
+                    doc.buffer.positionForOffset(merged->first));
+            }
+            return;
+        }
+        std::size_t off = doc.buffer.caretOffset();
+        std::size_t candidate = revisions::nextUnmarkedChar(
+            doc.buffer, doc.revisions, off);
+        if (candidate >= doc.buffer.textSize()) return;
+        auto merged = markDeletedRange(doc, candidate, candidate + 1);
+        if (merged) {
+            doc.buffer.setCaret(
+                doc.buffer.positionForOffset(merged->first));
+        }
+        return;
+    }
+    if (doc.buffer.hasSelection()) {
+        CaretPosition start = doc.buffer.selectionStart();
+        std::size_t off = doc.buffer.offsetForPosition(start);
+        std::string selected = doc.buffer.getSelectedText();
+        doc.buffer.del();
+        recordDeleteRevision(doc, off, selected);
+    } else {
+        std::size_t offset = doc.buffer.caretOffset();
+        if (offset < doc.buffer.textSize()) {
+            char deleted = doc.buffer.charAtOffset(offset);
+            doc.buffer.del();
+            recordDeleteRevision(doc, offset, std::string(1, deleted));
+        } else {
+            doc.buffer.del();
+        }
+    }
 }
 
 // --- Suggesting mode: per-revision accept/reject (revisions.h) ---
@@ -220,12 +398,16 @@ inline bool applyChipPopup(DocumentComponent& doc, DialogState& dialogs) {
     for (std::size_t i = at; i < caret; ++i) {
         oldText.push_back(doc.buffer.charAtOffset(i));
     }
-    if (!oldText.empty()) recordDeleteRevision(doc, at, oldText);
-    recordInsertRevision(doc, at, item.label);
     bool ok = chips::insertChipAt(doc.buffer, doc.chips, at, caret,
                                   item.kind, item.label);
     dialogs.showChipPopup = false;
     if (ok) {
+        // Records AFTER the op (post-op offsets: the chip label
+        // sits at `at`): the op fires the edit-shift hook,
+        // which would clip just-recorded Deletes to nothing.
+        // Only on success: a failed insert records nothing.
+        if (!oldText.empty()) recordDeleteRevision(doc, at, oldText);
+        recordInsertRevision(doc, at, item.label);
         doc.isDirty = true;
         // A chip insert is not a repeatable typed run.
         repeat::clear(doc.repeatRecord);
@@ -238,10 +420,13 @@ inline bool eraseChipAtCaret(DocumentComponent& doc) {
     int idx = chips::chipEndingAt(doc.buffer, doc.chips,
                                   doc.buffer.caretOffset());
     if (idx < 0) return false;
-    const Chip& chip = doc.chips[static_cast<std::size_t>(idx)];
-    recordDeleteRevision(doc, chip.startOffset, chip.label);
+    const Chip chip = doc.chips[static_cast<std::size_t>(idx)];
     if (chips::eraseChipAt(doc.buffer, doc.chips,
                            static_cast<std::size_t>(idx))) {
+        // Record AFTER the op (post-op offset): the op fires
+        // the edit-shift hook, which would clip a just-recorded
+        // Delete to nothing. Only on success.
+        recordDeleteRevision(doc, chip.startOffset, chip.label);
         doc.isDirty = true;
         return true;
     }
@@ -442,7 +627,8 @@ inline bool saveDocument(DocumentComponent& doc, LayoutComponent& layout,
     auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
                                          doc.tables, savePath,
                                          &doc.headerBuffer,
-                                         &doc.footerBuffer);
+                                         &doc.footerBuffer,
+                                         &doc.revisions);
     if (result.success) {
         doc.isDirty = false;
         doc.filePath = savePath;
@@ -467,7 +653,8 @@ inline bool saveDocumentAs(DocumentComponent& doc, LayoutComponent& layout,
     auto result = saveDocumentWithTables(doc.buffer, doc.docSettings,
                                          doc.tables, path,
                                          &doc.headerBuffer,
-                                         &doc.footerBuffer);
+                                         &doc.footerBuffer,
+                                         &doc.revisions);
     if (result.success) {
         doc.isDirty = false;
         doc.filePath = path;
@@ -493,15 +680,18 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
     // rides the same path (Batch 9); opening another document
     // ends any header/footer edit on the old one.
     layout::exitHeaderFooterEdit(layout);
+    // The load REPLACES doc.revisions (validated against the
+    // loaded text; absent in old files -> empty), so there is no
+    // post-load clear here — it would wipe the loaded marks.
     auto result = loadDocumentWithTables(doc.buffer, doc.docSettings,
                                          doc.tables, path,
                                          &doc.headerBuffer,
-                                         &doc.footerBuffer);
+                                         &doc.footerBuffer,
+                                         &doc.revisions);
     if (result.success) {
         doc.filePath = path;
         doc.isDirty = false;
         doc.comments.clear();
-        doc.revisions.clear();
         doc.chips.clear();
         doc.repeatRecord = ActionRecord{};
         doc.cellEdit = CellEditState{};
@@ -580,6 +770,9 @@ inline bool undo(DocumentComponent& doc) {
     }
     if (doc.buffer.canUndo()) {
         doc.buffer.undo();
+        // Undo commands set the caret directly, bypassing the
+        // arrow-key skip: a caret inside a live mark snaps out.
+        snapCaretOutOfDeletedMarks(doc);
         doc.isDirty = true;
         return true;
     }
@@ -589,6 +782,7 @@ inline bool undo(DocumentComponent& doc) {
 inline bool redo(DocumentComponent& doc) {
     if (doc.buffer.canRedo()) {
         doc.buffer.redo();
+        snapCaretOutOfDeletedMarks(doc);
         doc.isDirty = true;
         return true;
     }
@@ -602,9 +796,25 @@ inline void cut(DocumentComponent& doc) {
         std::string selected = doc.buffer.getSelectedText();
         if (!selected.empty()) {
             CaretPosition start = doc.buffer.selectionStart();
-            recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
+            std::size_t off = doc.buffer.offsetForPosition(start);
             app::clipboard::set_text(selected);
-            doc.buffer.deleteSelection();
+            if (doc.trackChangesEnabled) {
+                // Mark the cut text as deleted (it stays, struck
+                // through); the clipboard still carries it.
+                auto merged = markDeletedRange(
+                    doc, off, off + selected.size());
+                doc.buffer.clearSelection();
+                if (merged) {
+                    doc.buffer.setCaret(
+                        doc.buffer.positionForOffset(merged->first));
+                }
+            } else {
+                doc.buffer.deleteSelection();
+                // Record AFTER the op: the op fires the
+                // edit-shift hook, which would clip a
+                // just-recorded Delete to nothing.
+                recordDeleteRevision(doc, off, selected);
+            }
             doc.isDirty = true;
         }
     }
@@ -622,6 +832,10 @@ inline void copy(DocumentComponent& doc) {
 inline void paste(DocumentComponent& doc) {
     if (app::clipboard::has_text()) {
         std::string clipText = app::clipboard::get_text();
+        // Tracking + selection: the selection is marked as
+        // deleted and the paste lands after the mark (the
+        // helper moves the caret there and clears it).
+        markSelectionForReplacement(doc);
         std::size_t offset = doc.buffer.caretOffset();
         recordInsertRevision(doc, offset, clipText);
         doc.buffer.insertText(clipText);
@@ -634,10 +848,15 @@ inline void paste(DocumentComponent& doc) {
 // quote, a Tab's spaces, a newline) inserts through the buffer and
 // coalesces into the Repeat InsertText run (repeat::noteTyped).
 // Revision records mirror the plain insertChar path below.
+// Tracking + selection: the selection is marked as deleted
+// first, and the typed text inserts after the mark (the helper
+// moves the caret there and clears the selection) instead of
+// deleteSelection-ing it away unrecorded.
 inline void insertTypedText(DocumentComponent& doc, const std::string& text) {
     if (text.empty()) return;
-    std::size_t offset = doc.buffer.caretOffset();
     bool hadSelection = doc.buffer.hasSelection();
+    markSelectionForReplacement(doc);
+    std::size_t offset = doc.buffer.caretOffset();
     repeat::noteTyped(doc.repeatRecord, text, offset, hadSelection);
     recordInsertRevision(doc, offset, text);
     doc.buffer.insertText(text);
@@ -999,23 +1218,34 @@ inline bool applyTableFormula(DocumentComponent& doc, DialogState& dialogs) {
 // inserts the same static text either way (noted in the dialog code).
 inline void insertDateTime(DocumentComponent& doc, const std::string& text) {
     if (text.empty()) return;
-    CaretPosition start = doc.buffer.hasSelection()
-                              ? doc.buffer.selectionStart()
-                              : doc.buffer.caret();
-    CaretPosition end = doc.buffer.hasSelection()
-                            ? doc.buffer.selectionEnd()
-                            : start;
-    std::size_t offset = doc.buffer.offsetForPosition(start);
-    std::size_t length = doc.buffer.offsetForPosition(end) - offset;
+    std::size_t offset;
+    std::size_t length;
     std::string oldText;
-    oldText.reserve(length);
-    for (std::size_t i = 0; i < length; ++i) {
-        oldText.push_back(doc.buffer.charAtOffset(offset + i));
+    if (doc.trackChangesEnabled && doc.buffer.hasSelection()) {
+        // The selection is marked as deleted; the insert lands
+        // after the mark.
+        offset = markSelectionForReplacement(doc);
+        length = 0;
+    } else {
+        CaretPosition start = doc.buffer.hasSelection()
+                                  ? doc.buffer.selectionStart()
+                                  : doc.buffer.caret();
+        CaretPosition end = doc.buffer.hasSelection()
+                                ? doc.buffer.selectionEnd()
+                                : start;
+        offset = doc.buffer.offsetForPosition(start);
+        length = doc.buffer.offsetForPosition(end) - offset;
+        oldText.reserve(length);
+        for (std::size_t i = 0; i < length; ++i) {
+            oldText.push_back(doc.buffer.charAtOffset(offset + i));
+        }
     }
-    if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
-    recordInsertRevision(doc, offset, text);
     doc.buffer.clearSelection();
     doc.buffer.replaceRange(offset, length, text);
+    // Records AFTER the op (post-op offsets): the op fires the
+    // edit-shift hook, which would clip just-recorded Deletes.
+    if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
+    recordInsertRevision(doc, offset, text);
     doc.isDirty = true;
 }
 
@@ -1116,23 +1346,34 @@ inline void refreshTocForSave(DocumentComponent& doc,
 // UTF-8 byte. Same shape as insertDateTime above.
 inline void insertSymbol(DocumentComponent& doc, const std::string& text) {
     if (text.empty()) return;
-    CaretPosition start = doc.buffer.hasSelection()
-                              ? doc.buffer.selectionStart()
-                              : doc.buffer.caret();
-    CaretPosition end = doc.buffer.hasSelection()
-                            ? doc.buffer.selectionEnd()
-                            : start;
-    std::size_t offset = doc.buffer.offsetForPosition(start);
-    std::size_t length = doc.buffer.offsetForPosition(end) - offset;
+    std::size_t offset;
+    std::size_t length;
     std::string oldText;
-    oldText.reserve(length);
-    for (std::size_t i = 0; i < length; ++i) {
-        oldText.push_back(doc.buffer.charAtOffset(offset + i));
+    if (doc.trackChangesEnabled && doc.buffer.hasSelection()) {
+        // The selection is marked as deleted; the insert lands
+        // after the mark.
+        offset = markSelectionForReplacement(doc);
+        length = 0;
+    } else {
+        CaretPosition start = doc.buffer.hasSelection()
+                                  ? doc.buffer.selectionStart()
+                                  : doc.buffer.caret();
+        CaretPosition end = doc.buffer.hasSelection()
+                                ? doc.buffer.selectionEnd()
+                                : start;
+        offset = doc.buffer.offsetForPosition(start);
+        length = doc.buffer.offsetForPosition(end) - offset;
+        oldText.reserve(length);
+        for (std::size_t i = 0; i < length; ++i) {
+            oldText.push_back(doc.buffer.charAtOffset(offset + i));
+        }
     }
-    if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
-    recordInsertRevision(doc, offset, text);
     doc.buffer.clearSelection();
     doc.buffer.replaceRange(offset, length, text);
+    // Records AFTER the op (post-op offsets): the op fires the
+    // edit-shift hook, which would clip just-recorded Deletes.
+    if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
+    recordInsertRevision(doc, offset, text);
     doc.isDirty = true;
 }
 
@@ -1531,9 +1772,11 @@ inline void grammarChange(DocumentComponent& doc, DialogState& dialogs) {
     std::size_t length = current->length;
     std::string oldText = current->text;
     std::string suggestion = current->suggestion;
+    doc.buffer.replaceRange(offset, length, suggestion);
+    // Records AFTER the op (post-op offsets): the op fires the
+    // edit-shift hook, which would clip just-recorded Deletes.
     recordDeleteRevision(doc, offset, oldText);
     recordInsertRevision(doc, offset, suggestion);
-    doc.buffer.replaceRange(offset, length, suggestion);
     doc.isDirty = true;
     refreshGrammarDialog(doc, dialogs);
     // Resume at the first remaining error at/after the change.
@@ -1566,6 +1809,9 @@ inline std::size_t findReplaceAll(DocumentComponent& doc, DialogState& dialogs) 
     dialogs.lastSearchTerm = dialogs.findInputStr;
     const std::string replacement = dialogs.replaceInputStr;
     std::vector<TextReplacement> replacements;
+    // Pre-op offsets + old texts, for the records, which are
+    // written AFTER the op at post-op offsets (see below).
+    std::vector<std::pair<std::size_t, std::string>> recorded;
     std::size_t nextSearchOffset = 0;
     for (const FindResult& match : doc.buffer.findAll(
              dialogs.lastSearchTerm, dialogs.findOptions)) {
@@ -1579,13 +1825,26 @@ inline std::size_t findReplaceAll(DocumentComponent& doc, DialogState& dialogs) 
         for (std::size_t i = startOffset; i < endOffset; ++i) {
             oldText.push_back(doc.buffer.charAtOffset(i));
         }
-        recordDeleteRevision(doc, startOffset, oldText);
-        recordInsertRevision(doc, startOffset, replacement);
+        recorded.emplace_back(startOffset, oldText);
         replacements.push_back({match.start, std::move(oldText), replacement});
     }
     if (replacements.empty()) return 0;
     const std::size_t count = replacements.size();
     doc.buffer.replaceRanges(std::move(replacements));
+    // Records AFTER the op: the op fires the edit-shift hook,
+    // which would clip just-recorded Deletes to nothing. Each
+    // match's post-op offset is its pre-op offset shifted by the
+    // cumulative length delta of the earlier replacements
+    // (matches are non-overlapping, left to right).
+    std::ptrdiff_t shift = 0;
+    for (const auto& [preOffset, oldText] : recorded) {
+        const std::size_t postOffset = static_cast<std::size_t>(
+            static_cast<std::ptrdiff_t>(preOffset) + shift);
+        recordDeleteRevision(doc, postOffset, oldText);
+        recordInsertRevision(doc, postOffset, replacement);
+        shift += static_cast<std::ptrdiff_t>(replacement.size()) -
+                 static_cast<std::ptrdiff_t>(oldText.size());
+    }
     doc.isDirty = true;
     return count;
 }
@@ -1651,9 +1910,12 @@ inline void spellChange(DocumentComponent& doc, DialogState& dialogs) {
     if (replacement.empty()) return;
     std::size_t offset = dialogs.spellCurrentOffset;
     std::size_t length = dialogs.spellCurrentLength;
-    recordDeleteRevision(doc, offset, dialogs.spellCurrentWord);
-    recordInsertRevision(doc, offset, replacement);
+    std::string oldWord = dialogs.spellCurrentWord;
     doc.buffer.replaceRange(offset, length, replacement);
+    // Records AFTER the op (post-op offsets): the op fires the
+    // edit-shift hook, which would clip just-recorded Deletes.
+    recordDeleteRevision(doc, offset, oldWord);
+    recordInsertRevision(doc, offset, replacement);
     doc.isDirty = true;
     dialogs.spellSearchOffset = offset + replacement.size();
     refreshSpellingDialog(doc, dialogs);
@@ -1667,6 +1929,10 @@ inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
     options.caseSensitive = false;
     options.wholeWord = true;
     std::vector<TextReplacement> replacements;
+    // Pre-op offsets + old texts, for the records, which are
+    // written AFTER the op at post-op offsets (see
+    // findReplaceAll for the cumulative-shift math).
+    std::vector<std::pair<std::size_t, std::string>> recorded;
     for (const FindResult& match : doc.buffer.findAll(word, options)) {
         std::size_t startOffset = doc.buffer.offsetForPosition(match.start);
         std::size_t endOffset = doc.buffer.offsetForPosition(match.end);
@@ -1675,14 +1941,22 @@ inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
         for (std::size_t i = startOffset; i < endOffset; ++i) {
             oldText.push_back(doc.buffer.charAtOffset(i));
         }
-        recordDeleteRevision(doc, startOffset, oldText);
-        recordInsertRevision(doc, startOffset, replacement);
+        recorded.emplace_back(startOffset, oldText);
         replacements.push_back(
             {match.start, std::move(oldText), replacement});
     }
     if (replacements.empty()) return;
     // One undo step for the whole Change All.
     doc.buffer.replaceRanges(std::move(replacements));
+    std::ptrdiff_t shift = 0;
+    for (const auto& [preOffset, oldText] : recorded) {
+        const std::size_t postOffset = static_cast<std::size_t>(
+            static_cast<std::ptrdiff_t>(preOffset) + shift);
+        recordDeleteRevision(doc, postOffset, oldText);
+        recordInsertRevision(doc, postOffset, replacement);
+        shift += static_cast<std::ptrdiff_t>(replacement.size()) -
+                 static_cast<std::ptrdiff_t>(oldText.size());
+    }
     doc.isDirty = true;
     // Continue from the top: the replaced word is gone everywhere, so
     // the next refresh shows the first remaining error in doc order.
@@ -1783,9 +2057,11 @@ inline bool thesaurusReplace(DocumentComponent& doc, DialogState& dialogs) {
         current.push_back(doc.buffer.charAtOffset(offset + i));
     }
     if (current != dialogs.thesaurusCurrentWord) return false;
+    doc.buffer.replaceRange(offset, length, synonym);
+    // Records AFTER the op (post-op offsets): the op fires the
+    // edit-shift hook, which would clip just-recorded Deletes.
     recordDeleteRevision(doc, offset, current);
     recordInsertRevision(doc, offset, synonym);
-    doc.buffer.replaceRange(offset, length, synonym);
     doc.isDirty = true;
     dialogs.thesaurusCurrentWord = synonym;
     dialogs.thesaurusLookupStr = synonym;
@@ -1862,9 +2138,11 @@ inline bool tryAutoCorrect(DocumentComponent& doc, char delimiter) {
     auto corrected = doc.autoCorrect.correct(word, sentenceStart);
     if (!corrected) return false;
     std::string replacement = *corrected + delimiter;
+    buffer.replaceRange(start, word.size(), replacement);
+    // Records AFTER the op (post-op offsets): the op fires the
+    // edit-shift hook, which would clip just-recorded Deletes.
     recordDeleteRevision(doc, start, word);
     recordInsertRevision(doc, start, replacement);
-    buffer.replaceRange(start, word.size(), replacement);
     doc.isDirty = true;
     // An AutoCorrect fix is not a repeatable typed run: the "teh"
     // run must not survive to be re-inserted by F4.
@@ -2315,24 +2593,37 @@ inline bool repeatLastAction(DocumentComponent& doc) {
     ActionRecord record = doc.repeatRecord;
     if (record.kind == RepeatKind::InsertText ||
         record.kind == RepeatKind::Paste) {
-        std::size_t offset = doc.buffer.caretOffset();
-        std::size_t length = 0;
-        if (doc.buffer.hasSelection()) {
-            offset = doc.buffer.offsetForPosition(
-                doc.buffer.selectionStart());
-            length = doc.buffer.offsetForPosition(
-                         doc.buffer.selectionEnd()) -
-                     offset;
+        if (doc.trackChangesEnabled && doc.buffer.hasSelection()) {
+            // Selection replaced: mark it as deleted, insert the
+            // repeated text after the mark.
+            std::size_t insertAt = markSelectionForReplacement(doc);
+            doc.buffer.replaceRange(insertAt, 0, record.text);
+            recordInsertRevision(doc, insertAt, record.text);
+        } else {
+            std::size_t offset = doc.buffer.caretOffset();
+            std::size_t length = 0;
+            if (doc.buffer.hasSelection()) {
+                offset = doc.buffer.offsetForPosition(
+                    doc.buffer.selectionStart());
+                length = doc.buffer.offsetForPosition(
+                             doc.buffer.selectionEnd()) -
+                         offset;
+            }
+            std::string oldText;
+            oldText.reserve(length);
+            for (std::size_t i = 0; i < length; ++i) {
+                oldText.push_back(doc.buffer.charAtOffset(offset + i));
+            }
+            doc.buffer.clearSelection();
+            doc.buffer.replaceRange(offset, length, record.text);
+            // Records AFTER the op (post-op offsets): the op
+            // fires the edit-shift hook, which would clip
+            // just-recorded Deletes.
+            if (!oldText.empty()) {
+                recordDeleteRevision(doc, offset, oldText);
+            }
+            recordInsertRevision(doc, offset, record.text);
         }
-        std::string oldText;
-        oldText.reserve(length);
-        for (std::size_t i = 0; i < length; ++i) {
-            oldText.push_back(doc.buffer.charAtOffset(offset + i));
-        }
-        if (!oldText.empty()) recordDeleteRevision(doc, offset, oldText);
-        recordInsertRevision(doc, offset, record.text);
-        doc.buffer.clearSelection();
-        doc.buffer.replaceRange(offset, length, record.text);
     } else {
         repeat::apply(doc.buffer, record);
     }

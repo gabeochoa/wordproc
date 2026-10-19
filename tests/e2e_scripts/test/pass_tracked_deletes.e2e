@@ -1,0 +1,63 @@
+# Test: Tracked deletions IN PLACE (Batch 14)
+# With Track Changes on, Backspace marks the target range as a
+# Delete revision instead of removing it — the text stays in the
+# buffer (red + strikethrough, caret skips it); undo unmarks;
+# the Revisions dialog Accept really deletes the text; undo
+# restores it.
+menu_open Edit
+wait_frames 12
+menu_select "Track Changes"
+wait_frames 12
+validate track_changes_enabled=true
+validate status_text=Track Changes: On
+type "Hello world"
+wait_frames 12
+validate text=Hello world
+validate revision_count=11
+# Five Backspaces mark "world" (one merged Delete revision),
+# they do NOT remove it: the text stays, revision_count +1.
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+key BACKSPACE
+wait_frames 12
+validate text=Hello world
+validate revision_count=12
+screenshot delete_marked
+# Undo chain: undo unmarks (the text was never removed),
+# redo re-marks.
+key CTRL+Z
+wait_frames 12
+validate text=Hello world
+validate revision_count=11
+key CTRL+Y
+wait_frames 12
+validate text=Hello world
+validate revision_count=12
+# Revisions dialog: the Delete group is item 1 (item 0 is the
+# Insert group "Hello world"). Accept it: "world" is really
+# deleted now (one undo step).
+menu_open Tools
+wait_frames 12
+menu_select "Revisions..."
+wait_frames 12
+validate dialog_open=Revisions
+expect_text Deleted
+screenshot revisions_dialog
+click_ui revision_item_1
+click_ui revision_accept
+wait_frames 12
+validate revision_count=11
+validate text_length=6
+validate text_contains_Hello=true
+validate text_contains_world=false
+screenshot delete_accepted
+click_ui revision_close
+# Undo of the Accept restores the text (the Delete record stays
+# resolved) — the undo chain stays sane through marking,
+# accept, and undo.
+key CTRL+Z
+wait_frames 12
+validate text=Hello world
+validate text_length=11

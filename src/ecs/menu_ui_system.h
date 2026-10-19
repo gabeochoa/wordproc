@@ -5956,8 +5956,24 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                         })();
                                     
                                     if (matches) {
-                                        doc.buffer.deleteSelection();
-                                        doc.buffer.insertText(dialogs.replaceTerm);
+                                        if (doc.trackChangesEnabled) {
+                                            // The selection is marked
+                                            // as deleted; the
+                                            // replacement inserts
+                                            // after the mark, as a
+                                            // tracked insertion.
+                                            std::size_t insertAt =
+                                                cmd::markSelectionForReplacement(
+                                                    doc);
+                                            cmd::recordInsertRevision(
+                                                doc, insertAt,
+                                                dialogs.replaceTerm);
+                                            doc.buffer.insertText(
+                                                dialogs.replaceTerm);
+                                        } else {
+                                            doc.buffer.deleteSelection();
+                                            doc.buffer.insertText(dialogs.replaceTerm);
+                                        }
                                         doc.isDirty = true;
                                         flash("Replaced");
                                         
@@ -6019,10 +6035,11 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // row — see revisions::groupRevisions) with a right button
         // column. Accept / Reject act on the selected GROUP (all
         // its members, one undo step); Accept All / Reject All are
-        // wired to the existing Edit-menu commands. Deletes are
-        // records only (see revisions.h: no keep-visible deleted
-        // text in the buffer), so the dialog is where they are
-        // visible; inserts additionally render green-underlined in
+        // wired to the existing Edit-menu commands. Live Delete
+        // marks additionally render in the text (red +
+        // strikethrough) while their text still matches the
+        // buffer; record-only Deletes (replace-paths) live in
+        // this dialog only. Inserts render green-underlined in
         // the text while their text still matches the buffer.
         if (dialogs.showRevisionsDialog) {
             constexpr int REVISIONS_MODAL_ID = 50013;

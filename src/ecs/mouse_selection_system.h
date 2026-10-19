@@ -56,6 +56,19 @@ struct MouseSelectionSystem
     float lastClickX_ = 0.0f;
     float lastClickY_ = 0.0f;
 
+    // Click/drag landing inside a live Delete mark snaps to the
+    // nearer boundary (the mark is non-editable); boundary
+    // positions pass through unchanged.
+    CaretPosition snapClickPos(const DocumentComponent& doc,
+                               CaretPosition pos) const {
+        const std::size_t off = doc.buffer.offsetForPosition(pos);
+        const std::size_t snapped =
+            revisions::snapOffsetOutOfDeleteRanges(doc.buffer, doc.revisions,
+                                                   off);
+        if (snapped == off) return pos;
+        return doc.buffer.positionForOffset(snapped);
+    }
+
     CaretPosition hitTest(const TextBuffer& buffer, const LayoutComponent& layout,
                           const LayoutComponent::Rect& area, float mx, float my,
                           int scrollOffset, int fontSize, int lineHeight,
@@ -606,12 +619,17 @@ struct MouseSelectionSystem
                     doc.buffer.setSelectionAnchor(doc.buffer.caret());
                 }
                 dragAnchor_ = doc.buffer.selectionStart();
+                // A click inside a live Delete mark lands on the
+                // nearer boundary (the mark is non-editable); a
+                // word / paragraph click above keeps its range.
+                pos = snapClickPos(doc, pos);
                 doc.buffer.setCaret(pos);
                 doc.buffer.updateSelectionToCaret();
                 dragging_ = true;
                 autoScrolledThisDrag_ = false;
             } else {
                 doc.buffer.clearSelection();
+                pos = snapClickPos(doc, pos);
                 doc.buffer.setCaret(pos);
                 dragAnchor_ = pos;
                 dragging_ = true;
@@ -709,6 +727,10 @@ struct MouseSelectionSystem
                                             lineHeight, columnCount,
                                             columnSpacingPx,
                                             columnsLinesPerPage);
+                // A drag end inside a live Delete mark lands on
+                // the nearer boundary (the mark is non-editable);
+                // the selection itself can still span the mark.
+                pos = snapClickPos(doc, pos);
                 if (!doc.buffer.hasSelection()) {
                     doc.buffer.setCaret(dragAnchor_);
                     doc.buffer.setSelectionAnchor(dragAnchor_);
@@ -742,6 +764,7 @@ struct MouseSelectionSystem
                                         scroll.offset, fontSize, lineHeight,
                                         columnCount, columnSpacingPx,
                                         columnsLinesPerPage);
+            pos = snapClickPos(doc, pos);
             // First drag move after a plain click: open the selection at
             // the stored anchor. Shift-click already opened it.
             if (!doc.buffer.hasSelection()) {

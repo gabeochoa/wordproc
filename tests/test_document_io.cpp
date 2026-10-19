@@ -218,6 +218,102 @@ TEST_CASE("saveDocumentEx and loadDocumentEx roundtrip with full settings", "[do
         REQUIRE_FALSE(loaded.effectiveStyleAt(6).bold);
     }
 
+    SECTION("Track Changes revisions round-trip (Batch 14)") {
+        TextBuffer original;
+        original.setText("Hello world");
+        DocumentSettings settings;
+        std::vector<Revision> revs;
+        Revision del;
+        del.type = RevisionType::Delete;
+        del.startOffset = 6;
+        del.text = "world";
+        revs.push_back(del);
+        Revision ins;
+        ins.type = RevisionType::Insert;
+        ins.startOffset = 0;
+        ins.text = "Hello";
+        revs.push_back(ins);
+        REQUIRE(saveDocumentEx(original, settings, path, &revs).success);
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        std::vector<Revision> loadedRevs;
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path,
+                               &loadedRevs).success);
+        REQUIRE(loaded.getText() == "Hello world");
+        REQUIRE(loadedRevs.size() == 2);
+        REQUIRE(loadedRevs[0].type == RevisionType::Delete);
+        REQUIRE(loadedRevs[0].startOffset == 6);
+        REQUIRE(loadedRevs[0].text == "world");
+        REQUIRE(loadedRevs[1].type == RevisionType::Insert);
+        REQUIRE(loadedRevs[1].startOffset == 0);
+        REQUIRE(loadedRevs[1].text == "Hello");
+    }
+    SECTION("Track Changes revisions round-trip through WithTables") {
+        TextBuffer original;
+        original.setText("Hello world");
+        DocumentSettings settings;
+        TableList tables;
+        std::vector<Revision> revs;
+        Revision del;
+        del.type = RevisionType::Delete;
+        del.startOffset = 6;
+        del.text = "world";
+        revs.push_back(del);
+        REQUIRE(saveDocumentWithTables(original, settings, tables, path,
+                                       nullptr, nullptr, &revs).success);
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        TableList loadedTables;
+        std::vector<Revision> loadedRevs;
+        REQUIRE(loadDocumentWithTables(loaded, loadedSettings, loadedTables,
+                                       path, nullptr, nullptr,
+                                       &loadedRevs).success);
+        REQUIRE(loaded.getText() == "Hello world");
+        REQUIRE(loadedRevs.size() == 1);
+        REQUIRE(loadedRevs[0].type == RevisionType::Delete);
+        REQUIRE(loadedRevs[0].text == "world");
+    }
+    SECTION("a file without revisions loads with no marks (old files)") {
+        {
+            std::ofstream ofs(path);
+            ofs << R"({"version":1,"text":"Old doc","style":{"bold":false,"italic":false,"font":"Default","fontSize":16}})";
+        }
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        std::vector<Revision> loadedRevs{Revision{RevisionType::Delete, 0, "stale", "Gabe", 0}};
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path,
+                               &loadedRevs).success);
+        REQUIRE(loaded.getText() == "Old doc");
+        REQUIRE(loadedRevs.empty());
+    }
+    SECTION("a stale saved revision is dropped on load") {
+        // Hand-edited file: the Delete entry's text does not
+        // match the buffer at its offset — never render it at
+        // a wrong offset.
+        {
+            std::ofstream ofs(path);
+            ofs << R"({"version":1,"text":"Hello world","style":{"bold":false,"italic":false,"font":"Default","fontSize":16},"revisions":[{"type":"delete","start":6,"text":"WRONG","author":"Gabe","timestamp":0},{"type":"delete","start":6,"text":"world","author":"Gabe","timestamp":0}]})";
+        }
+        TextBuffer loaded;
+        DocumentSettings loadedSettings;
+        std::vector<Revision> loadedRevs;
+        REQUIRE(loadDocumentEx(loaded, loadedSettings, path,
+                               &loadedRevs).success);
+        REQUIRE(loadedRevs.size() == 1);
+        REQUIRE(loadedRevs[0].text == "world");
+    }
+    SECTION("no revisions means no revisions key in the file") {
+        TextBuffer original;
+        original.setText("plain");
+        DocumentSettings settings;
+        std::vector<Revision> revs;
+        REQUIRE(saveDocumentEx(original, settings, path, &revs).success);
+        std::ifstream ifs(path);
+        std::string content((std::istreambuf_iterator<char>(ifs)),
+                            std::istreambuf_iterator<char>());
+        REQUIRE(content.find("\"revisions\"") == std::string::npos);
+    }
+
     SECTION("default page settings are used when loading old document format") {
         // Simulate old format without pageLayout field
         {

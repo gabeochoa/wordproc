@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iosfwd>
 #include <memory>
 #include <string>
@@ -325,6 +326,58 @@ class ReplaceRangesCommand : public afterhours::Command<TextBuffer> {
     std::vector<TextReplacement> replacements_;
 };
 
+// One undo step for a revision-list change already applied
+// (marking a range as a tracked deletion, or any future
+// revision-list edit): stores before/after snapshots of an
+// EXTERNAL revision vector — the live list stays in
+// DocumentComponent::revisions (the single source); this only
+// restores it on undo/redo, like SetParagraphFormatCommand
+// restores line formats. The vector pointer must outlive the
+// buffer's history (DocumentComponent owns both; its buffer is
+// destroyed with it, and destroying a command never dereferences
+// the pointer). See TextBuffer::commitRevisionList.
+class RevisionListCommand : public afterhours::Command<TextBuffer> {
+   public:
+    RevisionListCommand(std::vector<Revision>* revs,
+                        std::vector<Revision> before,
+                        std::vector<Revision> after)
+        : revs_(revs),
+          before_(std::move(before)),
+          after_(std::move(after)) {}
+    void execute(TextBuffer& /*buffer*/) override {
+        if (revs_ != nullptr) *revs_ = after_;
+    }
+    void undo(TextBuffer& /*buffer*/) override {
+        if (revs_ != nullptr) *revs_ = before_;
+    }
+    std::string description() const override {
+        return "Track Changes mark";
+    }
+    // One undo step per delete RUN: consecutive markings of the
+    // same list merge into one history entry (CommandHistory
+    // calls this on push). Adjacency is by list state: the new
+    // marking must start exactly where this one ended
+    // (before_ == after_). A typing run in between changes the
+    // list (its Insert records), so the runs stay separate —
+    // even if the typing was undone, because undoing typing
+    // does not remove its Insert records.
+    bool can_merge_with(const Command& other) const override {
+        const auto* o =
+            dynamic_cast<const RevisionListCommand*>(&other);
+        return o != nullptr && o->revs_ == revs_ &&
+               o->before_ == after_;
+    }
+    void merge_with(Command& other) override {
+        const auto& o = static_cast<const RevisionListCommand&>(other);
+        after_ = o.after_;
+    }
+
+   private:
+    std::vector<Revision>* revs_ = nullptr;
+    std::vector<Revision> before_;
+    std::vector<Revision> after_;
+};
+
 // TextStyle is now defined in document_settings.h
 
 // Line metadata for SoA layout - stores offset and length instead of copying
@@ -383,6 +436,54 @@ struct TextStats {
 class TextBuffer {
    public:
     TextBuffer();
+    // No copies (the undo history owns unique_ptrs). Moves keep
+    // the destination's edit-shift hook (see operator=): the hook
+    // belongs to the owning DocumentComponent's revision list,
+    // not to the text being moved in — the startup move-assign
+    // of the preloaded buffer must not drop it. Declared here
+    // because a user-declared move-assign suppresses the
+    // implicit move constructor.
+    TextBuffer(const TextBuffer&) = delete;
+    TextBuffer& operator=(const TextBuffer&) = delete;
+    TextBuffer(TextBuffer&&) = default;
+    TextBuffer& operator=(TextBuffer&& other) noexcept;
+
+    // Record one undo step for a revision-list change already
+    // applied (the caller applied `after` to `*revs`; this only
+    // pushes the before/after snapshots — the commit* pattern,
+    // same as commitParagraphIndents). No-op when before ==
+    // after, so re-marking an already-marked range adds no undo
+    // step. Bumps the version: a mark changes the rendering
+    // (red strikethrough appears / disappears), so the render
+    // cache must rebuild, and a bumped version marks older
+    // table-undo entries stale (the mark is newer than them).
+    void commitRevisionList(std::vector<Revision>* revs,
+                            std::vector<Revision> before,
+                            std::vector<Revision> after);
+
+    // Edit-shift hook: fired with (pos, delta) on EVERY text
+    // edit (insert of delta chars at pos, delta > 0; delete of
+    // -delta chars at pos, delta < 0), BEFORE the edit is
+    // applied — from noteEditShift, called at the same sites
+    // that shift CharStyleSpans, including the low-level
+    // insertCharAt / deleteCharAt that undo/redo go through.
+    // Pre-edit firing matters: the hook re-anchors revision
+    // marks (revisions::shiftForEdit), whose live-vs-record-
+    // only test reads the PRE-edit buffer (a mark's text still
+    // matches there; after a deletion it would not). The
+    // owning DocumentComponent installs the hook; a standalone
+    // buffer has none (tests install one via
+    // revisions::installShiftHook). The hook must not mutate
+    // the buffer (no recursion: it only edits the revision
+    // list). setEditShiftHook(nullptr) clears it.
+    using EditShiftHook =
+        std::function<void(std::size_t pos, std::ptrdiff_t delta)>;
+    void setEditShiftHook(EditShiftHook hook) {
+        editShiftHook_ = std::move(hook);
+    }
+    bool hasEditShiftHook() const {
+        return static_cast<bool>(editShiftHook_);
+    }
 
     // Read-only access to lines (returns span count for iteration)
     std::size_t lineCount() const;
@@ -931,6 +1032,13 @@ class TextBuffer {
     // of a delete of a span's FIRST char re-inserts at the span's
     // start, so that char lands just outside the span.
     void adjustCharStyleSpans(std::size_t pos, std::ptrdiff_t delta);
+    // Fire the edit-shift hook for a text edit about to happen
+    // at (pos, delta). Called BEFORE the chars_ mutation at
+    // every site that calls adjustCharStyleSpans after it (see
+    // text_buffer.cpp) — the hook sees the pre-edit buffer.
+    void noteEditShift(std::size_t pos, std::ptrdiff_t delta) {
+        if (delta != 0 && editShiftHook_) editShiftHook_(pos, delta);
+    }
     // Normalize charStyleSpans_: sorted, non-overlapping, adjacent
     // equal-style spans merged, empties dropped.
     void normalizeCharStyleSpans();
@@ -975,4 +1083,8 @@ class TextBuffer {
     std::uint64_t version_ = 0;  // Increments on every modification
     mutable afterhours::CommandHistory<TextBuffer> history_;  // Undo/redo
     bool recordingHistory_ = true;  // Whether to record commands for undo
+    // Edit-shift hook (see setEditShiftHook): re-anchors the
+    // owner's revision marks on every text edit. Preserved by
+    // move-assignment (it belongs to the owner, not the text).
+    EditShiftHook editShiftHook_;
 };

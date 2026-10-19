@@ -9,6 +9,7 @@
 #include "../editor/autocorrect.h"
 #include "../editor/chips.h"
 #include "../editor/document_settings.h"
+#include "../editor/revisions.h"
 #include "../editor/version_history.h"
 #include "../editor/font_dialog.h"
 #include "../editor/format_painter.h"
@@ -57,6 +58,20 @@ struct ScrollComponent : public afterhours::BaseComponent {
 
 // Component for document state
 struct DocumentComponent : public afterhours::BaseComponent {
+    DocumentComponent() {
+        // Revision marks live here (`revisions`), but buffer edits
+        // happen inside TextBuffer: the buffer fires this hook on
+        // every text edit so marks shift exactly like
+        // CharStyleSpans (revisions::shiftForEdit). The hook
+        // survives the startup move-assign of the preloaded buffer
+        // (TextBuffer::operator= preserves the destination's
+        // hook). The component is heap-owned by the entity, never
+        // moved, so the `this` capture stays valid.
+        buffer.setEditShiftHook(
+            [this](std::size_t pos, std::ptrdiff_t delta) {
+                revisions::shiftForEdit(buffer, revisions, pos, delta);
+            });
+    }
     TextBuffer buffer;
     // Header / footer bodies (Batch 9): real TextBuffers, edited in
     // the header/footer mode (LayoutComponent::headerEditTarget)

@@ -19,8 +19,6 @@
 
 namespace ecs {
 
-using cmd::recordInsertRevision;
-using cmd::recordDeleteRevision;
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
@@ -345,35 +343,16 @@ struct TextInputSystem
                               !dialogs.showChipPopup &&
                               cmd::eraseChipAtCaret(doc);
             if (!chipErased) {
-                if (doc.buffer.hasSelection()) {
-                    CaretPosition start = doc.buffer.selectionStart();
-                    std::string selected = doc.buffer.getSelectedText();
-                    recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
-                } else {
-                    std::size_t offset = doc.buffer.caretOffset();
-                    if (offset > 0) {
-                        char deleted = doc.buffer.charAtOffset(offset - 1);
-                        recordDeleteRevision(doc, offset - 1, std::string(1, deleted));
-                    }
-                }
-                doc.buffer.backspace();
+                // cmd::backspace: tracking on marks instead of
+                // removing (one undo step); tracking off records
+                // + really backspaces, as before.
+                cmd::backspace(doc);
             }
             doc.isDirty = true;
         }
         if (actionMap_.isActionPressedRepeat(Action::Delete)) {
             repeat::clear(doc.repeatRecord);
-            if (doc.buffer.hasSelection()) {
-                CaretPosition start = doc.buffer.selectionStart();
-                std::string selected = doc.buffer.getSelectedText();
-                recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
-            } else {
-                std::size_t offset = doc.buffer.caretOffset();
-                if (offset < doc.buffer.textSize()) {
-                    char deleted = doc.buffer.charAtOffset(offset);
-                    recordDeleteRevision(doc, offset, std::string(1, deleted));
-                }
-            }
-            doc.buffer.del();
+            cmd::deleteForward(doc);
             doc.isDirty = true;
         }
 
@@ -969,7 +948,7 @@ struct NavigationSystem
             if (otherNav) dialogs.showChipPopup = false;
         }
 
-        auto navigateWithSelection = [&](auto moveFunc) {
+        auto navigateWithSelection = [&](auto moveFunc, bool forward) {
             CaretPosition before = doc.buffer.caret();
             if (shift_down && !doc.buffer.hasSelection()) {
                 doc.buffer.setSelectionAnchor(before);
@@ -978,6 +957,18 @@ struct NavigationSystem
                 doc.buffer.clearSelection();
             }
             moveFunc();
+            // Deleted text is non-editable: a move landing
+            // inside a live Delete mark skips over it — forward
+            // past the mark, backward to before it (the
+            // selection end skips the same way, so a
+            // shift-selection can still span a mark).
+            std::size_t off = doc.buffer.caretOffset();
+            std::size_t skipped = revisions::nextUnmarkedCaretPos(
+                doc.buffer, doc.revisions, off, forward);
+            if (skipped != off) {
+                doc.buffer.setCaret(
+                    doc.buffer.positionForOffset(skipped));
+            }
             if (shift_down) {
                 doc.buffer.updateSelectionToCaret();
             }
@@ -987,32 +978,35 @@ struct NavigationSystem
         // Left/Right with Ctrl for word movement
         // Use isActionPressedRepeat for held arrow keys to keep moving
         if (actionMap_.isActionPressedRepeat(Action::MoveWordLeft)) {
-            navigateWithSelection([&]() { doc.buffer.moveWordLeft(); });
+            navigateWithSelection([&]() { doc.buffer.moveWordLeft(); }, false);
         } else if (actionMap_.isActionPressedRepeat(Action::MoveLeft)) {
-            navigateWithSelection([&]() { doc.buffer.moveLeft(); });
+            navigateWithSelection([&]() { doc.buffer.moveLeft(); }, false);
         }
         if (actionMap_.isActionPressedRepeat(Action::MoveWordRight)) {
-            navigateWithSelection([&]() { doc.buffer.moveWordRight(); });
+            navigateWithSelection([&]() { doc.buffer.moveWordRight(); }, true);
         } else if (actionMap_.isActionPressedRepeat(Action::MoveRight)) {
-            navigateWithSelection([&]() { doc.buffer.moveRight(); });
+            navigateWithSelection([&]() { doc.buffer.moveRight(); }, true);
         }
         if (actionMap_.isActionPressedRepeat(Action::MoveUp)) {
-            navigateWithSelection([&]() { doc.buffer.moveUp(); });
+            navigateWithSelection([&]() { doc.buffer.moveUp(); }, false);
         }
         if (actionMap_.isActionPressedRepeat(Action::MoveDown)) {
-            navigateWithSelection([&]() { doc.buffer.moveDown(); });
+            navigateWithSelection([&]() { doc.buffer.moveDown(); }, true);
         }
 
         // Home/End with Ctrl for document start/end
         if (actionMap_.isActionPressedRepeat(Action::MoveDocumentStart)) {
-            navigateWithSelection([&]() { doc.buffer.moveToDocumentStart(); });
+            navigateWithSelection(
+                [&]() { doc.buffer.moveToDocumentStart(); }, false);
         } else if (actionMap_.isActionPressedRepeat(Action::MoveLineStart)) {
-            navigateWithSelection([&]() { doc.buffer.moveToLineStart(); });
+            navigateWithSelection(
+                [&]() { doc.buffer.moveToLineStart(); }, false);
         }
         if (actionMap_.isActionPressedRepeat(Action::MoveDocumentEnd)) {
-            navigateWithSelection([&]() { doc.buffer.moveToDocumentEnd(); });
+            navigateWithSelection(
+                [&]() { doc.buffer.moveToDocumentEnd(); }, true);
         } else if (actionMap_.isActionPressedRepeat(Action::MoveLineEnd)) {
-            navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); });
+            navigateWithSelection([&]() { doc.buffer.moveToLineEnd(); }, true);
         }
 
         auto clampSecondary = [&]() {
@@ -1030,7 +1024,8 @@ struct NavigationSystem
                 clampSecondary();
             } else {
                 navigateWithSelection(
-                    [&]() { doc.buffer.movePageUp(LINES_PER_PAGE); });
+                    [&]() { doc.buffer.movePageUp(LINES_PER_PAGE); },
+                    false);
             }
         }
         if (actionMap_.isActionPressed(Action::PageDown)) {
@@ -1039,7 +1034,8 @@ struct NavigationSystem
                 clampSecondary();
             } else {
                 navigateWithSelection(
-                    [&]() { doc.buffer.movePageDown(LINES_PER_PAGE); });
+                    [&]() { doc.buffer.movePageDown(LINES_PER_PAGE); },
+                    true);
             }
         }
 

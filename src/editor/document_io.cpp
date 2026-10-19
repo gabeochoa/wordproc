@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "../util/logging.h"
+#include "revisions.h"
 #include "table.h"
 
 // Helper to convert PageMode to string
@@ -292,6 +293,75 @@ static Table deserializeTable(const nlohmann::json &j) {
     return table;
 }
 
+// --- Track Changes revisions (Batch 14) ---
+// Written only when revisions exist, so plain documents keep the
+// old file shape byte-for-byte — like charStyleSpans. Each entry
+// is {type: "insert"/"delete", start, text, author, timestamp};
+// a Delete entry's text is the buffer substring at [start,
+// start + text.size()), i.e. the live marked range. On load an
+// entry is kept only when its text still matches the buffer at
+// its offset (a hand-edited file's stale mark is dropped, never
+// rendered at a wrong offset); a file without the key loads
+// with no marks, like old files.
+static void writeRevisions(nlohmann::json &doc,
+                           const std::vector<Revision> *revisions) {
+    if (revisions == nullptr || revisions->empty()) return;
+    nlohmann::json arr = nlohmann::json::array();
+    for (const auto &rev : *revisions) {
+        nlohmann::json obj;
+        obj["type"] =
+            rev.type == RevisionType::Insert ? "insert" : "delete";
+        obj["start"] = rev.startOffset;
+        obj["text"] = rev.text;
+        obj["author"] = rev.author;
+        obj["timestamp"] =
+            static_cast<long long>(rev.timestamp);
+        arr.push_back(std::move(obj));
+    }
+    doc["revisions"] = std::move(arr);
+}
+
+static void readRevisions(const nlohmann::json &doc,
+                          const TextBuffer &buffer,
+                          std::vector<Revision> *revisionsOut) {
+    if (revisionsOut == nullptr) return;
+    revisionsOut->clear();
+    if (!doc.contains("revisions")) return;
+    const nlohmann::json &arr = doc.at("revisions");
+    if (!arr.is_array()) return;
+    for (const auto &entry : arr) {
+        if (!entry.is_object() || !entry.contains("type") ||
+            !entry.contains("start") || !entry.contains("text")) {
+            continue;
+        }
+        Revision rev;
+        std::string type = entry.at("type").get<std::string>();
+        if (type == "insert") {
+            rev.type = RevisionType::Insert;
+        } else if (type == "delete") {
+            rev.type = RevisionType::Delete;
+        } else {
+            continue;
+        }
+        rev.startOffset = entry.at("start").get<std::size_t>();
+        rev.text = entry.at("text").get<std::string>();
+        if (entry.contains("author")) {
+            rev.author = entry.at("author").get<std::string>();
+        }
+        if (entry.contains("timestamp")) {
+            rev.timestamp = static_cast<std::time_t>(
+                entry.at("timestamp").get<long long>());
+        }
+        if (rev.text.empty()) continue;
+        // Keep only entries that still match the loaded text.
+        if (!revisions::bufferMatchesAt(buffer, rev.startOffset,
+                                        rev.text)) {
+            continue;
+        }
+        revisionsOut->push_back(std::move(rev));
+    }
+}
+
 // Internal: read entire file into string (binary, single allocation)
 static std::string readFileRaw(const std::string &path) {
     std::ifstream ifs(path, std::ios::binary | std::ios::ate);
@@ -324,7 +394,8 @@ DocumentResult saveTextFileEx(const TextBuffer &buffer,
 
 DocumentResult saveDocumentEx(const TextBuffer &buffer,
                               const DocumentSettings &settings,
-                              const std::string &path) {
+                              const std::string &path,
+                              const std::vector<Revision> *revisions) {
     DocumentResult result;
 
     std::filesystem::path output_path(path);
@@ -420,6 +491,10 @@ DocumentResult saveDocumentEx(const TextBuffer &buffer,
         doc["charStyleSpans"] = std::move(spanArr);
     }
 
+    // Track Changes revisions (Batch 14): written only when
+    // revisions exist, so plain documents keep the old shape.
+    writeRevisions(doc, revisions);
+
     // Style settings (document-specific, saved with file)
     doc["style"] = {
         {"bold", style.bold},
@@ -511,7 +586,8 @@ DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path) {
 }
 
 DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
-                              const std::string &path) {
+                              const std::string &path,
+                              std::vector<Revision> *revisionsOut) {
     SCOPED_TIMER("loadDocumentEx total");
     DocumentResult result;
 
@@ -528,6 +604,7 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
         }
         // Empty file is valid
         buffer.setText("");
+        if (revisionsOut != nullptr) revisionsOut->clear();
         result.success = true;
         return result;
     }
@@ -539,6 +616,8 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
     if (extension == ".txt" || extension == ".md") {
         SCOPED_TIMER("  setText (plain text)");
         buffer.setText(raw);
+        // Plain text carries no marks.
+        if (revisionsOut != nullptr) revisionsOut->clear();
         result.success = true;
         result.usedFallback = true;
         return result;
@@ -733,6 +812,12 @@ DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
             }
         }
 
+        // Load Track Changes revisions (written by
+        // saveDocumentEx when revisions exist; absent in old
+        // files -> no marks). Entries are validated against
+        // the loaded text; stale ones are dropped.
+        readRevisions(doc, buffer, revisionsOut);
+
         // Load text options
         if (doc.contains("options")) {
             const nlohmann::json &opts = doc.at("options");
@@ -873,7 +958,8 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                                       const TableList &tables,
                                       const std::string &path,
                                       const TextBuffer *headerBuffer,
-                                      const TextBuffer *footerBuffer) {
+                                      const TextBuffer *footerBuffer,
+                                      const std::vector<Revision> *revisions) {
     DocumentResult result;
 
     std::filesystem::path output_path(path);
@@ -1002,6 +1088,8 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
             {"end", buffer.tocEndOffset()},
         };
     }
+    // Track Changes revisions (Batch 14, same as saveDocumentEx).
+    writeRevisions(doc, revisions);
     if (headerBuffer != nullptr && !headerBuffer->getText().empty()) {
         doc["headerText"] = headerBuffer->getText();
     }
@@ -1036,7 +1124,8 @@ DocumentResult loadDocumentWithTables(TextBuffer &buffer,
                                       TableList &tables,
                                       const std::string &path,
                                       TextBuffer *headerBuffer,
-                                      TextBuffer *footerBuffer) {
+                                      TextBuffer *footerBuffer,
+                                      std::vector<Revision> *revisionsOut) {
     // Read file once, reuse the raw string for both document and tables
     std::string raw = readFileRaw(path);
     if (raw.empty()) {
@@ -1046,7 +1135,9 @@ DocumentResult loadDocumentWithTables(TextBuffer &buffer,
     }
 
     // Load the basic document using the raw string we already have
-    DocumentResult result = loadDocumentEx(buffer, settings, path);
+    // (revisions ride along: validated against the loaded text).
+    DocumentResult result =
+        loadDocumentEx(buffer, settings, path, revisionsOut);
     
     if (!result.success && !result.usedFallback) {
         return result;

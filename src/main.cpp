@@ -60,9 +60,11 @@ struct PreloadedDocument {
     // Tables load with the document (Batch 8): the old
     // buffer-only preload silently dropped them on startup.
     // Header/footer text rides the same path (Batch 9).
+    // Track Changes marks ride the same path (Batch 14).
     TableList tables;
     TextBuffer headerBuffer;
     TextBuffer footerBuffer;
+    std::vector<Revision> revisions;
     bool loaded = false;
     std::string error;
 };
@@ -173,6 +175,7 @@ static void app_init() {
             docComp.tables = std::move(preloaded.tables);
             docComp.headerBuffer = std::move(preloaded.headerBuffer);
             docComp.footerBuffer = std::move(preloaded.footerBuffer);
+            docComp.revisions = std::move(preloaded.revisions);
         } else if (!preloaded.error.empty()) {
             LOG_WARNING("Failed to load file: %s", preloaded.error.c_str());
         }
@@ -184,7 +187,8 @@ static void app_init() {
                                              docComp.tables,
                                              app_state::loadFile,
                                              &docComp.headerBuffer,
-                                             &docComp.footerBuffer);
+                                             &docComp.footerBuffer,
+                                             &docComp.revisions);
         if (!result.success) {
             LOG_WARNING("Failed to load file: %s", result.error.c_str());
         }
@@ -709,7 +713,8 @@ int main(int argc, char* argv[]) {
                                                  data.docSettings,
                                                  data.tables, filePath,
                                                  &data.headerBuffer,
-                                                 &data.footerBuffer);
+                                                 &data.footerBuffer,
+                                                 &data.revisions);
             data.loaded = result.success;
             data.error = result.error;
             return data;

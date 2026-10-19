@@ -355,6 +355,18 @@ struct Revision {
     std::string text;
     std::string author = "Gabe";
     std::time_t timestamp = 0;
+    // Equality for revision-list snapshots (see
+    // TextBuffer::commitRevisionList): a marking that changes
+    // nothing — e.g. re-marking an already-marked range —
+    // commits no undo step.
+    bool operator==(const Revision& other) const {
+        return type == other.type &&
+               startOffset == other.startOffset && text == other.text &&
+               author == other.author && timestamp == other.timestamp;
+    }
+    bool operator!=(const Revision& other) const {
+        return !(*this == other);
+    }
 };
 
 // Page layout mode

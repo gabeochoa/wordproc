@@ -1,10 +1,11 @@
 # Test: Suggesting mode + Tools > Revisions... dialog
 # With Track Changes on, typing records Insert revisions and
-# Backspace records a Delete revision. The Revisions dialog lists
-# GROUPED rows: the typed run "abc" is one Insert row and the
-# backspaced "c" is one Delete row. Accept/Reject act on the
-# whole group (one undo step); Edit > Reject All Changes rejects
-# the rest.
+# Backspace MARKS a Delete revision in place: the text stays in
+# the buffer (red + strikethrough), the caret lands at the mark
+# start. The Revisions dialog lists GROUPED rows: the typed run
+# "abc" is one Insert row and the marked "c" is one Delete row.
+# Accept/Reject act on the whole group (one undo step); Edit >
+# Reject All Changes rejects the rest.
 #
 # Regression: pre-grouping, item_0 was Insert "a" and item_2 was
 # the Delete; this script clicks the GROUP rows (item_1 = Delete
@@ -21,7 +22,8 @@ wait_frames 12
 key BACKSPACE
 wait_frames 12
 validate revision_count=4
-validate text=ab
+# The backspaced "c" is MARKED, not removed: the text stays.
+validate text=abc
 
 menu_open Tools
 wait_frames 12
@@ -34,9 +36,10 @@ expect_text "Ln 1"
 
 screenshot revisions_dialog
 
-# Reject the Delete GROUP (item_1): the deleted "c" comes back.
-# The three Insert records stay; count drops by one GROUP (4 raw
-# records -> 3), because the Delete group has one member.
+# Reject the Delete GROUP (item_1): the mark is lifted, the
+# text stays plain. The three Insert records stay; count drops
+# by one GROUP (4 raw records -> 3), because the Delete group
+# has one member.
 click_ui revision_item_1
 wait_frames 12
 click_ui revision_reject
@@ -60,11 +63,13 @@ wait_frames 12
 screenshot revisions
 
 # Reject All rejects a fresh grouped run: type "d" (one Insert
-# group), then Reject All removes it
+# group), then Reject All removes it. The caret sits at the
+# mark start (offset 2, where the Backspace left it), so the
+# "d" inserts there: "abdc", not "abcd".
 type "d"
 wait_frames 12
 validate revision_count=1
-validate text=abcd
+validate text=abdc
 menu_open Edit
 wait_frames 12
 menu_select "Reject All Changes"

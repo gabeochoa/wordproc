@@ -25,12 +25,19 @@ DocumentResult saveTextFileEx(const TextBuffer &buffer,
                               const std::string &path);
 DocumentResult loadTextFileEx(TextBuffer &buffer, const std::string &path);
 
-// Full document save/load with all settings
+// Full document save/load with all settings. The optional
+// revisions pointer carries Track Changes marks (Batch 14): on
+// save, written as the "revisions" array when non-empty (a null
+// pointer means "no revisions on this path", old file shape);
+// on load, replaced with the file's validated revisions (absent
+// in old files -> empty).
 DocumentResult saveDocumentEx(const TextBuffer &buffer,
                               const DocumentSettings &settings,
-                              const std::string &path);
+                              const std::string &path,
+                              const std::vector<Revision> *revisions = nullptr);
 DocumentResult loadDocumentEx(TextBuffer &buffer, DocumentSettings &settings,
-                              const std::string &path);
+                              const std::string &path,
+                              std::vector<Revision> *revisionsOut = nullptr);
 
 // Type alias for table storage (line number -> table)
 using TableList = std::vector<std::pair<std::size_t, Table>>;
@@ -47,12 +54,14 @@ DocumentResult saveDocumentWithTables(const TextBuffer &buffer,
                                       const TableList &tables,
                                       const std::string &path,
                                       const TextBuffer *headerBuffer = nullptr,
-                                      const TextBuffer *footerBuffer = nullptr);
+                                      const TextBuffer *footerBuffer = nullptr,
+                                      const std::vector<Revision> *revisions = nullptr);
 DocumentResult loadDocumentWithTables(TextBuffer &buffer,
                                       DocumentSettings &settings,
                                       TableList &tables,
                                       const std::string &path,
                                       TextBuffer *headerBuffer = nullptr,
-                                      TextBuffer *footerBuffer = nullptr);
+                                      TextBuffer *footerBuffer = nullptr,
+                                      std::vector<Revision> *revisionsOut = nullptr);
 
 #endif  // WORDPROC_EDITOR_DOCUMENT_IO_H

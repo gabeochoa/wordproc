@@ -664,11 +664,12 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              // ranges highlight pale yellow; the cards
                              // themselves are UI in MenuUISystem.
                              const std::vector<Comment>* comments = nullptr,
-                             // Tracked inserts (suggesting mode): green
-                             // underline while the recorded text still
-                             // matches the buffer at the offset.
-                             // Deletes have no in-text render (see
-                             // revisions.h); they live in the dialog.
+                             // Tracked revisions (suggesting mode):
+                             // inserts render green + underlined,
+                             // live Delete marks render red +
+                             // strikethrough, while the recorded
+                             // text still matches the buffer at the
+                             // offset (see revisions.h).
                              const std::vector<Revision>* revisions = nullptr,
                              // @ smart chips: raised BUTTON_FACE box
                              // behind the label while the buffer still
@@ -692,16 +693,23 @@ inline void renderTextBuffer(const TextBuffer& buffer,
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
 
-    // Verified tracked inserts, computed once per render (not per
-    // line): only revisions whose text still matches the buffer at
-    // their offset render; a stale revision draws nothing rather
-    // than colouring the wrong text. Classification lives in
-    // revisions::verifiedInsertRanges / offsetInInsertRanges so
-    // unit tests pin it without rendering.
+    // Verified tracked inserts / deletes, computed once per
+    // render (not per line): only revisions whose text still
+    // matches the buffer at their offset render; a stale
+    // revision draws nothing rather than colouring the wrong
+    // text. Classification lives in
+    // revisions::verifiedInsertRanges / verifiedDeleteRanges /
+    // offsetInInsertRanges / offsetInDeleteRanges so unit tests
+    // pin it without rendering.
     const std::vector<std::pair<std::size_t, std::size_t>>
         verifiedInserts =
             revisions
                 ? revisions::verifiedInsertRanges(buffer, *revisions)
+                : std::vector<std::pair<std::size_t, std::size_t>>{};
+    const std::vector<std::pair<std::size_t, std::size_t>>
+        verifiedDeletes =
+            revisions
+                ? revisions::verifiedDeleteRanges(buffer, *revisions)
                 : std::vector<std::pair<std::size_t, std::size_t>>{};
 
     // Verified chips, same once-per-render pattern: only chips
@@ -1578,11 +1586,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     const bool segInsert =
                         revisions::offsetInInsertRanges(
                             displayOffsets[segStart], verifiedInserts);
+                    const bool segDelete =
+                        revisions::offsetInDeleteRanges(
+                            displayOffsets[segStart], verifiedDeletes);
                     std::size_t segEnd = segStart + 1;
                     while (segEnd < segCount &&
                            revisions::offsetInInsertRanges(
                                displayOffsets[segEnd], verifiedInserts) ==
                                    segInsert &&
+                           revisions::offsetInDeleteRanges(
+                               displayOffsets[segEnd], verifiedDeletes) ==
+                                   segDelete &&
                            buffer.effectiveStyleAt(displayOffsets[segEnd]) ==
                                segStyle) {
                         ++segEnd;
@@ -1625,10 +1639,15 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         static_cast<unsigned char>(segTextColor.g / 2 + 64),
                         static_cast<unsigned char>(segTextColor.b / 2 + 64),
                         segTextColor.a};
+                    // Delete wins over insert: inserted-then-
+                    // deleted text reads as deleted (red +
+                    // strikethrough, no underline).
+                    const afterhours::Color revisionRed{255, 0, 0, 255};
                     const afterhours::Color segColor =
-                        segInsert ? revisionGreen
-                                  : (segItalic ? segItalicColor
-                                               : segTextColor);
+                        segDelete ? revisionRed
+                                  : (segInsert ? revisionGreen
+                                               : (segItalic ? segItalicColor
+                                                            : segTextColor));
                     if (segBold) {
                         afterhours::draw_text(segText.c_str(), cursorX,
                                               y + segYOffset, segFontSize,
@@ -1641,13 +1660,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                               y + segYOffset, segFontSize,
                                               segColor);
                     }
-                    if (segInsert || segStyle.underline) {
+                    if ((segInsert && !segDelete) ||
+                        segStyle.underline) {
                         const int underlineY = y + lineFontSize + 1;
                         afterhours::draw_line(cursorX, underlineY,
                                               cursorX + segW, underlineY,
                                               segColor);
                     }
-                    if (segStyle.strikethrough) {
+                    if (segDelete || segStyle.strikethrough) {
                         const int strikeY = y + lineFontSize / 2;
                         afterhours::draw_line(cursorX, strikeY,
                                               cursorX + segW, strikeY,
@@ -1721,12 +1741,21 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                     displayOffsets[std::min(
                                         subStart, segCount - 1)],
                                     verifiedInserts);
+                            const bool subDelete =
+                                revisions::offsetInDeleteRanges(
+                                    displayOffsets[std::min(
+                                        subStart, segCount - 1)],
+                                    verifiedDeletes);
                             std::size_t subEnd = subStart + 1;
                             while (subEnd < dispEnd &&
                                    revisions::offsetInInsertRanges(
                                        displayOffsets[std::min(
                                            subEnd, segCount - 1)],
                                        verifiedInserts) == subInsert &&
+                                   revisions::offsetInDeleteRanges(
+                                       displayOffsets[std::min(
+                                           subEnd, segCount - 1)],
+                                       verifiedDeletes) == subDelete &&
                                    buffer.effectiveStyleAt(
                                        displayOffsets[std::min(
                                            subEnd, segCount - 1)]) ==
@@ -1765,14 +1794,15 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                     subText.c_str(), subX, y + subYOff,
                                     subSize, theme::SELECTION_TEXT);
                             }
-                            if (subInsert || subStyle.underline) {
+                            if ((subInsert && !subDelete) ||
+                                subStyle.underline) {
                                 const int underlineY =
                                     y + lineFontSize + 1;
                                 afterhours::draw_line(
                                     subX, underlineY, subX + subW,
                                     underlineY, theme::SELECTION_TEXT);
                             }
-                            if (subStyle.strikethrough) {
+                            if (subDelete || subStyle.strikethrough) {
                                 const int strikeY = y + lineFontSize / 2;
                                 afterhours::draw_line(
                                     subX, strikeY, subX + subW, strikeY,
@@ -1783,11 +1813,13 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         }
                     }
                 }
-            } else if (!verifiedInserts.empty()) {
-                // Split the line into insert / non-insert segments.
-                // Each display char maps to the buffer offset of the
-                // raw char it came from (a tab's expanded spaces all
-                // map to the tab itself), mirroring expandTabs above.
+            } else if (!verifiedInserts.empty() ||
+                       !verifiedDeletes.empty()) {
+                // Split the line into insert / delete / plain
+                // segments. Each display char maps to the buffer
+                // offset of the raw char it came from (a tab's
+                // expanded spaces all map to the tab itself),
+                // mirroring expandTabs above.
                 std::vector<std::size_t> displayOffsets;
                 displayOffsets.reserve(displayLine.size());
                 if (tabWidth <= 0) {
@@ -1816,11 +1848,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                     const bool segInsert =
                         revisions::offsetInInsertRanges(
                             displayOffsets[segStart], verifiedInserts);
+                    const bool segDelete =
+                        revisions::offsetInDeleteRanges(
+                            displayOffsets[segStart], verifiedDeletes);
                     std::size_t segEnd = segStart + 1;
                     while (segEnd < segCount &&
                            revisions::offsetInInsertRanges(
                                displayOffsets[segEnd], verifiedInserts) ==
-                                   segInsert) {
+                                   segInsert &&
+                           revisions::offsetInDeleteRanges(
+                               displayOffsets[segEnd], verifiedDeletes) ==
+                                   segDelete) {
                         ++segEnd;
                     }
                     const std::string segText = displayLine.substr(
@@ -1829,9 +1867,12 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         x + afterhours::graphics::measure_text(
                                 displayLine.substr(0, segStart).c_str(),
                                 textFontSize);
+                    const afterhours::Color revisionRed{255, 0, 0, 255};
                     const afterhours::Color segColor =
-                        segInsert ? revisionGreen
-                                  : (isItalic ? italicColor : textColor);
+                        segDelete ? revisionRed
+                                  : (segInsert ? revisionGreen
+                                               : (isItalic ? italicColor
+                                                           : textColor));
                     if (isBold) {
                         afterhours::draw_text(segText.c_str(), segX,
                                               y + textYOffset, textFontSize,
@@ -1845,14 +1886,24 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                               segColor);
                     }
                     // Insert spans are always underlined (green);
+                    // Delete spans are always struck through (red);
                     // other segments follow the global underline flag.
-                    if (segInsert || globalStyle.underline) {
+                    if ((segInsert && !segDelete) ||
+                        globalStyle.underline) {
                         const int underlineY = y + lineFontSize + 1;
                         const int segW =
                             afterhours::graphics::measure_text(
                                 segText.c_str(), textFontSize);
                         afterhours::draw_line(segX, underlineY, segX + segW,
                                               underlineY, segColor);
+                    }
+                    if (segDelete) {
+                        const int strikeY = y + lineFontSize / 2;
+                        const int segW =
+                            afterhours::graphics::measure_text(
+                                segText.c_str(), textFontSize);
+                        afterhours::draw_line(segX, strikeY, segX + segW,
+                                              strikeY, segColor);
                     }
                     segStart = segEnd;
                 }
@@ -1931,6 +1982,70 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                             afterhours::draw_line(selX, strikeY, selX + selW, strikeY,
                                                   theme::SELECTION_TEXT);
                         }
+                        // A selected Delete mark keeps its
+                        // strikethrough (in selection white), so
+                        // the mark stays visible under the
+                        // highlight: split the selection by the
+                        // delete flag, same tab mapping as the
+                        // segmented draw above.
+                        if (!verifiedDeletes.empty()) {
+                            std::vector<std::size_t> selOffsets;
+                            selOffsets.reserve(displayLine.size());
+                            if (tabWidth <= 0) {
+                                for (std::size_t i = 0; i < lineLen; ++i) {
+                                    selOffsets.push_back(span.offset + i);
+                                }
+                            } else {
+                                int col = 0;
+                                for (std::size_t i = 0; i < lineLen; ++i) {
+                                    if (lineData[i] == '\t') {
+                                        int spaces = tabWidth - (col % tabWidth);
+                                        for (int s = 0; s < spaces; ++s) {
+                                            selOffsets.push_back(span.offset + i);
+                                        }
+                                        col += spaces;
+                                    } else {
+                                        selOffsets.push_back(span.offset + i);
+                                        ++col;
+                                    }
+                                }
+                            }
+                            const std::size_t selCount = std::min(
+                                selOffsets.size(), displayLine.size());
+                            std::size_t subStart = dispStart;
+                            while (subStart < dispEnd &&
+                                   subStart < selCount) {
+                                const bool subDelete =
+                                    revisions::offsetInDeleteRanges(
+                                        selOffsets[subStart], verifiedDeletes);
+                                std::size_t subEnd = subStart + 1;
+                                while (subEnd < dispEnd &&
+                                       subEnd < selCount &&
+                                       revisions::offsetInDeleteRanges(
+                                           selOffsets[subEnd],
+                                           verifiedDeletes) == subDelete) {
+                                    ++subEnd;
+                                }
+                                if (subDelete) {
+                                    const int subX =
+                                        x + afterhours::graphics::measure_text(
+                                                displayLine.substr(0, subStart)
+                                                    .c_str(),
+                                                textFontSize);
+                                    const int subW =
+                                        afterhours::graphics::measure_text(
+                                            displayLine.substr(subStart,
+                                                               subEnd - subStart)
+                                                .c_str(),
+                                            textFontSize);
+                                    const int strikeY = y + lineFontSize / 2;
+                                    afterhours::draw_line(
+                                        subX, strikeY, subX + subW, strikeY,
+                                        theme::SELECTION_TEXT);
+                                }
+                                subStart = subEnd;
+                            }
+                        }
                     }
                 }
             }
@@ -1977,6 +2092,26 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                         }
                     }
                     if (overlapsInsert) {
+                        ++squiggleIdx;
+                        continue;
+                    }
+                }
+                // Tracked deletes win over squiggles the same
+                // way: a struck-through mark already reads as a
+                // deletion, and a red squiggle under it would
+                // fake a spelling error on deleted text.
+                if (!verifiedDeletes.empty()) {
+                    const std::size_t sqBegin = span.offset + sq.startCol;
+                    const std::size_t sqEnd = span.offset + sq.endCol;
+                    bool overlapsDelete = false;
+                    for (const auto& range : verifiedDeletes) {
+                        if (sqBegin < range.second &&
+                            sqEnd > range.first) {
+                            overlapsDelete = true;
+                            break;
+                        }
+                    }
+                    if (overlapsDelete) {
                         ++squiggleIdx;
                         continue;
                     }
