@@ -4471,20 +4471,26 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Tab Width input dialog
+        // Tab Width input dialog - Win95 shell: square BUTTON_FACE
+        // panel, navy caption, no backdrop dim, sunken field,
+        // raised 90px buttons.
         if (dialogs.showTabWidthDialog) {
             constexpr int TABWIDTH_MODAL_ID = 50004;
             auto result = afterhours::modal(ctx, mk(entity, TABWIDTH_MODAL_ID),
                 dialogs.showTabWidthDialog,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(320), afterhours::ui::h720(180))
-                    .with_title("Tab Width"));
-            
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(320), afterhours::ui::h720(130),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
-                
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Tab Width", CONTENT_LAYER);
+
                 // Prompt label: the unit is characters — one tab
                 // expands to this many space characters.
                 test_input::register_visible_text(
@@ -4492,18 +4498,21 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 div(ctx, mk(result.ent(), 0),
                     ComponentConfig{}
                         .with_label("Tab width in characters (1-16):")
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
 
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     dialogs.tabWidthInputStr,
-                    ComponentConfig{}
+                    ah_win95::win95SunkenStyle()
                         .with_debug_name("tabwidth_input")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_background(Theme::Usage::Surface)
+                        .with_size(ComponentSize{w1280(100), h720(28)})
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 // Button row
                 auto buttonRow = div(ctx, mk(result.ent(), 2),
                     ComponentConfig{}
@@ -4512,16 +4521,16 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
                         .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 if (button(ctx, mk(buttonRow.ent(), 0),
-                    ComponentConfig{}
+                    ah_win95::win95DialogButtonStyle()
                         .with_debug_name("tabwidth_ok")
                         .with_label("OK")
-                        .with_size(ComponentSize{h720(80), h720(32)})
-                        .with_background(Theme::Usage::Primary)
-                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                        .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                         .with_render_layer(CONTENT_LAYER))) {
                     // Handle OK - set tab width
                     if (!dialogs.tabWidthInputStr.empty()) {
@@ -4538,10 +4547,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 }
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
-                    ComponentConfig{}
+                    ah_win95::win95DialogButtonStyle()
                         .with_debug_name("tabwidth_cancel")
                         .with_label("Cancel")
-                        .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {
                     dialogs.tabWidthInputStr.clear();
                     dialogs.showTabWidthDialog = false;
