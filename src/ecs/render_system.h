@@ -14,6 +14,8 @@
 #include <afterhours/src/drawing_helpers.h>
 #include "../editor/borders_shading.h"
 #include "../editor/columns_math.h"
+#include "../editor/drop_cap.h"
+#include "../editor/text_layout.h"
 #include "../editor/normal_view.h"
 #include "../editor/outline_view.h"
 #include "../editor/revisions.h"
@@ -590,14 +592,25 @@ inline void renderDocumentTables(
     const std::vector<std::pair<std::size_t, Table>>& tables,
     const LayoutComponent::Rect& textArea, int baseLineHeight,
     int scrollOffset, const CellEditState* cellEdit = nullptr,
-    bool caretVisible = true) {
+    bool caretVisible = true, const TextBuffer* buffer = nullptr) {
     for (std::size_t ti = 0; ti < tables.size(); ++ti) {
         const auto& [lineNum, table] = tables[ti];
         // Calculate Y position based on line number
         if (lineNum < static_cast<std::size_t>(scrollOffset)) continue;
 
+        // A table after a drop-cap paragraph sits below the glyph:
+        // the offset accumulates each prior row's reserved extent
+        // (text_layout::yOffsetForRow), not a bare row stride.
+        // buffer == nullptr keeps the old naive stride.
+        int rowOffset =
+            buffer
+                ? yOffsetForRow(*buffer,
+                                static_cast<std::size_t>(
+                                    std::max(0, scrollOffset)),
+                                lineNum, baseLineHeight)
+                : static_cast<int>(lineNum - scrollOffset) * baseLineHeight;
         int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING +
-                static_cast<int>(lineNum - scrollOffset) * baseLineHeight;
+                rowOffset;
         int x = static_cast<int>(textArea.x) + theme::layout::TEXT_PADDING;
 
         // Check if table is visible
@@ -995,8 +1008,16 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             int spaceAfter = buffer.lineSpaceAfter(row);
             bool nextStartsNewPage =
                 buffer.lineSpan(row + 1).pageBreakBefore;
+            // The page-overflow check uses the whole reserved extent
+            // of a drop-cap paragraph, not one line of it: a cap
+            // paragraph starting at the page bottom must move with
+            // its next row, not spill its glyph past the page edge.
+            int reservedHeight =
+                static_cast<int>(drop_cap::reservedRows(
+                    buffer.lineDropCapLines(row), 1)) *
+                lineHeight;
             if (nextStartsNewPage ||
-                y + lineHeight + spaceAfter >
+                y + reservedHeight + spaceAfter >
                     static_cast<int>(textArea.y + textArea.height)) {
                 break;
             }
@@ -1729,9 +1750,18 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 theme::CARET_COLOR);
         }
 
-        // Advance y by line height plus paragraph spacing after
+        // Advance y by the paragraph's RESERVED height plus paragraph
+        // spacing after. A drop-cap paragraph reserves
+        // drop_cap::reservedRows(cap, 1) rows (this renderer draws
+        // one visual row per paragraph), so the next paragraph
+        // begins below the glyph instead of beside it — its first
+        // word used to print through the glyph's lower half. The
+        // glyph itself draws top-aligned inside this box (above).
         int paragraphSpaceAfter = buffer.lineSpaceAfter(row);
-        y += lineHeight + paragraphSpaceAfter;
+        y += static_cast<int>(drop_cap::reservedRows(
+                 buffer.lineDropCapLines(row), 1)) *
+                 lineHeight +
+             paragraphSpaceAfter;
         drawnAnyRow = true;
 
         if (y > static_cast<int>(textArea.y + textArea.height)) {
@@ -2195,7 +2225,8 @@ struct EditorRenderSystem
         auto drawTables = [&](const LayoutComponent::Rect& area,
                               int scrollOffset) {
             renderDocumentTables(doc.tables, area, lineHeight,
-                                 scrollOffset, cellEdit, caret.visible);
+                                 scrollOffset, cellEdit, caret.visible,
+                                 &doc.buffer);
         };
 
         if (!layout.previewMode && layout.splitViewEnabled) {

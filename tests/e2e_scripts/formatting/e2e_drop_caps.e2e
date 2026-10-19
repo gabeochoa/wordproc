@@ -40,6 +40,14 @@ validate dialog_open=false
 validate drop_cap=true
 validate drop_cap_lines=3
 
+# Vertical extent (regression): the cap paragraph reserves its cap
+# span, so paragraph 2's top sits 3 rows below paragraph 1's top —
+# fully below the glyph — and paragraph 3 one row below that.
+# Without the reservation p2 started beside the glyph and its first
+# word printed through the glyph's lower half.
+validate row_top_rows_1=3
+validate row_top_rows_2=4
+
 # The cap belongs to paragraph 1 only: moving the caret to
 # paragraph 2 shows no drop cap there (Batch 11 fix round: the
 # old renderer indented paragraphs 2 and 3 under paragraph 1's
@@ -62,5 +70,7 @@ key CTRL+Z
 wait_frames 12
 validate drop_cap=false
 validate drop_cap_lines=0
+# The reservation releases with the cap: p2 is one row below p1 again.
+validate row_top_rows_1=1
 
 screenshot dropcap_off

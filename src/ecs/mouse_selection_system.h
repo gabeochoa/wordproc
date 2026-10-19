@@ -86,14 +86,16 @@ struct MouseSelectionSystem
                     styles, layout.outlineShowLevel,
                     layout.outlineCollapsedRows);
             if (visible.empty()) return {0, 0};
-            int rawVisibleIndex =
-                scrollOffset +
-                static_cast<int>(
-                    std::floor(relY / static_cast<float>(lineHeight)));
-            if (rawVisibleIndex < 0) rawVisibleIndex = 0;
+            // The visible-index walk accumulates each heading's
+            // reserved extent (a drop-cap heading holds its cap
+            // span), matching where the renderer draws it.
+            std::size_t visibleIndex = rowForYOffsetInList(
+                buffer, visible,
+                scrollOffset > 0 ? static_cast<std::size_t>(scrollOffset)
+                                 : 0,
+                relY, lineHeight);
             std::size_t row = outline_view::outlineRealRowForVisible(
-                visible, static_cast<std::size_t>(rawVisibleIndex),
-                buffer.lineCount());
+                visible, visibleIndex, buffer.lineCount());
             ParagraphStyle style = buffer.lineParagraphStyle(row);
             // The renderer shifts EVERY heading's text right by
             // the collapse-box width in Outline (a reserved
@@ -134,20 +136,23 @@ struct MouseSelectionSystem
                             static_cast<float>(theme::layout::TEXT_PADDING) +
                             columns_math::columnXOffset(column, colWidth,
                                                         columnSpacingPx);
-            int rowInColumn = static_cast<int>(
-                std::floor(relY / static_cast<float>(lineHeight)));
-            if (rowInColumn < 0) rowInColumn = 0;
             std::size_t pageSize = static_cast<std::size_t>(linesPerColumn) *
                                    static_cast<std::size_t>(columnCount);
             std::size_t pageFirst =
                 (static_cast<std::size_t>(std::max(0, scrollOffset)) /
                  pageSize) *
                 pageSize;
-            std::size_t realRow =
+            // Walk this column's rows from its first row,
+            // accumulating each row's reserved extent (a drop-cap
+            // row holds its cap span), matching where the renderer
+            // draws it. Walking contiguously past the column's end
+            // preserves the old spill into the next column's rows.
+            std::size_t colFirst =
                 pageFirst +
                 static_cast<std::size_t>(column) *
-                    static_cast<std::size_t>(linesPerColumn) +
-                static_cast<std::size_t>(rowInColumn);
+                    static_cast<std::size_t>(linesPerColumn);
+            std::size_t realRow =
+                rowForYOffset(buffer, colFirst, relY, lineHeight);
             std::size_t lineCount = buffer.lineCount();
             if (lineCount == 0) return {0, 0};
             if (realRow >= lineCount) realRow = lineCount - 1;
@@ -155,13 +160,16 @@ struct MouseSelectionSystem
             std::size_t col = hitTestColumn(line, mx - columnX, measure);
             return {realRow, col};
         }
-        int row = scrollOffset + static_cast<int>(std::floor(relY / static_cast<float>(lineHeight)));
-        int lineCount = static_cast<int>(buffer.lineCount());
-        if (row < 0) row = 0;
-        if (row > lineCount - 1) row = lineCount - 1;
-        std::string line = buffer.lineString(static_cast<std::size_t>(row));
+        // Walk rows from the scrolled row, accumulating each row's
+        // reserved extent (a drop-cap row holds its cap span), so a
+        // click below a cap lands on the row drawn there — the
+        // same mapping renderTextBuffer draws with.
+        std::size_t firstRow =
+            scrollOffset > 0 ? static_cast<std::size_t>(scrollOffset) : 0;
+        std::size_t row = rowForYOffset(buffer, firstRow, relY, lineHeight);
+        std::string line = buffer.lineString(row);
         std::size_t col = hitTestColumn(line, mx - baseX, measure);
-        return {static_cast<std::size_t>(row), col};
+        return {row, col};
     }
 
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
@@ -366,11 +374,18 @@ struct MouseSelectionSystem
                 doc.tables[tableIndex].first;
             float tableX = area.x +
                            static_cast<float>(theme::layout::TEXT_PADDING);
-            float tableY = area.y +
-                           static_cast<float>(theme::layout::TEXT_PADDING) +
-                           static_cast<float>(
-                               static_cast<int>(lineNum) - scroll.offset) *
-                               static_cast<float>(lineHeight);
+            // Table top accumulates each prior row's reserved extent
+            // (a drop-cap row holds its cap span), matching
+            // renderDocumentTables.
+            float tableY =
+                area.y +
+                static_cast<float>(theme::layout::TEXT_PADDING) +
+                static_cast<float>(yOffsetForRow(
+                    doc.buffer,
+                    scroll.offset > 0
+                        ? static_cast<std::size_t>(scroll.offset)
+                        : 0,
+                    lineNum, lineHeight));
             Table::CellBounds bounds = table.cellBounds(cell);
             const TableCell& cellData = table.cell(cell);
             float relX = mx - (tableX + bounds.x +
@@ -397,12 +412,17 @@ struct MouseSelectionSystem
                 float tableX =
                     area.x +
                     static_cast<float>(theme::layout::TEXT_PADDING);
+                // Same reserved-extent table top as cellOffsetAtMouse
+                // above (a drop-cap row holds its cap span).
                 float tableY =
                     area.y +
                     static_cast<float>(theme::layout::TEXT_PADDING) +
-                    static_cast<float>(
-                        static_cast<int>(lineNum) - scroll.offset) *
-                        static_cast<float>(lineHeight);
+                    static_cast<float>(yOffsetForRow(
+                        doc.buffer,
+                        scroll.offset > 0
+                            ? static_cast<std::size_t>(scroll.offset)
+                            : 0,
+                        lineNum, lineHeight));
                 if (mouse.x < tableX ||
                     mouse.x >= tableX + table.totalWidth() ||
                     mouse.y < tableY ||
@@ -510,16 +530,22 @@ struct MouseSelectionSystem
                 float outlineRelY =
                     mouse.y - area.y -
                     static_cast<float>(theme::layout::TEXT_PADDING);
-                int outlineVisibleIndex =
-                    scroll.offset +
-                    static_cast<int>(std::floor(
-                        outlineRelY / static_cast<float>(lineHeight)));
-                if (outlineVisibleIndex >= 0 &&
-                    static_cast<std::size_t>(outlineVisibleIndex) <
+                // Collapse-box row via the reserved-extent walk (a
+                // drop-cap heading holds its cap span), same as
+                // hitTest's outline path. A scrolled-past list
+                // stays a miss, as before.
+                std::size_t outlineVisibleIndex = outlineVisible.size();
+                if (scroll.offset >= 0 &&
+                    static_cast<std::size_t>(scroll.offset) <
                         outlineVisible.size()) {
+                    outlineVisibleIndex = rowForYOffsetInList(
+                        doc.buffer, outlineVisible,
+                        static_cast<std::size_t>(scroll.offset),
+                        outlineRelY, lineHeight);
+                }
+                if (outlineVisibleIndex < outlineVisible.size()) {
                     std::size_t outlineRow =
-                        outlineVisible[static_cast<std::size_t>(
-                            outlineVisibleIndex)];
+                        outlineVisible[outlineVisibleIndex];
                     if (outline_view::outlineHasSubordinateHeadings(
                             outlineStyles, outlineRow)) {
                         float outlineBaseX =

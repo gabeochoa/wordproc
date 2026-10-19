@@ -235,6 +235,64 @@ TEST_CASE("Scroll offset visible content validation", "[text_layout][scroll]") {
     }
 }
 
+TEST_CASE("RenderCache drop-cap reservation", "[text_layout][cache][drop_cap]") {
+    // A drop-cap paragraph reserves max(wrapped, dropCapLines) rows:
+    // p1 (1 line, cap 3) occupies 3 rows, so p2's top is p1's top +
+    // 3 * lineHeight. Without the reservation p2 drew beside the glyph
+    // and its first word printed through the glyph's lower half.
+    TextBuffer buffer;
+    buffer.setText("First\nSecond\nThird");
+    ParagraphFormat fmt = buffer.lineParagraphFormat(0);
+    fmt.dropCapLines = 3;
+    buffer.setLineParagraphFormat(0, fmt);
+
+    const int lineHeight = 20;
+    const int textPadding = 8;
+    RenderCache cache;
+    cache.rebuild(buffer, buffer.version(), 16, 0, 0, 800, 600, lineHeight,
+                  textPadding);
+    const auto& lines = cache.visibleLines();
+    REQUIRE(lines.size() == 3);
+    REQUIRE(lines[0].y_position == textPadding);
+    REQUIRE(lines[1].y_position == textPadding + 3 * lineHeight);
+    REQUIRE(lines[2].y_position == textPadding + 4 * lineHeight);
+
+    SECTION("rowForYOffset inverts the reserved tops") {
+        REQUIRE(rowForYOffset(buffer, 0, 0.0f, lineHeight) == 0);
+        REQUIRE(rowForYOffset(buffer, 0, 2.9f * lineHeight, lineHeight) == 0);
+        REQUIRE(rowForYOffset(buffer, 0, 3.0f * lineHeight, lineHeight) == 1);
+        REQUIRE(rowForYOffset(buffer, 0, 3.5f * lineHeight, lineHeight) == 1);
+        REQUIRE(rowForYOffset(buffer, 0, 4.0f * lineHeight, lineHeight) == 2);
+        // Past the end clamps to the last row; scrolled start
+        // offsets measure from that row.
+        REQUIRE(rowForYOffset(buffer, 0, 99.0f * lineHeight, lineHeight) == 2);
+        REQUIRE(rowForYOffset(buffer, 1, 0.0f, lineHeight) == 1);
+        REQUIRE(rowForYOffset(buffer, 1, 1.0f * lineHeight, lineHeight) == 2);
+    }
+
+    SECTION("yOffsetForRow accumulates reserved heights") {
+        REQUIRE(yOffsetForRow(buffer, 0, 0, lineHeight) == 0);
+        REQUIRE(yOffsetForRow(buffer, 0, 1, lineHeight) == 3 * lineHeight);
+        REQUIRE(yOffsetForRow(buffer, 0, 2, lineHeight) == 4 * lineHeight);
+        REQUIRE(yOffsetForRow(buffer, 1, 2, lineHeight) == lineHeight);
+        REQUIRE(yOffsetForRow(buffer, 2, 1, lineHeight) == 0);
+        REQUIRE(yOffsetForRow(buffer, 0, 1, 0) == 0);
+    }
+
+    SECTION("rowForYOffsetInList walks an explicit row list") {
+        // Outline-style visible list: rows 0 and 2; row 0's cap 3
+        // holds 3 rows, so the second visible row starts at 3*LH.
+        std::vector<std::size_t> visible = {0, 2};
+        REQUIRE(rowForYOffsetInList(buffer, visible, 0, 2.9f * lineHeight,
+                                    lineHeight) == 0);
+        REQUIRE(rowForYOffsetInList(buffer, visible, 0, 3.0f * lineHeight,
+                                    lineHeight) == 1);
+        REQUIRE(rowForYOffsetInList(buffer, visible, 1, 0.0f, lineHeight) ==
+                1);
+        REQUIRE(rowForYOffsetInList(buffer, {}, 0, 0.0f, lineHeight) == 0);
+    }
+}
+
 TEST_CASE("RenderCache invalidation", "[text_layout][cache]") {
     TextBuffer buffer;
     RenderCache cache;

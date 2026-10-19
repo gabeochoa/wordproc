@@ -88,6 +88,74 @@ TEST_CASE("Drop cap helpers", "[drop_cap]") {
     }
 }
 
+TEST_CASE("Drop cap vertical extent", "[drop_cap]") {
+    SECTION("reservedRows: max(wrapped, cap); off means wrapped") {
+        REQUIRE(drop_cap::reservedRows(0, 1) == 1);
+        REQUIRE(drop_cap::reservedRows(1, 1) == 1);
+        REQUIRE(drop_cap::reservedRows(3, 1) == 3);
+        REQUIRE(drop_cap::reservedRows(2, 1) == 2);
+        REQUIRE(drop_cap::reservedRows(4, 1) == 4);
+        // More text lines than the cap: no extra rows.
+        REQUIRE(drop_cap::reservedRows(3, 4) == 4);
+        REQUIRE(drop_cap::reservedRows(3, 3) == 3);
+        // The span clamps the same way as the indent (9 -> 4).
+        REQUIRE(drop_cap::reservedRows(9, 1) == 4);
+    }
+
+    SECTION("extraReservedRows: blank rows below the cap paragraph") {
+        REQUIRE(drop_cap::extraReservedRows(3, 1) == 2);
+        REQUIRE(drop_cap::extraReservedRows(3, 4) == 0);
+        REQUIRE(drop_cap::extraReservedRows(0, 1) == 0);
+    }
+
+    SECTION("paragraphRowTops: p1 (1 line, cap 3) holds 3 rows") {
+        auto tops = drop_cap::paragraphRowTops({3, 0, 0}, {1, 1, 1}, 8, 20);
+        REQUIRE(tops.size() == 3);
+        REQUIRE(tops[0] == 8);
+        // p2 starts 3 rows below p1's top: below the glyph.
+        REQUIRE(tops[1] == 8 + 3 * 20);
+        REQUIRE(tops[2] == 8 + 4 * 20);
+    }
+
+    SECTION("paragraphRowTops: more lines than the cap, no extra rows") {
+        auto tops = drop_cap::paragraphRowTops({3, 0, 0}, {4, 1, 1}, 8, 20);
+        REQUIRE(tops[1] == 8 + 4 * 20);
+        REQUIRE(tops[2] == 8 + 5 * 20);
+    }
+
+    SECTION("paragraphRowTops: wrapped counts from layoutWrappedLines") {
+        // p1 wraps into 4 lines at width 10 (same doc as the indent
+        // test); cap 3 is shorter than the text, so p2's top is
+        // 4 rows below p1's, not 3.
+        TextBuffer buffer;
+        buffer.setText("First paragraph wraps a lot here\nSecond\nThird");
+        ParagraphFormat fmt = buffer.lineParagraphFormat(0);
+        fmt.dropCapLines = 3;
+        buffer.setLineParagraphFormat(0, fmt);
+        auto wrapped = layoutWrappedLines(buffer, 10);
+        std::vector<std::size_t> wrappedPerRow(buffer.lineCount(), 0);
+        for (const auto& line : wrapped) ++wrappedPerRow[line.source_row];
+        REQUIRE(wrappedPerRow[0] == 4);
+        std::vector<int> caps;
+        for (std::size_t r = 0; r < buffer.lineCount(); ++r)
+            caps.push_back(buffer.lineDropCapLines(r));
+        auto tops = drop_cap::paragraphRowTops(caps, wrappedPerRow, 0, 20);
+        REQUIRE(tops[1] == 4 * 20);
+        REQUIRE(tops[2] == 5 * 20);
+    }
+
+    SECTION("paragraphRowTops: degenerate inputs") {
+        REQUIRE(drop_cap::paragraphRowTops({}, {}, 8, 20).empty());
+        // Mismatched lengths use the shorter one.
+        auto tops = drop_cap::paragraphRowTops({3, 0}, {1, 1, 1}, 8, 20);
+        REQUIRE(tops.size() == 2);
+        // Non-positive line height: no advance.
+        tops = drop_cap::paragraphRowTops({3, 0}, {1, 1}, 8, 0);
+        REQUIRE(tops[0] == 8);
+        REQUIRE(tops[1] == 8);
+    }
+}
+
 TEST_CASE("Drop cap paragraph format", "[drop_cap]") {
     TextBuffer buffer;
     buffer.setText("First\nSecond\nThird");

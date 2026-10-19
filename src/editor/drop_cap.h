@@ -25,6 +25,26 @@
 // The mouse hit-test does not account for paragraph indents at all
 // (pre-existing approximation), so it does not account for this
 // indent either.
+//
+// Vertical extent (Batch 11 fix round, follow-up): the drop cap is
+// contained in its own paragraph's box — the paragraph reserves
+// max(wrappedLines, dropCapLines) rows, so the NEXT paragraph begins
+// below the glyph instead of beside it (its first word used to print
+// through the glyph's lower half). The glyph draws top-aligned inside
+// the reserved box; wrapped lines 2..N of the cap paragraph keep their
+// indent (above); a paragraph with MORE wrapped lines than the cap
+// flows full-width below the glyph, as before.
+//
+// reservedRows is the ONE reservation formula: the renderer
+// (renderTextBuffer, one visual row per paragraph, wrappedLines = 1),
+// the hit-test / table y mapping (text_layout::yOffsetForRow /
+// rowForYOffset, same model), RenderCache, and paragraphRowTops all
+// use it, so a click on a row after a cap lands on the row drawn
+// there. Callers with per-paragraph line heights / spacing (the
+// renderer) apply the reservation with their own lineHeight and keep
+// their own space-before/after around it; the uniform-lineHeight
+// helpers in text_layout.h are the hit-test's approximation of the
+// same mapping, as before, now with the cap included.
 
 #include <algorithm>
 #include <cstddef>
@@ -60,6 +80,52 @@ inline bool wrapIndentApplies(int dropCapLines,
     return lineIndexWithinParagraph >= 1 &&
            lineIndexWithinParagraph <
                static_cast<std::size_t>(dropCapLines);
+}
+
+// Rows of vertical space one paragraph reserves: its wrapped text
+// lines, or the cap span when that is taller (a 1-line paragraph
+// with a 3-line cap occupies 3 rows; a 4-line paragraph with a
+// 3-line cap occupies 4). Off / clamped the same way as the
+// indent above: dropCapLines < 2 means no cap.
+inline std::size_t reservedRows(int dropCapLines,
+                                std::size_t wrappedLines) {
+    if (!isEnabled(dropCapLines)) return wrappedLines;
+    return std::max(wrappedLines,
+                    static_cast<std::size_t>(clampLines(dropCapLines)));
+}
+
+// Rows the cap adds beyond the paragraph's own text rows: 0 when
+// the paragraph is at least as tall as the cap.
+inline std::size_t extraReservedRows(int dropCapLines,
+                                     std::size_t wrappedLines) {
+    return reservedRows(dropCapLines, wrappedLines) - wrappedLines;
+}
+
+// Top of every paragraph (one entry per paragraph, in order) for a
+// document whose paragraph i wraps into wrappedLinesPerRow[i] lines
+// and carries dropCapLinesPerRow[i]. Paragraph i occupies
+// [tops[i], tops[i] + reservedRows * lineHeight): the next
+// paragraph's top is exactly the reserved extent below this one's.
+// dropCapLinesPerRow / wrappedLinesPerRow must have the same length;
+// lineHeight <= 0 yields all tops == topY.
+inline std::vector<int> paragraphRowTops(
+    const std::vector<int>& dropCapLinesPerRow,
+    const std::vector<std::size_t>& wrappedLinesPerRow, int topY,
+    int lineHeight) {
+    std::vector<int> tops;
+    const std::size_t count =
+        std::min(dropCapLinesPerRow.size(), wrappedLinesPerRow.size());
+    tops.reserve(count);
+    int y = topY;
+    for (std::size_t i = 0; i < count; ++i) {
+        tops.push_back(y);
+        if (lineHeight > 0) {
+            y += static_cast<int>(reservedRows(dropCapLinesPerRow[i],
+                                               wrappedLinesPerRow[i])) *
+                 lineHeight;
+        }
+    }
+    return tops;
 }
 
 // The drop-cap paragraph covering a wrapped line: `paragraphRow`

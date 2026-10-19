@@ -2,6 +2,62 @@
 
 #include <algorithm>
 
+#include "drop_cap.h"
+
+// Row -> y mapping for the renderer's one-visual-row-per-paragraph
+// model. Each paragraph's band is reservedRows(cap, 1) * lineHeight:
+// a 1-line paragraph with a 3-line cap holds 3 rows of y, so a
+// following row starts 3 rows below the cap paragraph's top.
+int yOffsetForRow(const TextBuffer& buffer, std::size_t firstRow,
+                  std::size_t targetRow, int lineHeight) {
+    if (lineHeight <= 0 || targetRow <= firstRow) return 0;
+    const std::size_t last =
+        std::min(targetRow, buffer.lineCount());
+    int offset = 0;
+    for (std::size_t row = firstRow; row < last; ++row) {
+        offset += static_cast<int>(
+                      drop_cap::reservedRows(buffer.lineDropCapLines(row),
+                                             1)) *
+                  lineHeight;
+    }
+    return offset;
+}
+
+std::size_t rowForYOffset(const TextBuffer& buffer, std::size_t firstRow,
+                          float relY, int lineHeight) {
+    const std::size_t lineCount = buffer.lineCount();
+    if (lineCount == 0) return 0;
+    if (firstRow >= lineCount) return lineCount - 1;
+    if (lineHeight <= 0 || relY <= 0.0f) return firstRow;
+    float cursor = 0.0f;
+    for (std::size_t row = firstRow; row < lineCount; ++row) {
+        cursor += static_cast<float>(
+                      drop_cap::reservedRows(buffer.lineDropCapLines(row),
+                                             1)) *
+                  static_cast<float>(lineHeight);
+        if (relY < cursor) return row;
+    }
+    return lineCount - 1;
+}
+
+std::size_t rowForYOffsetInList(const TextBuffer& buffer,
+                                const std::vector<std::size_t>& rows,
+                                std::size_t firstVisibleIndex, float relY,
+                                int lineHeight) {
+    if (rows.empty()) return 0;
+    if (firstVisibleIndex >= rows.size()) return rows.size() - 1;
+    if (lineHeight <= 0 || relY <= 0.0f) return firstVisibleIndex;
+    float cursor = 0.0f;
+    for (std::size_t i = firstVisibleIndex; i < rows.size(); ++i) {
+        cursor += static_cast<float>(
+                      drop_cap::reservedRows(
+                          buffer.lineDropCapLines(rows[i]), 1)) *
+                  static_cast<float>(lineHeight);
+        if (relY < cursor) return i;
+    }
+    return rows.size() - 1;
+}
+
 std::vector<WrappedLine> layoutWrappedLines(const TextBuffer &buffer,
                                             std::size_t max_columns) {
     std::vector<WrappedLine> result;
@@ -141,6 +197,11 @@ void RenderCache::rebuild(const TextBuffer &buffer,
         visible_lines_.push_back(std::move(cached));
         last_visible_row_ = row;
 
-        y += line_height;
+        // A drop-cap paragraph reserves its cap span (same formula
+        // as renderTextBuffer), so the next row's cached top sits
+        // below the glyph.
+        y += static_cast<int>(
+                 drop_cap::reservedRows(buffer.lineDropCapLines(row), 1)) *
+             line_height;
     }
 }

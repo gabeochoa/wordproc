@@ -65,6 +65,26 @@ struct LayoutResult {
     }
 };
 
+// Row -> y mapping for the renderer's one-visual-row-per-paragraph
+// model (each paragraph draws as ONE row, wrappedLines = 1), at a
+// uniform `lineHeight`. The drop-cap reservation is included via
+// drop_cap::reservedRows, so these agree with renderTextBuffer on
+// the cap extent; per-paragraph font sizes / spacing /
+// space-before/after are NOT modelled here, exactly as the
+// pre-existing hit-test approximation did not model them.
+// lineHeight <= 0 yields 0 / firstRow.
+int yOffsetForRow(const TextBuffer& buffer, std::size_t firstRow,
+                  std::size_t targetRow, int lineHeight);
+std::size_t rowForYOffset(const TextBuffer& buffer, std::size_t firstRow,
+                           float relY, int lineHeight);
+// Same y -> row walk over an explicit row list (Outline's visible
+// heading rows): `firstVisibleIndex` is the index into `rows` the
+// y offset is measured from. Returns a clamped index into `rows`.
+std::size_t rowForYOffsetInList(const TextBuffer& buffer,
+                                const std::vector<std::size_t>& rows,
+                                std::size_t firstVisibleIndex, float relY,
+                                int lineHeight);
+
 // Original API for backwards compatibility
 std::vector<WrappedLine> layoutWrappedLines(const TextBuffer& buffer,
                                             std::size_t max_columns);

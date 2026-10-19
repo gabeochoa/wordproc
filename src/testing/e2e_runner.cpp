@@ -5,6 +5,7 @@
 #include "../ecs/component_helpers.h"
 #include "deferred_screenshot.h"
 #include "../editor/columns_math.h"
+#include "../editor/text_layout.h"
 #include "../editor/document_settings.h"
 #include "../editor/normal_view.h"
 #include "../editor/outline_view.h"
@@ -769,6 +770,35 @@ static void setupCallbacksEx(
         if (prop == "tab_width") return std::to_string(docComp.docSettings.tabWidth);
         if (prop == "drop_cap") return buffer.currentLineHasDropCap() ? "true" : "false";
         if (prop == "drop_cap_lines") return std::to_string(buffer.currentDropCapLines());
+        // row_top_rows_N = top of buffer row N in lineHeight rows
+        // from the top of the scrolled-first row (the renderer's
+        // one-visual-row-per-paragraph mapping, drop-cap
+        // reservation included: text_layout::yOffsetForRow /
+        // drop_cap::reservedRows). A 1-line p1 with a 3-line cap
+        // holds 3 rows, so row_top_rows_1 == 3; the next paragraph
+        // starts below the glyph instead of beside it. Out of
+        // range -> "" (validate fails, like any unknown prop).
+        if (prop.length() > 13 && prop.substr(0, 13) == "row_top_rows_") {
+            try {
+                std::size_t row =
+                    static_cast<std::size_t>(std::stoul(prop.substr(13)));
+                if (row < buffer.lineCount()) {
+                    int lineHeight = ruler_math::scaledLineHeight(
+                        style.fontSize,
+                        ecs::layout::displayScale(layoutComp));
+                    if (lineHeight <= 0) return "0";
+                    int offset = yOffsetForRow(
+                        buffer,
+                        scrollComp.offset > 0
+                            ? static_cast<std::size_t>(scrollComp.offset)
+                            : 0,
+                        row, lineHeight);
+                    return std::to_string(offset / lineHeight);
+                }
+            } catch (...) {
+            }
+            return "";
+        }
         if (prop == "smart_quotes_enabled") {
             return docComp.docSettings.smartQuotesEnabled ? "true" : "false";
         }
