@@ -176,18 +176,27 @@ struct MouseSelectionSystem
         // elements over the text area whose clicks the UI already
         // handled this frame. A press inside one must not also move
         // the caret: a card click would land the caret on the card's
-        // screen position instead of the comment's anchor. (The chip
-        // popup's dismiss-on-outside-click lives with the popup.)
+        // screen position instead of the comment's anchor, and a
+        // popup click would move the caret off the chip it just
+        // inserted. Any press while the chip popup is open dismisses
+        // the popup; a press outside every shield then proceeds as
+        // a normal text click.
         if (pressed) {
             auto mousePos = input::getMousePosition();
+            bool inShield = false;
             for (const auto& shield : dialogs.clickShields) {
                 if (mousePos.x >= shield.x &&
                     mousePos.x < shield.x + shield.w &&
                     mousePos.y >= shield.y &&
                     mousePos.y < shield.y + shield.h) {
-                    dragging_ = false;
-                    return;
+                    inShield = true;
+                    break;
                 }
+            }
+            if (dialogs.showChipPopup) dialogs.showChipPopup = false;
+            if (inShield) {
+                dragging_ = false;
+                return;
             }
         }
 

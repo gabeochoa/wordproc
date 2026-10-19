@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -99,6 +101,88 @@ inline void rejectAllRevisions(DocumentComponent& doc) {
     toast_notify::success("All changes rejected");
 }
 
+// --- @ smart chips ---
+
+// Filter = buffer text between the "@" and the caret.
+inline std::string chipPopupFilter(const DocumentComponent& doc,
+                                   const DialogState& dialogs) {
+    std::size_t at = dialogs.chipPopupAtOffset;
+    std::size_t caret = doc.buffer.caretOffset();
+    if (caret <= at) return "";
+    std::string filter;
+    for (std::size_t i = at + 1; i < caret; ++i) {
+        filter.push_back(doc.buffer.charAtOffset(i));
+    }
+    return filter;
+}
+
+// Is the popup still anchored: "@" still at its offset, caret
+// after it, short filter with no whitespace/newline (typing the
+// filter keeps it valid; moving the caret away invalidates it).
+inline bool chipPopupValid(const DocumentComponent& doc,
+                           const DialogState& dialogs) {
+    if (!dialogs.showChipPopup) return false;
+    std::size_t at = dialogs.chipPopupAtOffset;
+    if (at >= doc.buffer.textSize() ||
+        doc.buffer.charAtOffset(at) != '@') {
+        return false;
+    }
+    std::size_t caret = doc.buffer.caretOffset();
+    if (caret <= at || caret - at > 49) return false;
+    for (std::size_t i = at + 1; i < caret; ++i) {
+        char ch = doc.buffer.charAtOffset(i);
+        if (std::isspace(static_cast<unsigned char>(ch))) return false;
+    }
+    return true;
+}
+
+// Apply the selected popup item: replace "@" + filter with the
+// chip label, as one undo step. Shared by Enter (TextInputSystem)
+// and popup clicks (MenuUISystem).
+inline bool applyChipPopup(DocumentComponent& doc, DialogState& dialogs) {
+    if (!chipPopupValid(doc, dialogs)) {
+        dialogs.showChipPopup = false;
+        return false;
+    }
+    std::size_t at = dialogs.chipPopupAtOffset;
+    std::size_t caret = doc.buffer.caretOffset();
+    auto items = chips::popupItems(chipPopupFilter(doc, dialogs),
+                                   std::time(nullptr));
+    if (items.empty()) {
+        dialogs.showChipPopup = false;
+        return false;
+    }
+    int sel = std::clamp(dialogs.chipPopupSelected, 0,
+                         static_cast<int>(items.size()) - 1);
+    const ChipItem& item = items[static_cast<std::size_t>(sel)];
+    std::string oldText;
+    for (std::size_t i = at; i < caret; ++i) {
+        oldText.push_back(doc.buffer.charAtOffset(i));
+    }
+    if (!oldText.empty()) recordDeleteRevision(doc, at, oldText);
+    recordInsertRevision(doc, at, item.label);
+    bool ok = chips::insertChipAt(doc.buffer, doc.chips, at, caret,
+                                  item.kind, item.label);
+    dialogs.showChipPopup = false;
+    if (ok) doc.isDirty = true;
+    return ok;
+}
+
+// Backspace at a chip's end deletes the whole chip (one undo step).
+inline bool eraseChipAtCaret(DocumentComponent& doc) {
+    int idx = chips::chipEndingAt(doc.buffer, doc.chips,
+                                  doc.buffer.caretOffset());
+    if (idx < 0) return false;
+    const Chip& chip = doc.chips[static_cast<std::size_t>(idx)];
+    recordDeleteRevision(doc, chip.startOffset, chip.label);
+    if (chips::eraseChipAt(doc.buffer, doc.chips,
+                           static_cast<std::size_t>(idx))) {
+        doc.isDirty = true;
+        return true;
+    }
+    return false;
+}
+
 // --- Layout <-> DocumentSettings sync ---
 
 inline void syncLayoutToSettings(DocumentComponent& doc, LayoutComponent& layout) {
@@ -165,6 +249,7 @@ inline bool openTemplateAsNew(DocumentComponent& doc, MenuComponent& menu,
     }
     doc.comments.clear();
     doc.revisions.clear();
+    doc.chips.clear();
     doc.trackChangesBaseline.clear();
     doc.docSettings = tmpSettings;
     templates::adoptTemplate(doc.buffer, tmp, tmpSettings);
@@ -183,6 +268,7 @@ inline void newDocument(DocumentComponent& doc) {
     doc.isDirty = false;
     doc.comments.clear();
     doc.revisions.clear();
+    doc.chips.clear();
     doc.trackChangesBaseline.clear();
 }
 
@@ -236,6 +322,7 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
         doc.isDirty = false;
         doc.comments.clear();
         doc.revisions.clear();
+        doc.chips.clear();
         syncSettingsToLayout(doc, layout);
         refreshMenuBar(menu, doc, path);
         toast_notify::success(

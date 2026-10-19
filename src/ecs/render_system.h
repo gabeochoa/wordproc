@@ -247,7 +247,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              // matches the buffer at the offset.
                              // Deletes have no in-text render (see
                              // revisions.h); they live in the dialog.
-                             const std::vector<Revision>* revisions = nullptr) {
+                             const std::vector<Revision>* revisions = nullptr,
+                             // @ smart chips: raised BUTTON_FACE box
+                             // behind the label while the buffer still
+                             // holds it at the recorded offset.
+                             const std::vector<Chip>* chips = nullptr) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
 
@@ -263,6 +267,17 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                                            rev.text)) {
                 verifiedInserts.emplace_back(
                     rev.startOffset, rev.startOffset + rev.text.size());
+            }
+        }
+    }
+
+    // Verified chips, same once-per-render pattern: only chips
+    // whose label still matches the buffer render a box.
+    std::vector<std::pair<std::size_t, std::size_t>> verifiedChips;
+    if (chips) {
+        for (const auto& chip : *chips) {
+            if (chips::bufferMatches(buffer, chip)) {
+                verifiedChips.emplace_back(chip.startOffset, chip.endOffset);
             }
         }
     }
@@ -703,6 +718,47 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                               static_cast<float>(hlW),
                               static_cast<float>(lineHeight)},
                     afterhours::Color{255, 255, 180, 255});
+            }
+        }
+
+        // Draw @ chip boxes: raised BUTTON_FACE rect behind the
+        // chip's label on this line (same column mapping as the
+        // comment highlight above). Rendered before the text so
+        // the glyphs draw on top of the box.
+        if (!verifiedChips.empty() && !displayLine.empty()) {
+            for (const auto& range : verifiedChips) {
+                std::size_t lineBegin = span.offset;
+                std::size_t lineEnd = span.offset + span.length;
+                std::size_t segBegin = std::max(range.first, lineBegin);
+                std::size_t segEnd = std::min(range.second, lineEnd);
+                if (segBegin >= segEnd) continue;
+                std::size_t dispBegin = rawColumnToDisplayColumn(
+                    lineData, lineLen, segBegin - lineBegin, tabWidth);
+                std::size_t dispEnd = rawColumnToDisplayColumn(
+                    lineData, lineLen, segEnd - lineBegin, tabWidth);
+                dispBegin = std::min(dispBegin, displayLine.size());
+                dispEnd = std::min(std::max(dispEnd, dispBegin),
+                                   displayLine.size());
+                if (dispBegin >= dispEnd) continue;
+                int boxX = x + afterhours::graphics::measure_text(
+                                  displayLine.substr(0, dispBegin).c_str(),
+                                  lineFontSize);
+                int boxW = afterhours::graphics::measure_text(
+                    displayLine.substr(dispBegin, dispEnd - dispBegin)
+                        .c_str(),
+                    lineFontSize);
+                afterhours::draw_rectangle(
+                    Rectangle{static_cast<float>(boxX),
+                              static_cast<float>(y),
+                              static_cast<float>(boxW),
+                              static_cast<float>(lineHeight)},
+                    theme::BUTTON_FACE);
+                afterhours::draw_rectangle_outline(
+                    Rectangle{static_cast<float>(boxX),
+                              static_cast<float>(y),
+                              static_cast<float>(boxW),
+                              static_cast<float>(lineHeight)},
+                    afterhours::Color{128, 128, 128, 255}, 1.0f);
             }
         }
 
@@ -1384,7 +1440,8 @@ struct EditorRenderSystem
                              layout.outlineShowLevel,
                              &layout.outlineCollapsedRows,
                              layout.previewMode ? nullptr : &doc.comments,
-                             layout.previewMode ? nullptr : &doc.revisions);
+                             layout.previewMode ? nullptr : &doc.revisions,
+                             layout.previewMode ? nullptr : &doc.chips);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
@@ -1396,7 +1453,8 @@ struct EditorRenderSystem
                              layout.outlineShowLevel,
                              &layout.outlineCollapsedRows,
                              layout.previewMode ? nullptr : &doc.comments,
-                             layout.previewMode ? nullptr : &doc.revisions);
+                             layout.previewMode ? nullptr : &doc.revisions,
+                             layout.previewMode ? nullptr : &doc.chips);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1416,7 +1474,8 @@ struct EditorRenderSystem
                              layout.outlineShowLevel,
                              &layout.outlineCollapsedRows,
                              layout.previewMode ? nullptr : &doc.comments,
-                             layout.previewMode ? nullptr : &doc.revisions);
+                             layout.previewMode ? nullptr : &doc.revisions,
+                             layout.previewMode ? nullptr : &doc.chips);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

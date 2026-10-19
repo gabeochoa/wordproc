@@ -1,0 +1,63 @@
+# Test: @ smart chips (Docs chips, Win95 dress)
+# Typing "@" opens the popup; filtering narrows the items; Enter
+# inserts the selected item as a chip; Backspace at a chip's end
+# deletes the whole chip; Esc dismisses the popup.
+
+type "Meet @to"
+wait_frames 12
+validate chip_popup_open=true
+expect_text "Today"
+expect_text "Tomorrow"
+
+screenshot chip_popup
+
+key ENTER
+wait_frames 12
+validate chip_popup_open=false
+validate chip_count=1
+validate text_contains_Today=true
+
+screenshot chip_rendered
+
+# Backspace at the chip's end deletes the whole chip
+key BACKSPACE
+wait_frames 12
+validate chip_count=0
+validate text_contains_Meet=true
+
+# Filtering: @ga matches only the person
+type "@ga"
+wait_frames 12
+validate chip_popup_open=true
+expect_text "Gabe Ochoa"
+
+# Esc dismisses the popup and leaves the typed text
+key ESCAPE
+wait_frames 12
+validate chip_popup_open=false
+validate chip_count=0
+
+# Arrow keys move the popup selection: Down twice from the top
+# lands on "Gabe Ochoa", and Enter inserts it as a chip
+type " @"
+wait_frames 12
+validate chip_popup_open=true
+key DOWN
+wait_frames 6
+key DOWN
+wait_frames 6
+key ENTER
+wait_frames 12
+validate chip_popup_open=false
+validate chip_count=1
+validate text_contains_Gabe=true
+
+# Clicking a popup item selects it: item 1 is "Tomorrow"
+type " @"
+wait_frames 12
+validate chip_popup_open=true
+click_ui chip_item_1
+wait_frames 12
+validate chip_popup_open=false
+validate chip_count=2
+validate text_contains_Tomorrow=true

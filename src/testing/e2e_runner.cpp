@@ -500,6 +500,8 @@ static void setupCallbacksEx(
         }
 
         if (prop == "comment_count") return std::to_string(docComp.comments.size());
+        if (prop == "chip_count") return std::to_string(docComp.chips.size());
+        if (prop == "chip_popup_open") return dialogState.showChipPopup ? "true" : "false";
         if (prop == "track_changes_enabled") return docComp.trackChangesEnabled ? "true" : "false";
         if (prop == "revision_count") return std::to_string(docComp.revisions.size());
         if (prop == "tab_width") return std::to_string(docComp.docSettings.tabWidth);
@@ -1008,6 +1010,7 @@ static void setupCallbacksEx(
         docComp.buffer.setTextStyle(TextStyle{});
         docComp.comments.clear();
         docComp.revisions.clear();
+        docComp.chips.clear();
         docComp.trackChangesEnabled = false;
         docComp.trackChangesBaseline.clear();
         docComp.docSettings = DocumentSettings{};
@@ -1082,6 +1085,11 @@ static void setupCallbacksEx(
         dialogState.showAutoCorrectDialog = false;
         dialogState.showOptionsDialog = false;
         dialogState.showMailMergeDialog = false;
+        dialogState.showRevisionsDialog = false;
+        dialogState.revisionsSelected = -1;
+        dialogState.showChipPopup = false;
+        dialogState.chipPopupAtOffset = 0;
+        dialogState.chipPopupSelected = 0;
         docComp.autoCorrect = AutoCorrect{};
         dialogState.printRequested = false;
         dialogState.printPdfPath.clear();

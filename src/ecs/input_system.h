@@ -66,6 +66,23 @@ struct TextInputSystem
             return;
         }
 
+        // @ chip popup owns Enter (select) and Escape (dismiss)
+        // while open. Typing / Backspace fall through below: they
+        // edit the filter text in the buffer. Up/Down are owned by
+        // NavigationSystem (it runs after this one).
+        if (dialogs.showChipPopup) {
+            if (!cmd::chipPopupValid(doc, dialogs)) {
+                dialogs.showChipPopup = false;
+            } else if (input::isKeyPressed(afterhours::keys::ESCAPE)) {
+                dialogs.showChipPopup = false;
+                return;
+            } else if (actionMap_.isActionPressed(Action::InsertNewline)) {
+                cmd::applyChipPopup(doc, dialogs);
+                caret::resetBlink(caret);
+                return;
+            }
+        }
+
         // Find/Replace keyboard shortcuts
         if (actionMap_.isActionPressed(Action::Find)) {
             dialogs.showFindDialog = true;
@@ -113,9 +130,31 @@ struct TextInputSystem
                                    cmd::tryAutoCorrect(doc, ch);
                     if (!handled) {
                         std::size_t offset = doc.buffer.caretOffset();
+                        // "@" opens the smart-chip popup when the char
+                        // before it is the start or whitespace (and
+                        // there is no selection: "@" replacing a
+                        // selection would mis-anchor the popup).
+                        bool openChipPopup = false;
+                        if (ch == '@' && !doc.buffer.hasSelection()) {
+                            if (offset == 0) {
+                                openChipPopup = true;
+                            } else {
+                                char prev =
+                                    doc.buffer.charAtOffset(offset - 1);
+                                if (std::isspace(
+                                        static_cast<unsigned char>(prev))) {
+                                    openChipPopup = true;
+                                }
+                            }
+                        }
                         recordInsertRevision(doc, offset, std::string(1, ch));
                         doc.buffer.insertChar(ch);
                         doc.isDirty = true;
+                        if (openChipPopup) {
+                            dialogs.showChipPopup = true;
+                            dialogs.chipPopupAtOffset = offset;
+                            dialogs.chipPopupSelected = 0;
+                        }
                     }
                     caret::resetBlink(caret);
                 }
@@ -131,18 +170,26 @@ struct TextInputSystem
         }
         // Use isActionPressedRepeat for backspace/delete so they repeat when held
         if (actionMap_.isActionPressedRepeat(Action::Backspace)) {
-            if (doc.buffer.hasSelection()) {
-                CaretPosition start = doc.buffer.selectionStart();
-                std::string selected = doc.buffer.getSelectedText();
-                recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
-            } else {
-                std::size_t offset = doc.buffer.caretOffset();
-                if (offset > 0) {
-                    char deleted = doc.buffer.charAtOffset(offset - 1);
-                    recordDeleteRevision(doc, offset - 1, std::string(1, deleted));
+            // Backspace at a chip's end deletes the whole chip (one
+            // undo step), not one character. Not while the popup is
+            // open: there Backspace edits the filter text.
+            bool chipErased = !doc.buffer.hasSelection() &&
+                              !dialogs.showChipPopup &&
+                              cmd::eraseChipAtCaret(doc);
+            if (!chipErased) {
+                if (doc.buffer.hasSelection()) {
+                    CaretPosition start = doc.buffer.selectionStart();
+                    std::string selected = doc.buffer.getSelectedText();
+                    recordDeleteRevision(doc, doc.buffer.offsetForPosition(start), selected);
+                } else {
+                    std::size_t offset = doc.buffer.caretOffset();
+                    if (offset > 0) {
+                        char deleted = doc.buffer.charAtOffset(offset - 1);
+                        recordDeleteRevision(doc, offset - 1, std::string(1, deleted));
+                    }
                 }
+                doc.buffer.backspace();
             }
-            doc.buffer.backspace();
             doc.isDirty = true;
         }
         if (actionMap_.isActionPressedRepeat(Action::Delete)) {
@@ -417,7 +464,8 @@ struct KeyboardShortcutSystem
 // System for handling navigation keys using remappable ActionMap
 struct NavigationSystem
     : public afterhours::System<DocumentComponent, CaretComponent,
-                                ScrollComponent, LayoutComponent, InputComponent> {
+                                ScrollComponent, LayoutComponent, InputComponent,
+                                DialogState> {
     // Last caret row we snapped to. The caret snap only fires when the
     // caret actually moved: otherwise every wheel/scrollbar scroll would
     // be undone on the next frame by snapping back to the caret.
@@ -426,6 +474,7 @@ struct NavigationSystem
     void for_each_with(afterhours::Entity& /*entity*/, DocumentComponent& doc,
                        CaretComponent& caret, ScrollComponent& scroll,
                        LayoutComponent& layout, InputComponent& inputComp,
+                       DialogState& dialogs,
                        const float) override {
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
@@ -458,6 +507,44 @@ struct NavigationSystem
                 layout::previewNextPage(layout);
             }
             return;
+        }
+
+        // @ chip popup owns Up/Down (it moves the popup selection,
+        // not the caret). Any other navigation key pressed while the
+        // popup is open dismisses it and then moves the caret
+        // normally; a frame with no navigation key leaves the popup
+        // alone.
+        if (dialogs.showChipPopup) {
+            bool up = actionMap_.isActionPressedRepeat(Action::MoveUp);
+            bool down = actionMap_.isActionPressedRepeat(Action::MoveDown);
+            if (up || down) {
+                const auto items = chips::popupItems(
+                    cmd::chipPopupFilter(doc, dialogs), std::time(nullptr));
+                const int count = static_cast<int>(items.size());
+                if (count > 0) {
+                    if (up) {
+                        dialogs.chipPopupSelected =
+                            std::max(0, dialogs.chipPopupSelected - 1);
+                    }
+                    if (down) {
+                        dialogs.chipPopupSelected = std::min(
+                            count - 1, dialogs.chipPopupSelected + 1);
+                    }
+                }
+                return;
+            }
+            bool otherNav =
+                actionMap_.isActionPressedRepeat(Action::MoveLeft) ||
+                actionMap_.isActionPressedRepeat(Action::MoveRight) ||
+                actionMap_.isActionPressedRepeat(Action::MoveWordLeft) ||
+                actionMap_.isActionPressedRepeat(Action::MoveWordRight) ||
+                actionMap_.isActionPressedRepeat(Action::MoveLineStart) ||
+                actionMap_.isActionPressedRepeat(Action::MoveLineEnd) ||
+                actionMap_.isActionPressedRepeat(Action::MoveDocumentStart) ||
+                actionMap_.isActionPressedRepeat(Action::MoveDocumentEnd) ||
+                actionMap_.isActionPressedRepeat(Action::PageUp) ||
+                actionMap_.isActionPressedRepeat(Action::PageDown);
+            if (otherNav) dialogs.showChipPopup = false;
         }
 
         auto navigateWithSelection = [&](auto moveFunc) {

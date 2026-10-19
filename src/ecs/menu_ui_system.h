@@ -3683,6 +3683,140 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // @ smart chip popup (Docs chips, Win95 dress): a small
+        // Win95 listbox at the caret listing the filtered items.
+        // Arrow/Enter/click selects (TextInputSystem owns Enter,
+        // NavigationSystem owns Up/Down); Esc or any outside click
+        // dismisses. The popup never renders in Print Preview,
+        // Focus mode, or while a modal dialog owns input.
+        if (dialogs.showChipPopup) {
+            if (!cmd::chipPopupValid(doc, dialogs) ||
+                layout.previewMode || layout.focusMode ||
+                ScrollbarSystem::anyModalDialogOpen(dialogs) ||
+                !cache_.scroll) {
+                dialogs.showChipPopup = false;
+            } else {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                const auto items = chips::popupItems(
+                    cmd::chipPopupFilter(doc, dialogs), std::time(nullptr));
+                constexpr float POPUP_W = 240.0f;
+                constexpr float ITEM_H = 22.0f;
+                const float popupH =
+                    static_cast<float>(std::max<std::size_t>(items.size(), 1)) *
+                        ITEM_H +
+                    4.0f;
+                const auto effective = layout::effectiveTextArea(layout);
+                const float ds = layout::displayScale(layout);
+                const int popupFontSize =
+                    ruler_math::scaledFontSize(doc.buffer.textStyle().fontSize,
+                                               ds);
+                const int popupLineHeight = popupFontSize + 4;
+                CaretPosition caretPos = doc.buffer.caret();
+                std::string line =
+                    caretPos.row < doc.buffer.lineCount()
+                        ? doc.buffer.lineString(caretPos.row)
+                        : "";
+                std::string prefix =
+                    line.substr(0, std::min(caretPos.column, line.size()));
+                float popupX =
+                    effective.x +
+                    static_cast<float>(theme::layout::TEXT_PADDING) +
+                    static_cast<float>(afterhours::graphics::measure_text(
+                        prefix.c_str(), popupFontSize));
+                if (layout.showLineNumbers) {
+                    popupX += layout.lineNumberGutterWidth;
+                }
+                float caretLineY =
+                    effective.y +
+                    static_cast<float>(theme::layout::TEXT_PADDING) +
+                    static_cast<float>(
+                        static_cast<int>(caretPos.row) - cache_.scroll->offset) *
+                        static_cast<float>(popupLineHeight);
+                float popupY = caretLineY + static_cast<float>(popupLineHeight);
+                if (popupX > static_cast<float>(layout.screenWidth) - POPUP_W - 4.0f) {
+                    popupX = static_cast<float>(layout.screenWidth) - POPUP_W - 4.0f;
+                }
+                if (popupX < effective.x) popupX = effective.x;
+                const float statusH =
+                    theme::layout::scale(theme::layout::STATUS_BAR_HEIGHT);
+                if (popupY + popupH >
+                    static_cast<float>(layout.screenHeight) - statusH - 4.0f) {
+                    popupY = caretLineY - popupH;
+                }
+                if (popupY < layout.textArea.y) {
+                    popupY = layout.textArea.y;
+                }
+                dialogs.clickShields.push_back(ClickShieldRect{
+                    popupX, popupY, POPUP_W, popupH, 1});
+                div(ctx, mk(entity, 41000),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{pixels(POPUP_W),
+                                                 pixels(popupH)})
+                        .with_absolute_position()
+                        .with_translate(popupX, popupY)
+                        .with_custom_background(
+                            ui_imm::win95_colors::TEXT_AREA)
+                        .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                        .with_roundness(0.0f)
+                        .with_render_layer(70));
+                if (items.empty()) {
+                    test_input::register_visible_text("(no matches)");
+                    div(ctx, mk(entity, 41001),
+                        ComponentConfig{}
+                            .with_label("(no matches)")
+                            .with_size(ComponentSize{pixels(POPUP_W - 4.0f),
+                                                     pixels(ITEM_H)})
+                            .with_absolute_position()
+                            .with_translate(popupX + 2.0f, popupY + 2.0f)
+                            .with_custom_background(
+                                ui_imm::win95_colors::TEXT_AREA)
+                            .with_custom_text_color(
+                                ui_imm::win95_colors::TEXT_DISABLED)
+                            .with_alignment(
+                                afterhours::ui::TextAlignment::Left)
+                            .with_roundness(0.0f)
+                            .with_render_layer(71));
+                }
+                for (std::size_t i = 0; i < items.size(); ++i) {
+                    const bool selected =
+                        static_cast<int>(i) == dialogs.chipPopupSelected;
+                    test_input::register_visible_text(items[i].label);
+                    if (button(ctx, mk(entity, 41010 + static_cast<int>(i) * 10),
+                               ComponentConfig{}
+                                   .with_debug_name("chip_item_" +
+                                                   std::to_string(i))
+                                   .with_label(items[i].label)
+                                   .with_size(ComponentSize{
+                                       pixels(POPUP_W - 4.0f),
+                                       pixels(ITEM_H)})
+                                   .with_absolute_position()
+                                   .with_translate(
+                                       popupX + 2.0f,
+                                       popupY + 2.0f +
+                                           static_cast<float>(i) * ITEM_H)
+                                   .with_custom_background(
+                                       selected
+                                           ? ui_imm::win95_colors::HIGHLIGHT
+                                           : ui_imm::win95_colors::TEXT_AREA)
+                                   .with_custom_text_color(
+                                       selected
+                                           ? ui_imm::win95_colors::TEXT_WHITE
+                                           : ui_imm::win95_colors::TEXT)
+                                   .with_alignment(
+                                       afterhours::ui::TextAlignment::Left)
+                                   .with_text_inset(4.0f, 0.0f)
+                                   .with_roundness(0.0f)
+                                   .with_cursor(
+                                       afterhours::ui::CursorType::Pointer)
+                                   .with_render_layer(71))) {
+                        dialogs.chipPopupSelected = static_cast<int>(i);
+                        cmd::applyChipPopup(doc, dialogs);
+                    }
+                }
+            }
+        }
+
         // Right-click detection for context menu (real input, not E2E)
         if (!dialogs.showContextMenu && !dialogs.showFindDialog &&
             !dialogs.showAboutDialog && !dialogs.showHelpWindow &&

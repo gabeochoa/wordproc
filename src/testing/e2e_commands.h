@@ -232,6 +232,7 @@ struct HandleOpenFileCommand : System<testing::PendingE2ECommand> {
       doc_comp->isDirty = false;
       doc_comp->comments.clear();
       doc_comp->revisions.clear();
+      doc_comp->chips.clear();
       cmd.consume();
     } else {
       cmd.fail("Failed to open file: " + file_path +

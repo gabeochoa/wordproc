@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../editor/autocorrect.h"
+#include "../editor/chips.h"
 #include "../editor/document_settings.h"
 #include "../editor/font_dialog.h"
 #include "../editor/format_painter.h"
@@ -65,6 +66,10 @@ struct DocumentComponent : public afterhours::BaseComponent {
     std::vector<Revision> revisions;
     bool trackChangesEnabled = false;
     std::string trackChangesBaseline;
+
+    // @ smart chips (Docs-era): label text lives in the buffer;
+    // the record anchors it for the render pass.
+    std::vector<Chip> chips;
 
     // Auto-save state
     bool autoSaveEnabled = true;
@@ -263,6 +268,14 @@ struct DialogState : public afterhours::BaseComponent {
     // revisionsSelected indexes doc.revisions; -1 = none selected.
     bool showRevisionsDialog = false;
     int revisionsSelected = -1;
+
+    // @ smart chip popup (Docs-era): open while the user types a
+    // filter after "@". chipPopupAtOffset is the "@" offset in the
+    // buffer; the filter is the buffer text between it and the
+    // caret, so it needs no separate stored copy.
+    bool showChipPopup = false;
+    std::size_t chipPopupAtOffset = 0;
+    int chipPopupSelected = 0;
 
     // AutoCorrect dialog (Tools > AutoCorrect...)
     bool showAutoCorrectDialog = false;
