@@ -37,11 +37,14 @@ expect_text "Multiple consecutive spaces"
 expect_text "A  B"
 
 # Change: apply the " " suggestion through the command layer.
+# Clean state is the field layout reading "No grammar issues
+# found." with Change/Ignore disabled (fix round 3), not the old
+# separate "Grammar check complete." screen.
 click_ui grammar_change
 wait_frames 12
 validate grammar_error_count=0
 validate text=The the cat sat. A B
-expect_text "Grammar check complete."
+expect_text "No grammar issues found."
 
 click_ui grammar_close
 wait_frames 12

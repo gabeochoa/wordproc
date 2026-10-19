@@ -1,0 +1,66 @@
+# Test: Grammar dialog re-scans after every Change and advances to
+# the next still-existing issue; when none remain it shows the clean
+# state ("No grammar issues found." in the fields, Change/Ignore
+# disabled), never a stale issue left actionable.
+#
+# Regression (reviewer-caught, fix round 3): after Change the dialog
+# kept showing the fixed "The the" issue while the document already
+# read "The cat sat." The two-issue doc below pins the advance:
+# Change fixes ONLY the first "The the"; Change again fixes the
+# second and reaches the clean state. Clicking Change / Ignore Once
+# in the clean state must be a no-op (the buttons are disabled),
+# not a re-fix of a stale issue. RED on pre-fix bytes: the dialog
+# showed "Grammar check complete." instead of "No grammar issues
+# found.", and grammar_change did not exist in the clean state, so
+# the click_ui below failed with "UI component not found".
+
+type "The the cat sat. The the dog ran."
+wait_frames 12
+
+menu_open Tools
+wait_frames 12
+menu_select "Grammar..."
+wait_frames 12
+
+validate dialog_open=Grammar
+validate grammar_error_count=2
+validate grammar_context_span=0:7
+expect_text "Repeated word"
+expect_text "The the cat sat."
+
+# Change fixes ONLY the first repeated word: the dialog must now
+# show the SECOND issue, and the document must read with only the
+# first fixed.
+click_ui grammar_change
+wait_frames 12
+validate grammar_error_count=1
+validate text=The cat sat. The the dog ran.
+expect_text "The the dog ran."
+expect_text "Repeated word"
+
+# Change again: the second issue is fixed and the dialog reaches
+# the clean state (fields, not a stale issue).
+click_ui grammar_change
+wait_frames 12
+validate grammar_error_count=0
+validate text=The cat sat. The dog ran.
+expect_text "No grammar issues found."
+
+# Clean state is not actionable: Change / Ignore Once are
+# disabled, so clicking them changes nothing.
+click_ui grammar_change
+wait_frames 12
+validate text=The cat sat. The dog ran.
+validate grammar_error_count=0
+expect_text "No grammar issues found."
+
+click_ui grammar_ignore_once
+wait_frames 12
+validate text=The cat sat. The dog ran.
+validate grammar_error_count=0
+expect_text "No grammar issues found."
+
+click_ui grammar_close
+wait_frames 12
+validate dialog_open=false
+validate text=The cat sat. The dog ran.

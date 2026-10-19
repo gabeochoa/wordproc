@@ -947,19 +947,23 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         // (Ignore Once, Ignore All, Change, Close). One issue at a
         // time at grammarIndex; the enum name (e.g. REPEATED_WORD) is
         // never shown — Issue shows the human message, with the rule
-        // display name as fallback.
+        // display name as fallback. The clean state keeps this same
+        // field layout with "No grammar issues found." in the
+        // fields and Ignore/Change disabled (Close stays enabled):
+        // a separate complete screen let a stale issue's buttons
+        // survive a re-scan, and its Change button vanished instead
+        // of disabling, so a click on a stale issue stayed possible.
         if (dialogs.showGrammarDialog) {
             constexpr int GRAMMAR_MODAL_ID = 50012;
-            // Height fits the content: issue view is title(20) +
-            // body(~176) + panel padding(8) = ~204, so 215; the
-            // "check complete" view is ~96 tall, so 120. The old
+            // Height fits the content: title(20) + body(~176) +
+            // panel padding(8) = ~204, so 215, in both the issue
+            // and the clean state (same field layout). The old
             // fixed 300 left ~95px of empty bottom in the issue view.
-            float grammarHeight =
-                cmd::grammarCurrentError(dialogs) ? 215.0f : 120.0f;
+            constexpr float GRAMMAR_HEIGHT = 215.0f;
             auto result = afterhours::modal(ctx, mk(entity, GRAMMAR_MODAL_ID),
                 dialogs.showGrammarDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(430), afterhours::ui::h720(grammarHeight),
+                    afterhours::ui::h720(430), afterhours::ui::h720(GRAMMAR_HEIGHT),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -973,37 +977,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
 
                 const GrammarError* current =
                     cmd::grammarCurrentError(dialogs);
-                if (!current) {
-                    div(ctx, mk(result.ent(), 901),
-                        ComponentConfig{}
-                            .with_label("Grammar check complete.")
-                            .with_size(ComponentSize{percent(1.0f), h720(24)})
-                            .with_custom_background(
-                                ui_imm::win95_colors::BUTTON_FACE)
-                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
-                            .with_render_layer(CONTENT_LAYER));
-                    test_input::register_visible_text(
-                        "Grammar check complete.");
-                    auto doneRow = div(ctx, mk(result.ent(), 902),
-                        ComponentConfig{}
-                            .with_size(ComponentSize{percent(1.0f), h720(44)})
-                            .with_flex_direction(FlexDirection::Row)
-                            .with_justify_content(JustifyContent::Center)
-                            .with_align_items(AlignItems::Center)
-                            .with_custom_background(
-                                ui_imm::win95_colors::BUTTON_FACE)
-                            .with_render_layer(CONTENT_LAYER));
-                    if (doneRow) {
-                        if (button(ctx, mk(doneRow.ent(), 0),
-                            ah_win95::win95DialogButtonStyle()
-                                .with_debug_name("grammar_close")
-                                .with_label("Close")
-                                .with_border(ui_imm::win95_colors::TEXT, 1.0f)
-                                .with_render_layer(CONTENT_LAYER))) {
-                            dialogs.showGrammarDialog = false;
-                        }
-                    }
-                } else {
+                {
                     // Body row: left column + right button column
                     auto bodyRow = div(ctx, mk(result.ent(), 903),
                         ComponentConfig{}
@@ -1018,7 +992,10 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     // rebuild grammarErrors (refresh), which would
                     // dangle `current`. Declared in bodyRow scope so
                     // the right column can use it.
-                    bool canChange = !current->suggestion.empty();
+                    bool hasIssue = current != nullptr;
+                    bool canIgnore = hasIssue;
+                    bool canChange =
+                        hasIssue && !current->suggestion.empty();
                     auto leftCol = div(ctx, mk(bodyRow.ent(), 0),
                         ComponentConfig{}
                             .with_size(ComponentSize{w1280(302), children()})
@@ -1028,18 +1005,35 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
                     if (leftCol) {
-                    GrammarContext grammarCtx =
-                        grammarSentenceContextWithHighlight(
-                            doc.buffer.getText(), *current);
-                    std::string sentence = grammarCtx.sentence;
-                    std::string issue = cmd::grammarIssueLabel(*current);
-                    std::string suggestion = current->suggestion.empty()
-                        ? "(no suggestion)"
-                        : current->suggestion;
+                    // Clean state: the fields read "No grammar
+                    // issues found." with no highlight span, and
+                    // the buttons below are disabled — a fixed
+                    // issue is never left on display, actionable.
+                    static const char* CLEAN_TEXT = "No grammar issues found.";
+                    GrammarContext grammarCtx;
+                    std::string sentence;
+                    std::string issue;
+                    std::string suggestion;
+                    if (hasIssue) {
+                        grammarCtx =
+                            grammarSentenceContextWithHighlight(
+                                doc.buffer.getText(), *current);
+                        sentence = grammarCtx.sentence;
+                        issue = cmd::grammarIssueLabel(*current);
+                        suggestion = current->suggestion.empty()
+                            ? "(no suggestion)"
+                            : current->suggestion;
+                    } else {
+                        sentence = CLEAN_TEXT;
+                        issue = CLEAN_TEXT;
+                        suggestion = CLEAN_TEXT;
+                    }
                     test_input::register_visible_text(sentence);
                     test_input::register_visible_text(issue);
-                    test_input::register_visible_text(
-                        current->suggestion);
+                    if (hasIssue) {
+                        test_input::register_visible_text(
+                            current->suggestion);
+                    }
 
                     auto fieldLabel = [&](int id, const std::string& label) {
                         div(ctx, mk(leftCol.ent(), id),
@@ -1137,7 +1131,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     // Right column: vertical stack of compact 90px
                     // gray buttons. Ignore Once is the default button
                     // (dark outline). Change is disabled with no
-                    // concrete suggestion.
+                    // concrete suggestion; in the clean state
+                    // Ignore/Change are all disabled, so no stale
+                    // issue stays actionable — only Close works.
                     auto rightCol = div(ctx, mk(bodyRow.ent(), 1),
                         ComponentConfig{}
                             .with_size(ComponentSize{w1280(100), children()})
@@ -1148,19 +1144,23 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                     if (rightCol) {
                         if (button(ctx, mk(rightCol.ent(), 0),
-                            ah_win95::win95DialogButtonStyle()
+                            ah_win95::win95DialogButtonStyle(canIgnore)
                                 .with_debug_name("grammar_ignore_once")
                                 .with_label("Ignore Once")
                                 .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                                 .with_render_layer(CONTENT_LAYER))) {
-                            cmd::grammarIgnoreOnce(doc, dialogs);
+                            if (canIgnore) {
+                                cmd::grammarIgnoreOnce(doc, dialogs);
+                            }
                         }
                         if (button(ctx, mk(rightCol.ent(), 1),
-                            ah_win95::win95DialogButtonStyle()
+                            ah_win95::win95DialogButtonStyle(canIgnore)
                                 .with_debug_name("grammar_ignore_all")
                                 .with_label("Ignore All")
                                 .with_render_layer(CONTENT_LAYER))) {
-                            cmd::grammarIgnoreAll(doc, dialogs);
+                            if (canIgnore) {
+                                cmd::grammarIgnoreAll(doc, dialogs);
+                            }
                         }
                         if (button(ctx, mk(rightCol.ent(), 2),
                             ah_win95::win95DialogButtonStyle(canChange)
@@ -1178,7 +1178,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         }
                     }  // rightCol
                     }  // bodyRow
-                }  // else (an issue is current)
+                }  // field layout (issue or clean state)
             }
         }
 

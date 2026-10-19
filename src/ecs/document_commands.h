@@ -299,9 +299,13 @@ inline void requestPrint(DocumentComponent& doc, DialogState& dialogs) {
 // this rule + this phrase (other instances of the same rule, or the
 // same phrase under another rule, are unaffected); Change applies
 // the suggestion through the buffer as one undo step, when a
-// concrete suggestion exists. Re-scanning after Change resumes at
-// the first error at/after the change, so later errors (whose
-// offsets shifted) stay in order and earlier ones are not re-shown.
+// concrete suggestion exists. EVERY action re-scans the document
+// and lands on the next still-existing issue, and recomputes
+// grammarNoErrors from the re-scanned list — a stale index or a
+// stale noErrors flag never leaves a fixed issue (or a complete
+// screen for a document that still has issues) on display. When no
+// issue remains, the dialog shows its clean state ("No grammar
+// issues found." in the fields, Change/Ignore disabled).
 // The dialog never renders grammar underlines: GrammarChecker has
 // no render path (grammar issues are NOT spell squiggles), and the
 // one squiggle the old screenshot showed under "sat." was a spell
@@ -348,25 +352,61 @@ inline void openGrammarDialog(DocumentComponent& doc, DialogState& dialogs) {
 
 inline void grammarIgnoreOnce(DocumentComponent& doc,
                               DialogState& dialogs) {
-    if (!grammarCurrentError(dialogs)) return;
-    ++dialogs.grammarIndex;
+    const GrammarError* current = grammarCurrentError(dialogs);
+    if (!current) return;
+    // Copy the ignored issue: refresh rebuilds grammarErrors and
+    // would dangle the pointer.
+    GrammarError ignored = *current;
     refreshGrammarDialog(doc, dialogs);
-    if (dialogs.grammarIndex >= dialogs.grammarErrors.size()) {
-        dialogs.grammarNoErrors = true;
+    // The ignored issue still exists in the re-scanned list (the
+    // document did not change); the next issue is the one after it
+    // in the new list. If the re-scan no longer contains it, fall
+    // back to the first issue at/after the end of its span. Either
+    // way grammarNoErrors is recomputed from the new list, never
+    // left at a stale value.
+    std::size_t next = dialogs.grammarErrors.size();
+    for (std::size_t i = 0; i < dialogs.grammarErrors.size(); ++i) {
+        const GrammarError& err = dialogs.grammarErrors[i];
+        if (err.offset == ignored.offset &&
+            err.length == ignored.length &&
+            err.ruleId == ignored.ruleId) {
+            next = i + 1;
+            break;
+        }
     }
+    if (next == dialogs.grammarErrors.size()) {
+        for (std::size_t i = 0; i < dialogs.grammarErrors.size(); ++i) {
+            if (dialogs.grammarErrors[i].offset >=
+                ignored.offset + ignored.length) {
+                next = i;
+                break;
+            }
+        }
+    }
+    dialogs.grammarIndex = next;
+    dialogs.grammarNoErrors = next >= dialogs.grammarErrors.size();
 }
 
 inline void grammarIgnoreAll(DocumentComponent& doc,
                              DialogState& dialogs) {
     const GrammarError* current = grammarCurrentError(dialogs);
     if (!current) return;
+    std::size_t offset = current->offset;
     dialogs.grammarIgnored.insert(grammarIgnoreKey(*current));
     refreshGrammarDialog(doc, dialogs);
-    // The ignored issue is gone, so the next issue (if any) now
-    // sits at the same index; if none does, the check is complete.
-    if (dialogs.grammarIndex >= dialogs.grammarErrors.size()) {
-        dialogs.grammarNoErrors = true;
+    // The ignored issues are gone from the re-scanned list, so the
+    // next still-existing issue is the first at/after the ignored
+    // span's start; if none does, the check is complete.
+    // grammarNoErrors is recomputed, not left stale.
+    std::size_t next = dialogs.grammarErrors.size();
+    for (std::size_t i = 0; i < dialogs.grammarErrors.size(); ++i) {
+        if (dialogs.grammarErrors[i].offset >= offset) {
+            next = i;
+            break;
+        }
     }
+    dialogs.grammarIndex = next;
+    dialogs.grammarNoErrors = next >= dialogs.grammarErrors.size();
 }
 
 inline void grammarChange(DocumentComponent& doc, DialogState& dialogs) {
@@ -393,9 +433,9 @@ inline void grammarChange(DocumentComponent& doc, DialogState& dialogs) {
         }
     }
     dialogs.grammarIndex = next;
-    if (next >= dialogs.grammarErrors.size()) {
-        dialogs.grammarNoErrors = true;
-    }
+    // Recomputed in both branches: a stale true must clear when
+    // issues remain, and a stale false must set when none do.
+    dialogs.grammarNoErrors = next >= dialogs.grammarErrors.size();
 }
 
 // --- Spelling dialog commands (Tools > Spelling..., F7) ---
