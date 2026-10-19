@@ -60,7 +60,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 ## Format
 | Feature | Status | Priority | Notes |
 |---|---|---|---|
-| Font... dialog (family/size/effects) | Partial | P0 | Formatting toolbar dropdowns; only 2 families wired |
+| Font... dialog (family/size/effects) | Have | P0 | FIRST Format item: Win95 dialog with Font list (toolbar fonts vector), Font style list (Regular/Bold/Italic/Bold Italic), Size list (16 sizes + custom field), Effects (Underline/Strikethrough/Superscript/Subscript, super/sub mutually exclusive), color swatch row (existing text colors), Preview "AaBbYyZz 123" in the chosen size/bold/color. OK applies via buffer.setTextStyle, the toolbar path (buffer style is document-global). Honest partial: Times New Roman/Arial/Courier New are toolbar names with no loaded face, so the preview family falls back to the default face (size/bold/color exact); italic has no slanted UI face in the preview |
 | Bold/Italic/Underline/Strike/Super/Sub | Have | P0 | |
 | Alignment L/C/R/Justify | Have | P0 | |
 | Indents & Tabs (ruler + dialog) | Partial | P0 | ruler drag sets indents (one undo step) + indent keys + Tab Width dialog; no full Paragraph dialog |
@@ -113,7 +113,7 @@ Inventory by code read, 2026-10-18 (`src/ui/menu_setup.h`, `src/ecs/menu_actions
 | Scrollbars (Win95 style) | Partial | P1 | verify |
 
 ## Counts (from tables above, 2026-10-18)
-**Have 41 · Partial 16 · Missing 9** (after Batch 4 item 2, Templates) (66 grouped rows; several rows bundle
+**Have 42 · Partial 15 · Missing 9** (after Batch 4 item 3, Font dialog) (66 grouped rows; several rows bundle
 e.g. Cut/Copy/Paste). Supersedes the front-door first-reply estimate (31/11/13).
 Ranking: Batch 1 = Tools spell trio (squiggles + F7 dialog + AutoCorrect) —
 highest daily value, engine already exists. Batch 2 = app chrome (Word 95

@@ -296,7 +296,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
         } else if (menuIndex == 4) {  // Format menu
             TextStyle style = doc.buffer.textStyle();
-            switch (itemIndex) {
+            // "Font..." is item 0, so every item below it dispatches
+            // on itemIndex - 1 and the old case numbers are unchanged.
+            if (itemIndex == 0) {  // Font...
+                dialogs.showFontDialog = true;
+                dialogs.fontDialogInitialized = false;
+            } else switch (itemIndex - 1) {
                 case 0:  // Normal
                     doc.buffer.setCurrentParagraphStyle(ParagraphStyle::Normal);
                     toast_notify::info("Style: Normal");

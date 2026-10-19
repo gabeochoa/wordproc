@@ -100,7 +100,8 @@ inline std::vector<MenuData> createMenuBarData() {
     // Format menu
     MenuData formatMenu;
     formatMenu.label = "Format";
-    formatMenu.items = {{"Normal", "Ctrl+Alt+0", true, false},
+    formatMenu.items = {{"Font...", "", true, false},
+                        {"Normal", "Ctrl+Alt+0", true, false},
                         {"Title", "", true, false},
                         {"Subtitle", "", true, false},
                         {"Heading 1", "Ctrl+Alt+1", true, false},

@@ -81,6 +81,10 @@ TEST_CASE("Menu bar creation", "[menu][e2e]") {
     SECTION("Format menu has expected items") {
         REQUIRE(menus.size() >= 4);
         REQUIRE(menus[3].label == "Format");
+        // Font... is the FIRST Format item (Word 95 Font dialog).
+        REQUIRE_FALSE(menus[3].items.empty());
+        REQUIRE(menus[3].items[0].label == "Font...");
+        REQUIRE(menus[3].items[1].label == "Normal");
         bool hasBold = false;
         bool hasItalic = false;
         bool hasSuperscript = false;

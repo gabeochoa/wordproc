@@ -6,6 +6,7 @@
 
 #include "../editor/autocorrect.h"
 #include "../editor/document_settings.h"
+#include "../editor/font_dialog.h"
 #include "../editor/format_painter.h"
 #include "../editor/spell_squiggles.h"
 #include "../editor/spellcheck.h"
@@ -281,6 +282,14 @@ struct DialogState : public afterhours::BaseComponent {
     std::vector<std::string> dateTimeFormats;
     int dateTimeSelected = 0;
     bool dateTimeUpdateAutomatically = false;
+
+    // Font dialog (Format > Font...): the working selection plus the
+    // custom-size field text. fontDialogInitialized seeds them from
+    // the current style on the first frame the dialog is open.
+    bool showFontDialog = false;
+    bool fontDialogInitialized = false;
+    font_dialog::FontDialogSelection fontDialogSelection;
+    std::string fontDialogCustomSize;
 
     // Tab Width
     bool showTabWidthDialog = false;

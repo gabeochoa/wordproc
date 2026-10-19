@@ -113,7 +113,8 @@ inline std::vector<win95::Menu> createMenuBar(
     win95::Menu formatMenu;
     formatMenu.label = "Format";
     formatMenu.items = {
-        // Paragraph styles (0-8)
+        // Font dialog (0), then paragraph styles (1-9)
+        {"Font...", "", true, false, nullptr},
         {"Normal", "Ctrl+Alt+0", true, false, nullptr},
         {"Title", "", true, false, nullptr},
         {"Subtitle", "", true, false, nullptr},

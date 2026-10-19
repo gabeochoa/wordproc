@@ -418,6 +418,7 @@ static void setupCallbacksEx(
             if (dialogState.showGrammarDialog) return "Grammar";
             if (dialogState.showAutoCorrectDialog) return "AutoCorrect";
             if (dialogState.showTemplateDialog) return "Template";
+            if (dialogState.showFontDialog) return "Font";
             if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
@@ -982,6 +983,10 @@ static void setupCallbacksEx(
         dialogState.dateTimeFormats.clear();
         dialogState.dateTimeSelected = 0;
         dialogState.dateTimeUpdateAutomatically = false;
+        dialogState.showFontDialog = false;
+        dialogState.fontDialogInitialized = false;
+        dialogState.fontDialogSelection = font_dialog::FontDialogSelection{};
+        dialogState.fontDialogCustomSize.clear();
         dialogState.showTabWidthDialog = false;
         dialogState.tabWidthInputBuffer[0] = '\0';
         dialogState.tabWidthInputStr.clear();
