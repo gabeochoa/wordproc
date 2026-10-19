@@ -266,7 +266,8 @@ struct DialogState : public afterhours::BaseComponent {
     bool showMailMergeDialog = false;
 
     // Revisions (Tools > Revisions...): suggesting-mode dialog.
-    // revisionsSelected indexes doc.revisions; -1 = none selected.
+    // revisionsSelected indexes revisions::groupRevisions groups
+    // (grouped display rows), not raw doc.revisions; -1 = none.
     bool showRevisionsDialog = false;
     int revisionsSelected = -1;
 

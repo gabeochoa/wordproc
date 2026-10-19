@@ -173,3 +173,168 @@ TEST_CASE("Revision accept/reject (suggesting mode)", "[revisions]") {
         REQUIRE_FALSE(revisions::rejectRevision(buffer, revs, 3));
     }
 }
+
+TEST_CASE("Revision grouping (dialog model)", "[revisions]") {
+    SECTION("a typed run groups into one Insert row") {
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b"),
+                                   insertRev(2, "c")};
+        auto groups = revisions::groupRevisions(revs);
+        REQUIRE(groups.size() == 1);
+        REQUIRE(groups[0].count == 3);
+        REQUIRE(groups[0].type == RevisionType::Insert);
+        REQUIRE(groups[0].startOffset == 0);
+        REQUIRE(groups[0].text == "abc");
+        TextBuffer buffer;
+        buffer.setText("abc");
+        REQUIRE(revisions::groupLabel(buffer, groups[0]) ==
+                "Inserted \"abc\" — Ln 1");
+    }
+    SECTION("Backspace deletes group in document order") {
+        // Deleted 'c', then 'b', then 'a': list order is reverse.
+        std::vector<Revision> revs{deleteRev(2, "c"), deleteRev(1, "b"),
+                                   deleteRev(0, "a")};
+        auto groups = revisions::groupRevisions(revs);
+        REQUIRE(groups.size() == 1);
+        REQUIRE(groups[0].text == "abc");
+        // Ln comes from the FIRST member's offset (2), still Ln 1.
+        REQUIRE(groups[0].startOffset == 2);
+        TextBuffer buffer;
+        buffer.setText("abc");
+        REQUIRE(revisions::groupLabel(buffer, groups[0]) ==
+                "Deleted \"abc\" — Ln 1");
+    }
+    SECTION("forward deletes group (same offset, list order)") {
+        std::vector<Revision> revs{deleteRev(0, "a"), deleteRev(0, "b"),
+                                   deleteRev(0, "c")};
+        auto groups = revisions::groupRevisions(revs);
+        REQUIRE(groups.size() == 1);
+        REQUIRE(groups[0].text == "abc");
+    }
+    SECTION("type change, gap, and caret jump break the group") {
+        std::vector<Revision> revs{insertRev(0, "a"), deleteRev(1, "x"),
+                                   insertRev(2, "b")};
+        REQUIRE(revisions::groupRevisions(revs).size() == 3);
+        std::vector<Revision> gapped{insertRev(0, "a"), insertRev(5, "b")};
+        REQUIRE(revisions::groupRevisions(gapped).size() == 2);
+        std::vector<Revision> jumped{insertRev(0, "a"), insertRev(0, "b")};
+        REQUIRE(revisions::groupRevisions(jumped).size() == 2);
+    }
+    SECTION("a paste right after typing joins the group") {
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "bc")};
+        auto groups = revisions::groupRevisions(revs);
+        REQUIRE(groups.size() == 1);
+        REQUIRE(groups[0].text == "abc");
+    }
+    SECTION("grouping keeps per-revision data intact") {
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b")};
+        (void)revisions::groupRevisions(revs);
+        REQUIRE(revs.size() == 2);
+        REQUIRE(revs[0].text == "a");
+        REQUIRE(revs[1].text == "b");
+    }
+    SECTION("out-of-range group index is a no-op false") {
+        TextBuffer buffer;
+        buffer.setText("abc");
+        std::vector<Revision> revs{insertRev(0, "a")};
+        REQUIRE_FALSE(
+            revisions::acceptRevisionGroup(buffer, revs, 1));
+        REQUIRE_FALSE(
+            revisions::rejectRevisionGroup(buffer, revs, 1));
+        REQUIRE(revs.size() == 1);
+    }
+}
+
+TEST_CASE("Revision group accept/reject (one undo step)", "[revisions]") {
+    SECTION("reject an insert group removes all its text, one undo") {
+        TextBuffer buffer;
+        buffer.setText("abc");
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b"),
+                                   insertRev(2, "c")};
+        REQUIRE(revisions::rejectRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText().empty());
+        REQUIRE(revs.empty());
+        REQUIRE(buffer.canUndo());
+        buffer.undo();
+        REQUIRE(buffer.getText() == "abc");
+    }
+    SECTION("accept an insert group keeps the text, no undo step") {
+        TextBuffer buffer;
+        buffer.setText("abc");
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b"),
+                                   insertRev(2, "c")};
+        REQUIRE(revisions::acceptRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText() == "abc");
+        REQUIRE(revs.empty());
+        REQUIRE_FALSE(buffer.canUndo());
+    }
+    SECTION("accept an insert group restores missing text, one undo") {
+        TextBuffer buffer;
+        buffer.setText("ab");
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b"),
+                                   insertRev(2, "c")};
+        REQUIRE(revisions::acceptRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText() == "abc");
+        REQUIRE(revs.empty());
+        buffer.undo();
+        REQUIRE(buffer.getText() == "ab");
+    }
+    SECTION("reject a Backspace delete group restores it, one undo") {
+        TextBuffer buffer;
+        buffer.setText("a");
+        std::vector<Revision> revs{deleteRev(2, "c"), deleteRev(1, "b"),
+                                   deleteRev(0, "a")};
+        REQUIRE(revisions::rejectRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText() == "abc");
+        REQUIRE(revs.empty());
+        buffer.undo();
+        REQUIRE(buffer.getText() == "a");
+    }
+    SECTION("accept a delete group keeps the deletion, one undo") {
+        TextBuffer buffer;
+        buffer.setText("abc");
+        std::vector<Revision> revs{deleteRev(2, "c"), deleteRev(1, "b"),
+                                   deleteRev(0, "a")};
+        REQUIRE(revisions::acceptRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText().empty());
+        REQUIRE(revs.empty());
+        buffer.undo();
+        REQUIRE(buffer.getText() == "abc");
+    }
+    SECTION("reject a forward-delete group restores it, one undo") {
+        TextBuffer buffer;
+        buffer.setText("");
+        std::vector<Revision> revs{deleteRev(0, "a"), deleteRev(0, "b"),
+                                   deleteRev(0, "c")};
+        REQUIRE(revisions::rejectRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText() == "abc");
+        REQUIRE(revs.empty());
+        buffer.undo();
+        REQUIRE(buffer.getText().empty());
+    }
+    SECTION("group op re-anchors a later revision and leaves the tail") {
+        // "abc X": the space at 3 is untracked, so the X at 4 is
+        // its own group; rejecting the "abc" group leaves " X"
+        // and shifts the X record 4 -> 1.
+        TextBuffer buffer;
+        buffer.setText("abc X");
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b"),
+                                   insertRev(2, "c"), insertRev(4, "X")};
+        auto groups = revisions::groupRevisions(revs);
+        REQUIRE(groups.size() == 2);
+        REQUIRE(revisions::rejectRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText() == " X");
+        REQUIRE(revs.size() == 1);
+        REQUIRE(revs[0].startOffset == 1);
+    }
+    SECTION("accepting one group leaves the other group alone") {
+        TextBuffer buffer;
+        buffer.setText("ab");
+        std::vector<Revision> revs{insertRev(0, "a"), insertRev(1, "b"),
+                                   deleteRev(2, "c")};
+        REQUIRE(revisions::groupRevisions(revs).size() == 2);
+        REQUIRE(revisions::acceptRevisionGroup(buffer, revs, 0));
+        REQUIRE(buffer.getText() == "ab");
+        REQUIRE(revs.size() == 1);
+        REQUIRE(revs[0].type == RevisionType::Delete);
+    }
+}

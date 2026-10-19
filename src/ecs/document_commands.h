@@ -105,6 +105,28 @@ inline bool rejectRevision(DocumentComponent& doc, std::size_t index) {
     return true;
 }
 
+// Group dialog rows: Accept/Reject applies to every member of one
+// groupRevisions group, as one undo step (see revisions.h).
+inline bool acceptRevisionGroup(DocumentComponent& doc,
+                                std::size_t groupIndex) {
+    if (!revisions::acceptRevisionGroup(doc.buffer, doc.revisions,
+                                        groupIndex)) {
+        return false;
+    }
+    doc.isDirty = true;
+    return true;
+}
+
+inline bool rejectRevisionGroup(DocumentComponent& doc,
+                                std::size_t groupIndex) {
+    if (!revisions::rejectRevisionGroup(doc.buffer, doc.revisions,
+                                        groupIndex)) {
+        return false;
+    }
+    doc.isDirty = true;
+    return true;
+}
+
 inline void acceptAllRevisions(DocumentComponent& doc) {
     revisions::acceptAllRevisions(doc.buffer, doc.revisions);
     doc.trackChangesBaseline = doc.buffer.getText();

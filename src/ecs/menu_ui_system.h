@@ -3390,10 +3390,12 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
         
         // Revisions dialog (Tools > Revisions...): one sunken
-        // listbox of human rows (`Inserted "abc" — Ln 3`) with a
-        // right button column. Accept / Reject act on the selected
-        // row; Accept All / Reject All are wired to the existing
-        // Edit-menu commands. Deletes are
+        // listbox of grouped human rows (`Inserted "abc" — Ln 3`,
+        // adjacent contiguous revisions of the same type in one
+        // row — see revisions::groupRevisions) with a right button
+        // column. Accept / Reject act on the selected GROUP (all
+        // its members, one undo step); Accept All / Reject All are
+        // wired to the existing Edit-menu commands. Deletes are
         // records only (see revisions.h: no keep-visible deleted
         // text in the buffer), so the dialog is where they are
         // visible; inserts additionally render green-underlined in
@@ -3415,13 +3417,15 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
                                               "Revisions", CONTENT_LAYER);
 
+                const auto revisionGroups =
+                    revisions::groupRevisions(doc.revisions);
                 auto clampSelection = [&]() {
-                    if (doc.revisions.empty()) {
+                    if (revisionGroups.empty()) {
                         dialogs.revisionsSelected = -1;
                     } else if (dialogs.revisionsSelected >=
-                               static_cast<int>(doc.revisions.size())) {
+                               static_cast<int>(revisionGroups.size())) {
                         dialogs.revisionsSelected =
-                            static_cast<int>(doc.revisions.size()) - 1;
+                            static_cast<int>(revisionGroups.size()) - 1;
                     }
                 };
 
@@ -3430,8 +3434,22 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 // white inset list, not separate cards — the
                 // container carries the sunken bevel; the selected
                 // row is navy/white. Accept / Reject act on the
-                // selected row (per-row); Accept All / Reject All
-                // resolve every record; Close dismisses.
+                // selected GROUP; Accept All / Reject All resolve
+                // every record; Close dismisses. Widths: the dialog
+                // is 480 wide with 4px panel padding each side, so
+                // the content row is 472; the button column is
+                // w1280(100) (the 90-wide buttons, Spelling-style)
+                // and the list takes the rest: 472 - 8 gap - 100
+                // = 364. Widths MUST be w1280 (width axis), not
+                // h720: h720 resolves against the width axis at
+                // 1280/720 scale, so the old h720(320) list +
+                // h720(120) column summed to ~790 in a 472 slot
+                // and flex-shrink ran the navy row under the
+                // Accept button. Row text sits 5px in from the
+                // row edge (text_inset, the chip-popup pattern):
+                // the old padding-left did not offset the label,
+                // so the sunken bevel clipped the 'I' in
+                // 'Inserted'.
                 auto contentRow = div(ctx, mk(result.ent(), 1),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(216)})
@@ -3441,15 +3459,17 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 if (contentRow) {
                     auto listBox = div(ctx, mk(contentRow.ent(), 10),
                         ah_win95::win95SunkenStyle()
-                            .with_size(ComponentSize{afterhours::ui::h720(320),
+                            .with_size(ComponentSize{afterhours::ui::w1280(364),
                                                     h720(216)})
                             .with_flex_direction(FlexDirection::Column)
                             .with_overflow(afterhours::ui::Overflow::Auto)
                             .with_padding(Padding{.top = pixels(2),
-                                                  .bottom = pixels(2)})
+                                                  .bottom = pixels(2),
+                                                  .left = pixels(2),
+                                                  .right = pixels(2)})
                             .with_render_layer(CONTENT_LAYER));
                     if (listBox) {
-                        if (doc.revisions.empty()) {
+                        if (revisionGroups.empty()) {
                             div(ctx, mk(listBox.ent(), 0),
                                 ComponentConfig{}
                                     .with_label("No revisions to review.")
@@ -3459,15 +3479,15 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                         ui_imm::win95_colors::TEXT_AREA)
                                     .with_custom_text_color(
                                         ui_imm::win95_colors::TEXT)
-                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_text_inset(5.0f, 0.0f)
                                     .with_render_layer(CONTENT_LAYER));
                         }
-                        for (std::size_t i = 0; i < doc.revisions.size(); ++i) {
-                            const Revision& rev = doc.revisions[i];
+                        for (std::size_t i = 0; i < revisionGroups.size(); ++i) {
+                            const revisions::RevisionGroup& group = revisionGroups[i];
                             const bool selected =
                                 static_cast<int>(i) == dialogs.revisionsSelected;
                             const std::string rowLabel =
-                                revisions::dialogLabel(doc.buffer, rev);
+                                revisions::groupLabel(doc.buffer, group);
                             test_input::register_visible_text(rowLabel);
                             if (button(ctx, mk(listBox.ent(), 1000 + static_cast<int>(i)),
                                 ComponentConfig{}
@@ -3481,7 +3501,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                         ? ui_imm::win95_colors::TEXT_WHITE
                                         : ui_imm::win95_colors::TEXT)
                                     .with_alignment(afterhours::ui::TextAlignment::Left)
-                                    .with_padding(Padding{.left = pixels(4)})
+                                    .with_text_inset(5.0f, 0.0f)
                                     .with_cursor(afterhours::ui::CursorType::Pointer)
                                     .with_render_layer(CONTENT_LAYER))) {
                                 dialogs.revisionsSelected = static_cast<int>(i);
@@ -3490,7 +3510,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                     auto buttonCol = div(ctx, mk(contentRow.ent(), 11),
                         ComponentConfig{}
-                            .with_size(ComponentSize{afterhours::ui::h720(120),
+                            .with_size(ComponentSize{afterhours::ui::w1280(100),
                                                     h720(216)})
                             .with_flex_direction(FlexDirection::Column)
                             .with_align_items(AlignItems::Center)
@@ -3511,14 +3531,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         };
                         dialogBtn(0, "revision_accept", "Accept", [&]() {
                             if (dialogs.revisionsSelected >= 0) {
-                                cmd::acceptRevision(
+                                cmd::acceptRevisionGroup(
                                     doc,
                                     static_cast<std::size_t>(dialogs.revisionsSelected));
                             }
                         });
                         dialogBtn(1, "revision_reject", "Reject", [&]() {
                             if (dialogs.revisionsSelected >= 0) {
-                                cmd::rejectRevision(
+                                cmd::rejectRevisionGroup(
                                     doc,
                                     static_cast<std::size_t>(dialogs.revisionsSelected));
                             }

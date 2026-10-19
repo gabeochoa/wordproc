@@ -1,8 +1,14 @@
 # Test: Suggesting mode + Tools > Revisions... dialog
 # With Track Changes on, typing records Insert revisions and
 # Backspace records a Delete revision. The Revisions dialog lists
-# both kinds; Accept keeps an insert, Reject restores a deleted
-# character, and Edit > Reject All Changes rejects the rest.
+# GROUPED rows: the typed run "abc" is one Insert row and the
+# backspaced "c" is one Delete row. Accept/Reject act on the
+# whole group (one undo step); Edit > Reject All Changes rejects
+# the rest.
+#
+# Regression: pre-grouping, item_0 was Insert "a" and item_2 was
+# the Delete; this script clicks the GROUP rows (item_1 = Delete
+# group, item_0 = Insert group), so it fails on pre-fix bytes.
 
 menu_open Edit
 wait_frames 12
@@ -28,20 +34,24 @@ expect_text "Ln 1"
 
 screenshot revisions_dialog
 
-# Accept the first revision (Insert "a"): text unchanged, one fewer record
+# Reject the Delete GROUP (item_1): the deleted "c" comes back.
+# The three Insert records stay; count drops by one GROUP (4 raw
+# records -> 3), because the Delete group has one member.
+click_ui revision_item_1
+wait_frames 12
+click_ui revision_reject
+wait_frames 12
+validate revision_count=3
+validate text=abc
+
+# Accept the Insert GROUP (item_0): all three inserts accepted
+# at once — count drops 3 -> 0, proving the group (pre-grouping,
+# Accept on item_0 removed one record, leaving 2)
 click_ui revision_item_0
 wait_frames 12
 click_ui revision_accept
 wait_frames 12
-validate revision_count=3
-validate text=ab
-
-# Reject the Delete revision (now index 2): the deleted "c" comes back
-click_ui revision_item_2
-wait_frames 12
-click_ui revision_reject
-wait_frames 12
-validate revision_count=2
+validate revision_count=0
 validate text=abc
 
 click_ui revision_close
@@ -49,11 +59,15 @@ wait_frames 12
 
 screenshot revisions
 
-# Reject All rejects the two remaining inserts ("a" was accepted,
-# so it stays)
+# Reject All rejects a fresh grouped run: type "d" (one Insert
+# group), then Reject All removes it
+type "d"
+wait_frames 12
+validate revision_count=1
+validate text=abcd
 menu_open Edit
 wait_frames 12
 menu_select "Reject All Changes"
 wait_frames 12
 validate revision_count=0
-validate text=a
+validate text=abc
