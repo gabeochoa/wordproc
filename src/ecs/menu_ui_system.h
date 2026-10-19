@@ -3635,10 +3635,14 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
 
         // Margin comment cards (Docs comments, Win95 dress): one card
-        // per comment, anchored to its anchor row. Paged mode: the
-        // card sits in the page's right margin (text right + 8, kept
-        // on screen). Pageless: docked at the right edge of the text
-        // area (inside the margin band, left of the scrollbar).
+        // per comment, anchored to its anchor row (card top aligns
+        // with the anchor row). Paged mode: the card sits fully
+        // OUTSIDE the page (page right edge + 8, kept on screen),
+        // with a 1px connector tick from the page edge to the card
+        // at the anchor row's centre. Pageless: docked at the
+        // right edge of the text area (inside the margin band, left
+        // of the scrollbar). Every card carries a 1px dark border
+        // + raised bevel frame; Resolve is a small raised button.
         // Cards on the same row stack below each other. The card
         // body is a button (click -> caret to the anchor start);
         // Resolve is a higher-layer button on top, so a click on it
@@ -3676,8 +3680,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                               static_cast<float>(pos.row - static_cast<std::size_t>(cache_.scroll->offset)) *
                                   static_cast<float>(cardLineHeight);
                 float cardX = 0.0f;
+                float pageRight = 0.0f;
                 if (layout.pageMode == PageMode::Paged) {
-                    cardX = effective.x + effective.width + 8.0f;
+                    // Fully OUTSIDE the page: the card starts at the
+                    // page's right edge + gap, not at the text-area
+                    // edge (the old x sat inside the page's right
+                    // margin band and overlapped the page by ~32px).
+                    // Only when the window cannot fit page + gap +
+                    // card does it clamp back on screen (overlapping
+                    // the page again — the narrow-window fallback).
+                    pageRight =
+                        layout.pageOffsetX + layout.pageDisplayWidth;
+                    cardX = pageRight + 8.0f;
                     const float maxX = static_cast<float>(layout.screenWidth) -
                                        CARD_W - 4.0f;
                     if (cardX > maxX) cardX = maxX;
@@ -3715,6 +3729,27 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                         .with_roundness(0.0f)
                         .with_render_layer(CARD_LAYER));
+                // Anchor connector (paged): a 1px tick from the
+                // page's right edge to the card's left edge at the
+                // anchor row's vertical centre. Skipped when the
+                // card was clamped (no gap left to bridge). The
+                // card top already aligns with the anchor row.
+                if (layout.pageMode == PageMode::Paged &&
+                    cardX - pageRight >= 2.0f) {
+                    div(ctx, mk(entity, baseId + 5),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{
+                                pixels(cardX - pageRight), pixels(1.0f)})
+                            .with_absolute_position()
+                            .with_translate(
+                                pageRight,
+                                cardY + static_cast<float>(cardLineHeight) /
+                                              2.0f)
+                            .with_custom_background(
+                                ui_imm::win95_colors::TEXT)
+                            .with_roundness(0.0f)
+                            .with_render_layer(CARD_LAYER));
+                }
                 if (button(ctx, mk(entity, baseId + 1),
                            ComponentConfig{}
                                .with_debug_name("comment_card_" +
@@ -3726,10 +3761,21 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                .with_translate(cardX, cardY)
                                .with_custom_background(
                                    afterhours::Color{255, 255, 220, 255})
-                               .with_bevel(afterhours::ui::BevelStyle::None,
+                               // 1px dark border + raised bevel frame.
+                               // The border used to live only on the
+                               // base div below, which this button
+                               // (same rect, higher layer) painted
+                               // over — so no border ever showed. The
+                               // border draws after (over) the bevel
+                               // and covers its outer 1px, so the
+                               // bevel runs at thickness 2 to leave
+                               // its inner highlight visible.
+                               .with_border(ui_imm::win95_colors::TEXT,
+                                           1.0f)
+                               .with_bevel(afterhours::ui::BevelStyle::Raised,
                                            ui_imm::win95_colors::BORDER_LIGHT,
                                            ui_imm::win95_colors::BORDER_DARK,
-                                           0.0f)
+                                           2.0f)
                                .with_roundness(0.0f)
                                .with_cursor(afterhours::ui::CursorType::Pointer)
                                .with_render_layer(CARD_LAYER + 1))) {
