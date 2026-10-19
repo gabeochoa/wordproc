@@ -138,3 +138,10 @@ Thesaurus 6->7.5, Formatting-toggle 8.5, table render/sort 6->7.5.
 invisible) — now wired. All 98 info toasts swept to status-bar flashes;
 only error toasts remain. Typing into table cells is still
 unimplemented (cells seeded via test hooks only) — Batch 8.
+
+## 2026-10-19 — Batch 8 (table cell editing)
+
+cell_editing 8, cell_wrap 8 — **PASS.** Tables also persisted on
+save for the first time (serializers had no callers). Polish round:
+active-cell outline navy on all edges (neighbors' gridlines were
+overpainting it), status flashes expire on next keystroke.
