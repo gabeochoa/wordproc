@@ -5,6 +5,7 @@
 #include <format>
 
 #include "../util/clipboard.h"
+#include "../editor/borders_shading.h"
 #include "../editor/columns_math.h"
 #include "../editor/paragraph_dialog.h"
 #include "../editor/document_io.h"
@@ -603,7 +604,22 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 71:  // Tab Width...
                     dialogs.showTabWidthDialog = true;
                     break;
-                case 72:  // Columns...
+                case 72:  // Borders and Shading...
+                    // Seed the dialog from the caret paragraph; OK
+                    // re-reads the caret/selection then, so a
+                    // multi-paragraph selection gets the same border
+                    // + shading (like Paragraph...).
+                    dialogs.showBordersShadingDialog = true;
+                    {
+                        ParagraphFormat fmt =
+                            doc.buffer.lineParagraphFormat(
+                                doc.buffer.caret().row);
+                        dialogs.bordersEdges = fmt.borderEdges;
+                        dialogs.bordersStyle = fmt.borderStyle;
+                        dialogs.bordersShadingIndex = fmt.shadingColorIndex;
+                    }
+                    break;
+                case 73:  // Columns...
                     dialogs.showColumnsDialog = true;
                     dialogs.columnsSelected =
                         std::clamp(doc.docSettings.pageSettings.columnCount,

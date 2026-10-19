@@ -201,6 +201,10 @@ inline std::vector<win95::Menu> createMenuBar(
         {"", "", false, true, nullptr},  // Separator
         {"Drop Cap", "", true, false, nullptr},
         {"Tab Width...", "", true, false, nullptr},
+        // Borders and Shading... sits just before Columns... (which
+        // stays last: test_menu_setup pins Columns... as the tail,
+        // and Paragraph... must directly precede Align Left).
+        {"Borders and Shading...", "", true, false, nullptr},
         {"Columns...", "", true, false, nullptr}
     };
     // formatMenu pushed later in correct order (Index 4)

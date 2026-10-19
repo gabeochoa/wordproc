@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "../vendor/afterhours/src/plugins/command_history.h"
+#include "borders_shading.h"
 #include "document_settings.h"
 #include "gap_buffer.h"
 
@@ -127,11 +128,21 @@ struct ParagraphFormat {
     float lineSpacing = 1.0f;
     int spaceBefore = 0;
     int spaceAfter = 0;
+    // Borders and shading (Format > Borders and Shading...): border
+    // edges bitmask + border style + shading color index, stored
+    // the way indents are stored. See borders_shading.h for the
+    // edge/style/palette constants.
+    int borderEdges = 0;
+    int borderStyle = borders_shading::kBorderStyleNone;
+    int shadingColorIndex = 0;
     bool operator==(const ParagraphFormat& other) const {
         return indents == other.indents &&
                lineSpacing == other.lineSpacing &&
                spaceBefore == other.spaceBefore &&
-               spaceAfter == other.spaceAfter;
+               spaceAfter == other.spaceAfter &&
+               borderEdges == other.borderEdges &&
+               borderStyle == other.borderStyle &&
+               shadingColorIndex == other.shadingColorIndex;
     }
 };
 
@@ -258,6 +269,13 @@ struct LineSpan {
     // Drop cap formatting
     bool hasDropCap = false;
     int dropCapLines = 2;  // Number of lines the drop cap spans
+
+    // Paragraph borders and shading (Format > Borders and
+    // Shading...): border edges bitmask + border style + shading
+    // color index. Defaults draw nothing, like a fresh paragraph.
+    int borderEdges = 0;
+    int borderStyle = borders_shading::kBorderStyleNone;
+    int shadingColorIndex = 0;
 };
 
 // Word count and document statistics

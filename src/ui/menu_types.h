@@ -175,6 +175,7 @@ inline std::vector<MenuData> createMenuBarData() {
                         {"", "", false, true},
                         {"Drop Cap", "", true, false},
                         {"Tab Width...", "", true, false},
+                        {"Borders and Shading...", "", true, false},
                         {"Columns...", "", true, false}};
     menus.push_back(formatMenu);
 

@@ -250,6 +250,23 @@ TEST_CASE("Format menu ends with Columns...", "[menu]") {
     REQUIRE(format->items.back().label == "Columns...");
 }
 
+TEST_CASE("Format menu has Borders and Shading... right before Columns...",
+            "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* format = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "Format") format = &m;
+    }
+    REQUIRE(format != nullptr);
+    std::size_t borders = format->items.size();
+    for (std::size_t i = 0; i < format->items.size(); ++i) {
+        if (format->items[i].label == "Borders and Shading...") borders = i;
+    }
+    REQUIRE(borders < format->items.size());
+    REQUIRE(format->items[borders + 1].label == "Columns...");
+    REQUIRE(format->items[borders].enabled == true);
+}
+
 TEST_CASE("Insert menu has Date and Time before Special Character", "[menu]") {
     auto menus = createMenuBarData();
     const MenuData* insert = nullptr;

@@ -60,6 +60,13 @@ static void setupCallbacks(
         if (prop == "line_spacing") return std::to_string(buffer.currentLineSpacing());
         if (prop == "space_before") return std::to_string(buffer.currentSpaceBefore());
         if (prop == "space_after") return std::to_string(buffer.currentSpaceAfter());
+        if (prop == "border_edges" || prop == "border_style" ||
+            prop == "shading_index") {
+            ParagraphFormat fmt = buffer.lineParagraphFormat(buffer.caret().row);
+            if (prop == "border_edges") return std::to_string(fmt.borderEdges);
+            if (prop == "border_style") return std::to_string(fmt.borderStyle);
+            return std::to_string(fmt.shadingColorIndex);
+        }
         if (prop == "hyperlink_count") return std::to_string(buffer.hyperlinks().size());
         if (prop == "bookmark_count") return std::to_string(buffer.bookmarks().size());
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
@@ -222,6 +229,13 @@ static void setupCallbacksEx(
         if (prop == "line_spacing") return std::to_string(buffer.currentLineSpacing());
         if (prop == "space_before") return std::to_string(buffer.currentSpaceBefore());
         if (prop == "space_after") return std::to_string(buffer.currentSpaceAfter());
+        if (prop == "border_edges" || prop == "border_style" ||
+            prop == "shading_index") {
+            ParagraphFormat fmt = buffer.lineParagraphFormat(buffer.caret().row);
+            if (prop == "border_edges") return std::to_string(fmt.borderEdges);
+            if (prop == "border_style") return std::to_string(fmt.borderStyle);
+            return std::to_string(fmt.shadingColorIndex);
+        }
         if (prop == "hyperlink_count") return std::to_string(buffer.hyperlinks().size());
         if (prop == "bookmark_count") return std::to_string(buffer.bookmarks().size());
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
@@ -457,6 +471,7 @@ static void setupCallbacksEx(
             if (dialogState.showFontDialog) return "Font";
             if (dialogState.showColumnsDialog) return "Columns";
             if (dialogState.showParagraphDialog) return "Paragraph";
+            if (dialogState.showBordersShadingDialog) return "BordersShading";
             if (dialogState.showDateTimeDialog) return "DateTime";
             if (dialogState.showOptionsDialog) return "Options";
             if (dialogState.showMailMergeDialog) return "MailMerge";
@@ -1097,6 +1112,10 @@ static void setupCallbacksEx(
         dialogState.paragraphAfterStr = "0";
         dialogState.paragraphLineSpacingIndex = 0;
         dialogState.paragraphTabStopsStr = "4";
+        dialogState.showBordersShadingDialog = false;
+        dialogState.bordersEdges = 0;
+        dialogState.bordersStyle = 0;
+        dialogState.bordersShadingIndex = 0;
         dialogState.showTabWidthDialog = false;
         dialogState.tabWidthInputBuffer[0] = '\0';
         dialogState.tabWidthInputStr.clear();

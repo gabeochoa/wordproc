@@ -362,6 +362,16 @@ struct DialogState : public afterhours::BaseComponent {
     int paragraphLineSpacingIndex = 0;
     std::string paragraphTabStopsStr = "4";
 
+    // Borders and Shading dialog (Format > Borders and Shading...):
+    // working copy seeded from the caret paragraph when the dialog
+    // opens (see menu_actions). Edges is the borders_shading bitmask,
+    // style is kBorderStyleNone / kBorderStyleSingle, shading is the
+    // index into borders_shading::kShadingColors (0 = None).
+    bool showBordersShadingDialog = false;
+    int bordersEdges = 0;
+    int bordersStyle = 0;
+    int bordersShadingIndex = 0;
+
     // Tab Width
     bool showTabWidthDialog = false;
     char tabWidthInputBuffer[16] = {0};

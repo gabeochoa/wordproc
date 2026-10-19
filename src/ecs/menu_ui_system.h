@@ -3227,6 +3227,333 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Borders and Shading dialog (Format > Borders and Shading...)
+        // - Win95 shell: Setting (None / Box / Custom), per-edge
+        // toggles, Style (None / Single), shading swatches (None +
+        // highlight palette). OK applies to the caret paragraph, or
+        // every paragraph in the selection, as ONE undo step
+        // (commitParagraphFormat); it only touches the border /
+        // shading fields, preserving each paragraph's indents,
+        // spacing, and line spacing. Cancel discards edits.
+        if (dialogs.showBordersShadingDialog) {
+            constexpr int BORDERS_MODAL_ID = 50021;
+            auto result = afterhours::modal(ctx, mk(entity, BORDERS_MODAL_ID),
+                dialogs.showBordersShadingDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(460),
+                    afterhours::ui::h720(340),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Borders and Shading",
+                                              CONTENT_LAYER);
+
+                auto groupLabel = [&](int id, const char* label) {
+                    test_input::register_visible_text(label);
+                    div(ctx, mk(result.ent(), id),
+                        ComponentConfig{}
+                            .with_label(label)
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                };
+
+                // Setting: None clears edges + style, Box sets all
+                // four edges + Single style, Custom keeps the
+                // working copy for the edge toggles below.
+                groupLabel(901, "Setting:");
+                {
+                    auto row = div(ctx, mk(result.ent(), 902),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(30)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        bool noneSelected =
+                            dialogs.bordersStyle ==
+                                borders_shading::kBorderStyleNone &&
+                            dialogs.bordersEdges == 0;
+                        bool boxSelected =
+                            dialogs.bordersStyle ==
+                                borders_shading::kBorderStyleSingle &&
+                            dialogs.bordersEdges ==
+                                borders_shading::kEdgeAll;
+                        bool customSelected = !noneSelected && !boxSelected;
+                        static const char* kSettingLabels[3] = {"None", "Box",
+                                                               "Custom"};
+                        static const char* kSettingDebug[3] = {
+                            "borders_setting_none", "borders_setting_box",
+                            "borders_setting_custom"};
+                        bool selected[3] = {noneSelected, boxSelected,
+                                            customSelected};
+                        for (int i = 0; i < 3; ++i) {
+                            test_input::register_visible_text(
+                                kSettingLabels[i]);
+                            if (button(ctx, mk(row.ent(), i),
+                                ah_win95::win95DialogButtonStyle()
+                                    .with_debug_name(kSettingDebug[i])
+                                    .with_label(kSettingLabels[i])
+                                    .with_custom_background(selected[i]
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(selected[i]
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                if (i == 0) {
+                                    dialogs.bordersEdges = 0;
+                                    dialogs.bordersStyle =
+                                        borders_shading::kBorderStyleNone;
+                                } else if (i == 1) {
+                                    dialogs.bordersEdges =
+                                        borders_shading::kEdgeAll;
+                                    dialogs.bordersStyle =
+                                        borders_shading::kBorderStyleSingle;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Edges: per-edge toggles. Turning an edge on while
+                // the style is None also picks Single, so the toggle
+                // visibly takes effect.
+                groupLabel(903, "Edges:");
+                {
+                    auto row = div(ctx, mk(result.ent(), 904),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(30)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        static const char* kEdgeLabels[4] = {"Top", "Bottom",
+                                                             "Left", "Right"};
+                        static const int kEdgeBits[4] = {
+                            borders_shading::kEdgeTop,
+                            borders_shading::kEdgeBottom,
+                            borders_shading::kEdgeLeft,
+                            borders_shading::kEdgeRight};
+                        static const char* kEdgeDebug[4] = {
+                            "borders_edge_top", "borders_edge_bottom",
+                            "borders_edge_left", "borders_edge_right"};
+                        for (int i = 0; i < 4; ++i) {
+                            bool on = (dialogs.bordersEdges &
+                                       kEdgeBits[i]) != 0;
+                            std::string label =
+                                std::string(on ? "[X] " : "[ ] ") +
+                                kEdgeLabels[i];
+                            test_input::register_visible_text(label);
+                            if (button(ctx, mk(row.ent(), i),
+                                ah_win95::win95DialogButtonStyle()
+                                    .with_debug_name(kEdgeDebug[i])
+                                    .with_label(label)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.bordersEdges ^= kEdgeBits[i];
+                                if ((dialogs.bordersEdges &
+                                     kEdgeBits[i]) != 0 &&
+                                    dialogs.bordersStyle ==
+                                        borders_shading::kBorderStyleNone) {
+                                    dialogs.bordersStyle =
+                                        borders_shading::kBorderStyleSingle;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Style: None draws no border even with edges set;
+                // Single draws one 1px line on the chosen edges.
+                groupLabel(905, "Style:");
+                {
+                    auto row = div(ctx, mk(result.ent(), 906),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(30)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        static const char* kStyleLabels[2] = {"None",
+                                                              "Single"};
+                        static const char* kStyleDebug[2] = {
+                            "borders_style_none", "borders_style_single"};
+                        static const int kStyleValues[2] = {
+                            borders_shading::kBorderStyleNone,
+                            borders_shading::kBorderStyleSingle};
+                        for (int i = 0; i < 2; ++i) {
+                            bool selected =
+                                dialogs.bordersStyle == kStyleValues[i];
+                            test_input::register_visible_text(
+                                kStyleLabels[i]);
+                            if (button(ctx, mk(row.ent(), i),
+                                ah_win95::win95DialogButtonStyle()
+                                    .with_debug_name(kStyleDebug[i])
+                                    .with_label(kStyleLabels[i])
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.bordersStyle = kStyleValues[i];
+                            }
+                        }
+                    }
+                }
+
+                // Shading: one swatch per palette entry (None +
+                // highlight palette). The None swatch is white with
+                // a gray frame; the current choice is named below
+                // the row so None is unambiguous.
+                groupLabel(907, "Shading:");
+                {
+                    auto row = div(ctx, mk(result.ent(), 908),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(30)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(6))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        for (int i = 0; i < borders_shading::kShadingCount;
+                             ++i) {
+                            TextColor swatch =
+                                borders_shading::shadingColorForIndex(i);
+                            bool selected =
+                                dialogs.bordersShadingIndex == i;
+                            std::string debugName =
+                                std::string("borders_shading_") +
+                                borders_shading::kShadingNames[i];
+                            for (char& ch : debugName) {
+                                if (ch >= 'A' && ch <= 'Z')
+                                    ch = static_cast<char>(ch - 'A' + 'a');
+                            }
+                            test_input::register_visible_text(
+                                borders_shading::kShadingNames[i]);
+                            if (button(ctx, mk(row.ent(), i),
+                                ComponentConfig{}
+                                    .with_debug_name(debugName)
+                                    .with_label("")
+                                    .with_size(ComponentSize{w1280(32),
+                                                             h720(24)})
+                                    .with_custom_background(afterhours::Color{
+                                        swatch.r, swatch.g, swatch.b,
+                                        swatch.a})
+                                    .with_border(
+                                        selected
+                                            ? ui_imm::win95_colors::TEXT
+                                            : afterhours::Color{128, 128, 128,
+                                                               255},
+                                        selected ? 2.0f : 1.0f)
+                                    .with_roundness(0.0f)
+                                    .with_cursor(afterhours::ui::CursorType::
+                                                   Pointer)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.bordersShadingIndex = i;
+                            }
+                        }
+                    }
+                }
+                {
+                    std::string current =
+                        std::string("Shading: ") +
+                        borders_shading::kShadingNames
+                            [static_cast<std::size_t>(
+                                borders_shading::clampShadingIndex(
+                                    dialogs.bordersShadingIndex))];
+                    test_input::register_visible_text(current);
+                    div(ctx, mk(result.ent(), 909),
+                        ComponentConfig{}
+                            .with_label(current)
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                }
+
+                auto buttonRow = div(ctx, mk(result.ent(), 910),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("borders_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        std::size_t firstRow = doc.buffer.caret().row;
+                        std::size_t lastRow = firstRow;
+                        if (doc.buffer.hasSelection()) {
+                            firstRow = std::min(
+                                doc.buffer.selectionStart().row,
+                                doc.buffer.selectionEnd().row);
+                            lastRow = std::max(
+                                doc.buffer.selectionStart().row,
+                                doc.buffer.selectionEnd().row);
+                        }
+                        if (lastRow >= doc.buffer.lineCount() &&
+                            doc.buffer.lineCount() > 0)
+                            lastRow = doc.buffer.lineCount() - 1;
+                        std::vector<ParagraphFormatChange> changes;
+                        for (std::size_t row = firstRow; row <= lastRow;
+                             ++row) {
+                            ParagraphFormat old =
+                                doc.buffer.lineParagraphFormat(row);
+                            ParagraphFormat next = old;
+                            next.borderEdges = dialogs.bordersEdges;
+                            next.borderStyle = dialogs.bordersStyle;
+                            next.shadingColorIndex =
+                                dialogs.bordersShadingIndex;
+                            doc.buffer.setLineParagraphFormat(row, next);
+                            changes.push_back({row, old, next});
+                        }
+                        doc.buffer.commitParagraphFormat(
+                            std::move(changes));
+                        doc.isDirty = true;
+                        dialogs.showBordersShadingDialog = false;
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("borders_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showBordersShadingDialog = false;
+                    }
+                }
+            }
+        }
+
         // Page Setup dialog (File > Page Setup...) - Win95 shell:
         // paper-size presets, Portrait/Landscape, four margin
         // fields in inches. OK writes the whole block to
@@ -4704,6 +5031,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             !dialogs.showCommentDialog && !dialogs.showTemplateDialog &&
             !dialogs.showDateTimeDialog && !dialogs.showFontDialog &&
             !dialogs.showColumnsDialog && !dialogs.showParagraphDialog &&
+            !dialogs.showBordersShadingDialog &&
             !dialogs.showSpellingDialog && !dialogs.showGrammarDialog &&
             !dialogs.showAutoCorrectDialog &&
             !dialogs.showWordCountDialog && !dialogs.showTabWidthDialog &&

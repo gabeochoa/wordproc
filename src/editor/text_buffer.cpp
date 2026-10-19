@@ -293,6 +293,7 @@ void TextBuffer::rebuildLineIndex() {
     TextAlignment alignment = TextAlignment::Left;
     int leftIndent = 0;
     int firstLineIndent = 0;
+    int rightIndent = 0;
     float lineSpacing = 1.0f;
     int spaceBefore = 0;
     int spaceAfter = 0;
@@ -302,6 +303,9 @@ void TextBuffer::rebuildLineIndex() {
     bool hasPageBreakBefore = false;
     bool hasDropCap = false;
     int dropCapLines = 2;
+    int borderEdges = 0;
+    int borderStyle = borders_shading::kBorderStyleNone;
+    int shadingColorIndex = 0;
   };
 
   std::vector<LineMetaSnapshot> savedMeta;
@@ -313,6 +317,7 @@ void TextBuffer::rebuildLineIndex() {
     snapshot.alignment = span.alignment;
     snapshot.leftIndent = span.leftIndent;
     snapshot.firstLineIndent = span.firstLineIndent;
+    snapshot.rightIndent = span.rightIndent;
     snapshot.lineSpacing = span.lineSpacing;
     snapshot.spaceBefore = span.spaceBefore;
     snapshot.spaceAfter = span.spaceAfter;
@@ -322,6 +327,9 @@ void TextBuffer::rebuildLineIndex() {
     snapshot.hasPageBreakBefore = span.hasPageBreakBefore;
     snapshot.hasDropCap = span.hasDropCap;
     snapshot.dropCapLines = span.dropCapLines;
+    snapshot.borderEdges = span.borderEdges;
+    snapshot.borderStyle = span.borderStyle;
+    snapshot.shadingColorIndex = span.shadingColorIndex;
     savedMeta.push_back(snapshot);
   }
 
@@ -348,6 +356,7 @@ void TextBuffer::rebuildLineIndex() {
         span.alignment = snapshot.alignment;
         span.leftIndent = snapshot.leftIndent;
         span.firstLineIndent = snapshot.firstLineIndent;
+        span.rightIndent = snapshot.rightIndent;
         span.lineSpacing = snapshot.lineSpacing;
         span.spaceBefore = snapshot.spaceBefore;
         span.spaceAfter = snapshot.spaceAfter;
@@ -357,6 +366,9 @@ void TextBuffer::rebuildLineIndex() {
         span.hasPageBreakBefore = snapshot.hasPageBreakBefore;
         span.hasDropCap = snapshot.hasDropCap;
         span.dropCapLines = snapshot.dropCapLines;
+        span.borderEdges = snapshot.borderEdges;
+        span.borderStyle = snapshot.borderStyle;
+        span.shadingColorIndex = snapshot.shadingColorIndex;
         break;
       }
     }
@@ -724,7 +736,10 @@ ParagraphFormat TextBuffer::lineParagraphFormat(std::size_t row) const {
     return {{span.leftIndent, span.firstLineIndent, span.rightIndent},
             span.lineSpacing,
             span.spaceBefore,
-            span.spaceAfter};
+            span.spaceAfter,
+            span.borderEdges,
+            span.borderStyle,
+            span.shadingColorIndex};
 }
 
 void TextBuffer::setLineParagraphFormat(std::size_t row,
@@ -735,6 +750,13 @@ void TextBuffer::setLineParagraphFormat(std::size_t row,
     span.lineSpacing = std::max(0.5f, std::min(3.0f, format.lineSpacing));
     span.spaceBefore = std::max(0, format.spaceBefore);
     span.spaceAfter = std::max(0, format.spaceAfter);
+    span.borderEdges = format.borderEdges & borders_shading::kEdgeAll;
+    span.borderStyle =
+        format.borderStyle == borders_shading::kBorderStyleSingle
+            ? borders_shading::kBorderStyleSingle
+            : borders_shading::kBorderStyleNone;
+    span.shadingColorIndex =
+        borders_shading::clampShadingIndex(format.shadingColorIndex);
     version_++;
 }
 

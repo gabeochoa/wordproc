@@ -12,6 +12,7 @@
 
 #include "../../vendor/afterhours/src/core/system.h"
 #include <afterhours/src/drawing_helpers.h>
+#include "../editor/borders_shading.h"
 #include "../editor/columns_math.h"
 #include "../editor/outline_view.h"
 #include "../editor/revisions.h"
@@ -651,6 +652,65 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             }
         }
         
+        // Draw paragraph shading + borders (Format > Borders and
+        // Shading...). Shading fills the paragraph rect behind the
+        // text, BEFORE the selection highlight below (a selection
+        // still paints its navy bg over the shading) and before the
+        // squiggles, which draw after the text. The rect spans the
+        // indented paragraph width with a 4px / 2px breathing margin
+        // so the box reads even on short text; consecutive lines
+        // with the identical border + shading triple merge into one
+        // box (no internal horizontal edge), except in columns /
+        // outline mode where each visible line draws its own edges.
+        // Borders reuse drawBorderEdge, the table-border helper.
+        if (borders_shading::hasParagraphShading(span.shadingColorIndex) ||
+            borders_shading::hasParagraphBorder(span.borderEdges,
+                                                span.borderStyle)) {
+            bool mergeGroups = !columnsActive && !outlineMode;
+            auto sameTriple = [&](std::size_t other) {
+                LineSpan otherSpan = buffer.lineSpan(other);
+                return borders_shading::sameBorderShading(
+                    span.borderEdges, span.borderStyle,
+                    span.shadingColorIndex, otherSpan.borderEdges,
+                    otherSpan.borderStyle, otherSpan.shadingColorIndex);
+            };
+            bool sameAsPrev =
+                mergeGroups && row > 0 && sameTriple(row - 1);
+            bool sameAsNext = mergeGroups && row + 1 < lineCount &&
+                              sameTriple(row + 1);
+            float boxX0 = static_cast<float>(baseX + leftIndent - 4);
+            float boxX1 = static_cast<float>(baseX + availableWidth -
+                                              rightIndent + 4);
+            float boxY0 = static_cast<float>(y - 2);
+            float boxY1 = static_cast<float>(y + lineHeight + 2);
+            if (borders_shading::hasParagraphShading(
+                    span.shadingColorIndex)) {
+                TextColor fill =
+                    borders_shading::shadingColorForIndex(
+                        span.shadingColorIndex);
+                afterhours::draw_rectangle(
+                    Rectangle{boxX0, boxY0, boxX1 - boxX0, boxY1 - boxY0},
+                    afterhours::Color{fill.r, fill.g, fill.b, fill.a});
+            }
+            borders_shading::EdgesToDraw toDraw =
+                borders_shading::edgesToDraw(span.borderEdges,
+                                             span.borderStyle, sameAsPrev,
+                                             sameAsNext);
+            afterhours::Color borderColor{0, 0, 0, 255};
+            if (toDraw.top)
+                drawBorderEdge(boxX0, boxY0, boxX1, boxY0,
+                               BorderStyle::Thin, borderColor);
+            if (toDraw.bottom)
+                drawBorderEdge(boxX0, boxY1, boxX1, boxY1,
+                               BorderStyle::Thin, borderColor);
+            if (toDraw.left)
+                drawBorderEdge(boxX0, boxY0, boxX0, boxY1,
+                               BorderStyle::Thin, borderColor);
+            if (toDraw.right)
+                drawBorderEdge(boxX1, boxY0, boxX1, boxY1,
+                               BorderStyle::Thin, borderColor);
+        }
+
         // Draw selection highlight (with alignment offset).
         // Selection columns are raw-line coords; map through tab
         // expansion to display columns so the bg lines up with the text.
