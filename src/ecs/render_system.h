@@ -305,14 +305,27 @@ inline void renderTable(const Table& table, float tableX, float tableY,
                     theme::CARET_COLOR);
             }
 
-            // Highlight the active editing cell: navy #000080,
-            // 1px — the Word 95 selection colour, not electric blue.
-            if (isActiveCell) {
-                afterhours::draw_rectangle_outline(
-                    Rectangle{cellX, cellY, cellW, cellH},
-                    afterhours::Color{0, 0, 128, 255}, 1.0f);
-            }
         }
+    }
+
+    // Active editing cell outline: navy #000080, 1px — the Word 95
+    // selection colour, not electric blue. Drawn AFTER the cell
+    // loop, not per-cell: neighbouring cells share the active
+    // cell's right/bottom edges, and their dotted gridlines are
+    // drawn in row-major order AFTER the active cell, so a
+    // per-cell outline came out navy on the top/left and
+    // navy/gray-dotted on the right/bottom (the neighbours'
+    // gridlines overpainted it). Deferred, all four edges stay
+    // solid navy.
+    if (cellEdit != nullptr && cellEdit->active &&
+        cellEdit->cell.row < table.rowCount() &&
+        cellEdit->cell.col < table.colCount() &&
+        !table.cell(cellEdit->cell).isMerged) {
+        Table::CellBounds bounds = table.cellBounds(cellEdit->cell);
+        afterhours::draw_rectangle_outline(
+            Rectangle{tableX + bounds.x, tableY + bounds.y, bounds.width,
+                      bounds.height},
+            afterhours::Color{0, 0, 128, 255}, 1.0f);
     }
 }
 
