@@ -491,6 +491,8 @@ static void setupCallbacksEx(
             return repeat::kindName(docComp.repeatRecord);
         if (prop == "thesaurus_current") return dialogState.thesaurusCurrentWord;
         if (prop == "thesaurus_lookup") return dialogState.thesaurusLookupStr;
+        if (prop == "thesaurus_selected")
+            return std::to_string(dialogState.thesaurusSelected);
         if (prop == "thesaurus_synonym_count")
             return std::to_string(dialogState.thesaurusSynonyms.size());
         if (prop == "thesaurus_synonyms") {

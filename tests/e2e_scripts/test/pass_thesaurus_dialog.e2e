@@ -1,7 +1,10 @@
 # Test: Tools > Thesaurus... (Shift+F7) dialog, Replace changes text
-# "happy" has synonyms; clicking "glad" then Replace swaps the word
-# at the caret: "happy" -> "glad". "glad" has no thesaurus entry, so
-# after Replace the list shows "(no thesaurus entry)".
+# Opening on "happy" prefills Current word + Look Up with "happy",
+# lists its synonyms, and preselects the FIRST synonym (joyful),
+# so Replace is enabled in the opening state. Clicking "glad"
+# then Replace swaps the word at the caret: "happy" -> "glad".
+# "glad" has no thesaurus entry, so after Replace the list shows
+# "(no thesaurus entry)".
 
 type "happy"
 wait_frames 12
@@ -11,18 +14,24 @@ wait_frames 12
 
 validate dialog_open=Thesaurus
 validate thesaurus_current=happy
+validate thesaurus_lookup=happy
 validate thesaurus_synonym_count=6
 validate thesaurus_synonyms=joyful,cheerful,glad,delighted,pleased,content
+validate thesaurus_selected=0
 
-# Click the "glad" synonym, then Replace
+# Click the "glad" synonym, then Replace (screenshot: Current
+# word=happy, glad selected, Replace enabled).
 click_ui thesaurus_synonym_glad
 wait_frames 12
+validate thesaurus_selected=2
+screenshot thesaurus_dialog
 click_ui thesaurus_replace
 wait_frames 12
 
 validate text=glad
 validate thesaurus_current=glad
 validate thesaurus_synonym_count=0
+validate thesaurus_selected=-1
 expect_text "(no thesaurus entry)"
 
 click_ui thesaurus_close
@@ -40,9 +49,11 @@ wait_frames 12
 validate dialog_open=Thesaurus
 validate thesaurus_current=
 validate thesaurus_synonym_count=0
+validate thesaurus_selected=-1
 expect_text "(no thesaurus entry)"
 
 # Look Up: type a word into the (empty) Look Up field and look it up.
+# The first synonym is preselected here too.
 click_ui thesaurus_lookup_input
 wait_frames 6
 type "sad"
@@ -52,8 +63,7 @@ wait_frames 12
 
 validate thesaurus_synonym_count=6
 validate thesaurus_synonyms=unhappy,sorrowful,gloomy,melancholy,downcast,dejected
-
-screenshot thesaurus_dialog
+validate thesaurus_selected=0
 
 click_ui thesaurus_close
 wait_frames 12

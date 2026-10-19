@@ -994,7 +994,10 @@ inline void spellChangeAll(DocumentComponent& doc, DialogState& dialogs) {
 
 // --- Thesaurus dialog commands (Tools > Thesaurus..., Shift+F7) ---
 // Open seeds from the word at the caret (a caret at a word's end
-// still belongs to that word) or the selection. Look Up re-reads
+// still belongs to that word) or the selection — Current word and
+// Look Up both start as that word, with its synonyms listed and
+// the first synonym preselected so Replace is enabled at open.
+// Look Up re-reads
 // the Look Up field against the entry map loaded on open; a miss
 // leaves an empty synonym list and the dialog shows
 // "(no thesaurus entry)". Replace swaps the stored word range for
@@ -1033,7 +1036,6 @@ inline bool thesaurusWordRange(DocumentComponent& doc, std::size_t& offset,
 inline void openThesaurusDialog(DocumentComponent& doc, DialogState& dialogs) {
     dialogs.showThesaurusDialog = true;
     dialogs.thesaurusEntries = thesaurus::loadDefault();
-    dialogs.thesaurusSelected = -1;
     std::size_t offset = 0;
     std::size_t length = 0;
     std::string word;
@@ -1052,12 +1054,18 @@ inline void openThesaurusDialog(DocumentComponent& doc, DialogState& dialogs) {
         dialogs.thesaurusLookupStr.clear();
         dialogs.thesaurusSynonyms.clear();
     }
+    // The first synonym is preselected, so Replace is enabled in
+    // the opening state (no click on the list needed); a word with
+    // no entry leaves nothing selected and Replace disabled.
+    dialogs.thesaurusSelected =
+        dialogs.thesaurusSynonyms.empty() ? -1 : 0;
 }
 
 inline void thesaurusLookup(DocumentComponent& /*doc*/, DialogState& dialogs) {
     dialogs.thesaurusSynonyms =
         thesaurus::lookup(dialogs.thesaurusEntries, dialogs.thesaurusLookupStr);
-    dialogs.thesaurusSelected = -1;
+    dialogs.thesaurusSelected =
+        dialogs.thesaurusSynonyms.empty() ? -1 : 0;
 }
 
 inline bool thesaurusReplace(DocumentComponent& doc, DialogState& dialogs) {
@@ -1086,7 +1094,8 @@ inline bool thesaurusReplace(DocumentComponent& doc, DialogState& dialogs) {
     dialogs.thesaurusWordLength = synonym.size();
     dialogs.thesaurusSynonyms =
         thesaurus::lookup(dialogs.thesaurusEntries, synonym);
-    dialogs.thesaurusSelected = -1;
+    dialogs.thesaurusSelected =
+        dialogs.thesaurusSynonyms.empty() ? -1 : 0;
     return true;
 }
 
