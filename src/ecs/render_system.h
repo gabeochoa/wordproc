@@ -133,14 +133,17 @@ inline void drawPageBackground(const LayoutComponent& layout,
 // wrap the mouse hit-test uses), left-aligned in the margin
 // band from layout::headerFooterAreas; a page-number field
 // (HeaderFooter::center.showPageNumber) draws "Page N" (real
-// per-page index, HeaderFooter::formatPageNumber) centered on
-// its own line after the text. differentFirstPage skips the
-// band on page 1 — except the ACTIVE band while editing it
-// (typing into an invisible band would be unusable). While
-// editing, the active band gets a gray outline, the selection
-// highlight, and the blinking caret. Pageless / Normal never
-// reach here (the caller gates on pageMode == Paged): Word
-// Normal shows headers/footers only in Page Layout.
+// per-page index, HeaderFooter::formatPageNumber) centered
+// on the FIRST line's baseline, sharing it with the band
+// text (Word 95: left text + centered Page N on one line) —
+// not on its own line after the text. differentFirstPage
+// skips the band on page 1 — except the ACTIVE band while
+// editing it (typing into an invisible band would be
+// unusable). While editing, the active band gets a gray
+// outline, the selection highlight, and the blinking caret.
+// Pageless / Normal never reach here (the
+// caller gates on pageMode == Paged): Word Normal shows
+// headers/footers only in Page Layout.
 inline void renderHeaderFooter(const DocumentComponent& doc,
                                const LayoutComponent& layout, int page,
                                int totalPages, bool caretVisible) {
@@ -177,6 +180,39 @@ inline void renderHeaderFooter(const DocumentComponent& doc,
             2.0f * static_cast<float>(theme::layout::TEXT_PADDING);
         auto lines = cell_edit::wrapCellText(hfBuffer.getText(), wrapWidth,
                                              fontSize, measure);
+        // Page-number field (Batch 9 fix round): shares the
+        // FIRST line's baseline with the band text — it used
+        // to draw on its own line after the text, ~one
+        // lineHeight lower. Computed before the line loop so
+        // the first line can truncate before it: Page N keeps
+        // the center and the text truncates on a collision,
+        // never the reverse. Same font size / line height as
+        // the band text (the footer buffer's), never a
+        // separately computed y.
+        //
+        // Page N geometry uses the DRAWN measure
+        // (theme::MeasureUIText, the same scaled measure
+        // the draw call uses), not the band's wrap/caret
+        // `measure`: the draw scales the font by ui_scale,
+        // so an unscaled width would center Page N ~off by
+        // the scale error and the truncated line would
+        // still overrun it at ui_scale != 1. Wrap, caret,
+        // and selection keep the unscaled measure — the
+        // mouse hit-test shares it, and re-plumbing the
+        // global measure convention is out of scope.
+        std::string pageText;
+        float pageX = 0.0f;
+        bool showPageNumber = config.center.showPageNumber;
+        if (showPageNumber) {
+            pageText = "Page " + HeaderFooter::formatPageNumber(
+                                     page, config.center.format);
+            if (config.center.showTotalPages) {
+                pageText += " of " + std::to_string(totalPages);
+            }
+            float pageW = static_cast<float>(
+                theme::MeasureUIText(pageText.c_str(), fontSize));
+            pageX = band.x + (band.width - pageW) / 2.0f;
+        }
         std::size_t selStartOff = 0;
         std::size_t selEndOff = 0;
         if (editing && hfBuffer.hasSelection()) {
@@ -186,10 +222,32 @@ inline void renderHeaderFooter(const DocumentComponent& doc,
                 hfBuffer.offsetForPosition(hfBuffer.selectionEnd());
         }
         float y = textY;
-        for (const auto& line : lines) {
+        for (std::size_t lineIdx = 0; lineIdx < lines.size(); ++lineIdx) {
+            const auto& line = lines[lineIdx];
             if (y + static_cast<float>(lineHeight) >
                 band.y + band.height) {
                 break;
+            }
+            // First-line text truncates before the centered
+            // Page N (8px gap, in drawn space); later lines
+            // cannot collide with it. Pop whole UTF-8
+            // characters only. The truncation measure is
+            // the drawn measure (see above): with the
+            // unscaled wrap measure, the drawn line would
+            // still overrun Page N at ui_scale != 1.
+            std::string drawText = line.text;
+            if (lineIdx == 0 && showPageNumber) {
+                float avail = pageX - 8.0f - textX;
+                while (!drawText.empty() &&
+                       static_cast<float>(theme::MeasureUIText(
+                           drawText.c_str(), fontSize)) > avail) {
+                    drawText.pop_back();
+                    while (!drawText.empty() &&
+                           (static_cast<unsigned char>(drawText.back()) &
+                            0xC0) == 0x80) {
+                        drawText.pop_back();
+                    }
+                }
             }
             if (editing && hfBuffer.hasSelection() &&
                 line.endOffset > selStartOff &&
@@ -198,6 +256,12 @@ inline void renderHeaderFooter(const DocumentComponent& doc,
                     std::max(line.startOffset, selStartOff);
                 std::size_t segEnd =
                     std::min(line.endOffset, selEndOff);
+                // Selection highlight covers only the drawn
+                // (possibly truncated) text, never Page N.
+                if (lineIdx == 0 && showPageNumber) {
+                    segEnd = std::min(
+                        segEnd, line.startOffset + drawText.size());
+                }
                 if (segEnd > segBegin) {
                     std::string beforeSeg = line.text.substr(
                         0, std::min(segBegin - line.startOffset,
@@ -218,32 +282,25 @@ inline void renderHeaderFooter(const DocumentComponent& doc,
                         theme::SELECTION_BG);
                 }
             }
-            if (!line.text.empty()) {
-                drawTextWithRegistry(line.text.c_str(),
+            if (!drawText.empty()) {
+                drawTextWithRegistry(drawText.c_str(),
                                      static_cast<int>(textX),
                                      static_cast<int>(y), fontSize,
                                      textColor);
             }
             y += static_cast<float>(lineHeight);
         }
-        if (config.center.showPageNumber &&
-            y + static_cast<float>(lineHeight) <=
+        // Page N on the FIRST line's baseline (textY): the
+        // same y the band text starts on, from the same font
+        // size / line height — not the y left over after the
+        // text lines.
+        if (showPageNumber &&
+            textY + static_cast<float>(lineHeight) <=
                 band.y + band.height) {
-            std::string pageText =
-                "Page " +
-                HeaderFooter::formatPageNumber(page,
-                                               config.center.format);
-            if (config.center.showTotalPages) {
-                pageText += " of " + std::to_string(totalPages);
-            }
-            float pageW = measure(pageText, fontSize);
-            float pageX =
-                band.x + (band.width - pageW) / 2.0f;
             drawTextWithRegistry(pageText.c_str(),
                                  static_cast<int>(pageX),
-                                 static_cast<int>(y), fontSize,
+                                 static_cast<int>(textY), fontSize,
                                  textColor);
-            y += static_cast<float>(lineHeight);
         }
         if (editing) {
             afterhours::draw_rectangle_outline(
