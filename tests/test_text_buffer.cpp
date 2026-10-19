@@ -1350,6 +1350,52 @@ TEST_CASE("Paragraph format commit is one undo step", "[text_buffer][spacing]") 
     }
 }
 
+TEST_CASE("Paragraph format alignment and page breaks round-trip + undo",
+          "[text_buffer][paragraph_dialog]") {
+    TextBuffer buffer;
+    buffer.setText("First\nSecond");
+
+    SECTION("alignment, pageBreakBefore, keepWithNext undo in one step") {
+        ParagraphFormat next;
+        next.alignment = TextAlignment::Center;
+        next.pageBreakBefore = true;
+        next.keepWithNext = true;
+        ParagraphFormat old = buffer.lineParagraphFormat(0);
+        buffer.setLineParagraphFormat(0, next);
+        buffer.commitParagraphFormat({{0, old, next}});
+
+        ParagraphFormat got = buffer.lineParagraphFormat(0);
+        REQUIRE(got.alignment == TextAlignment::Center);
+        REQUIRE(got.pageBreakBefore);
+        REQUIRE(got.keepWithNext);
+        REQUIRE(buffer.lineParagraphFormat(1) == ParagraphFormat{});
+
+        buffer.undo();
+        ParagraphFormat undone = buffer.lineParagraphFormat(0);
+        REQUIRE(undone.alignment == TextAlignment::Left);
+        REQUIRE_FALSE(undone.pageBreakBefore);
+        REQUIRE_FALSE(undone.keepWithNext);
+        buffer.redo();
+        REQUIRE(buffer.lineParagraphFormat(0).alignment ==
+                TextAlignment::Center);
+        REQUIRE(buffer.lineParagraphFormat(0).pageBreakBefore);
+    }
+
+    SECTION("pageBreakBefore is distinct from the Ctrl+Enter manual break") {
+        // insertPageBreak splits the caret row and marks the NEW
+        // row (row 1) with the manual break.
+        buffer.setCaret({0, 0});
+        buffer.insertPageBreak();
+        REQUIRE(buffer.hasPageBreakBefore(1));
+        ParagraphFormat got = buffer.lineParagraphFormat(1);
+        REQUIRE_FALSE(got.pageBreakBefore);
+        got.pageBreakBefore = true;
+        buffer.setLineParagraphFormat(1, got);
+        REQUIRE(buffer.hasPageBreakBefore(1));
+        REQUIRE(buffer.lineParagraphFormat(1).pageBreakBefore);
+    }
+}
+
 TEST_CASE("Bulleted and numbered lists", "[text_buffer][lists]") {
     TextBuffer buffer;
     buffer.setText("Item 1\nItem 2\nItem 3");

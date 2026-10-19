@@ -301,6 +301,8 @@ void TextBuffer::rebuildLineIndex() {
     int listLevel = 0;
     int listNumber = 1;
     bool hasPageBreakBefore = false;
+    bool pageBreakBefore = false;
+    bool keepWithNext = false;
     bool hasDropCap = false;
     int dropCapLines = 2;
     int borderEdges = 0;
@@ -325,6 +327,8 @@ void TextBuffer::rebuildLineIndex() {
     snapshot.listLevel = span.listLevel;
     snapshot.listNumber = span.listNumber;
     snapshot.hasPageBreakBefore = span.hasPageBreakBefore;
+    snapshot.pageBreakBefore = span.pageBreakBefore;
+    snapshot.keepWithNext = span.keepWithNext;
     snapshot.hasDropCap = span.hasDropCap;
     snapshot.dropCapLines = span.dropCapLines;
     snapshot.borderEdges = span.borderEdges;
@@ -364,6 +368,8 @@ void TextBuffer::rebuildLineIndex() {
         span.listLevel = snapshot.listLevel;
         span.listNumber = snapshot.listNumber;
         span.hasPageBreakBefore = snapshot.hasPageBreakBefore;
+        span.pageBreakBefore = snapshot.pageBreakBefore;
+        span.keepWithNext = snapshot.keepWithNext;
         span.hasDropCap = snapshot.hasDropCap;
         span.dropCapLines = snapshot.dropCapLines;
         span.borderEdges = snapshot.borderEdges;
@@ -733,13 +739,19 @@ void TextBuffer::commitParagraphIndents(std::size_t row,
 ParagraphFormat TextBuffer::lineParagraphFormat(std::size_t row) const {
     if (row >= line_spans_.size()) return {};
     const LineSpan& span = line_spans_[row];
-    return {{span.leftIndent, span.firstLineIndent, span.rightIndent},
-            span.lineSpacing,
-            span.spaceBefore,
-            span.spaceAfter,
-            span.borderEdges,
-            span.borderStyle,
-            span.shadingColorIndex};
+    ParagraphFormat format;
+    format.indents = {span.leftIndent, span.firstLineIndent,
+                      span.rightIndent};
+    format.lineSpacing = span.lineSpacing;
+    format.spaceBefore = span.spaceBefore;
+    format.spaceAfter = span.spaceAfter;
+    format.borderEdges = span.borderEdges;
+    format.borderStyle = span.borderStyle;
+    format.shadingColorIndex = span.shadingColorIndex;
+    format.alignment = span.alignment;
+    format.pageBreakBefore = span.pageBreakBefore;
+    format.keepWithNext = span.keepWithNext;
+    return format;
 }
 
 void TextBuffer::setLineParagraphFormat(std::size_t row,
@@ -757,6 +769,9 @@ void TextBuffer::setLineParagraphFormat(std::size_t row,
             : borders_shading::kBorderStyleNone;
     span.shadingColorIndex =
         borders_shading::clampShadingIndex(format.shadingColorIndex);
+    span.alignment = format.alignment;
+    span.pageBreakBefore = format.pageBreakBefore;
+    span.keepWithNext = format.keepWithNext;
     version_++;
 }
 

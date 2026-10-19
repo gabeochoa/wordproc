@@ -10,14 +10,16 @@
 // (72 = 1 inch, see ruler_math), spacing in points (1pt = 1 stored
 // unit at scale 1, the same unit the renderer adds for
 // spaceBefore/spaceAfter). Tab stops are the document-wide
-// DocumentSettings.tabWidth (spaces per tab): per-paragraph tab
-// stops do not exist, so the dialog edits the global default and
-// says so ("Default tab stops:").
+// DocumentSettings.tabWidth (characters per tab): per-paragraph tab
+// stops do not exist, so the dialog has no tab-stops field —
+// Tabs... opens the Tab Width dialog, which edits the default.
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <string>
+
+#include "document_settings.h"  // TextAlignment for the Alignment dropdown
 
 namespace paragraph_dialog {
 
@@ -35,6 +37,21 @@ inline constexpr int MAX_TAB_STOPS = 16;
 inline constexpr const char* kLineSpacingNames[3] = {"Single", "1.5 lines",
                                                       "Double"};
 inline constexpr float kLineSpacingValues[3] = {1.0f, 1.5f, 2.0f};
+
+// Alignment dropdown entries, in dropdown order (Word 95 labels).
+// Index maps to TextAlignment: Left / Center / Right / Justify.
+inline constexpr const char* kAlignmentNames[4] = {"Left", "Centered",
+                                                    "Right", "Justified"};
+
+// Special-indent dropdown entries, in dropdown order.
+inline constexpr int kSpecialNone = 0;
+inline constexpr int kSpecialFirstLine = 1;
+inline constexpr int kSpecialHanging = 2;
+inline constexpr const char* kSpecialNames[3] = {"None", "First line",
+                                                 "Hanging"};
+// Default "By:" amount (inches) when the seeded first-line indent is
+// 0, matching Word's 0.5" default for a newly-picked special indent.
+inline constexpr double kDefaultByInches = 0.5;
 
 // Inches -> stored indent units, rounded to the nearest unit.
 // The signed form keeps a negative first-line (hanging) indent.
@@ -112,6 +129,49 @@ inline int lineSpacingIndexFor(float multiplier) {
 inline float lineSpacingForIndex(int index) {
     if (index < 0 || index > 2) return 1.0f;
     return kLineSpacingValues[index];
+}
+
+// Dropdown index <-> TextAlignment, for the Alignment dropdown.
+// Out-of-range indices read as Left.
+inline int alignmentIndexFor(TextAlignment alignment) {
+    switch (alignment) {
+        case TextAlignment::Center: return 1;
+        case TextAlignment::Right: return 2;
+        case TextAlignment::Justify: return 3;
+        case TextAlignment::Left:
+        default: return 0;
+    }
+}
+
+inline TextAlignment alignmentForIndex(int index) {
+    switch (index) {
+        case 1: return TextAlignment::Center;
+        case 2: return TextAlignment::Right;
+        case 3: return TextAlignment::Justify;
+        case 0:
+        default: return TextAlignment::Left;
+    }
+}
+
+// Special-indent dropdown index for a stored first-line indent:
+// positive -> First line, negative -> Hanging, zero -> None.
+inline int specialIndexFor(int firstLineIndent) {
+    if (firstLineIndent > 0) return kSpecialFirstLine;
+    if (firstLineIndent < 0) return kSpecialHanging;
+    return kSpecialNone;
+}
+
+// Stored first-line indent for a (Special, By) pair: None ignores
+// By (always 0), First line is +By, Hanging is -By. By is a
+// magnitude: a negative typed value clamps to 0 via inchesToStored.
+inline int firstLineIndentFor(int specialIndex, double byInches) {
+    if (specialIndex == kSpecialFirstLine) {
+        return inchesToStored(byInches);
+    }
+    if (specialIndex == kSpecialHanging) {
+        return -inchesToStored(byInches);
+    }
+    return 0;
 }
 
 }  // namespace paragraph_dialog

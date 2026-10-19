@@ -508,7 +508,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     // re-reads the caret/selection then, so a
                     // multi-paragraph selection gets the same format.
                     dialogs.showParagraphDialog = true;
+                    dialogs.paragraphTab = 0;
                     dialogs.paragraphLineSpacingDropdownOpen = false;
+                    dialogs.paragraphAlignmentDropdownOpen = false;
+                    dialogs.paragraphSpecialDropdownOpen = false;
                     {
                         ParagraphFormat fmt =
                             doc.buffer.lineParagraphFormat(
@@ -516,9 +519,18 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         dialogs.paragraphLeftStr =
                             paragraph_dialog::storedToInchesString(
                                 fmt.indents.left);
-                        dialogs.paragraphFirstLineStr =
-                            paragraph_dialog::storedToInchesString(
+                        dialogs.paragraphSpecialIndex =
+                            paragraph_dialog::specialIndexFor(
                                 fmt.indents.firstLine);
+                        dialogs.paragraphByStr =
+                            paragraph_dialog::storedToInchesString(
+                                std::abs(fmt.indents.firstLine) > 0
+                                    ? std::abs(fmt.indents.firstLine)
+                                    : static_cast<int>(std::lround(
+                                          paragraph_dialog::
+                                              kDefaultByInches *
+                                          paragraph_dialog::
+                                              POINTS_PER_INCH)));
                         dialogs.paragraphRightStr =
                             paragraph_dialog::storedToInchesString(
                                 fmt.indents.right);
@@ -529,8 +541,12 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                         dialogs.paragraphLineSpacingIndex =
                             paragraph_dialog::lineSpacingIndexFor(
                                 fmt.lineSpacing);
-                        dialogs.paragraphTabStopsStr =
-                            std::to_string(doc.docSettings.tabWidth);
+                        dialogs.paragraphAlignmentIndex =
+                            paragraph_dialog::alignmentIndexFor(
+                                fmt.alignment);
+                        dialogs.paragraphPageBreakBefore =
+                            fmt.pageBreakBefore;
+                        dialogs.paragraphKeepWithNext = fmt.keepWithNext;
                     }
                     break;
                 case 48:  // Align Left

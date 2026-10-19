@@ -350,17 +350,27 @@ struct DialogState : public afterhours::BaseComponent {
     // seeded from the caret paragraph when the dialog opens (see
     // menu_actions). Indents are inches, spacing is points, line
     // spacing is the dropdown index into
-    // paragraph_dialog::kLineSpacingValues, tab stops is the
-    // document-wide default (per-paragraph tab stops do not exist).
+    // paragraph_dialog::kLineSpacingValues. Tabs: 0 = "Indents and
+    // Spacing", 1 = "Line and Page Breaks". Alignment / Special are
+    // dropdown indices into paragraph_dialog::kAlignmentNames /
+    // kSpecialNames; By is the Special amount in inches. Tab stops
+    // have no field here (per-paragraph tab stops do not exist) —
+    // Tabs... opens the Tab Width dialog for the document default.
     bool showParagraphDialog = false;
+    int paragraphTab = 0;
     bool paragraphLineSpacingDropdownOpen = false;
+    bool paragraphAlignmentDropdownOpen = false;
+    bool paragraphSpecialDropdownOpen = false;
     std::string paragraphLeftStr = "0";
-    std::string paragraphFirstLineStr = "0";
+    std::string paragraphByStr = "0.5";
     std::string paragraphRightStr = "0";
     std::string paragraphBeforeStr = "0";
     std::string paragraphAfterStr = "0";
     int paragraphLineSpacingIndex = 0;
-    std::string paragraphTabStopsStr = "4";
+    int paragraphAlignmentIndex = 0;
+    int paragraphSpecialIndex = 0;
+    bool paragraphPageBreakBefore = false;
+    bool paragraphKeepWithNext = false;
 
     // Borders and Shading dialog (Format > Borders and Shading...):
     // working copy seeded from the caret paragraph when the dialog

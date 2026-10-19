@@ -1,0 +1,77 @@
+# Test: Format > Paragraph... Tab 2 ("Line and Page Breaks")
+# sets "Page break before" + "Keep with next" on the caret
+# paragraph in one undo step, and the Tabs... button on Tab 1
+# opens the Tab Width dialog (no Default-tab-stops field: the
+# tab stops are the document-wide default).
+# Page break before is a per-paragraph attribute, NOT the
+# Ctrl+Enter manual break: it starts the paragraph on a new
+# page in Page Layout and draws the dashed break line in Normal
+# view. One Ctrl+Z restores both checkboxes.
+#
+# Regression: pre-tab bytes have no Tab 2, no checkboxes, and
+# no page_break_before / keep_with_next properties.
+
+type "First page paragraph"
+key ENTER
+type "Second page paragraph"
+wait_frames 12
+
+menu_open Format
+wait_frames 12
+menu_select "Paragraph..."
+wait_frames 12
+
+validate dialog_open=Paragraph
+expect_text "Indents and Spacing"
+expect_text "Line and Page Breaks"
+
+click_ui paragraph_tab_breaks
+wait_frames 12
+expect_text "Page break before"
+expect_text "Keep with next"
+
+screenshot paragraph_dialog_tab2
+
+click_ui paragraph_pagebreak_checkbox
+wait_frames 12
+click_ui paragraph_keepnext_checkbox
+wait_frames 12
+
+click_ui paragraph_ok
+wait_frames 12
+
+validate dialog_open=false
+validate page_break_before=true
+validate keep_with_next=true
+
+# The first paragraph is untouched.
+key UP
+wait_frames 12
+validate page_break_before=false
+validate keep_with_next=false
+
+# One undo step restores both checkboxes on the second paragraph.
+key DOWN
+wait_frames 12
+key CTRL+Z
+wait_frames 12
+validate page_break_before=false
+validate keep_with_next=false
+
+# Tabs... on Tab 1 opens the Tab Width dialog with the current
+# document-wide default (4) seeded, labelled in characters.
+menu_open Format
+wait_frames 12
+menu_select "Paragraph..."
+wait_frames 12
+validate dialog_open=Paragraph
+
+click_ui paragraph_tabs_button
+wait_frames 12
+expect_text "Tab width in characters (1-16):"
+expect_input_text tabwidth_input "4"
+
+click_ui tabwidth_cancel
+wait_frames 12
+
+screenshot paragraph_dialog_tabs

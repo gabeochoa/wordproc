@@ -69,6 +69,13 @@ static void setupCallbacks(
             if (prop == "border_style") return std::to_string(fmt.borderStyle);
             return std::to_string(fmt.shadingColorIndex);
         }
+        // Paragraph dialog, "Line and Page Breaks" tab.
+        if (prop == "page_break_before" || prop == "keep_with_next") {
+            ParagraphFormat fmt = buffer.lineParagraphFormat(buffer.caret().row);
+            if (prop == "page_break_before")
+                return fmt.pageBreakBefore ? "true" : "false";
+            return fmt.keepWithNext ? "true" : "false";
+        }
         if (prop == "hyperlink_count") return std::to_string(buffer.hyperlinks().size());
         if (prop == "bookmark_count") return std::to_string(buffer.bookmarks().size());
         if (prop == "footnote_count") return std::to_string(buffer.footnotes().size());
@@ -237,6 +244,13 @@ static void setupCallbacksEx(
             if (prop == "border_edges") return std::to_string(fmt.borderEdges);
             if (prop == "border_style") return std::to_string(fmt.borderStyle);
             return std::to_string(fmt.shadingColorIndex);
+        }
+        // Paragraph dialog, "Line and Page Breaks" tab.
+        if (prop == "page_break_before" || prop == "keep_with_next") {
+            ParagraphFormat fmt = buffer.lineParagraphFormat(buffer.caret().row);
+            if (prop == "page_break_before")
+                return fmt.pageBreakBefore ? "true" : "false";
+            return fmt.keepWithNext ? "true" : "false";
         }
         if (prop == "hyperlink_count") return std::to_string(buffer.hyperlinks().size());
         if (prop == "bookmark_count") return std::to_string(buffer.bookmarks().size());
@@ -1144,14 +1158,20 @@ static void setupCallbacksEx(
         dialogState.columnsSelected = 1;
         dialogState.columnsSpacingStr = "0.5";
         dialogState.showParagraphDialog = false;
+        dialogState.paragraphTab = 0;
         dialogState.paragraphLineSpacingDropdownOpen = false;
+        dialogState.paragraphAlignmentDropdownOpen = false;
+        dialogState.paragraphSpecialDropdownOpen = false;
         dialogState.paragraphLeftStr = "0";
-        dialogState.paragraphFirstLineStr = "0";
+        dialogState.paragraphByStr = "0.5";
         dialogState.paragraphRightStr = "0";
         dialogState.paragraphBeforeStr = "0";
         dialogState.paragraphAfterStr = "0";
         dialogState.paragraphLineSpacingIndex = 0;
-        dialogState.paragraphTabStopsStr = "4";
+        dialogState.paragraphAlignmentIndex = 0;
+        dialogState.paragraphSpecialIndex = 0;
+        dialogState.paragraphPageBreakBefore = false;
+        dialogState.paragraphKeepWithNext = false;
         dialogState.showBordersShadingDialog = false;
         dialogState.bordersEdges = 0;
         dialogState.bordersStyle = 0;

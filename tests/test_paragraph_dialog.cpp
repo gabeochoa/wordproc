@@ -34,6 +34,33 @@ TEST_CASE("Paragraph dialog field conversions", "[paragraph_dialog]") {
         REQUIRE(parseTabStops("99", 4) == 16);
         REQUIRE(parseTabStops("abc", 4) == 4);
     }
+    SECTION("alignment dropdown maps to TextAlignment and back") {
+        REQUIRE(alignmentIndexFor(TextAlignment::Left) == 0);
+        REQUIRE(alignmentIndexFor(TextAlignment::Center) == 1);
+        REQUIRE(alignmentIndexFor(TextAlignment::Right) == 2);
+        REQUIRE(alignmentIndexFor(TextAlignment::Justify) == 3);
+        REQUIRE(alignmentForIndex(0) == TextAlignment::Left);
+        REQUIRE(alignmentForIndex(1) == TextAlignment::Center);
+        REQUIRE(alignmentForIndex(2) == TextAlignment::Right);
+        REQUIRE(alignmentForIndex(3) == TextAlignment::Justify);
+        REQUIRE(alignmentForIndex(7) == TextAlignment::Left);
+        REQUIRE(std::string(kAlignmentNames[1]) == "Centered");
+        REQUIRE(std::string(kAlignmentNames[3]) == "Justified");
+    }
+    SECTION("special indent maps from a stored first-line indent") {
+        REQUIRE(specialIndexFor(0) == kSpecialNone);
+        REQUIRE(specialIndexFor(36) == kSpecialFirstLine);
+        REQUIRE(specialIndexFor(-36) == kSpecialHanging);
+        REQUIRE(std::string(kSpecialNames[2]) == "Hanging");
+    }
+    SECTION("(Special, By) drives firstLineIndent, None ignores By") {
+        REQUIRE(firstLineIndentFor(kSpecialNone, 0.5) == 0);
+        REQUIRE(firstLineIndentFor(kSpecialFirstLine, 0.5) == 36);
+        REQUIRE(firstLineIndentFor(kSpecialHanging, 0.5) == -36);
+        REQUIRE(firstLineIndentFor(kSpecialFirstLine, -0.5) == 0);
+        REQUIRE(firstLineIndentFor(kSpecialHanging, 0.0) == 0);
+        REQUIRE(firstLineIndentFor(9, 0.5) == 0);
+    }
     SECTION("line spacing maps to the nearest dropdown entry") {
         REQUIRE(lineSpacingIndexFor(1.0f) == 0);
         REQUIRE(lineSpacingIndexFor(1.5f) == 1);

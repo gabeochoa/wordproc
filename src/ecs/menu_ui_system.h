@@ -2890,20 +2890,27 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Paragraph dialog (Format > Paragraph...) - Win95 shell:
-        // Indentation (Left / First line / Right, inches), Spacing
-        // (Before / After, points), Line spacing dropdown (Single /
-        // 1.5 lines / Double), Default tab stops (the document-wide
-        // tabWidth: per-paragraph tab stops do not exist) + a
-        // Tabs... button opening the existing Tab Width dialog.
+        // Paragraph dialog (Format > Paragraph...) - Win95 shell,
+        // two tabs: "Indents and Spacing" (Alignment dropdown,
+        // Indentation Left / Special + By / Right, Spacing Before /
+        // After, Line spacing dropdown, Tabs... button) and "Line
+        // and Page Breaks" ("Page break before" + "Keep with next"
+        // checkboxes). No Default-tab-stops field: per-paragraph
+        // tab stops do not exist, so Tabs... opens the existing
+        // Tab Width dialog for the document-wide default.
         // OK applies to the caret paragraph, or every paragraph in
         // the selection, as ONE undo step (commitParagraphFormat);
         // an invalid / cleared field keeps its seeded value, like
         // Page Setup margins. Cancel / Tabs... discard edits.
+        // OK builds each row's format from that row's stored
+        // format (next = old) so it never wipes fields this
+        // dialog does not edit (borders/shading).
         if (dialogs.showParagraphDialog) {
             constexpr int PARAGRAPH_MODAL_ID = 50019;
             float paragraphDialogH =
-                340.0f +
+                (dialogs.paragraphTab == 0 ? 370.0f : 180.0f) +
+                (dialogs.paragraphAlignmentDropdownOpen ? 88.0f : 0.0f) +
+                (dialogs.paragraphSpecialDropdownOpen ? 66.0f : 0.0f) +
                 (dialogs.paragraphLineSpacingDropdownOpen ? 66.0f : 0.0f);
             auto result = afterhours::modal(ctx, mk(entity, PARAGRAPH_MODAL_ID),
                 dialogs.showParagraphDialog,
@@ -2965,19 +2972,307 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER));
                 };
 
-                groupLabel(901, "Indentation:");
-                fieldRow(902, "Left (inches):", "paragraph_left_input",
+                // Dropdown row + in-flow option list, the same
+                // pattern as the Font dialog dropdowns: the button
+                // shows the pending choice, the list expands
+                // in-flow below (the dialog height grows by its
+                // height). Opening one dropdown closes the other
+                // two, so at most one list is open.
+                auto dropdownRow = [&](int rowId, int listId,
+                                       const char* label,
+                                       const char* currentName,
+                                       bool& openFlag, bool& otherOpen1,
+                                       bool& otherOpen2,
+                                       const char* const* names, int count,
+                                       const char* const* debugNames,
+                                       int& index,
+                                       const char* dropdownDebug) {
+                    auto row = div(ctx, mk(result.ent(), rowId),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        test_input::register_visible_text(label);
+                        div(ctx, mk(row.ent(), 0),
+                            ComponentConfig{}
+                                .with_label(label)
+                                .with_size(ComponentSize{w1280(150), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        test_input::register_visible_text(
+                            std::string(label) + " " + currentName);
+                        if (button(ctx, mk(row.ent(), 1),
+                            ah_win95::win95DropdownButtonStyle(
+                                120.0f, 26.0f, openFlag)
+                                .with_debug_name(dropdownDebug)
+                                .with_label(currentName)
+                                .with_text_inset(8.0f, 2.0f)
+                                .with_on_draw_fg([](RectangleType r) {
+                                    drawDropdownTriangle(
+                                        r.x + r.width -
+                                            theme::layout::scale(10),
+                                        r.y + r.height / 2.0f,
+                                        theme::BUTTON_TEXT);
+                                })
+                                .with_render_layer(CONTENT_LAYER))) {
+                            openFlag = !openFlag;
+                            otherOpen1 = false;
+                            otherOpen2 = false;
+                        }
+                    }
+                    if (openFlag) {
+                        auto list = div(ctx, mk(result.ent(), listId),
+                            ah_win95::win95SunkenStyle()
+                                .with_size(ComponentSize{
+                                    percent(1.0f),
+                                    h720(static_cast<float>(count * 22))})
+                                .with_flex_direction(FlexDirection::Column)
+                                .with_padding(Padding{.top = pixels(2),
+                                                     .bottom = pixels(2)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (list) {
+                            for (int i = 0; i < count; ++i) {
+                                bool selected = i == index;
+                                test_input::register_visible_text(names[i]);
+                                if (button(ctx, mk(list.ent(), 700 + i),
+                                    ComponentConfig{}
+                                        .with_debug_name(debugNames[i])
+                                        .with_label(names[i])
+                                        .with_size(ComponentSize{percent(1.0f),
+                                                                h720(22)})
+                                        .with_roundness(0.0f)
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(
+                                            afterhours::ui::TextAlignment::Left)
+                                        .with_text_inset(8.0f, 2.0f)
+                                        .with_cursor(
+                                            afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    index = i;
+                                    openFlag = false;
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // Tab strip: two tabs, the selected one highlighted.
+                {
+                    auto strip = div(ctx, mk(result.ent(), 901),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (strip) {
+                        static const char* kTabLabels[2] = {
+                            "Indents and Spacing", "Line and Page Breaks"};
+                        static const char* kTabDebug[2] = {
+                            "paragraph_tab_indents", "paragraph_tab_breaks"};
+                        static const float kTabWidths[2] = {140.0f,
+                                                             150.0f};
+                        for (int i = 0; i < 2; ++i) {
+                            bool selected = dialogs.paragraphTab == i;
+                            test_input::register_visible_text(kTabLabels[i]);
+                            if (button(ctx, mk(strip.ent(), i),
+                                ah_win95::win95DialogButtonStyle()
+                                    .with_debug_name(kTabDebug[i])
+                                    .with_size(ComponentSize{
+                                        w1280(kTabWidths[i]), h720(24)})
+                                    .with_label(kTabLabels[i])
+                                    .with_custom_background(selected
+                                        ? ui_imm::win95_colors::HIGHLIGHT
+                                        : ui_imm::win95_colors::BUTTON_FACE)
+                                    .with_custom_text_color(selected
+                                        ? ui_imm::win95_colors::TEXT_WHITE
+                                        : ui_imm::win95_colors::TEXT)
+                                    .with_render_layer(CONTENT_LAYER))) {
+                                dialogs.paragraphTab = i;
+                                dialogs.paragraphLineSpacingDropdownOpen =
+                                    false;
+                                dialogs.paragraphAlignmentDropdownOpen =
+                                    false;
+                                dialogs.paragraphSpecialDropdownOpen =
+                                    false;
+                            }
+                        }
+                    }
+                }
+
+                if (dialogs.paragraphTab == 0) {
+                // Alignment dropdown (Tab 1, like Word's Alignment
+                // dropdown at the top of Indents and Spacing).
+                {
+                    static const char* kAlignDebug[4] = {
+                        "paragraph_alignment_left",
+                        "paragraph_alignment_centered",
+                        "paragraph_alignment_right",
+                        "paragraph_alignment_justified"};
+                    const char* currentName =
+                        paragraph_dialog::kAlignmentNames
+                            [static_cast<std::size_t>(std::clamp(
+                                dialogs.paragraphAlignmentIndex, 0, 3))];
+                    dropdownRow(902, 903, "Alignment:", currentName,
+                                dialogs.paragraphAlignmentDropdownOpen,
+                                dialogs.paragraphSpecialDropdownOpen,
+                                dialogs.paragraphLineSpacingDropdownOpen,
+                                paragraph_dialog::kAlignmentNames, 4,
+                                kAlignDebug,
+                                dialogs.paragraphAlignmentIndex,
+                                "paragraph_alignment_dropdown");
+                }
+
+                groupLabel(904, "Indentation:");
+                fieldRow(905, "Left (inches):", "paragraph_left_input",
                          dialogs.paragraphLeftStr);
-                fieldRow(903, "First line (inches):",
-                         "paragraph_firstline_input",
-                         dialogs.paragraphFirstLineStr);
-                fieldRow(904, "Right (inches):", "paragraph_right_input",
+                // Special + By: Word's Special dropdown (None /
+                // First line / Hanging) and the By amount driving
+                // firstLineIndent (+By for First line, -By for
+                // Hanging, 0 for None). The dropdown shares the
+                // row with the By input, so it is bespoke rather
+                // than the dropdownRow helper.
+                {
+                    auto row = div(ctx, mk(result.ent(), 906),
+                        ComponentConfig{}
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
+                            .with_flex_direction(FlexDirection::Row)
+                            .with_align_items(AlignItems::Center)
+                            .with_gap(pixels(8))
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_render_layer(CONTENT_LAYER));
+                    if (row) {
+                        test_input::register_visible_text("Special:");
+                        div(ctx, mk(row.ent(), 0),
+                            ComponentConfig{}
+                                .with_label("Special:")
+                                .with_size(ComponentSize{w1280(150), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        const char* currentName =
+                            paragraph_dialog::kSpecialNames
+                                [static_cast<std::size_t>(std::clamp(
+                                    dialogs.paragraphSpecialIndex, 0, 2))];
+                        test_input::register_visible_text(
+                            std::string("Special: ") + currentName);
+                        if (button(ctx, mk(row.ent(), 1),
+                            ah_win95::win95DropdownButtonStyle(
+                                120.0f, 26.0f,
+                                dialogs.paragraphSpecialDropdownOpen)
+                                .with_debug_name(
+                                    "paragraph_special_dropdown")
+                                .with_label(currentName)
+                                .with_text_inset(8.0f, 2.0f)
+                                .with_on_draw_fg([](RectangleType r) {
+                                    drawDropdownTriangle(
+                                        r.x + r.width -
+                                            theme::layout::scale(10),
+                                        r.y + r.height / 2.0f,
+                                        theme::BUTTON_TEXT);
+                                })
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.paragraphSpecialDropdownOpen =
+                                !dialogs.paragraphSpecialDropdownOpen;
+                            dialogs.paragraphAlignmentDropdownOpen = false;
+                            dialogs.paragraphLineSpacingDropdownOpen = false;
+                        }
+                        test_input::register_visible_text("By:");
+                        div(ctx, mk(row.ent(), 2),
+                            ComponentConfig{}
+                                .with_label("By:")
+                                .with_size(ComponentSize{w1280(32), h720(24)})
+                                .with_custom_background(
+                                    ui_imm::win95_colors::BUTTON_FACE)
+                                .with_custom_text_color(
+                                    ui_imm::win95_colors::TEXT)
+                                .with_alignment(
+                                    afterhours::ui::TextAlignment::Left)
+                                .with_render_layer(CONTENT_LAYER));
+                        afterhours::text_input::text_input(
+                            ctx, mk(row.ent(), 3),
+                            dialogs.paragraphByStr,
+                            ah_win95::win95SunkenStyle()
+                                .with_debug_name("paragraph_by_input")
+                                .with_size(ComponentSize{w1280(80), h720(24)})
+                                .with_render_layer(CONTENT_LAYER));
+                    }
+                    if (dialogs.paragraphSpecialDropdownOpen) {
+                        auto list = div(ctx, mk(result.ent(), 907),
+                            ah_win95::win95SunkenStyle()
+                                .with_size(ComponentSize{percent(1.0f),
+                                                         h720(66)})
+                                .with_flex_direction(FlexDirection::Column)
+                                .with_padding(Padding{.top = pixels(2),
+                                                     .bottom = pixels(2)})
+                                .with_render_layer(CONTENT_LAYER));
+                        if (list) {
+                            static const char* kSpecialDebug[3] = {
+                                "paragraph_special_none",
+                                "paragraph_special_firstline",
+                                "paragraph_special_hanging"};
+                            for (int i = 0; i < 3; ++i) {
+                                bool selected =
+                                    i == dialogs.paragraphSpecialIndex;
+                                test_input::register_visible_text(
+                                    paragraph_dialog::kSpecialNames[i]);
+                                if (button(ctx, mk(list.ent(), 700 + i),
+                                    ComponentConfig{}
+                                        .with_debug_name(kSpecialDebug[i])
+                                        .with_label(
+                                            paragraph_dialog::kSpecialNames[i])
+                                        .with_size(ComponentSize{percent(1.0f),
+                                                                h720(22)})
+                                        .with_roundness(0.0f)
+                                        .with_custom_background(selected
+                                            ? ui_imm::win95_colors::HIGHLIGHT
+                                            : ui_imm::win95_colors::TEXT_AREA)
+                                        .with_custom_text_color(selected
+                                            ? ui_imm::win95_colors::TEXT_WHITE
+                                            : ui_imm::win95_colors::TEXT)
+                                        .with_alignment(
+                                            afterhours::ui::TextAlignment::Left)
+                                        .with_text_inset(8.0f, 2.0f)
+                                        .with_cursor(
+                                            afterhours::ui::CursorType::Pointer)
+                                        .with_render_layer(CONTENT_LAYER))) {
+                                    dialogs.paragraphSpecialIndex = i;
+                                    dialogs.paragraphSpecialDropdownOpen =
+                                        false;
+                                }
+                            }
+                        }
+                    }
+                }
+                fieldRow(908, "Right (inches):", "paragraph_right_input",
                          dialogs.paragraphRightStr);
 
-                groupLabel(905, "Spacing:");
-                fieldRow(906, "Before (pt):", "paragraph_before_input",
+                groupLabel(909, "Spacing:");
+                fieldRow(910, "Before (pt):", "paragraph_before_input",
                          dialogs.paragraphBeforeStr);
-                fieldRow(907, "After (pt):", "paragraph_after_input",
+                fieldRow(911, "After (pt):", "paragraph_after_input",
                          dialogs.paragraphAfterStr);
 
                 // Line spacing dropdown: button shows the pending
@@ -2985,7 +3280,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 // height grows by its height), same pattern as the
                 // Font dialog dropdowns.
                 {
-                    auto row = div(ctx, mk(result.ent(), 908),
+                    auto row = div(ctx, mk(result.ent(), 912),
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(1.0f), h720(28)})
                             .with_flex_direction(FlexDirection::Row)
@@ -3032,11 +3327,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_render_layer(CONTENT_LAYER))) {
                             dialogs.paragraphLineSpacingDropdownOpen =
                                 !dialogs.paragraphLineSpacingDropdownOpen;
+                            dialogs.paragraphAlignmentDropdownOpen = false;
+                            dialogs.paragraphSpecialDropdownOpen = false;
                         }
                     }
                 }
                 if (dialogs.paragraphLineSpacingDropdownOpen) {
-                    auto list = div(ctx, mk(result.ent(), 909),
+                    auto list = div(ctx, mk(result.ent(), 913),
                         ah_win95::win95SunkenStyle()
                             .with_size(ComponentSize{percent(1.0f), h720(66)})
                             .with_flex_direction(FlexDirection::Column)
@@ -3081,12 +3378,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     }
                 }
 
-                // Default tab stops: the document-wide tabWidth, with
-                // the Tabs... button opening the existing Tab Width
-                // dialog flow (this dialog closes, discarding its
-                // unsaved edits, like Cancel).
+                // Tabs... button: no Default-tab-stops field on
+                // this tab (per-paragraph tab stops do not exist).
+                // Opens the existing Tab Width dialog flow for the
+                // document-wide default; this dialog closes,
+                // discarding its unsaved edits, like Cancel.
                 {
-                    auto row = div(ctx, mk(result.ent(), 910),
+                    auto row = div(ctx, mk(result.ent(), 914),
                         ComponentConfig{}
                             .with_size(ComponentSize{percent(1.0f), h720(28)})
                             .with_flex_direction(FlexDirection::Row)
@@ -3096,12 +3394,27 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
                     if (row) {
+                        test_input::register_visible_text("Tabs...");
+                        if (button(ctx, mk(row.ent(), 0),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("paragraph_tabs_button")
+                                .with_label("Tabs...")
+                                .with_render_layer(CONTENT_LAYER))) {
+                            dialogs.tabWidthInputStr =
+                                std::to_string(doc.docSettings.tabWidth);
+                            dialogs.showParagraphDialog = false;
+                            dialogs.paragraphLineSpacingDropdownOpen =
+                                false;
+                            dialogs.paragraphAlignmentDropdownOpen = false;
+                            dialogs.paragraphSpecialDropdownOpen = false;
+                            dialogs.showTabWidthDialog = true;
+                        }
                         test_input::register_visible_text(
-                            "Default tab stops:");
-                        div(ctx, mk(row.ent(), 0),
+                            "Tab stops are document-wide.");
+                        div(ctx, mk(row.ent(), 1),
                             ComponentConfig{}
-                                .with_label("Default tab stops:")
-                                .with_size(ComponentSize{w1280(150), h720(24)})
+                                .with_label("Tab stops are document-wide.")
+                                .with_size(ComponentSize{w1280(260), h720(24)})
                                 .with_custom_background(
                                     ui_imm::win95_colors::BUTTON_FACE)
                                 .with_custom_text_color(
@@ -3109,39 +3422,39 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                                 .with_alignment(
                                     afterhours::ui::TextAlignment::Left)
                                 .with_render_layer(CONTENT_LAYER));
-                        afterhours::text_input::text_input(
-                            ctx, mk(row.ent(), 1),
-                            dialogs.paragraphTabStopsStr,
-                            ah_win95::win95SunkenStyle()
-                                .with_debug_name("paragraph_tabstops_input")
-                                .with_size(ComponentSize{w1280(80), h720(24)})
-                                .with_render_layer(CONTENT_LAYER));
-                        if (button(ctx, mk(row.ent(), 2),
-                            ah_win95::win95DialogButtonStyle()
-                                .with_debug_name("paragraph_tabs_button")
-                                .with_label("Tabs...")
-                                .with_render_layer(CONTENT_LAYER))) {
-                            dialogs.tabWidthInputStr =
-                                dialogs.paragraphTabStopsStr;
-                            dialogs.showParagraphDialog = false;
-                            dialogs.paragraphLineSpacingDropdownOpen = false;
-                            dialogs.showTabWidthDialog = true;
-                        }
                     }
                 }
-                test_input::register_visible_text(
-                    "No per-paragraph tab stops; this sets the document default.");
-                div(ctx, mk(result.ent(), 911),
-                    ComponentConfig{}
-                        .with_label("No per-paragraph tab stops; this sets the document default.")
-                        .with_size(ComponentSize{percent(1.0f), h720(20)})
-                        .with_custom_background(
-                            ui_imm::win95_colors::BUTTON_FACE)
-                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
-                        .with_alignment(afterhours::ui::TextAlignment::Left)
-                        .with_render_layer(CONTENT_LAYER));
+                }  // paragraphTab == 0
 
-                auto buttonRow = div(ctx, mk(result.ent(), 912),
+                // Tab 2: "Line and Page Breaks" — two checkboxes.
+                // Line spacing stays on Tab 1, like Word.
+                if (dialogs.paragraphTab == 1) {
+                    auto checkboxRow = [&](int id, const char* label,
+                                           const char* debugName,
+                                           bool& value) {
+                        test_input::register_visible_text(
+                            std::string(value ? "[X] " : "[ ] ") + label);
+                        if (button(ctx, mk(result.ent(), id),
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name(debugName)
+                                .with_size(ComponentSize{w1280(170),
+                                                         h720(24)})
+                                .with_label(std::string(value ? "[X] "
+                                                             : "[ ] ") +
+                                            label)
+                                .with_render_layer(CONTENT_LAYER))) {
+                            value = !value;
+                        }
+                    };
+                    checkboxRow(920, "Page break before",
+                                "paragraph_pagebreak_checkbox",
+                                dialogs.paragraphPageBreakBefore);
+                    checkboxRow(921, "Keep with next",
+                                "paragraph_keepnext_checkbox",
+                                dialogs.paragraphKeepWithNext);
+                }
+
+                auto buttonRow = div(ctx, mk(result.ent(), 930),
                     ComponentConfig{}
                         .with_size(ComponentSize{percent(1.0f), h720(44)})
                         .with_flex_direction(FlexDirection::Row)
@@ -3161,43 +3474,54 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         ParagraphFormat fallback =
                             doc.buffer.lineParagraphFormat(
                                 doc.buffer.caret().row);
-                        ParagraphFormat next;
-                        next.indents.left =
+                        // Parsed values, once: invalid / cleared
+                        // fields keep their seeded (fallback)
+                        // values, like Page Setup margins. By
+                        // falls back to the seeded |firstLine|, or
+                        // the 0.5" default when that is 0.
+                        int leftIndent =
                             paragraph_dialog::inchesToStored(
                                 paragraph_dialog::parseInches(
                                     dialogs.paragraphLeftStr,
                                     static_cast<double>(
                                         fallback.indents.left) /
                                         paragraph_dialog::POINTS_PER_INCH));
-                        next.indents.firstLine =
-                            paragraph_dialog::inchesToStoredSigned(
+                        double byFallback =
+                            fallback.indents.firstLine != 0
+                                ? static_cast<double>(std::abs(
+                                      fallback.indents.firstLine)) /
+                                      paragraph_dialog::POINTS_PER_INCH
+                                : paragraph_dialog::kDefaultByInches;
+                        int firstLineIndent =
+                            paragraph_dialog::firstLineIndentFor(
+                                dialogs.paragraphSpecialIndex,
                                 paragraph_dialog::parseInches(
-                                    dialogs.paragraphFirstLineStr,
-                                    static_cast<double>(
-                                        fallback.indents.firstLine) /
-                                        paragraph_dialog::POINTS_PER_INCH));
+                                    dialogs.paragraphByStr, byFallback));
                         // First line never left of the margin, like
                         // the ruler drag.
-                        if (next.indents.firstLine < -next.indents.left)
-                            next.indents.firstLine = -next.indents.left;
-                        next.indents.right =
+                        if (firstLineIndent < -leftIndent)
+                            firstLineIndent = -leftIndent;
+                        int rightIndent =
                             paragraph_dialog::inchesToStored(
                                 paragraph_dialog::parseInches(
                                     dialogs.paragraphRightStr,
                                     static_cast<double>(
                                         fallback.indents.right) /
                                         paragraph_dialog::POINTS_PER_INCH));
-                        next.spaceBefore =
+                        int spaceBefore =
                             paragraph_dialog::parsePoints(
                                 dialogs.paragraphBeforeStr,
                                 fallback.spaceBefore);
-                        next.spaceAfter =
+                        int spaceAfter =
                             paragraph_dialog::parsePoints(
                                 dialogs.paragraphAfterStr,
                                 fallback.spaceAfter);
-                        next.lineSpacing =
+                        float lineSpacing =
                             paragraph_dialog::lineSpacingForIndex(
                                 dialogs.paragraphLineSpacingIndex);
+                        ::TextAlignment alignment =
+                            paragraph_dialog::alignmentForIndex(
+                                dialogs.paragraphAlignmentIndex);
                         std::size_t firstRow = doc.buffer.caret().row;
                         std::size_t lastRow = firstRow;
                         if (doc.buffer.hasSelection()) {
@@ -3216,18 +3540,28 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                              ++row) {
                             ParagraphFormat old =
                                 doc.buffer.lineParagraphFormat(row);
+                            ParagraphFormat next = old;
+                            next.indents.left = leftIndent;
+                            next.indents.firstLine = firstLineIndent;
+                            next.indents.right = rightIndent;
+                            next.spaceBefore = spaceBefore;
+                            next.spaceAfter = spaceAfter;
+                            next.lineSpacing = lineSpacing;
+                            next.alignment = alignment;
+                            next.pageBreakBefore =
+                                dialogs.paragraphPageBreakBefore;
+                            next.keepWithNext =
+                                dialogs.paragraphKeepWithNext;
                             doc.buffer.setLineParagraphFormat(row, next);
                             changes.push_back({row, old, next});
                         }
                         doc.buffer.commitParagraphFormat(
                             std::move(changes));
-                        doc.docSettings.tabWidth =
-                            paragraph_dialog::parseTabStops(
-                                dialogs.paragraphTabStopsStr,
-                                doc.docSettings.tabWidth);
                         doc.isDirty = true;
                         dialogs.showParagraphDialog = false;
                         dialogs.paragraphLineSpacingDropdownOpen = false;
+                        dialogs.paragraphAlignmentDropdownOpen = false;
+                        dialogs.paragraphSpecialDropdownOpen = false;
                     }
                     if (button(ctx, mk(buttonRow.ent(), 1),
                         ah_win95::win95DialogButtonStyle()
@@ -3236,6 +3570,8 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.showParagraphDialog = false;
                         dialogs.paragraphLineSpacingDropdownOpen = false;
+                        dialogs.paragraphAlignmentDropdownOpen = false;
+                        dialogs.paragraphSpecialDropdownOpen = false;
                     }
                 }
             }
@@ -3854,17 +4190,21 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
                 
-                // Prompt label
+                // Prompt label: the unit is characters — one tab
+                // expands to this many space characters.
+                test_input::register_visible_text(
+                    "Tab width in characters (1-16):");
                 div(ctx, mk(result.ent(), 0),
                     ComponentConfig{}
-                        .with_label("Spaces per tab (1-16):")
+                        .with_label("Tab width in characters (1-16):")
                         .with_size(ComponentSize{percent(1.0f), h720(24)})
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 // Text input
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     dialogs.tabWidthInputStr,
                     ComponentConfig{}
+                        .with_debug_name("tabwidth_input")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Surface)
                         .with_render_layer(CONTENT_LAYER));
@@ -3882,6 +4222,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 if (button(ctx, mk(buttonRow.ent(), 0),
                     ComponentConfig{}
+                        .with_debug_name("tabwidth_ok")
                         .with_label("OK")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_background(Theme::Usage::Primary)
@@ -3903,6 +4244,7 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                 
                 if (button(ctx, mk(buttonRow.ent(), 1),
                     ComponentConfig{}
+                        .with_debug_name("tabwidth_cancel")
                         .with_label("Cancel")
                         .with_size(ComponentSize{h720(80), h720(32)})
                         .with_render_layer(CONTENT_LAYER))) {

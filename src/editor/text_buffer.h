@@ -135,6 +135,17 @@ struct ParagraphFormat {
     int borderEdges = 0;
     int borderStyle = borders_shading::kBorderStyleNone;
     int shadingColorIndex = 0;
+    // Paragraph dialog, "Indents and Spacing" tab: the paragraph
+    // alignment (LineSpan::alignment). "Line and Page Breaks" tab:
+    // pageBreakBefore starts the paragraph on a new page in the
+    // paged renderer (a dashed break line in Normal view); it is
+    // NOT the Ctrl+Enter manual break (LineSpan::hasPageBreakBefore).
+    // keepWithNext keeps the paragraph on the same page as the
+    // next one (paged renderer: a last-on-page paragraph with
+    // keepWithNext moves with the next paragraph).
+    TextAlignment alignment = TextAlignment::Left;
+    bool pageBreakBefore = false;
+    bool keepWithNext = false;
     bool operator==(const ParagraphFormat& other) const {
         return indents == other.indents &&
                lineSpacing == other.lineSpacing &&
@@ -142,7 +153,10 @@ struct ParagraphFormat {
                spaceAfter == other.spaceAfter &&
                borderEdges == other.borderEdges &&
                borderStyle == other.borderStyle &&
-               shadingColorIndex == other.shadingColorIndex;
+               shadingColorIndex == other.shadingColorIndex &&
+               alignment == other.alignment &&
+               pageBreakBefore == other.pageBreakBefore &&
+               keepWithNext == other.keepWithNext;
     }
 };
 
@@ -265,6 +279,11 @@ struct LineSpan {
     
     // Page break
     bool hasPageBreakBefore = false;  // Insert page break before this line (Ctrl+Enter)
+    // Paragraph dialog "Line and Page Breaks" tab (Format >
+    // Paragraph...): page-break-before attribute + keep-with-next.
+    // Distinct from hasPageBreakBefore (the manual break).
+    bool pageBreakBefore = false;
+    bool keepWithNext = false;
 
     // Drop cap formatting
     bool hasDropCap = false;

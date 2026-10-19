@@ -265,7 +265,14 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              // estimate (page text height / line
                              // height), passed in by the caller.
                              bool normalMode = false,
-                             int normalLinesPerPage = 50) {
+                             int normalLinesPerPage = 50,
+                             // Paged editing view (Page Layout):
+                             // the paragraph dialog's pageBreakBefore
+                             // / keepWithNext attributes reflow the
+                             // page here. In pageless / preview
+                             // (normalMode / suppressSelection) they
+                             // do not.
+                             bool pagedMode = false) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
 
@@ -348,6 +355,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
     int y = static_cast<int>(textArea.y) + theme::layout::TEXT_PADDING;
     const int startY = y;
+    // Whether a row has already been drawn in this call: the
+    // pageBreakBefore / keepWithNext pushes below only apply
+    // past the first drawn row — the first drawn row is already
+    // at this page's top.
+    bool drawnAnyRow = false;
 
     // Outline mode: iterate the heading rows only (Title /
     // Subtitle / Heading 1-6), after the Outlining toolbar's
@@ -479,6 +491,21 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Apply paragraph spacing before
         int paragraphSpaceBefore = buffer.lineSpaceBefore(row);
         y += paragraphSpaceBefore;
+
+        // Paragraph dialog "Page break before"
+        // (LineSpan::pageBreakBefore, distinct from the Ctrl+Enter
+        // manual break below): in the paged editing view the
+        // paragraph starts a new page. This viewport shows one
+        // page (textArea); ending the loop here leaves the rest
+        // of this page blank, and the paragraph renders at the
+        // top once scrolled to. Skipped in columns (rows are
+        // assigned to columns by index, not by y), outline, and
+        // Print Preview (suppressSelection: preview pagination
+        // is a line-stride estimate that does not reflow).
+        if (pagedMode && !columnsActive && !outlineMode &&
+            !suppressSelection && span.pageBreakBefore && drawnAnyRow) {
+            break;
+        }
         
         // Draw page break indicator if present (editing adornment:
         // hidden in Print Preview, which shows printable content only).
@@ -513,17 +540,19 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // View > Normal: dashed indicator at each COMPUTED page
         // boundary (normal_view::isPageBoundary — every
         // normalLinesPerPage-th row, the same estimate Print
-        // Preview uses). Word 95 Normal shows page breaks as
-        // dashed lines across the text; unlike an explicit Page
-        // Break (above) this adds no vertical space and no label
-        // — the rows keep their positions, so the hit-test math
-        // is untouched. Skipped where an explicit break already
-        // drew: two lines on top of each other would read as
-        // one thick line. Editing adornment: hidden in Print
-        // Preview (normalMode is false there), like the
-        // explicit break.
+        // Preview uses) and at each paragraph-dialog "Page break
+        // before" row (LineSpan::pageBreakBefore). Word 95 Normal
+        // shows page breaks as dashed lines across the text;
+        // unlike an explicit Page Break (above) this adds no
+        // vertical space and no label — the rows keep their
+        // positions, so the hit-test math is untouched. Skipped
+        // where an explicit break already drew: two lines on top
+        // of each other would read as one thick line. Editing
+        // adornment: hidden in Print Preview (normalMode is false
+        // there), like the explicit break.
         if (normalMode && !suppressSelection &&
-            normal_view::isPageBoundary(row, normalLinesPerPage) &&
+            (normal_view::isPageBoundary(row, normalLinesPerPage) ||
+             span.pageBreakBefore) &&
             !buffer.hasPageBreakBefore(row)) {
             // y is the current line's top (paragraph space-before
             // already added): y - 2 sits in the middle of the
@@ -536,6 +565,28 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             for (int px = lineStart; px < lineEnd; px += 8) {
                 afterhours::draw_line(px, breakY, px + 4, breakY,
                                       breakColor);
+            }
+        }
+
+        // Paragraph dialog "Keep with next"
+        // (LineSpan::keepWithNext): if this row is the last one
+        // that fits on this page and a next row exists, move this
+        // row to the next page with it — either the next row
+        // would overflow this page (the loop's own break check
+        // below would end the page after this row), or the next
+        // row starts a new page itself (pageBreakBefore). Same
+        // one-page viewport and same skips as pageBreakBefore
+        // above.
+        if (pagedMode && !columnsActive && !outlineMode &&
+            !suppressSelection && span.keepWithNext && drawnAnyRow &&
+            row + 1 < lineCount) {
+            int spaceAfter = buffer.lineSpaceAfter(row);
+            bool nextStartsNewPage =
+                buffer.lineSpan(row + 1).pageBreakBefore;
+            if (nextStartsNewPage ||
+                y + lineHeight + spaceAfter >
+                    static_cast<int>(textArea.y + textArea.height)) {
+                break;
             }
         }
 
@@ -1240,6 +1291,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // Advance y by line height plus paragraph spacing after
         int paragraphSpaceAfter = buffer.lineSpaceAfter(row);
         y += lineHeight + paragraphSpaceAfter;
+        drawnAnyRow = true;
 
         if (y > static_cast<int>(textArea.y + textArea.height)) {
             // In columns mode an overflowing row (e.g. a tall heading)
@@ -1701,7 +1753,8 @@ struct EditorRenderSystem
                              layout.previewMode ? nullptr : &doc.comments,
                              layout.previewMode ? nullptr : &doc.revisions,
                              layout.previewMode ? nullptr : &doc.chips,
-                             normalMode, columnsLinesPerPage);
+                             normalMode, columnsLinesPerPage,
+                             layout.pageMode == PageMode::Paged);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
@@ -1715,7 +1768,8 @@ struct EditorRenderSystem
                              layout.previewMode ? nullptr : &doc.comments,
                              layout.previewMode ? nullptr : &doc.revisions,
                              layout.previewMode ? nullptr : &doc.chips,
-                             normalMode, columnsLinesPerPage);
+                             normalMode, columnsLinesPerPage,
+                             layout.pageMode == PageMode::Paged);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1737,7 +1791,8 @@ struct EditorRenderSystem
                              layout.previewMode ? nullptr : &doc.comments,
                              layout.previewMode ? nullptr : &doc.revisions,
                              layout.previewMode ? nullptr : &doc.chips,
-                             normalMode, columnsLinesPerPage);
+                             normalMode, columnsLinesPerPage,
+                             layout.pageMode == PageMode::Paged);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===
