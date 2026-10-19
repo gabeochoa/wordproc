@@ -104,3 +104,13 @@ words; File's framed look traced to afterhours focus ring on recycled
 entity ids) -> round 3 (Grammar re-scans after Change; focus parked on
 idle frames, File flat). FINAL: Print Preview 8, Tools 7.5, Grammar 8,
 Standard toolbar 7.5 — **Batch 3 PASS, all read as Word 95.**
+
+## 2026-10-18 — Batch 4 (Date/Time, Templates, Font, Outline, Columns)
+
+Rounds: Date 7, Template 3->7, Font 4->6->8, Outline 2->6->7.5,
+Columns 5.5->6.5->8.5. **Batch 4 PASS — all read as Word 95.**
+Notable roots found en route: squiggle cache covered only the
+single-column window (columns), Font pending-state desync, outline
+level indent unused, "column" simply missing from the dictionary.
+Process note: one review round was graded on STALE /tmp captures —
+always upload from the round's own screenshot dir.
