@@ -80,6 +80,36 @@ inline bool sameBorderShading(int edgesA, int styleA, int shadingA,
     return edgesA == edgesB && styleA == styleB && shadingA == shadingB;
 }
 
+// Border/shading rect padding, in display pixels. The rect is the
+// paragraph's line box expanded on all sides: a 4px horizontal /
+// 2px vertical base margin plus a 3px expansion, so glyphs never
+// touch the stroke (the breathing room the reviewer asked for).
+// Text position is unchanged — only the rect grows.
+inline constexpr float kBorderBasePaddingX = 4.0f;
+inline constexpr float kBorderBasePaddingY = 2.0f;
+inline constexpr float kBorderPaddingExpansion = 3.0f;
+
+struct BorderBox {
+    float x0 = 0.0f;
+    float y0 = 0.0f;
+    float x1 = 0.0f;
+    float y1 = 0.0f;
+};
+
+// The border/shading rect for one line: the indented paragraph
+// width (baseX + leftIndent .. baseX + availableWidth -
+// rightIndent) and the line box (y .. y + lineHeight), each
+// expanded by the base padding + the 3px expansion.
+inline BorderBox borderBoxRect(float baseX, float leftIndent,
+                               float availableWidth, float rightIndent,
+                               float y, float lineHeight) {
+    float padX = kBorderBasePaddingX + kBorderPaddingExpansion;
+    float padY = kBorderBasePaddingY + kBorderPaddingExpansion;
+    return {baseX + leftIndent - padX, y - padY,
+            baseX + availableWidth - rightIndent + padX,
+            y + lineHeight + padY};
+}
+
 // Which border edges to draw for one line inside a merged group.
 // The top edge draws only on the group's first line and the bottom
 // only on the group's last line, so consecutive identical

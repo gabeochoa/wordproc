@@ -3,6 +3,27 @@
 
 #include "catch2/catch.hpp"
 
+TEST_CASE("Borders and Shading box rect padding", "[borders_shading]") {
+    using namespace borders_shading;
+    SECTION("rect is the line box expanded 3px past the base padding") {
+        REQUIRE(kBorderPaddingExpansion == 3.0f);
+        BorderBox box = borderBoxRect(100.0f, 0.0f, 500.0f, 0.0f, 50.0f,
+                                      20.0f);
+        // Horizontal: 4 base + 3 expansion = 7 each side.
+        REQUIRE(box.x0 == 93.0f);
+        REQUIRE(box.x1 == 607.0f);
+        // Vertical: 2 base + 3 expansion = 5 each side.
+        REQUIRE(box.y0 == 45.0f);
+        REQUIRE(box.y1 == 75.0f);
+    }
+    SECTION("indents narrow the rect") {
+        BorderBox box = borderBoxRect(100.0f, 36.0f, 500.0f, 72.0f,
+                                      50.0f, 20.0f);
+        REQUIRE(box.x0 == 129.0f);
+        REQUIRE(box.x1 == 535.0f);
+    }
+}
+
 TEST_CASE("Borders and Shading palette", "[borders_shading]") {
     using namespace borders_shading;
     SECTION("None + 8 highlight colors") {

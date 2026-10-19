@@ -746,8 +746,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // text, BEFORE the selection highlight below (a selection
         // still paints its navy bg over the shading) and before the
         // squiggles, which draw after the text. The rect spans the
-        // indented paragraph width with a 4px / 2px breathing margin
-        // so the box reads even on short text; consecutive lines
+        // indented paragraph width expanded by the
+        // borders_shading padding (7px horizontal / 5px vertical:
+        // base 4/2 + 3 expansion) so glyphs never touch the
+        // stroke; consecutive lines
         // with the identical border + shading triple merge into one
         // box (no internal horizontal edge), except in columns /
         // outline mode where each visible line draws its own edges.
@@ -767,11 +769,18 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 mergeGroups && row > 0 && sameTriple(row - 1);
             bool sameAsNext = mergeGroups && row + 1 < lineCount &&
                               sameTriple(row + 1);
-            float boxX0 = static_cast<float>(baseX + leftIndent - 4);
-            float boxX1 = static_cast<float>(baseX + availableWidth -
-                                              rightIndent + 4);
-            float boxY0 = static_cast<float>(y - 2);
-            float boxY1 = static_cast<float>(y + lineHeight + 2);
+            borders_shading::BorderBox box =
+                borders_shading::borderBoxRect(
+                    static_cast<float>(baseX),
+                    static_cast<float>(leftIndent),
+                    static_cast<float>(availableWidth),
+                    static_cast<float>(rightIndent),
+                    static_cast<float>(y),
+                    static_cast<float>(lineHeight));
+            float boxX0 = box.x0;
+            float boxX1 = box.x1;
+            float boxY0 = box.y0;
+            float boxY1 = box.y1;
             if (borders_shading::hasParagraphShading(
                     span.shadingColorIndex)) {
                 TextColor fill =
