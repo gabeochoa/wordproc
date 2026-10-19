@@ -718,6 +718,106 @@ void TextBuffer::commitParagraphIndents(std::size_t row,
         row, oldIndents, newIndents));
 }
 
+void TextBuffer::commitParagraphStyle(std::size_t row,
+                                      ParagraphStyle oldStyle,
+                                      ParagraphStyle newStyle) {
+    if (row >= line_spans_.size() || oldStyle == newStyle) return;
+    // Already applied live; record only, so Promote / Demote is
+    // one undo step.
+    history_.push(std::make_unique<SetParagraphStyleCommand>(
+        row, oldStyle, newStyle));
+}
+
+void TextBuffer::commitSwapAdjacentLineRanges(
+    std::size_t firstStart, std::size_t boundary, std::size_t secondEnd,
+    std::size_t oldCaretRow, std::size_t newCaretRow) {
+    if (firstStart >= boundary || boundary >= secondEnd ||
+        secondEnd > line_spans_.size()) {
+        return;
+    }
+    // Already applied live; record only, so the Move is one step.
+    history_.push(std::make_unique<SwapAdjacentLineRangesCommand>(
+        firstStart, boundary, secondEnd, oldCaretRow, newCaretRow));
+}
+
+void TextBuffer::swapAdjacentLineRanges(std::size_t firstStart,
+                                        std::size_t boundary,
+                                        std::size_t secondEnd) {
+    if (firstStart >= boundary || boundary >= secondEnd ||
+        secondEnd > line_spans_.size()) {
+        return;
+    }
+    // Offsets of the three boundaries. The combined range is one
+    // contiguous run of chars; swapping the two segments keeps
+    // the total length (and every offset after secondEnd) unchanged.
+    std::size_t startOffset = line_spans_[firstStart].offset;
+    std::size_t boundaryOffset = line_spans_[boundary].offset;
+    std::size_t endOffset =
+        secondEnd < line_spans_.size()
+            ? line_spans_[secondEnd].offset
+            : chars_.size();
+    std::string combined;
+    combined.reserve(endOffset - startOffset);
+    for (std::size_t i = startOffset; i < endOffset; ++i) {
+        combined.push_back(chars_.at(i));
+    }
+    std::string firstSeg = combined.substr(
+        0, boundaryOffset - startOffset);
+    std::string secondSeg = combined.substr(boundaryOffset - startOffset);
+    // Terminators: a line's "\n" separates it from the next line
+    // unless it is the last line of the document (no terminator).
+    // When the combined range ends mid-document, both segments
+    // already end with the terminator their last line needs in
+    // its new position. When it ends at the end of the document,
+    // the first segment's trailing "\n" must move: the second
+    // segment's last line (now in the middle) gains a terminator,
+    // and the first segment's last line (now last) loses its one.
+    std::string swapped;
+    if (secondEnd < line_spans_.size()) {
+        swapped = secondSeg + firstSeg;
+    } else {
+        if (!firstSeg.empty() && firstSeg.back() == '\n') {
+            firstSeg.pop_back();
+        }
+        swapped = secondSeg + "\n" + firstSeg;
+    }
+    chars_.erase(startOffset, endOffset - startOffset);
+    if (!swapped.empty()) {
+        chars_.insertString(startOffset, swapped.data(), swapped.size());
+    }
+    // Spans move with their lines: second block's spans first.
+    std::vector<LineSpan> newSpans;
+    newSpans.reserve(secondEnd - firstStart);
+    for (std::size_t i = boundary; i < secondEnd; ++i) {
+        newSpans.push_back(line_spans_[i]);
+    }
+    for (std::size_t i = firstStart; i < boundary; ++i) {
+        newSpans.push_back(line_spans_[i]);
+    }
+    for (std::size_t i = 0; i < newSpans.size(); ++i) {
+        line_spans_[firstStart + i] = newSpans[i];
+    }
+    // The moved spans carry their OLD offsets: the first span in
+    // the range must start at the range start, and every later
+    // offset is recomputed from it. (Forgetting this left the
+    // spans pointing at the pre-swap positions, so lineString()
+    // read the wrong characters after a swap.)
+    line_spans_[firstStart].offset = startOffset;
+    // Recompute offsets from the range start to the end of the
+    // document: the combined range's length is unchanged, so
+    // offsets after it are in fact unchanged, but recomputing
+    // through the end keeps the invariant (offset[i] = offset[i-1]
+    // + length[i-1] + terminator) true by construction.
+    for (std::size_t i = firstStart + 1; i < line_spans_.size(); ++i) {
+        const LineSpan& prev = line_spans_[i - 1];
+        std::size_t terminator =
+            (i - 1 == line_spans_.size() - 1) ? 0 : 1;
+        line_spans_[i].offset =
+            prev.offset + prev.length + terminator;
+    }
+    version_++;
+}
+
 // ============================================================================
 // Spacing methods
 // ============================================================================
@@ -1298,6 +1398,32 @@ void DeleteSelectionCommand::execute(TextBuffer& buffer) {
 void DeleteSelectionCommand::undo(TextBuffer& buffer) {
     buffer.insertTextAt(start_, deletedText_);
     buffer.setCaret(end_);
+}
+
+void SetParagraphStyleCommand::execute(TextBuffer& buffer) {
+    buffer.setLineParagraphStyle(row_, new_);
+}
+
+void SetParagraphStyleCommand::undo(TextBuffer& buffer) {
+    buffer.setLineParagraphStyle(row_, old_);
+}
+
+void SwapAdjacentLineRangesCommand::execute(TextBuffer& buffer) {
+    buffer.swapAdjacentLineRanges(firstStart_, boundary_, secondEnd_);
+    buffer.clearSelection();
+    buffer.setCaret({newCaretRow_, 0});
+}
+
+void SwapAdjacentLineRangesCommand::undo(TextBuffer& buffer) {
+    // After execute, the second block sits first: its size is
+    // secondEnd_ - boundary_, so the shifted boundary is
+    // firstStart_ + (secondEnd_ - boundary_). Swapping with that
+    // boundary restores the original order.
+    std::size_t shifted =
+        firstStart_ + (secondEnd_ - boundary_);
+    buffer.swapAdjacentLineRanges(firstStart_, shifted, secondEnd_);
+    buffer.clearSelection();
+    buffer.setCaret({oldCaretRow_, 0});
 }
 
 void SetParagraphIndentsCommand::execute(TextBuffer& buffer) {

@@ -5,6 +5,7 @@
 #include "../ecs/component_helpers.h"
 #include "deferred_screenshot.h"
 #include "../editor/document_settings.h"
+#include "../editor/outline_view.h"
 #include "../input_mapping.h"
 #include "../rl.h"
 #include "../../vendor/afterhours/src/plugins/modal.h"
@@ -188,6 +189,19 @@ static void setupCallbacksEx(
         
         // Basic text properties
         if (prop == "text") return buffer.getText();
+        // row_text_N = the content of buffer row N (validate
+        // row_text_0=Heading One). Lets an E2E prove a Move
+        // reordered lines, which text_contains= cannot (it only
+        // proves presence). Out of range -> empty.
+        if (prop.length() > 9 && prop.substr(0, 9) == "row_text_") {
+            try {
+                std::size_t row =
+                    static_cast<std::size_t>(std::stoul(prop.substr(9)));
+                if (row < buffer.lineCount()) return buffer.lineString(row);
+            } catch (...) {
+            }
+            return "";
+        }
         if (prop == "text_length") return std::to_string(buffer.textSize());
         if (prop == "line_count") return std::to_string(buffer.lineCount());
         if (prop == "bold") return style.bold ? "true" : "false";
@@ -464,9 +478,24 @@ static void setupCallbacksEx(
         // Outline properties
         if (prop == "outline_visible") return layoutComp.showOutline ? "true" : "false";
         if (prop == "line_numbers_visible") return layoutComp.showLineNumbers ? "true" : "false";
+        // outline_items = VISIBLE outline rows: the same filtered
+        // mapping the renderer and hit-test use (Show Level +
+        // collapsed headings), not the raw heading count -- so
+        // collapsing a heading drops the count, and Show Level 1
+        // drops it to the level-1 headings.
         if (prop == "outline_items") {
-            auto outline = buffer.getOutline();
-            return std::to_string(outline.size());
+            std::vector<ParagraphStyle> styles;
+            for (std::size_t i = 0; i < buffer.lineCount(); ++i) {
+                styles.push_back(buffer.lineParagraphStyle(i));
+            }
+            return std::to_string(outline_view::outlineVisibleRowsFiltered(
+                                       styles, layoutComp.outlineShowLevel,
+                                       layoutComp.outlineCollapsedRows)
+                                       .size());
+        }
+        // outline_show_level = 0 for All Levels, else 1..6.
+        if (prop == "outline_show_level") {
+            return std::to_string(layoutComp.outlineShowLevel);
         }
 
         if (prop == "comment_count") return std::to_string(docComp.comments.size());
@@ -1083,6 +1112,8 @@ static void setupCallbacksEx(
         layoutComp.showOutline = false;
         layoutComp.outlinePrevPageMode = PageMode::Pageless;
         layoutComp.outlinePrevScroll = 0;
+        layoutComp.outlineShowLevel = 0;
+        layoutComp.outlineCollapsedRows.clear();
         layoutComp.splitViewEnabled = false;
         layoutComp.splitViewHorizontal = true;
         // Window menu doc label rebuilds from the cleared filePath on
@@ -1101,6 +1132,7 @@ static void setupCallbacksEx(
         toolbarComp.fontSizeDropdownOpen = false;
         toolbarComp.previewZoomDropdownOpen = false;
         toolbarComp.zoomDropdownOpen = false;
+        toolbarComp.outlineShowLevelDropdownOpen = false;
         toolbarComp.formatPainter = FormatPainter{};
 
         // Reset scroll state (no offset / remainder leaks between tests)

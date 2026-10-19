@@ -2,6 +2,7 @@
 
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "../editor/autocorrect.h"
@@ -410,6 +411,17 @@ struct LayoutComponent : public afterhours::BaseComponent {
     float outlinePanelWidth = 200.0f;  // Width of outline panel in pixels
     PageMode outlinePrevPageMode = PageMode::Pageless;
     int outlinePrevScroll = 0;
+    // Outlining toolbar state (View > Outline): Show Level filter
+    // (0 = All Levels, else 1..6 -- headings deeper than N are
+    // hidden) and the buffer rows of collapsed headings (a
+    // collapsed heading hides its subordinate headings, not
+    // itself). Row indices are buffer rows: an edit that inserts
+    // / deletes lines above a collapsed heading leaves a stale
+    // entry, which is harmless (it only hides subordinates of a
+    // heading still at that row, and a Move rebuilds the entry
+    // for the moved heading -- see cmd::moveOutlineBlock).
+    int outlineShowLevel = 0;
+    std::unordered_set<std::size_t> outlineCollapsedRows;
 
     // Print Preview (File > Print Preview): a read-only mode showing one
     // paged page at a time. Entering forces pageMode=Paged (the paged
@@ -490,6 +502,10 @@ struct ToolbarComponent : public afterhours::BaseComponent {
     // toolbar zoom dropdown open states.
     bool previewZoomDropdownOpen = false;
     bool zoomDropdownOpen = false;
+
+    // Outlining toolbar (replaces the Formatting toolbar in
+    // Outline mode): Show Level dropdown open state.
+    bool outlineShowLevelDropdownOpen = false;
 
     // Format Painter (Standard toolbar): captured style + armed
     // state. See src/editor/format_painter.h for the subset note.

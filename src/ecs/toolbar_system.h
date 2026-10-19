@@ -697,7 +697,210 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         trackTooltip(curX, btnY, "Insert Table");
         curX += buttonSize + buttonPadding;
 
+        // === Outlining Toolbar (replaces the Formatting toolbar) ===
+        // In Outline mode the Formatting toolbar's controls (style /
+        // font / size / B / I / U / alignment) do not apply to an
+        // outline editor, so this bar occupies the same chrome slot
+        // (formattingBarY, formattingBarHeight) with the Outlining
+        // controls: Promote, Demote, Move Up, Move Down,
+        // Expand/Collapse, and a Show Level dropdown. The
+        // Formatting toolbar is not rendered in Outline mode (the
+        // else below), and its dropdowns are closed when this bar
+        // draws, so no formatting dropdown can leak into Outline.
+        if (layout.showOutline) {
+            toolbar.styleDropdownOpen = false;
+            toolbar.fontDropdownOpen = false;
+            toolbar.fontSizeDropdownOpen = false;
+
+            div(ctx, mk(uiRoot, 2000),
+                ComponentConfig{}
+                    .with_size(ComponentSize{pixels(screenWidth), pixels(formattingBarHeight)})
+                    .with_absolute_position()
+                    .with_translate(0, formattingBarY)
+                    .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                    .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                    .with_roundness(0.0f)
+                    .with_debug_name("outline_toolbar"));
+
+            float outlineX = buttonPadding;
+            float outlineBtnY = formattingBarY + buttonPadding;
+            float outlineBtnH = theme::layout::scale(22);
+            int outlineBtnId = 2300;
+            auto outlineButton = [&](float x, float w, const std::string& label,
+                                     const std::string& debug) {
+                return button(ctx, mk(uiRoot, outlineBtnId++),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{pixels(w), pixels(outlineBtnH)})
+                        .with_absolute_position()
+                        .with_translate(x, outlineBtnY)
+                        .with_custom_background(ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_bevel(afterhours::ui::BevelStyle::Raised,
+                                    ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f)
+                        .with_roundness(0.0f)
+                        .with_alignment(afterhours::ui::TextAlignment::Center)
+                        .with_justify_content(JustifyContent::Center)
+                        .with_align_items(AlignItems::Center)
+                        .with_cursor(afterhours::ui::CursorType::Pointer)
+                        .with_label(label)
+                        .with_debug_name(debug));
+            };
+            auto outlineSeparator = [&](float x) {
+                drawEtchedSeparator(ctx, uiRoot, outlineBtnId, x, outlineBtnY, outlineBtnH - 4);
+                outlineBtnId += 2;
+            };
+            auto outlineFlash = [&](const std::string& msg) {
+                if (cache_.status) {
+                    status::flash(*cache_.status, msg,
+                                  afterhours::graphics::get_time());
+                }
+            };
+
+            test_input::register_visible_text("Outlining");
+            test_input::register_visible_text("Promote <=");
+            if (outlineButton(outlineX, theme::layout::scale(95), "Promote <=",
+                              "outline_promote")) {
+                cmd::promoteOutlineHeading(doc);
+            }
+            trackTooltip(outlineX, outlineBtnY, "Promote (demote the other way)");
+            outlineX += theme::layout::scale(95) + buttonPadding;
+
+            test_input::register_visible_text("Demote =>");
+            if (outlineButton(outlineX, theme::layout::scale(95), "Demote =>",
+                              "outline_demote")) {
+                cmd::demoteOutlineHeading(doc);
+            }
+            trackTooltip(outlineX, outlineBtnY, "Demote (promote the other way)");
+            outlineX += theme::layout::scale(95) + buttonPadding;
+
+            outlineSeparator(outlineX + sepPadding / 2);
+            outlineX += sepWidth + sepPadding;
+
+            test_input::register_visible_text("Move Up");
+            if (outlineButton(outlineX, theme::layout::scale(78), "Move Up",
+                              "outline_move_up")) {
+                cmd::moveOutlineBlock(doc, layout, true);
+            }
+            trackTooltip(outlineX, outlineBtnY, "Move Up (swap with previous sibling block)");
+            outlineX += theme::layout::scale(78) + buttonPadding;
+
+            test_input::register_visible_text("Move Down");
+            if (outlineButton(outlineX, theme::layout::scale(88), "Move Down",
+                              "outline_move_down")) {
+                cmd::moveOutlineBlock(doc, layout, false);
+            }
+            trackTooltip(outlineX, outlineBtnY, "Move Down (swap with next sibling block)");
+            outlineX += theme::layout::scale(88) + buttonPadding;
+
+            outlineSeparator(outlineX + sepPadding / 2);
+            outlineX += sepWidth + sepPadding;
+
+            // Expand / Collapse for the heading at the caret:
+            // label follows the heading's state; the fixed
+            // "Expand/Collapse" text is registered for E2E too.
+            bool caretCollapsed = cmd::isOutlineCollapsedAtCaret(doc, layout);
+            test_input::register_visible_text("Expand/Collapse");
+            test_input::register_visible_text(caretCollapsed ? "Expand" : "Collapse");
+            if (outlineButton(outlineX, theme::layout::scale(88),
+                              caretCollapsed ? "Expand" : "Collapse",
+                              "outline_expand_collapse")) {
+                bool wasCollapsed = caretCollapsed;
+                if (cmd::toggleOutlineCollapse(doc, layout)) {
+                    outlineFlash(wasCollapsed ? "Expanded" : "Collapsed");
+                }
+            }
+            trackTooltip(outlineX, outlineBtnY, "Expand/Collapse heading at caret");
+            outlineX += theme::layout::scale(88) + buttonPadding;
+
+            outlineSeparator(outlineX + sepPadding / 2);
+            outlineX += sepWidth + sepPadding;
+
+            // Show Level dropdown: Level 1..6 or All Levels.
+            std::string showLevelLabel =
+                layout.outlineShowLevel == 0
+                    ? "Show Level: All Levels"
+                    : "Show Level: Level " +
+                          std::to_string(layout.outlineShowLevel);
+            test_input::register_visible_text("Show Level:");
+            test_input::register_visible_text(showLevelLabel);
+            float showLevelBtnX = outlineX;
+            float showLevelBtnW = theme::layout::scale(190);
+            bool showLevelOpen = toolbar.outlineShowLevelDropdownOpen;
+            if (button(ctx, mk(uiRoot, outlineBtnId++),
+                absDropdownButton(showLevelBtnX, outlineBtnY, showLevelBtnW,
+                                  outlineBtnH, showLevelOpen)
+                    .with_label(showLevelLabel)
+                    .with_debug_name("outline_show_level"))) {
+                toolbar.outlineShowLevelDropdownOpen = !showLevelOpen;
+            }
+            outlineX += showLevelBtnW + buttonPadding;
+
+            if (toolbar.outlineShowLevelDropdownOpen) {
+                float listY = formattingBarY + outlineBtnH + buttonPadding;
+                div(ctx, mk(uiRoot, 2400),
+                    ah_win95::win95DropdownListStyle(showLevelBtnW, 7)
+                        .with_translate(showLevelBtnX, listY)
+                        .with_render_layer(50)
+                        .with_debug_name("outline_show_level_list"));
+                for (int choice = 0; choice < 7; ++choice) {
+                    int level = choice == 6 ? 0 : choice + 1;
+                    std::string itemLabel =
+                        level == 0 ? "All Levels"
+                                   : "Level " + std::to_string(level);
+                    bool selected = layout.outlineShowLevel == level;
+                    test_input::register_visible_text(itemLabel);
+                    float itemY = listY + 2.0f +
+                                  static_cast<float>(choice) *
+                                      theme::layout::scale(20);
+                    if (button(ctx, mk(uiRoot, 2401 + choice),
+                        ComponentConfig{}
+                            .with_label(itemLabel)
+                            .with_size(ComponentSize{pixels(showLevelBtnW - 4.0f),
+                                                     pixels(theme::layout::scale(18))})
+                            .with_absolute_position()
+                            .with_translate(showLevelBtnX + 2.0f, itemY)
+                            .with_custom_background(selected ? ui_imm::win95_colors::HIGHLIGHT : ui_imm::win95_colors::TEXT_AREA)
+                            .with_custom_text_color(selected ? ui_imm::win95_colors::TEXT_WHITE : ui_imm::win95_colors::TEXT)
+                            .with_roundness(0.0f)
+                            .with_render_layer(51)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_debug_name("outline_show_level_" +
+                                            (level == 0 ? std::string("all")
+                                                        : std::to_string(level))))) {
+                        layout.outlineShowLevel = level;
+                        toolbar.outlineShowLevelDropdownOpen = false;
+                        ctx.set_focus(ctx.ROOT);
+                        outlineFlash(level == 0
+                                         ? "Show All Levels"
+                                         : "Show Level " + std::to_string(level));
+                    }
+                }
+                // Click outside the button / list closes the
+                // dropdown (same pattern as the formatting
+                // dropdown close below).
+                if (ctx.mouse.just_pressed) {
+                    float mx = ctx.mouse.pos.x;
+                    float my = ctx.mouse.pos.y;
+                    bool inside = mx >= showLevelBtnX &&
+                                  mx <= showLevelBtnX + showLevelBtnW &&
+                                  my >= outlineBtnY &&
+                                  my <= outlineBtnY + outlineBtnH;
+                    float listBottom = listY + 7.0f * theme::layout::scale(20) +
+                                       theme::layout::scale(4);
+                    if (mx >= showLevelBtnX && mx <= showLevelBtnX + showLevelBtnW &&
+                        my >= listY && my <= listBottom) {
+                        inside = true;
+                    }
+                    if (!inside) {
+                        toolbar.outlineShowLevelDropdownOpen = false;
+                    }
+                }
+            }
+        }
+
         // === Formatting Toolbar Background ===
+        if (!layout.showOutline) {
         div(ctx, mk(uiRoot, 2000),
             ComponentConfig{}
                 .with_size(ComponentSize{pixels(screenWidth), pixels(formattingBarHeight)})
@@ -972,6 +1175,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
             doc.isDirty = true;
         }
         trackTooltip(fmtX, fmtBtnY, "Justify (Ctrl+J)");
+        }  // if (!layout.showOutline): the Formatting toolbar
 
         // === Draw Tooltips ===
         // One tooltip at a time, after ~0.5s of steady hover on the same
@@ -1017,6 +1221,10 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         }
         
         // === Close dropdowns on click outside ===
+        // fmtBtnY lives in the Formatting toolbar block (not
+        // rendered in Outline mode); the close code below needs
+        // the same value, so define it here in the outer scope.
+        float fmtBtnY = formattingBarY + buttonPadding;
         // If mouse was pressed and no dropdown button is hovered, close all dropdowns
         if (ctx.mouse.just_pressed && (toolbar.styleDropdownOpen || toolbar.fontDropdownOpen || toolbar.fontSizeDropdownOpen || toolbar.zoomDropdownOpen)) {
             float mx = ctx.mouse.pos.x;

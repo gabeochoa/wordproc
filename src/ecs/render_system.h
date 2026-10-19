@@ -233,7 +233,10 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              bool outlineMode = false,
                              int columnCount = 1,
                              float columnSpacingPx = 0.0f,
-                             int linesPerColumn = 50) {
+                             int linesPerColumn = 50,
+                             int outlineShowLevel = 0,
+                             const std::unordered_set<std::size_t>*
+                                 outlineCollapsedRows = nullptr) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
     const std::vector<SpellSquiggle>* squiggles =
@@ -295,15 +298,26 @@ inline void renderTextBuffer(const TextBuffer& buffer,
     const int startY = y;
 
     // Outline mode: iterate the heading rows only (Title /
-    // Subtitle / Heading 1-6); scrollOffset counts visible heading
-    // rows, not buffer rows, so body paragraphs are never drawn.
+    // Subtitle / Heading 1-6), after the Outlining toolbar's
+    // filters (Show Level + collapsed headings); scrollOffset
+    // counts visible heading rows, not buffer rows, so body
+    // paragraphs are never drawn. The filter is the ONE mapping
+    // in outline_view.h -- the hit-test and the E2E
+    // outline_items count use the same function, so a click on a
+    // visible row lands on the heading drawn there.
+    // Per-row style list for the row filter and the collapse
+    // boxes below (styles by buffer row, in document order).
+    std::vector<ParagraphStyle> outlineAllStyles;
     std::vector<std::size_t> outlineRows;
     if (outlineMode) {
+        outlineAllStyles.reserve(lineCount);
         for (std::size_t i = 0; i < lineCount; ++i) {
-            if (outline_view::isHeadingStyle(buffer.lineParagraphStyle(i))) {
-                outlineRows.push_back(i);
-            }
+            outlineAllStyles.push_back(buffer.lineParagraphStyle(i));
         }
+        static const std::unordered_set<std::size_t> kNoCollapsed;
+        outlineRows = outline_view::outlineVisibleRowsFiltered(
+            outlineAllStyles, outlineShowLevel,
+            outlineCollapsedRows ? *outlineCollapsedRows : kNoCollapsed);
     }
     std::size_t visibleCount = columnsActive
                                      ? columnOrder.size()
@@ -485,10 +499,69 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // paragraph's own indents.
         int outlineIndent =
             outlineMode ? outline_view::outlineIndentPx(paraStyle) : 0;
-        int indentedBaseX = baseX + totalIndent + listIndent + outlineIndent;
+        // Collapse box: drawn at the heading's indented start
+        // when it has subordinate headings. EVERY heading's text
+        // shifts right by the box + gap -- not only headings
+        // with a box -- so the (level - 1) * 24px indent
+        // difference between a parent and a child is preserved
+        // (a box-only shift would eat 16px of the child's 24px
+        // indent and leave it only 8px right of its parent).
+        // The shift is part of indentedBaseX, so text, caret,
+        // selection, and squiggles all move with it (and the
+        // hit-test uses the same shift).
+        bool outlineHasCollapseBox =
+            outlineMode &&
+            outline_view::outlineHasSubordinateHeadings(outlineAllStyles,
+                                                        row);
+        int outlineCollapseShift =
+            outlineMode ? outline_view::kOutlineCollapseShift : 0;
+        int indentedBaseX = baseX + totalIndent + listIndent +
+                            outlineIndent + outlineCollapseShift;
         int indentedWidth =
             std::max(0, availableWidth - totalIndent - listIndent -
-                            rightIndent - outlineIndent);
+                            rightIndent - outlineIndent -
+                            outlineCollapseShift);
+        // Draw the +/- collapse box (before the text, at the
+        // pre-shift indented start). Collapsed shows '+'
+        // (subordinates hidden), expanded shows '-'.
+        if (outlineHasCollapseBox) {
+            int boxX = outline_view::outlineCollapseBoxX(
+                indentedBaseX - outlineCollapseShift);
+            int boxY = y + (lineFontSize + 4 -
+                            outline_view::kOutlineCollapseBoxSize) /
+                               2;
+            bool isCollapsed =
+                outlineCollapsedRows &&
+                outlineCollapsedRows->count(row) > 0;
+            afterhours::draw_rectangle(
+                Rectangle{static_cast<float>(boxX),
+                          static_cast<float>(boxY),
+                          static_cast<float>(
+                              outline_view::kOutlineCollapseBoxSize),
+                          static_cast<float>(
+                              outline_view::kOutlineCollapseBoxSize)},
+                afterhours::Color{255, 255, 255, 255});
+            afterhours::draw_rectangle_outline(
+                Rectangle{static_cast<float>(boxX),
+                          static_cast<float>(boxY),
+                          static_cast<float>(
+                              outline_view::kOutlineCollapseBoxSize),
+                          static_cast<float>(
+                              outline_view::kOutlineCollapseBoxSize)},
+                afterhours::Color{0, 0, 0, 255}, 1.0f);
+            int midY = boxY + outline_view::kOutlineCollapseBoxSize / 2;
+            afterhours::draw_line(
+                boxX + 2, midY,
+                boxX + outline_view::kOutlineCollapseBoxSize - 3, midY,
+                afterhours::Color{0, 0, 0, 255});
+            if (isCollapsed) {
+                int midX = boxX + outline_view::kOutlineCollapseBoxSize / 2;
+                afterhours::draw_line(
+                    midX, boxY + 2, midX,
+                    boxY + outline_view::kOutlineCollapseBoxSize - 3,
+                    afterhours::Color{0, 0, 0, 255});
+            }
+        }
         
         // Calculate text width for alignment
         int textWidth = displayLine.empty() ? 0 : afterhours::graphics::measure_text(displayLine.c_str(), lineFontSize);
@@ -1206,7 +1279,9 @@ struct EditorRenderSystem
                              layout::displayScale(layout),
                              layout.previewMode, showParagraphMarks, outlineMode,
                              columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
-                             columnsSpacingPx, columnsLinesPerPage);
+                             columnsSpacingPx, columnsLinesPerPage,
+                             layout.outlineShowLevel,
+                             &layout.outlineCollapsedRows);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
@@ -1214,7 +1289,9 @@ struct EditorRenderSystem
                              layout::displayScale(layout),
                              layout.previewMode, showParagraphMarks, outlineMode,
                              columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
-                             columnsSpacingPx, columnsLinesPerPage);
+                             columnsSpacingPx, columnsLinesPerPage,
+                             layout.outlineShowLevel,
+                             &layout.outlineCollapsedRows);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1230,7 +1307,9 @@ struct EditorRenderSystem
                              layout::displayScale(layout),
                              layout.previewMode, showParagraphMarks, outlineMode,
                              columnsActive ? doc.docSettings.pageSettings.columnCount : 1,
-                             columnsSpacingPx, columnsLinesPerPage);
+                             columnsSpacingPx, columnsLinesPerPage,
+                             layout.outlineShowLevel,
+                             &layout.outlineCollapsedRows);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

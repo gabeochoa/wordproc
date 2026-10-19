@@ -72,7 +72,9 @@ struct MouseSelectionSystem
                 styles.push_back(buffer.lineParagraphStyle(i));
             }
             std::vector<std::size_t> visible =
-                outline_view::outlineVisibleRows(styles);
+                outline_view::outlineVisibleRowsFiltered(
+                    styles, layout.outlineShowLevel,
+                    layout.outlineCollapsedRows);
             if (visible.empty()) return {0, 0};
             int rawVisibleIndex =
                 scrollOffset +
@@ -83,8 +85,15 @@ struct MouseSelectionSystem
                 visible, static_cast<std::size_t>(rawVisibleIndex),
                 buffer.lineCount());
             ParagraphStyle style = buffer.lineParagraphStyle(row);
+            // The renderer shifts EVERY heading's text right by
+            // the collapse-box width in Outline (a reserved
+            // collapse gutter); the column is measured from
+            // that same shifted start, matching where the text
+            // is drawn.
+            int collapseShift = outline_view::kOutlineCollapseShift;
             float indentedX =
-                baseX + static_cast<float>(outline_view::outlineIndentPx(style));
+                baseX + static_cast<float>(outline_view::outlineIndentPx(style) +
+                                            collapseShift);
             std::string line = buffer.lineString(row);
             std::size_t col = hitTestColumn(line, mx - indentedX, measure);
             return {row, col};
@@ -195,6 +204,67 @@ struct MouseSelectionSystem
             // Standard toolbar, so the painter cannot be armed there.
             if (!layout.previewMode) {
                 cmd::applyFormatPainter(doc, toolbar);
+            }
+            // Outline collapse box: a press on a heading's +/-
+            // box toggles that heading's collapse instead of
+            // moving the caret. The row band uses the same
+            // global-line-height approximation as hitTest (the
+            // renderer draws headings taller, so the band is
+            // approximate for deep outlines), and the box x uses
+            // the same outlineIndent + collapse-box geometry as
+            // the renderer. A press below the last visible row
+            // is NOT a box press (hitTest would clamp it to the
+            // last heading; toggling there would be a surprise).
+            if (layout.showOutline) {
+                std::vector<ParagraphStyle> outlineStyles;
+                for (std::size_t i = 0; i < doc.buffer.lineCount(); ++i) {
+                    outlineStyles.push_back(
+                        doc.buffer.lineParagraphStyle(i));
+                }
+                std::vector<std::size_t> outlineVisible =
+                    outline_view::outlineVisibleRowsFiltered(
+                        outlineStyles, layout.outlineShowLevel,
+                        layout.outlineCollapsedRows);
+                float outlineRelY =
+                    mouse.y - area.y -
+                    static_cast<float>(theme::layout::TEXT_PADDING);
+                int outlineVisibleIndex =
+                    scroll.offset +
+                    static_cast<int>(std::floor(
+                        outlineRelY / static_cast<float>(lineHeight)));
+                if (outlineVisibleIndex >= 0 &&
+                    static_cast<std::size_t>(outlineVisibleIndex) <
+                        outlineVisible.size()) {
+                    std::size_t outlineRow =
+                        outlineVisible[static_cast<std::size_t>(
+                            outlineVisibleIndex)];
+                    if (outline_view::outlineHasSubordinateHeadings(
+                            outlineStyles, outlineRow)) {
+                        float outlineBaseX =
+                            area.x + static_cast<float>(
+                                         theme::layout::TEXT_PADDING);
+                        if (layout.showLineNumbers) {
+                            outlineBaseX += layout.lineNumberGutterWidth;
+                        }
+                        float boxX =
+                            outlineBaseX +
+                            static_cast<float>(outline_view::outlineIndentPx(
+                                doc.buffer.lineParagraphStyle(outlineRow)));
+                        if (mouse.x >= boxX &&
+                            mouse.x < boxX + static_cast<float>(
+                                                 outline_view::kOutlineCollapseBoxSize)) {
+                            // Move the caret to the heading first,
+                            // so the Expand/Collapse toolbar button
+                            // and the box agree about the heading
+                            // at the caret after a box press.
+                            doc.buffer.clearSelection();
+                            doc.buffer.setCaret({outlineRow, 0});
+                            cmd::toggleOutlineCollapse(doc, layout);
+                            caret::resetBlink(caret);
+                            return;
+                        }
+                    }
+                }
             }
             bool shiftDown = test_input::is_key_down(afterhours::keys::LEFT_SHIFT) ||
                              test_input::is_key_down(afterhours::keys::RIGHT_SHIFT);

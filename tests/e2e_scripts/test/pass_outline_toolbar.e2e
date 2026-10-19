@@ -1,0 +1,127 @@
+# Test: Outlining toolbar (View > Outline) is a real outline
+# editor: Promote / Demote / Move Up / Move Down /
+# Expand-Collapse / Show Level, in the Formatting toolbar's
+# chrome slot. Doc: H1 "Heading One", H2 "Sub One", body,
+# H1 "Heading Two". Entering Outline parks the caret on the last
+# heading, so the first click moves it to the first heading.
+# RED-ON-REVERT: the outline_* debug names exist only with the
+# Outlining toolbar, and outline_items counts only visible rows.
+
+type "Heading One"
+key CTRL+ALT+1
+key ENTER
+wait_frames 6
+type "Sub One"
+key CTRL+ALT+2
+key ENTER
+wait_frames 6
+type "Body text here"
+key ENTER
+wait_frames 6
+type "Heading Two"
+key CTRL+ALT+1
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select "Outline"
+wait_frames 12
+
+validate outline_visible=true
+validate outline_items=3
+
+# The Outlining toolbar replaces the Formatting toolbar.
+expect_text "Promote <="
+expect_text "Demote =>"
+expect_text "Move Up"
+expect_text "Move Down"
+expect_text "Expand/Collapse"
+expect_text "Show Level: All Levels"
+expect_text "Outlining"
+
+screenshot outline_toolbar
+
+# Collapse the first H1: its H2 subordinate hides, the H1 stays.
+mouse_down 300 175
+wait_frames 2
+mouse_up
+wait_frames 6
+validate caret_row=0
+validate paragraph_style=heading 1
+
+click_ui outline_expand_collapse
+wait_frames 12
+validate outline_items=2
+
+click_ui outline_expand_collapse
+wait_frames 12
+validate outline_items=3
+
+# Demote the first H1 -> H2 (one undo step: CTRL+Z restores H1).
+click_ui outline_demote
+wait_frames 12
+validate paragraph_style=heading 2
+
+key CTRL+Z
+wait_frames 12
+validate paragraph_style=heading 1
+
+click_ui outline_demote
+wait_frames 12
+validate paragraph_style=heading 2
+
+# Move Down: the first heading's block swaps with the next
+# sibling block (Sub One + body). Caret follows its heading,
+# and the row text proves the blocks actually swapped (not
+# just the caret / style moving).
+click_ui outline_move_down
+wait_frames 12
+validate caret_row=2
+validate paragraph_style=heading 2
+validate row_text_0=Sub One
+validate row_text_1=Body text here
+validate row_text_2=Heading One
+validate row_text_3=Heading Two
+
+# One undo step restores the order.
+key CTRL+Z
+wait_frames 12
+validate caret_row=0
+validate paragraph_style=heading 2
+validate row_text_0=Heading One
+validate row_text_1=Sub One
+
+click_ui outline_move_down
+wait_frames 12
+validate caret_row=2
+validate row_text_0=Sub One
+
+# Move Up swaps back.
+click_ui outline_move_up
+wait_frames 12
+validate caret_row=0
+validate paragraph_style=heading 2
+validate row_text_0=Heading One
+validate row_text_1=Sub One
+
+# Show Level 1 hides both H2 headings; All Levels restores them.
+click_ui outline_show_level
+wait_frames 12
+click_ui outline_show_level_1
+wait_frames 12
+validate outline_show_level=1
+validate outline_items=1
+
+click_ui outline_show_level
+wait_frames 12
+click_ui outline_show_level_all
+wait_frames 12
+validate outline_show_level=0
+validate outline_items=3
+
+menu_open View
+wait_frames 12
+menu_select "Outline"
+wait_frames 12
+
+validate outline_visible=false

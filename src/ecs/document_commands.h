@@ -758,6 +758,139 @@ inline void toggleOutlineMode(DocumentComponent& doc,
     }
 }
 
+// --- Outlining toolbar (View > Outline) ---
+// Promote / Demote change the caret paragraph's heading level
+// via the existing style application (setLineParagraphStyle),
+// recorded as ONE undo step (commitParagraphStyle). A no-op
+// style (Promote on Heading 1, Demote on Heading 6, caret on a
+// Normal paragraph) records nothing.
+inline bool promoteOutlineHeading(DocumentComponent& doc) {
+    std::size_t row = doc.buffer.caret().row;
+    ParagraphStyle oldStyle = doc.buffer.lineParagraphStyle(row);
+    ParagraphStyle newStyle = outline_view::promoteParagraphStyle(oldStyle);
+    if (newStyle == oldStyle) return false;
+    doc.buffer.setLineParagraphStyle(row, newStyle);
+    doc.buffer.commitParagraphStyle(row, oldStyle, newStyle);
+    doc.buffer.clearSelection();
+    doc.buffer.setCaret({row, 0});
+    doc.isDirty = true;
+    return true;
+}
+
+inline bool demoteOutlineHeading(DocumentComponent& doc) {
+    std::size_t row = doc.buffer.caret().row;
+    ParagraphStyle oldStyle = doc.buffer.lineParagraphStyle(row);
+    ParagraphStyle newStyle = outline_view::demoteParagraphStyle(oldStyle);
+    if (newStyle == oldStyle) return false;
+    doc.buffer.setLineParagraphStyle(row, newStyle);
+    doc.buffer.commitParagraphStyle(row, oldStyle, newStyle);
+    doc.buffer.clearSelection();
+    doc.buffer.setCaret({row, 0});
+    doc.isDirty = true;
+    return true;
+}
+
+// Move the caret heading's block (heading + subordinates) up /
+// down past its previous / next sibling block, as ONE undo step
+// (swapAdjacentLineRanges + commitSwapAdjacentLineRanges).
+// The caret follows its heading. Returns false when there is no
+// sibling block in that direction. A collapsed heading carries
+// its collapsed entry with it: the entry moves from the old
+// heading row to the new one (the swap does not move the
+// LayoutComponent's row-keyed set, so the command layer does).
+inline bool moveOutlineBlock(DocumentComponent& doc, LayoutComponent& layout,
+                             bool up) {
+    std::size_t row = doc.buffer.caret().row;
+    std::vector<ParagraphStyle> styles;
+    for (std::size_t i = 0; i < doc.buffer.lineCount(); ++i) {
+        styles.push_back(doc.buffer.lineParagraphStyle(i));
+    }
+    if (up) {
+        auto prev = outline_view::outlinePrevSiblingBlock(styles, row);
+        if (!prev) return false;
+        std::size_t prevStart = prev->first;
+        std::size_t prevEnd = prev->second;  // == row
+        std::size_t blockEnd = outline_view::outlineBlockEnd(styles, row);
+        std::size_t newRow = row - (prevEnd - prevStart);
+        // Collapsed entries inside the combined range move with
+        // their headings (entries outside it are untouched): an
+        // entry in the first block moves by +(caret block size),
+        // one in the caret block by -(first block size).
+        std::unordered_set<std::size_t> moved;
+        for (std::size_t r : layout.outlineCollapsedRows) {
+            if (r >= prevStart && r < prevEnd) {
+                moved.insert(r + (blockEnd - row));
+            } else if (r >= row && r < blockEnd) {
+                moved.insert(r - (prevEnd - prevStart));
+            } else {
+                moved.insert(r);
+            }
+        }
+        doc.buffer.swapAdjacentLineRanges(prevStart, row, blockEnd);
+        doc.buffer.commitSwapAdjacentLineRanges(prevStart, row, blockEnd,
+                                                row, newRow);
+        doc.buffer.clearSelection();
+        doc.buffer.setCaret({newRow, 0});
+        layout.outlineCollapsedRows = std::move(moved);
+        doc.isDirty = true;
+        return true;
+    }
+    auto next = outline_view::outlineNextSiblingBlock(styles, row);
+    if (!next) return false;
+    std::size_t blockEnd = outline_view::outlineBlockEnd(styles, row);
+    std::size_t nextEnd = next->second;
+    // newRow = row + size of the next sibling block: the heading
+    // lands at the start of where its block ends up after the
+    // swap (the block that was after it now sits before it).
+    std::size_t newRow = row + (nextEnd - blockEnd);
+    std::unordered_set<std::size_t> moved;
+    for (std::size_t r : layout.outlineCollapsedRows) {
+        if (r >= row && r < blockEnd) {
+            moved.insert(r + (nextEnd - blockEnd));
+        } else if (r >= blockEnd && r < nextEnd) {
+            moved.insert(r - (blockEnd - row));
+        } else {
+            moved.insert(r);
+        }
+    }
+    doc.buffer.swapAdjacentLineRanges(row, blockEnd, nextEnd);
+    doc.buffer.commitSwapAdjacentLineRanges(row, blockEnd, nextEnd, row,
+                                            newRow);
+    doc.buffer.clearSelection();
+    doc.buffer.setCaret({newRow, 0});
+    layout.outlineCollapsedRows = std::move(moved);
+    doc.isDirty = true;
+    return true;
+}
+
+// Expand / Collapse the heading at the caret: toggles its row in
+// layout.outlineCollapsedRows. A heading with no subordinate
+// headings has no collapse box and this is a no-op (nothing
+// would hide). Not an undo step: collapse is view state, like
+// Show Level, not document state.
+inline bool toggleOutlineCollapse(DocumentComponent& doc,
+                                  LayoutComponent& layout) {
+    std::size_t row = doc.buffer.caret().row;
+    std::vector<ParagraphStyle> styles;
+    for (std::size_t i = 0; i < doc.buffer.lineCount(); ++i) {
+        styles.push_back(doc.buffer.lineParagraphStyle(i));
+    }
+    if (!outline_view::outlineHasSubordinateHeadings(styles, row)) {
+        return false;
+    }
+    if (layout.outlineCollapsedRows.count(row) > 0) {
+        layout.outlineCollapsedRows.erase(row);
+    } else {
+        layout.outlineCollapsedRows.insert(row);
+    }
+    return true;
+}
+
+inline bool isOutlineCollapsedAtCaret(DocumentComponent& doc,
+                                      LayoutComponent& layout) {
+    return layout.outlineCollapsedRows.count(doc.buffer.caret().row) > 0;
+}
+
 // Leave Outline for an explicit page-mode choice (View > Pageless /
 // Paged Mode): restore the saved scroll, then the caller sets the
 // chosen page mode.

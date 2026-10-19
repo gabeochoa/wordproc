@@ -115,6 +115,62 @@ class SetParagraphIndentsCommand : public afterhours::Command<TextBuffer> {
     ParagraphIndents new_;
 };
 
+// One undo step for a paragraph-style change (Outline
+// Promote / Demote). Stores old + new so undo restores the
+// previous style, exactly like SetParagraphIndentsCommand.
+class SetParagraphStyleCommand : public afterhours::Command<TextBuffer> {
+   public:
+    SetParagraphStyleCommand(std::size_t row, ParagraphStyle oldStyle,
+                             ParagraphStyle newStyle)
+        : row_(row), old_(oldStyle), new_(newStyle) {}
+    void execute(TextBuffer& buffer) override;
+    void undo(TextBuffer& buffer) override;
+    std::string description() const override { return "Set paragraph style"; }
+
+   private:
+    std::size_t row_;
+    ParagraphStyle old_;
+    ParagraphStyle new_;
+};
+
+// One undo step for swapping two ADJACENT line ranges
+// [firstStart, boundary) and [boundary, secondEnd) -- the
+// Outline Move Up / Down swap of two sibling blocks. Swap is
+// not its own inverse when the blocks differ in size: after
+// execute, the second block occupies [firstStart, firstStart +
+// (secondEnd - boundary)) and the first block follows it, so
+// undo swaps with the shifted boundary. Text AND line spans
+// (styles, alignment, indents, ...) move together: a text-only
+// swap (ReplaceRanges) would rebuild the moved lines with
+// Normal style. Hyperlink / bookmark / footnote offsets inside
+// the swapped ranges are NOT retargeted (they are document
+// offsets, not line-owned); the moved text keeps its content,
+// but an annotation anchored inside a moved block keeps its old
+// offset.
+class SwapAdjacentLineRangesCommand : public afterhours::Command<TextBuffer> {
+   public:
+    SwapAdjacentLineRangesCommand(std::size_t firstStart,
+                                  std::size_t boundary,
+                                  std::size_t secondEnd,
+                                  std::size_t oldCaretRow,
+                                  std::size_t newCaretRow)
+        : firstStart_(firstStart),
+          boundary_(boundary),
+          secondEnd_(secondEnd),
+          oldCaretRow_(oldCaretRow),
+          newCaretRow_(newCaretRow) {}
+    void execute(TextBuffer& buffer) override;
+    void undo(TextBuffer& buffer) override;
+    std::string description() const override { return "Move outline block"; }
+
+   private:
+    std::size_t firstStart_;
+    std::size_t boundary_;
+    std::size_t secondEnd_;
+    std::size_t oldCaretRow_;
+    std::size_t newCaretRow_;
+};
+
 class ReplaceRangesCommand : public afterhours::Command<TextBuffer> {
    public:
     explicit ReplaceRangesCommand(std::vector<TextReplacement> replacements)
@@ -277,6 +333,34 @@ class TextBuffer {
     void setLineIndents(std::size_t row, ParagraphIndents indents);
     void commitParagraphIndents(std::size_t row, ParagraphIndents oldIndents,
                                 ParagraphIndents newIndents);
+
+    // Record one undo step for a paragraph-style change already
+    // applied (the caller applies via setLineParagraphStyle, then
+    // commits -- same live-apply-then-record pattern as the ruler
+    // drag). No-op when old == new.
+    void commitParagraphStyle(std::size_t row, ParagraphStyle oldStyle,
+                              ParagraphStyle newStyle);
+
+    // Swap two adjacent line ranges, text + spans, as one undo
+    // step (Outline Move Up / Down). The caller must have already
+    // applied the swap via swapAdjacentLineRanges; this only
+    // records it. oldCaretRow / newCaretRow are the caret rows
+    // before / after the swap: the caret follows the heading it
+    // was on. No-op on an empty or invalid range.
+    void commitSwapAdjacentLineRanges(std::size_t firstStart,
+                                      std::size_t boundary,
+                                      std::size_t secondEnd,
+                                      std::size_t oldCaretRow,
+                                      std::size_t newCaretRow);
+
+    // Low-level swap of two adjacent ranges [firstStart,
+    // boundary) and [boundary, secondEnd): text + line spans,
+    // no history, caret untouched (commands set it). See the
+    // command's comment for the terminator handling at the end
+    // of the document.
+    void swapAdjacentLineRanges(std::size_t firstStart,
+                                std::size_t boundary,
+                                std::size_t secondEnd);
     
     // Spacing for current line (where caret is)
     float currentLineSpacing() const;

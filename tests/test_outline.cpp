@@ -218,6 +218,210 @@ TEST_CASE("Table of contents generation", "[text_buffer][outline][toc]") {
     }
 }
 
+TEST_CASE("Outline Promote / Demote", "[outline][outline_view]") {
+    using namespace outline_view;
+    REQUIRE(promoteParagraphStyle(ParagraphStyle::Heading2) ==
+            ParagraphStyle::Heading1);
+    REQUIRE(promoteParagraphStyle(ParagraphStyle::Heading6) ==
+            ParagraphStyle::Heading5);
+    // Clamps at the top: Heading 1 stays Heading 1.
+    REQUIRE(promoteParagraphStyle(ParagraphStyle::Heading1) ==
+            ParagraphStyle::Heading1);
+    REQUIRE(promoteParagraphStyle(ParagraphStyle::Subtitle) ==
+            ParagraphStyle::Title);
+    REQUIRE(promoteParagraphStyle(ParagraphStyle::Title) ==
+            ParagraphStyle::Title);
+    REQUIRE(demoteParagraphStyle(ParagraphStyle::Heading1) ==
+            ParagraphStyle::Heading2);
+    REQUIRE(demoteParagraphStyle(ParagraphStyle::Heading5) ==
+            ParagraphStyle::Heading6);
+    // Clamps at Heading 6.
+    REQUIRE(demoteParagraphStyle(ParagraphStyle::Heading6) ==
+            ParagraphStyle::Heading6);
+    REQUIRE(demoteParagraphStyle(ParagraphStyle::Title) ==
+            ParagraphStyle::Subtitle);
+    // Normal is not an outline row: unchanged.
+    REQUIRE(promoteParagraphStyle(ParagraphStyle::Normal) ==
+            ParagraphStyle::Normal);
+    REQUIRE(demoteParagraphStyle(ParagraphStyle::Normal) ==
+            ParagraphStyle::Normal);
+}
+
+TEST_CASE("Outline blocks and sibling blocks", "[outline][outline_view]") {
+    using namespace outline_view;
+    // H1, H2, body, H1, H2, body, H1
+    std::vector<ParagraphStyle> styles = {
+        ParagraphStyle::Heading1, ParagraphStyle::Heading2,
+        ParagraphStyle::Normal, ParagraphStyle::Heading1,
+        ParagraphStyle::Heading2, ParagraphStyle::Normal,
+        ParagraphStyle::Heading1};
+    REQUIRE(outlineBlockEnd(styles, 0) == 3);
+    REQUIRE(outlineBlockEnd(styles, 3) == 6);
+    REQUIRE(outlineBlockEnd(styles, 6) == 7);
+    REQUIRE(outlineBlockEnd(styles, 1) == 3);
+    REQUIRE(outlineHasSubordinateHeadings(styles, 0));
+    REQUIRE_FALSE(outlineHasSubordinateHeadings(styles, 1));
+    REQUIRE_FALSE(outlineHasSubordinateHeadings(styles, 6));
+    REQUIRE_FALSE(outlineHasSubordinateHeadings(styles, 2));
+
+    auto prev = outlinePrevSiblingBlock(styles, 3);
+    REQUIRE(prev.has_value());
+    REQUIRE(prev->first == 0);
+    REQUIRE(prev->second == 3);
+    REQUIRE_FALSE(outlinePrevSiblingBlock(styles, 0).has_value());
+    // The second H1's previous sibling is the first H1, and the
+    // H2 at 1 has no previous same-level sibling (its parent is
+    // the H1 at 0, not a sibling to move past).
+    REQUIRE_FALSE(outlinePrevSiblingBlock(styles, 1).has_value());
+    auto next = outlineNextSiblingBlock(styles, 3);
+    REQUIRE(next.has_value());
+    REQUIRE(next->first == 6);
+    REQUIRE(next->second == 7);
+    REQUIRE_FALSE(outlineNextSiblingBlock(styles, 6).has_value());
+    REQUIRE_FALSE(outlineNextSiblingBlock(styles, 1).has_value());
+    // H2 at 4: next sibling scanning stops at the shallower H1.
+    REQUIRE_FALSE(outlineNextSiblingBlock(styles, 4).has_value());
+}
+
+TEST_CASE("Outline filtered visible rows", "[outline][outline_view]") {
+    using namespace outline_view;
+    // H1, H2, body, H1, H2, H3, H1
+    std::vector<ParagraphStyle> styles = {
+        ParagraphStyle::Heading1, ParagraphStyle::Heading2,
+        ParagraphStyle::Normal, ParagraphStyle::Heading1,
+        ParagraphStyle::Heading2, ParagraphStyle::Heading3,
+        ParagraphStyle::Heading1};
+    std::unordered_set<std::size_t> none;
+    auto all = outlineVisibleRowsFiltered(styles, 0, none);
+    REQUIRE(all.size() == 6);
+
+    // Show Level 1 hides every heading deeper than 1.
+    auto level1 = outlineVisibleRowsFiltered(styles, 1, none);
+    REQUIRE(level1.size() == 3);
+    REQUIRE(level1[0] == 0);
+    REQUIRE(level1[1] == 3);
+    REQUIRE(level1[2] == 6);
+    // Show Level 2 keeps H2 but hides H3.
+    auto level2 = outlineVisibleRowsFiltered(styles, 2, none);
+    REQUIRE(level2.size() == 5);
+
+    // Collapsing the first H1 hides its H2 subordinate, but the
+    // first H1 itself stays visible.
+    std::unordered_set<std::size_t> collapsed = {0};
+    auto collapsedRows = outlineVisibleRowsFiltered(styles, 0, collapsed);
+    REQUIRE(collapsedRows.size() == 5);
+    REQUIRE(collapsedRows[0] == 0);
+    REQUIRE(collapsedRows[1] == 3);
+    // Collapsing the second H1 hides its H2 and H3.
+    collapsed = {3};
+    collapsedRows = outlineVisibleRowsFiltered(styles, 0, collapsed);
+    REQUIRE(collapsedRows.size() == 4);
+    REQUIRE(collapsedRows[0] == 0);
+    REQUIRE(collapsedRows[1] == 1);
+    REQUIRE(collapsedRows[2] == 3);
+    REQUIRE(collapsedRows[3] == 6);
+    // Collapsed + Show Level combine: Show Level 1 alone would
+    // show 3 rows; collapsing a visible H1 cannot hide another
+    // visible H1.
+    collapsed = {0};
+    auto both = outlineVisibleRowsFiltered(styles, 1, collapsed);
+    REQUIRE(both.size() == 3);
+}
+
+TEST_CASE("Outline block swap moves text and spans, undoes in one step",
+          "[outline][text_buffer]") {
+    TextBuffer buffer;
+    buffer.setText("First\nBody one\nSecond\nBody two\nThird");
+    auto styleRow = [&](std::size_t row, ParagraphStyle style) {
+        buffer.setCaret({row, 0});
+        buffer.setCurrentParagraphStyle(style);
+    };
+    styleRow(0, ParagraphStyle::Heading1);
+    styleRow(2, ParagraphStyle::Heading1);
+    styleRow(4, ParagraphStyle::Heading1);
+    // Second block [2, 4) swaps with the first block [0, 2).
+    buffer.swapAdjacentLineRanges(0, 2, 4);
+    buffer.commitSwapAdjacentLineRanges(0, 2, 4, 2, 0);
+    REQUIRE(buffer.lineString(0) == "Second");
+    REQUIRE(buffer.lineString(1) == "Body two");
+    REQUIRE(buffer.lineString(2) == "First");
+    REQUIRE(buffer.lineString(3) == "Body one");
+    REQUIRE(buffer.lineString(4) == "Third");
+    REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Heading1);
+    REQUIRE(buffer.lineParagraphStyle(1) == ParagraphStyle::Normal);
+    REQUIRE(buffer.lineParagraphStyle(2) == ParagraphStyle::Heading1);
+    REQUIRE(buffer.lineParagraphStyle(3) == ParagraphStyle::Normal);
+    REQUIRE(buffer.lineParagraphStyle(4) == ParagraphStyle::Heading1);
+    // One undo step restores the original order AND styles.
+    REQUIRE(buffer.canUndo());
+    buffer.undo();
+    REQUIRE(buffer.lineString(0) == "First");
+    REQUIRE(buffer.lineString(1) == "Body one");
+    REQUIRE(buffer.lineString(2) == "Second");
+    REQUIRE(buffer.lineString(3) == "Body two");
+    REQUIRE(buffer.lineString(4) == "Third");
+    REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Heading1);
+    REQUIRE(buffer.lineParagraphStyle(2) == ParagraphStyle::Heading1);
+    // Redo re-applies the swap.
+    REQUIRE(buffer.canRedo());
+    buffer.redo();
+    REQUIRE(buffer.lineString(0) == "Second");
+    REQUIRE(buffer.lineString(2) == "First");
+}
+
+TEST_CASE("Outline block swap with unequal block sizes",
+          "[outline][text_buffer]") {
+    TextBuffer buffer;
+    buffer.setText("A\nB\nC\nD");
+    // Swap [0, 1) ("A") with [1, 3) ("B", "C"): the shifted
+    // undo boundary (0 + 2 = 2) differs from the execute
+    // boundary (1), so undo must use the shifted one.
+    buffer.swapAdjacentLineRanges(0, 1, 3);
+    buffer.commitSwapAdjacentLineRanges(0, 1, 3, 0, 2);
+    REQUIRE(buffer.getText() == "B\nC\nA\nD");
+    buffer.undo();
+    REQUIRE(buffer.getText() == "A\nB\nC\nD");
+    buffer.redo();
+    REQUIRE(buffer.getText() == "B\nC\nA\nD");
+}
+
+TEST_CASE("Outline block swap at the end of the document",
+          "[outline][text_buffer]") {
+    TextBuffer buffer;
+    buffer.setText("Alpha\nBeta\nGamma");
+    buffer.setCaret({0, 0});
+    buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+    buffer.setCaret({1, 0});
+    buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+    buffer.setCaret({2, 0});
+    buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+    // Swap the last two single-line blocks (range ends at EOF:
+    // the terminator must move, not duplicate).
+    buffer.swapAdjacentLineRanges(1, 2, 3);
+    buffer.commitSwapAdjacentLineRanges(1, 2, 3, 1, 2);
+    REQUIRE(buffer.lineCount() == 3);
+    REQUIRE(buffer.getText() == "Alpha\nGamma\nBeta");
+    buffer.undo();
+    REQUIRE(buffer.getText() == "Alpha\nBeta\nGamma");
+}
+
+TEST_CASE("Outline paragraph style commit is one undo step",
+          "[outline][text_buffer]") {
+    TextBuffer buffer;
+    buffer.setText("Heading");
+    buffer.setCaret({0, 0});
+    buffer.setCurrentParagraphStyle(ParagraphStyle::Heading1);
+    buffer.clearHistory();
+    buffer.setLineParagraphStyle(0, ParagraphStyle::Heading2);
+    buffer.commitParagraphStyle(0, ParagraphStyle::Heading1,
+                                ParagraphStyle::Heading2);
+    REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Heading2);
+    buffer.undo();
+    REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Heading1);
+    buffer.redo();
+    REQUIRE(buffer.lineParagraphStyle(0) == ParagraphStyle::Heading2);
+}
+
 TEST_CASE("Outline view visible-rows mapping", "[outline][outline_view]") {
     using namespace outline_view;
     std::vector<ParagraphStyle> styles = {
