@@ -111,6 +111,19 @@ public:
     void setCellContent(std::size_t row, std::size_t col, const std::string& content);
     std::string getCellContent(std::size_t row, std::size_t col) const;
     
+    // Sort ALL rows by one column (there is no header-row concept
+    // in this model, so no row is pinned: the first row sorts with
+    // the rest). Numeric-aware: cells that parse wholly as numbers
+    // compare numerically (numbers sort before text); other cells
+    // compare case-insensitively; equal keys keep their order
+    // (stable). Row heights move with their rows; the caret cell
+    // follows its row; any selection is cleared. A table with a
+    // merged cell is not sorted (a row span cannot be permuted
+    // safely) and the call returns false, leaving the table
+    // untouched. One undo step is the command layer's job (it
+    // snapshots the table before calling this).
+    bool sortRows(std::size_t col, bool ascending);
+
     // Row operations
     void insertRowAbove(std::size_t row);
     void insertRowBelow(std::size_t row);

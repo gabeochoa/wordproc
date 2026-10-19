@@ -353,6 +353,78 @@ struct HandleAddCommentCommand : System<testing::PendingE2ECommand> {
   }
 };
 
+// Handle 'set_cell_content ROW COL TEXT' - sets one cell of the first
+// table. Test-only seeding: typing into table cells is not
+// implemented in the app (TableEditComponent is unused), so sort /
+// formula E2E need a way to build a table with contents. Like
+// set_tab_width / add_comment, this pokes app state directly.
+struct HandleSetCellContentCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("set_cell_content"))
+      return;
+    if (!cmd.has_args(3)) {
+      cmd.fail("set_cell_content requires row, col, and text");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+    if (doc_comp->tables.empty()) {
+      cmd.fail("no table in document");
+      return;
+    }
+    auto &table = doc_comp->tables[0].second;
+    std::size_t row = static_cast<std::size_t>(std::atoi(cmd.arg(0).c_str()));
+    std::size_t col = static_cast<std::size_t>(std::atoi(cmd.arg(1).c_str()));
+    if (row >= table.rowCount() || col >= table.colCount()) {
+      cmd.fail("cell out of range");
+      return;
+    }
+    std::string text = cmd.args[2];
+    for (size_t i = 3; i < cmd.args.size(); ++i) text += " " + cmd.args[i];
+    table.setCellContent(row, col, text);
+    cmd.consume();
+  }
+};
+
+// Handle 'set_table_cell ROW COL' - moves the first table's caret
+// cell (the Sort key column and the Formula target). Test-only,
+// same rationale as set_cell_content.
+struct HandleSetTableCellCommand : System<testing::PendingE2ECommand> {
+  ecs::DocumentComponent *doc_comp = nullptr;
+
+  virtual void for_each_with(Entity &, testing::PendingE2ECommand &cmd,
+                             float) override {
+    if (cmd.is_consumed() || !cmd.is("set_table_cell"))
+      return;
+    if (!cmd.has_args(2)) {
+      cmd.fail("set_table_cell requires row and col");
+      return;
+    }
+    if (!doc_comp) {
+      cmd.fail("doc_comp not set");
+      return;
+    }
+    if (doc_comp->tables.empty()) {
+      cmd.fail("no table in document");
+      return;
+    }
+    auto &table = doc_comp->tables[0].second;
+    std::size_t row = static_cast<std::size_t>(std::atoi(cmd.arg(0).c_str()));
+    std::size_t col = static_cast<std::size_t>(std::atoi(cmd.arg(1).c_str()));
+    if (row >= table.rowCount() || col >= table.colCount()) {
+      cmd.fail("cell out of range");
+      return;
+    }
+    table.setCurrentCell({row, col});
+    cmd.consume();
+  }
+};
+
 // Handle 'set_tab_width N' - directly sets tab width
 struct HandleSetTabWidthCommand : System<testing::PendingE2ECommand> {
   ecs::DocumentComponent *doc_comp = nullptr;
@@ -651,6 +723,14 @@ inline void register_app_commands(
   auto outline_click = std::make_unique<HandleOutlineClickCommand>();
   outline_click->doc_comp = doc_comp;
   sm.register_update_system(std::move(outline_click));
+
+  auto set_cell_content = std::make_unique<HandleSetCellContentCommand>();
+  set_cell_content->doc_comp = doc_comp;
+  sm.register_update_system(std::move(set_cell_content));
+
+  auto set_table_cell = std::make_unique<HandleSetTableCellCommand>();
+  set_table_cell->doc_comp = doc_comp;
+  sm.register_update_system(std::move(set_table_cell));
 
   auto open_file = std::make_unique<HandleOpenFileCommand>();
   open_file->doc_comp = doc_comp;

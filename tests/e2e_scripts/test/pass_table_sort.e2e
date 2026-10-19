@@ -1,0 +1,57 @@
+# Test: Table > Sort Ascending / Sort Descending (by caret's column)
+# The model has no header concept, so ALL rows sort. Column 0 holds
+# 30 / 5 / 20, column 1 holds the row tag, so a sort visibly moves
+# whole rows. Ctrl+Z undoes a sort (one undo step).
+
+menu_open Table
+wait_frames 12
+menu_select "Insert Table..."
+wait_frames 12
+validate cell_content_0_0=
+validate table_current_cell=0,0
+
+set_cell_content 0 0 30
+set_cell_content 0 1 row0
+set_cell_content 1 0 5
+set_cell_content 1 1 row1
+set_cell_content 2 0 20
+set_cell_content 2 1 row2
+wait_frames 12
+
+# Sort ascending by column 0 (the caret cell's column).
+menu_open Table
+wait_frames 12
+menu_select "Sort Ascending"
+wait_frames 12
+
+validate cell_content_0_0=5
+validate cell_content_0_1=row1
+validate cell_content_1_0=20
+validate cell_content_1_1=row2
+validate cell_content_2_0=30
+validate cell_content_2_1=row0
+
+# One undo step restores the pre-sort order.
+key CTRL+Z
+wait_frames 12
+validate cell_content_0_0=30
+validate cell_content_0_1=row0
+validate cell_content_1_0=5
+validate cell_content_1_1=row1
+validate cell_content_2_0=20
+validate cell_content_2_1=row2
+
+# Sort descending.
+menu_open Table
+wait_frames 12
+menu_select "Sort Descending"
+wait_frames 12
+
+validate cell_content_0_0=30
+validate cell_content_1_0=20
+validate cell_content_2_0=5
+validate cell_content_0_1=row0
+validate cell_content_1_1=row2
+validate cell_content_2_1=row1
+
+screenshot table_sorted

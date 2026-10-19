@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -83,6 +84,21 @@ struct DocumentComponent : public afterhours::BaseComponent {
     // Tables embedded in the document (indexed by position in text)
     // Each table is associated with a line number where it appears
     std::vector<std::pair<std::size_t, Table>> tables;
+
+    // One-step table undo (Table > Sort / Formula...): the table
+    // has no entry in the buffer's history, so a Sort/Formula
+    // snapshots before/after here. cmd::undo restores `before`
+    // only when the buffer is untouched since the op (bufferVersion
+    // match) and the table still equals `after` (no intervening
+    // table edit) — otherwise the entry is dropped and the buffer
+    // undo runs. Redo for a table undo is not supported.
+    struct TableUndoEntry {
+        std::size_t line = 0;
+        Table before;
+        Table after;
+        std::uint64_t bufferVersion = 0;
+    };
+    std::optional<TableUndoEntry> tableUndo;
 
     // For default doc path when saving without a name
     std::string defaultPath = "output/document.wpdoc";
@@ -295,6 +311,13 @@ struct DialogState : public afterhours::BaseComponent {
     // (grouped display rows), not raw doc.revisions; -1 = none.
     bool showRevisionsDialog = false;
     int revisionsSelected = -1;
+
+    // Table Formula dialog (Table > Formula...): the formula
+    // field text (prefilled =SUM(ABOVE)) and the last evaluation
+    // error, shown in the dialog when non-empty.
+    bool showTableFormulaDialog = false;
+    std::string tableFormulaStr = "=SUM(ABOVE)";
+    std::string tableFormulaError;
 
     // @ smart chip popup (Docs-era): open while the user types a
     // filter after "@". chipPopupAtOffset is the "@" offset in the

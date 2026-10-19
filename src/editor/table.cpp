@@ -4,6 +4,8 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "table_formula.h"  // parseNumericCell (sort's numeric compare)
+
 Table::Table(std::size_t rows, std::size_t cols) {
     initializeGrid(rows, cols);
 }
@@ -46,6 +48,76 @@ void Table::setCellContent(std::size_t row, std::size_t col, const std::string& 
 
 std::string Table::getCellContent(std::size_t row, std::size_t col) const {
     return cell(row, col).content;
+}
+
+// Sort all rows by one column. See table.h for the contract:
+// numeric-aware, stable, no header pin, merged tables refused.
+bool Table::sortRows(std::size_t col, bool ascending) {
+    if (isEmpty() || col >= colCount()) return false;
+    for (const auto& row : rows_) {
+        for (const auto& cell : row) {
+            if (cell.isMerged || cell.span.rowSpan > 1 ||
+                cell.span.colSpan > 1) {
+                return false;
+            }
+        }
+    }
+    // Numeric parse: the whole trimmed content must be a number
+    // (shared with the formula evaluator).
+    auto parseNumeric = [](const std::string& content, double& out) {
+        return table_formula::parseNumericCell(content, out);
+    };
+    auto lower = [](const std::string& value) {
+        std::string result = value;
+        std::transform(result.begin(), result.end(), result.begin(),
+                       [](unsigned char ch) {
+                           return static_cast<char>(std::tolower(ch));
+                       });
+        return result;
+    };
+    // -1 / 0 / +1 comparison on the sort column of two rows.
+    auto compareRows = [&](std::size_t a, std::size_t b) {
+        const std::string& aText = rows_[a][col].content;
+        const std::string& bText = rows_[b][col].content;
+        double aNum = 0.0;
+        double bNum = 0.0;
+        bool aIsNum = parseNumeric(aText, aNum);
+        bool bIsNum = parseNumeric(bText, bNum);
+        if (aIsNum && bIsNum) {
+            if (aNum < bNum) return -1;
+            if (aNum > bNum) return 1;
+            return 0;
+        }
+        if (aIsNum != bIsNum) return aIsNum ? -1 : 1;  // numbers first
+        std::string aLower = lower(aText);
+        std::string bLower = lower(bText);
+        if (aLower < bLower) return -1;
+        if (aLower > bLower) return 1;
+        return 0;
+    };
+    CellPosition caretBefore = currentCell_;
+    std::vector<std::size_t> order(rowCount());
+    for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+    std::stable_sort(order.begin(), order.end(),
+                     [&](std::size_t a, std::size_t b) {
+                         int cmp = compareRows(a, b);
+                         return ascending ? cmp < 0 : cmp > 0;
+                     });
+    std::vector<std::vector<TableCell>> sortedRows;
+    std::vector<float> sortedHeights;
+    sortedRows.reserve(rows_.size());
+    sortedHeights.reserve(rowHeights_.size());
+    for (std::size_t i = 0; i < order.size(); ++i) {
+        sortedRows.push_back(std::move(rows_[order[i]]));
+        sortedHeights.push_back(rowHeights_[order[i]]);
+        if (order[i] == caretBefore.row) {
+            currentCell_.row = i;
+        }
+    }
+    rows_ = std::move(sortedRows);
+    rowHeights_ = std::move(sortedHeights);
+    clearSelection();
+    return true;
 }
 
 // Row operations

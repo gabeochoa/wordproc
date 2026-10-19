@@ -924,6 +924,15 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     }
                     break;
                 }
+                case 13:  // Sort Ascending (by the caret's column)
+                    cmd::sortTable(doc, true);
+                    break;
+                case 14:  // Sort Descending (by the caret's column)
+                    cmd::sortTable(doc, false);
+                    break;
+                case 15:  // Formula...
+                    cmd::openTableFormulaDialog(doc, dialogs);
+                    break;
                 default:
                     break;
             }

@@ -299,6 +299,25 @@ TEST_CASE("Insert menu has Date and Time before Special Character", "[menu]") {
     REQUIRE(special == dateTime + 1);
 }
 
+TEST_CASE("Table menu ends with Sort + Formula after Split Cell", "[menu]") {
+    auto menus = createMenuBarData();
+    const MenuData* table = nullptr;
+    for (const auto& m : menus) {
+        if (m.label == "Table") table = &m;
+    }
+    REQUIRE(table != nullptr);
+    std::size_t split = table->items.size();
+    for (std::size_t i = 0; i < table->items.size(); ++i) {
+        if (table->items[i].label == "Split Cell") split = i;
+    }
+    REQUIRE(split < table->items.size());
+    REQUIRE(table->items[split + 1].isSeparator);
+    REQUIRE(table->items[split + 2].label == "Sort Ascending");
+    REQUIRE(table->items[split + 3].label == "Sort Descending");
+    REQUIRE(table->items[split + 4].label == "Formula...");
+    REQUIRE(split + 4 == table->items.size() - 1);
+}
+
 TEST_CASE("Tools menu is Word 95 order; UI Scale moved to View", "[menu]") {
     auto menus = createMenuBarData();
     const MenuData* tools = nullptr;

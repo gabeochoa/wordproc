@@ -298,7 +298,11 @@ inline std::vector<win95::Menu> createMenuBar(
         {"Delete Column", "", true, false, nullptr},             // 8
         {"", "", false, true, nullptr},                          // 9 Separator
         {"Merge Cells", "", true, false, nullptr},               // 10
-        {"Split Cell", "", true, false, nullptr}                 // 11
+        {"Split Cell", "", true, false, nullptr},                // 11
+        {"", "", false, true, nullptr},                          // 12 Separator
+        {"Sort Ascending", "", true, false, nullptr},           // 13
+        {"Sort Descending", "", true, false, nullptr},          // 14
+        {"Formula...", "", true, false, nullptr}                 // 15
     };
     menus.push_back(tableMenu);    // Index 6: Table
 

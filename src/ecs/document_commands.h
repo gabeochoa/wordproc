@@ -12,6 +12,7 @@
 #include "../editor/document_io.h"
 #include "../editor/revisions.h"
 #include "../editor/version_history.h"
+#include "../editor/table_formula.h"
 #include "../editor/outline_view.h"
 #include "../editor/templates.h"
 #include "../editor/export/export_pdf.h"
@@ -465,7 +466,43 @@ inline bool openDocument(DocumentComponent& doc, LayoutComponent& layout,
 
 // --- Edit commands ---
 
+// Table contents equality for the table-undo guard: dimensions,
+// contents, and merge spans (the fields Sort/Formula change or an
+// intervening table edit would change).
+inline bool tablesEqualForUndo(const Table& a, const Table& b) {
+    if (a.rowCount() != b.rowCount() || a.colCount() != b.colCount()) {
+        return false;
+    }
+    for (std::size_t r = 0; r < a.rowCount(); ++r) {
+        for (std::size_t c = 0; c < a.colCount(); ++c) {
+            const TableCell& ca = a.cell(r, c);
+            const TableCell& cb = b.cell(r, c);
+            if (ca.content != cb.content || ca.isMerged != cb.isMerged ||
+                ca.span.rowSpan != cb.span.rowSpan ||
+                ca.span.colSpan != cb.span.colSpan) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 inline bool undo(DocumentComponent& doc) {
+    // A pending table undo (Sort / Formula...) wins only when it is
+    // still the latest action: buffer untouched since the op and the
+    // table still exactly as the op left it. Otherwise the entry is
+    // stale (a later edit superseded it) and the buffer undo runs.
+    if (doc.tableUndo) {
+        DocumentComponent::TableUndoEntry entry = *doc.tableUndo;
+        doc.tableUndo.reset();
+        Table* table = doc.tableAtLine(entry.line);
+        if (table && doc.buffer.version() == entry.bufferVersion &&
+            tablesEqualForUndo(*table, entry.after)) {
+            *table = entry.before;
+            doc.isDirty = true;
+            return true;
+        }
+    }
     if (doc.buffer.canUndo()) {
         doc.buffer.undo();
         doc.isDirty = true;
@@ -538,6 +575,72 @@ inline void insertTypedChar(DocumentComponent& doc, char ch) {
 
 inline void selectAll(DocumentComponent& doc) {
     doc.buffer.selectAll();
+}
+
+// --- Table commands (Table menu) ---
+// Sort: sorts the table at the caret's line by the caret cell's
+// column, all rows (no header concept in the model), as one undo
+// step (before/after snapshot in doc.tableUndo; see cmd::undo).
+// Formula...: opens the dialog (prefilled =SUM(ABOVE)) when a
+// table is at the caret; OK evaluates against the caret cell and
+// writes the result into it, also as one undo step. A failed
+// evaluation leaves the dialog open with the error message.
+
+inline bool sortTable(DocumentComponent& doc, bool ascending) {
+    std::size_t line = doc.buffer.caret().row;
+    Table* table = doc.tableAtLine(line);
+    if (table == nullptr) {
+        toast_notify::error("No table at cursor");
+        return false;
+    }
+    Table before = *table;
+    if (!table->sortRows(table->currentCell().col, ascending)) {
+        toast_notify::error("Cannot sort table with merged cells");
+        return false;
+    }
+    doc.tableUndo = DocumentComponent::TableUndoEntry{
+        line, before, *table, doc.buffer.version()};
+    doc.isDirty = true;
+    toast_notify::info(ascending ? "Table sorted ascending"
+                                 : "Table sorted descending");
+    return true;
+}
+
+inline bool openTableFormulaDialog(DocumentComponent& doc,
+                                   DialogState& dialogs) {
+    Table* table = doc.tableAtLine(doc.buffer.caret().row);
+    if (table == nullptr) {
+        toast_notify::error("No table at cursor");
+        return false;
+    }
+    dialogs.showTableFormulaDialog = true;
+    dialogs.tableFormulaStr = "=SUM(ABOVE)";
+    dialogs.tableFormulaError.clear();
+    return true;
+}
+
+inline bool applyTableFormula(DocumentComponent& doc, DialogState& dialogs) {
+    std::size_t line = doc.buffer.caret().row;
+    Table* table = doc.tableAtLine(line);
+    if (table == nullptr) {
+        dialogs.tableFormulaError = "No table at cursor";
+        return false;
+    }
+    CellPosition cell = table->currentCell();
+    table_formula::FormulaResult result = table_formula::evaluate(
+        *table, cell.row, cell.col, dialogs.tableFormulaStr);
+    if (!result.ok) {
+        dialogs.tableFormulaError = result.error;
+        return false;
+    }
+    Table before = *table;
+    table->setCellContent(cell.row, cell.col, result.value);
+    doc.tableUndo = DocumentComponent::TableUndoEntry{
+        line, before, *table, doc.buffer.version()};
+    doc.isDirty = true;
+    dialogs.tableFormulaError.clear();
+    dialogs.showTableFormulaDialog = false;
+    return true;
 }
 
 // Insert > Date and Time...: inserts the chosen formatted string at

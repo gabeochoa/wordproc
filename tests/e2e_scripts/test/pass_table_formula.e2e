@@ -1,0 +1,60 @@
+# Test: Table > Formula... with =SUM(ABOVE)
+# Column 0 holds 10 / 20 / (empty target). The caret cell is moved
+# to (2, 0); the dialog opens prefilled with =SUM(ABOVE); OK writes
+# 30 into the caret cell. Ctrl+Z undoes it (one undo step). A
+# malformed formula leaves the dialog open with an error.
+
+menu_open Table
+wait_frames 12
+menu_select "Insert Table..."
+wait_frames 12
+
+set_cell_content 0 0 10
+set_cell_content 1 0 20
+set_table_cell 2 0
+wait_frames 12
+validate table_current_cell=2,0
+validate cell_content_2_0=
+
+menu_open Table
+wait_frames 12
+menu_select "Formula..."
+wait_frames 12
+
+validate dialog_open=TableFormula
+validate table_formula_field==SUM(ABOVE)
+
+click_ui table_formula_ok
+wait_frames 12
+
+validate dialog_open=false
+validate cell_content_2_0=30
+
+screenshot table_formula
+
+# One undo step clears the formula result.
+key CTRL+Z
+wait_frames 12
+validate cell_content_2_0=
+
+# A malformed formula errors and keeps the dialog open.
+menu_open Table
+wait_frames 12
+menu_select "Formula..."
+wait_frames 12
+validate table_formula_field==SUM(ABOVE)
+
+click_ui table_formula_input
+wait_frames 6
+type "X"
+wait_frames 6
+click_ui table_formula_ok
+wait_frames 12
+
+validate dialog_open=TableFormula
+validate table_formula_error=Invalid formula (expected =SUM(ABOVE))
+validate cell_content_2_0=
+
+click_ui table_formula_cancel
+wait_frames 12
+validate dialog_open=false

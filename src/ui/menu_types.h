@@ -237,7 +237,11 @@ inline std::vector<MenuData> createMenuBarData() {
                        {"Delete Column", "", true, false},
                        {"", "", false, true},
                        {"Merge Cells", "", true, false},
-                       {"Split Cell", "", true, false}};
+                       {"Split Cell", "", true, false},
+                       {"", "", false, true},
+                       {"Sort Ascending", "", true, false},
+                       {"Sort Descending", "", true, false},
+                       {"Formula...", "", true, false}};
     menus.push_back(tableMenu);
 
     // Window menu (between Table and Help, as in menu_setup)

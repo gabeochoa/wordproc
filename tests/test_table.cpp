@@ -527,3 +527,98 @@ TEST_CASE("Table cell properties", "[table]") {
         REQUIRE(table.cell(0, 0).backgroundColor.r == TextColors::Yellow.r);
     }
 }
+
+TEST_CASE("Table sortRows - numeric-aware, all rows sort, no header pin",
+          "[table]") {
+    Table table(3, 2);
+    table.setCellContent(0, 0, "30");
+    table.setCellContent(0, 1, "c");
+    table.setCellContent(1, 0, "5");
+    table.setCellContent(1, 1, "a");
+    table.setCellContent(2, 0, "20");
+    table.setCellContent(2, 1, "b");
+
+    SECTION("Ascending numeric sort moves whole rows, first row included") {
+        REQUIRE(table.sortRows(0, true));
+        REQUIRE(table.getCellContent(0, 0) == "5");
+        REQUIRE(table.getCellContent(0, 1) == "a");
+        REQUIRE(table.getCellContent(1, 0) == "20");
+        REQUIRE(table.getCellContent(1, 1) == "b");
+        REQUIRE(table.getCellContent(2, 0) == "30");
+        REQUIRE(table.getCellContent(2, 1) == "c");
+    }
+    SECTION("Descending numeric sort") {
+        REQUIRE(table.sortRows(0, false));
+        REQUIRE(table.getCellContent(0, 0) == "30");
+        REQUIRE(table.getCellContent(1, 0) == "20");
+        REQUIRE(table.getCellContent(2, 0) == "5");
+    }
+    SECTION("Sort key is the given column") {
+        REQUIRE(table.sortRows(1, true));
+        REQUIRE(table.getCellContent(0, 1) == "a");
+        REQUIRE(table.getCellContent(0, 0) == "5");
+        REQUIRE(table.getCellContent(2, 1) == "c");
+    }
+    SECTION("Out-of-range column refuses") {
+        REQUIRE_FALSE(table.sortRows(5, true));
+        REQUIRE(table.getCellContent(0, 0) == "30");
+    }
+    SECTION("Caret cell follows its row") {
+        table.setCurrentCell({0, 0});  // the "30" row
+        REQUIRE(table.sortRows(0, true));
+        REQUIRE(table.currentCell().row == 2);
+    }
+}
+
+TEST_CASE("Table sortRows - mixed numeric/text, case-insensitive, stable",
+          "[table]") {
+    Table table(5, 1);
+    table.setCellContent(0, 0, "banana");
+    table.setCellContent(1, 0, "10");
+    table.setCellContent(2, 0, "Apple");
+    table.setCellContent(3, 0, "2");
+    table.setCellContent(4, 0, "apple");
+
+    SECTION("Numbers sort before text, numerically; text case-insensitively") {
+        REQUIRE(table.sortRows(0, true));
+        REQUIRE(table.getCellContent(0, 0) == "2");
+        REQUIRE(table.getCellContent(1, 0) == "10");
+        REQUIRE(table.getCellContent(2, 0) == "Apple");
+        REQUIRE(table.getCellContent(3, 0) == "apple");
+        REQUIRE(table.getCellContent(4, 0) == "banana");
+    }
+    SECTION("Equal text keys keep their original order (stable)") {
+        Table stable(3, 2);
+        stable.setCellContent(0, 0, "same");
+        stable.setCellContent(0, 1, "first");
+        stable.setCellContent(1, 0, "same");
+        stable.setCellContent(1, 1, "second");
+        stable.setCellContent(2, 0, "aaa");
+        stable.setCellContent(2, 1, "third");
+        REQUIRE(stable.sortRows(0, true));
+        REQUIRE(stable.getCellContent(0, 1) == "third");
+        REQUIRE(stable.getCellContent(1, 1) == "first");
+        REQUIRE(stable.getCellContent(2, 1) == "second");
+    }
+    SECTION("A '12x' cell is text, not the number 12") {
+        Table mixed(3, 1);
+        mixed.setCellContent(0, 0, "12x");
+        mixed.setCellContent(1, 0, "3");
+        mixed.setCellContent(2, 0, "20");
+        REQUIRE(mixed.sortRows(0, true));
+        REQUIRE(mixed.getCellContent(0, 0) == "3");
+        REQUIRE(mixed.getCellContent(1, 0) == "20");
+        REQUIRE(mixed.getCellContent(2, 0) == "12x");
+    }
+}
+
+TEST_CASE("Table sortRows - merged cells refuse, table untouched",
+          "[table]") {
+    Table table(2, 2);
+    table.setCellContent(0, 0, "b");
+    table.setCellContent(1, 0, "a");
+    REQUIRE(table.mergeCells({0, 0}, {0, 1}));
+    REQUIRE_FALSE(table.sortRows(0, true));
+    REQUIRE(table.getCellContent(0, 0) == "b");
+    REQUIRE(table.getCellContent(1, 0) == "a");
+}

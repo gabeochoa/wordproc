@@ -1397,6 +1397,90 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
+        // Table Formula dialog (Table > Formula...): one Formula
+        // field (prefilled =SUM(ABOVE), editable), OK evaluates
+        // against the caret cell and writes the result into it
+        // (one undo step); a failed evaluation leaves the dialog
+        // open with the error in red below the field.
+        if (dialogs.showTableFormulaDialog) {
+            constexpr int FORMULA_MODAL_ID = 50014;
+            auto result = afterhours::modal(ctx, mk(entity, FORMULA_MODAL_ID),
+                dialogs.showTableFormulaDialog,
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(380), afterhours::ui::h720(180),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
+            if (result) {
+                using namespace afterhours::ui;
+                using namespace afterhours::ui::imm;
+                constexpr int CONTENT_LAYER = 1001;
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              "Formula", CONTENT_LAYER);
+                test_input::register_visible_text(dialogs.tableFormulaStr);
+                if (!dialogs.tableFormulaError.empty()) {
+                    test_input::register_visible_text(dialogs.tableFormulaError);
+                }
+
+                div(ctx, mk(result.ent(), 901),
+                    ComponentConfig{}
+                        .with_label("Formula:")
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
+                        .with_render_layer(CONTENT_LAYER));
+                afterhours::text_input::text_input(ctx, mk(result.ent(), 902),
+                    dialogs.tableFormulaStr,
+                    ah_win95::win95SunkenStyle()
+                        .with_debug_name("table_formula_input")
+                        .with_size(ComponentSize{percent(1.0f), h720(28)})
+                        .with_render_layer(CONTENT_LAYER));
+                if (!dialogs.tableFormulaError.empty()) {
+                    div(ctx, mk(result.ent(), 903),
+                        ComponentConfig{}
+                            .with_label(dialogs.tableFormulaError)
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(
+                                ui_imm::win95_colors::ERROR_COLOR)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
+                            .with_render_layer(CONTENT_LAYER));
+                }
+                auto buttonRow = div(ctx, mk(result.ent(), 904),
+                    ComponentConfig{}
+                        .with_size(ComponentSize{percent(1.0f), h720(44)})
+                        .with_flex_direction(FlexDirection::Row)
+                        .with_justify_content(JustifyContent::FlexEnd)
+                        .with_align_items(AlignItems::Center)
+                        .with_gap(pixels(8))
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_render_layer(CONTENT_LAYER));
+                if (buttonRow) {
+                    if (button(ctx, mk(buttonRow.ent(), 0),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("table_formula_ok")
+                            .with_label("OK")
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
+                            .with_render_layer(CONTENT_LAYER))) {
+                        cmd::applyTableFormula(doc, dialogs);
+                    }
+                    if (button(ctx, mk(buttonRow.ent(), 1),
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("table_formula_cancel")
+                            .with_label("Cancel")
+                            .with_render_layer(CONTENT_LAYER))) {
+                        dialogs.showTableFormulaDialog = false;
+                        dialogs.tableFormulaError.clear();
+                    }
+                }
+            }
+        }
+
         // AutoCorrect dialog (Tools > AutoCorrect...) - genuine
         // Word 95 layout: 3 option checkboxes, a scrollable sunken
         // Replace/With list, editable Replace:/With: fields with

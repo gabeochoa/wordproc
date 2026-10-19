@@ -1759,6 +1759,29 @@ struct EditorRenderSystem
         // columnsActive / columnsLinesPerPage / columnsSpacingPx
         // were computed above (the squiggle cache needs them).
 
+        // Tables (Table menu): renderDocumentTables was dead code
+        // (no call site) until Batch 7, so inserted tables were
+        // data-only and invisible. Tables draw on the (empty) text
+        // line they sit on, after the text, with the caret cell
+        // highlighted in the editing view only. Positions are the
+        // helper's naive line offsets: exact for a fresh document's
+        // line 0; paged multi-page alignment is approximate.
+        std::size_t editingLine = std::numeric_limits<std::size_t>::max();
+        CellPosition tableCell{0, 0};
+        if (!layout.previewMode) {
+            Table* caretTable =
+                doc.tableAtLine(doc.buffer.caret().row);
+            if (caretTable != nullptr) {
+                editingLine = doc.buffer.caret().row;
+                tableCell = caretTable->currentCell();
+            }
+        }
+        auto drawTables = [&](const LayoutComponent::Rect& area,
+                              int scrollOffset) {
+            renderDocumentTables(doc.tables, area, lineHeight, scrollOffset,
+                                 editingLine, tableCell);
+        };
+
         if (!layout.previewMode && layout.splitViewEnabled) {
             float splitHeight = effectiveArea.height * 0.5f;
             LayoutComponent::Rect topArea = {effectiveArea.x, effectiveArea.y,
@@ -1795,6 +1818,8 @@ struct EditorRenderSystem
                              layout.previewMode ? nullptr : &doc.chips,
                              normalMode, columnsLinesPerPage,
                              layout.pageMode == PageMode::Paged);
+            drawTables(topArea, renderScrollOffset);
+            drawTables(bottomArea, scroll.secondaryOffset);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1818,6 +1843,7 @@ struct EditorRenderSystem
                              layout.previewMode ? nullptr : &doc.chips,
                              normalMode, columnsLinesPerPage,
                              layout.pageMode == PageMode::Paged);
+            drawTables(effectiveArea, renderScrollOffset);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

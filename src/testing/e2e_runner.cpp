@@ -130,6 +130,7 @@ static void setupCallbacks(
         docComp.equations.clear();
         docComp.comments.clear();
         docComp.repeatRecord = ActionRecord{};
+        docComp.tableUndo.reset();
         docComp.isDirty = false;
         docComp.filePath.clear();
         docComp.spellChecker.clearIgnoreList();
@@ -350,6 +351,39 @@ static void setupCallbacksEx(
             }
             return "0";
         }
+        // cell_content_R_C = content of one table cell (first table).
+        if (prop.length() > 13 && prop.substr(0, 13) == "cell_content_") {
+            std::string rest = prop.substr(13);
+            std::size_t sep = rest.find('_');
+            if (sep != std::string::npos && !docComp.tables.empty()) {
+                try {
+                    std::size_t r = static_cast<std::size_t>(
+                        std::stoul(rest.substr(0, sep)));
+                    std::size_t c = static_cast<std::size_t>(
+                        std::stoul(rest.substr(sep + 1)));
+                    const auto& table = docComp.tables[0].second;
+                    if (r < table.rowCount() && c < table.colCount()) {
+                        return table.getCellContent(r, c);
+                    }
+                } catch (...) {
+                }
+            }
+            return "";
+        }
+        // table_current_cell = "row,col" of the first table's caret
+        // cell (the Sort key column and the Formula target).
+        if (prop == "table_current_cell") {
+            if (!docComp.tables.empty()) {
+                const auto& table = docComp.tables[0].second;
+                CellPosition cell = table.currentCell();
+                return std::to_string(cell.row) + "," +
+                       std::to_string(cell.col);
+            }
+            return "";
+        }
+        // Table Formula dialog: the formula field + last error.
+        if (prop == "table_formula_field") return dialogState.tableFormulaStr;
+        if (prop == "table_formula_error") return dialogState.tableFormulaError;
         if (prop == "cell_content") {
             // Return content of current/selected table cell
             if (!docComp.tables.empty()) {
@@ -530,6 +564,7 @@ static void setupCallbacksEx(
             if (dialogState.showMailMergeDialog) return "MailMerge";
             if (dialogState.showRevisionsDialog) return "Revisions";
             if (dialogState.showVersionHistoryDialog) return "VersionHistory";
+            if (dialogState.showTableFormulaDialog) return "TableFormula";
             return "false";
         }
         if (prop == "help_window_visible") return dialogState.showHelpWindow ? "true" : "false";
@@ -1139,6 +1174,7 @@ static void setupCallbacksEx(
         docComp.revisions.clear();
         docComp.chips.clear();
         docComp.repeatRecord = ActionRecord{};
+        docComp.tableUndo.reset();
         docComp.trackChangesEnabled = false;
         docComp.trackChangesBaseline.clear();
         docComp.docSettings = DocumentSettings{};
