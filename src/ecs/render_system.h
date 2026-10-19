@@ -360,6 +360,12 @@ inline void renderTextBuffer(const TextBuffer& buffer,
     // past the first drawn row — the first drawn row is already
     // at this page's top.
     bool drawnAnyRow = false;
+    // Painted bottom of the previous drawn row (its top +
+    // fontSize + 2, glyphs + squiggle): the Normal-view break
+    // line sits midway between it and the next row's top edge
+    // (normal_view::breakLineY). -1 when no row has been drawn
+    // yet in this call.
+    int prevPaintedBottom = -1;
 
     // Outline mode: iterate the heading rows only (Title /
     // Subtitle / Heading 1-6), after the Outlining toolbar's
@@ -406,6 +412,7 @@ inline void renderTextBuffer(const TextBuffer& buffer,
         // column's first row.
         if (columnsActive && column != prevColumn) {
             y = startY;
+            prevPaintedBottom = -1;
             prevColumn = column;
             squiggleIdx = 0;
             if (squiggles) {
@@ -555,9 +562,11 @@ inline void renderTextBuffer(const TextBuffer& buffer,
              span.pageBreakBefore) &&
             !buffer.hasPageBreakBefore(row)) {
             // y is the current line's top (paragraph space-before
-            // already added): y - 2 sits in the middle of the
-            // ~4px gap between this line and the previous one.
-            int breakY = y - 2;
+            // already added): the line sits at the top edge minus
+            // half the inter-line gap (midway between the
+            // previous row's painted bottom and this row's top),
+            // never on either row's glyphs or squiggle.
+            int breakY = normal_view::breakLineY(y, prevPaintedBottom);
             int lineStart = static_cast<int>(textArea.x) + 20;
             int lineEnd =
                 static_cast<int>(textArea.x + textArea.width) - 20;
@@ -589,6 +598,13 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                 break;
             }
         }
+
+        // Previous row's painted bottom for the next row's
+        // Normal-view break line: this row's top + fontSize + 2
+        // (glyphs + the squiggle below them). y is final for
+        // this row's text here (space-before and the explicit
+        // break bump already applied).
+        prevPaintedBottom = y + lineFontSize + 2;
 
         // Draw line number in gutter if enabled (not in columns
         // mode: the gutter would collide across columns).

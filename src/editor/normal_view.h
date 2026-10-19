@@ -26,6 +26,27 @@ inline bool isPageBoundary(std::size_t row, int linesPerPage) {
     return row % static_cast<std::size_t>(linesPerPage) == 0;
 }
 
+// Y for the dashed page-break line above the first row of a new
+// page. rowTop is that row's top edge (its y after
+// space-before); prevPaintedBottom is the previous row's painted
+// bottom (its top + fontSize + 2: glyphs plus the spell squiggle
+// below them, the lowest paint a row produces). The line sits at
+// the top edge minus half the inter-line gap (rowTop -
+// prevPaintedBottom), i.e. midway between the previous row's
+// painted bottom and the new row's top edge, so it never overlaps
+// either row's glyphs or squiggle. The old formula (rowTop - 2)
+// assumed a 4px gap and landed exactly on the previous row's
+// squiggle row, bisecting it visually. A degenerate gap (<= 0,
+// e.g. tight line spacing) or no previous row drawn yet
+// (prevPaintedBottom < 0: the boundary row is the first visible
+// row) falls back to one pixel above the top edge.
+inline int breakLineY(int rowTop, int prevPaintedBottom) {
+    if (prevPaintedBottom < 0) return rowTop - 1;
+    int gap = rowTop - prevPaintedBottom;
+    if (gap <= 0) return rowTop - 1;
+    return rowTop - gap / 2;
+}
+
 // How many computed boundaries a document with `lineCount` buffer
 // rows has: boundaries at rows linesPerPage, 2 * linesPerPage, ...
 // strictly below lineCount.

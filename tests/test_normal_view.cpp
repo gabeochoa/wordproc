@@ -32,6 +32,30 @@ TEST_CASE("Normal view page boundaries", "[normal][view]") {
     }
 }
 
+TEST_CASE("Normal view break line sits between rows", "[normal][view]") {
+    SECTION("default gap: one pixel above the new row's top edge") {
+        // Previous row top 540, font 16: painted bottom 540 + 16
+        // + 2 = 558 (glyphs + squiggle). New row top 560: gap 2,
+        // line at 560 - 1 = 559 — below the squiggle, above the
+        // new row's glyphs. The old formula (top - 2 = 558) drew
+        // exactly on the squiggle row.
+        REQUIRE(normal_view::breakLineY(560, 558) == 559);
+    }
+    SECTION("wider gap (paragraph spacing): midpoint of the gap") {
+        REQUIRE(normal_view::breakLineY(586, 578) == 582);
+        REQUIRE(normal_view::breakLineY(570, 558) == 564);
+    }
+    SECTION("odd gap rounds toward the new row's top edge") {
+        REQUIRE(normal_view::breakLineY(581, 580) == 581);
+        REQUIRE(normal_view::breakLineY(583, 580) == 582);
+    }
+    SECTION("degenerate gap or no previous row: one pixel above") {
+        REQUIRE(normal_view::breakLineY(580, 580) == 579);
+        REQUIRE(normal_view::breakLineY(580, 590) == 579);
+        REQUIRE(normal_view::breakLineY(580, -1) == 579);
+    }
+}
+
 TEST_CASE("Normal view boundary count", "[normal][view]") {
     SECTION("boundaries strictly below the last row") {
         // 70 rows at 32/page: boundaries at rows 32 and 64.
