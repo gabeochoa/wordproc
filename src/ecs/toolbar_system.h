@@ -38,9 +38,14 @@ using afterhours::ui::Margin;
 inline afterhours::Color rlToAh(const afterhours::Color& c) { return c; }
 
 // Helper: create an absolute-positioned toolbar button at (x, y) with given size
-// Win95 Office-style: flat by default, raised border on hover, sunken when pressed
+// Win95 Office-style: flat by default, raised border on hover, sunken when pressed.
+// idleRaised (Standard row only, Batch 13): an idle enabled button
+// also shows a subtle Raised 1px bevel — Word 95's Standard
+// buttons carry a raised edge even before hover, while the
+// Formatting row keeps the flat-idle look (its B/I/U show
+// their state through the sunken-pressed bevel instead).
 inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabled = true, bool pressed = false, bool hovered = false,
-                                        ToolbarIcon icon = ToolbarIcon::None) {
+                                        ToolbarIcon icon = ToolbarIcon::None, bool idleRaised = false) {
     // Match original colors: BUTTON_FACE normal, TOOLBAR_PRESSED_BG pressed
     afterhours::Color bg = pressed ? rlToAh(theme::TOOLBAR_PRESSED_BG) : rlToAh(theme::BUTTON_FACE);
     afterhours::Color textColor = enabled ? rlToAh(theme::BUTTON_TEXT) : rlToAh(theme::MENU_DISABLED);
@@ -65,11 +70,13 @@ inline ComponentConfig absToolbarButton(float x, float y, float size, bool enabl
         config.with_custom_hover_bg(afterhours::Color{220, 220, 220, 255});
     }
 
-    // Win95 Office-style hover: flat when idle, raised on hover, sunken when pressed
-    if (pressed) {
+    // Win95 Office-style: sunken when pressed, raised on hover,
+    // raised 1px at idle only where the caller asked (Standard
+    // row), flat otherwise. Disabled buttons get no bevel.
+    if (enabled && pressed) {
         config.with_bevel(afterhours::ui::BevelStyle::Sunken,
                           ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 2.0f);
-    } else if (hovered && enabled) {
+    } else if (enabled && (hovered || idleRaised)) {
         config.with_bevel(afterhours::ui::BevelStyle::Raised,
                           ui_imm::win95_colors::BORDER_LIGHT, ui_imm::win95_colors::BORDER_DARK, 1.0f);
     }
@@ -509,7 +516,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // === File Operations ===
         int newBtnId = btnId++;
         if (button(ctx, mk(uiRoot, newBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::New).with_label("").with_debug_name("btn_new"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::New, true).with_label("").with_debug_name("btn_new"))) {
             cmd::newDocument(doc);
         }
         stdTrackTooltip(curX, btnY, "New (Ctrl+N)");
@@ -517,7 +524,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int openBtnId = btnId++;
         if (button(ctx, mk(uiRoot, openBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Open).with_label("").with_debug_name("btn_open"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Open, true).with_label("").with_debug_name("btn_open"))) {
             // Open document (would trigger file dialog)
         }
         stdTrackTooltip(curX, btnY, "Open (Ctrl+O)");
@@ -525,7 +532,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int saveBtnId = btnId++;
         if (button(ctx, mk(uiRoot, saveBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Save).with_label("").with_debug_name("btn_save"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Save, true).with_label("").with_debug_name("btn_save"))) {
             cmd::saveDocument(doc, layout, *cache_.menu);
         }
         stdTrackTooltip(curX, btnY, "Save (Ctrl+S)");
@@ -539,7 +546,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Print (File > Print... / Ctrl+P)
         int printBtnId = btnId++;
         if (button(ctx, mk(uiRoot, printBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Print).with_label("").with_debug_name("btn_print"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Print, true).with_label("").with_debug_name("btn_print"))) {
             if (cache_.dialogs) cmd::requestPrint(doc, *cache_.dialogs);
         }
         stdTrackTooltip(curX, btnY, "Print (Ctrl+P)");
@@ -549,7 +556,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Print, Print Preview, Spelling, then Cut/Copy/Paste.
         int previewBtnId = btnId++;
         if (button(ctx, mk(uiRoot, previewBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::PrintPreview).with_label("").with_debug_name("btn_print_preview"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, false, stdIsMouseOver(curX, btnY), ToolbarIcon::PrintPreview, true).with_label("").with_debug_name("btn_print_preview"))) {
             cmd::openPrintPreview(doc, layout);
             // Entering preview replaces this toolbar; clear focus
             // so this button's stale id cannot recycle onto File.
@@ -561,7 +568,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Spelling (Tools > Spelling..., F7)
         int spellingBtnId = btnId++;
         if (button(ctx, mk(uiRoot, spellingBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Spelling).with_label("").with_debug_name("btn_spelling"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Spelling, true).with_label("").with_debug_name("btn_spelling"))) {
             if (cache_.dialogs) cmd::openSpellingDialog(doc, *cache_.dialogs);
         }
         stdTrackTooltip(curX, btnY, "Spelling (F7)");
@@ -581,7 +588,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
         int cutBtnId = btnId++;
         if (button(ctx, mk(uiRoot, cutBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, hasSelection && !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Cut).with_label("").with_debug_name("btn_cut"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, hasSelection && !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Cut, true).with_label("").with_debug_name("btn_cut"))) {
             if (hasSelection && !headerEditing) {
                 doc.isDirty = true;
             }
@@ -591,7 +598,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int copyBtnId = btnId++;
         if (button(ctx, mk(uiRoot, copyBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, hasSelection && !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Copy).with_label("").with_debug_name("btn_copy"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, hasSelection && !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Copy, true).with_label("").with_debug_name("btn_copy"))) {
             // Copy operation
         }
         stdTrackTooltip(curX, btnY, "Copy (Ctrl+C)");
@@ -599,7 +606,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         
         int pasteBtnId = btnId++;
         if (button(ctx, mk(uiRoot, pasteBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Paste).with_label("").with_debug_name("btn_paste"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Paste, true).with_label("").with_debug_name("btn_paste"))) {
             // Paste operation
         }
         stdTrackTooltip(curX, btnY, "Paste (Ctrl+V)");
@@ -611,7 +618,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // Cut/Copy/Paste, Format Painter, then Undo/Redo.
         int painterBtnId = btnId++;
         if (button(ctx, mk(uiRoot, painterBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, toolbar.formatPainter.armed, stdIsMouseOver(curX, btnY), ToolbarIcon::FormatPainter).with_label("").with_debug_name("btn_format_painter"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, toolbar.formatPainter.armed, stdIsMouseOver(curX, btnY), ToolbarIcon::FormatPainter, true).with_label("").with_debug_name("btn_format_painter"))) {
             cmd::toggleFormatPainter(doc, toolbar);
         }
         stdTrackTooltip(curX, btnY, "Format Painter");
@@ -628,7 +635,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                            : doc.buffer.canUndo();
         int undoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, undoBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, canUndo, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Undo).with_label("").with_debug_name("btn_undo"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, canUndo, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Undo, true).with_label("").with_debug_name("btn_undo"))) {
             if (headerEditing && hfBuffer != nullptr) {
                 hfBuffer->undo();
             } else {
@@ -643,7 +650,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
                            : doc.buffer.canRedo();
         int redoBtnId = btnId++;
         if (button(ctx, mk(uiRoot, redoBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, canRedo, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Redo).with_label("").with_debug_name("btn_redo"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, canRedo, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Redo, true).with_label("").with_debug_name("btn_redo"))) {
             if (headerEditing && hfBuffer != nullptr) {
                 hfBuffer->redo();
             } else {
@@ -662,7 +669,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // (¶ glyph at each line end). Sunken while on.
         int pilcrowBtnId = btnId++;
         if (button(ctx, mk(uiRoot, pilcrowBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, true, layout.showParagraphMarks, stdIsMouseOver(curX, btnY), ToolbarIcon::ShowParagraph).with_label("").with_debug_name("btn_show_paragraph"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, true, layout.showParagraphMarks, stdIsMouseOver(curX, btnY), ToolbarIcon::ShowParagraph, true).with_label("").with_debug_name("btn_show_paragraph"))) {
             layout.showParagraphMarks = !layout.showParagraphMarks;
         }
         stdTrackTooltip(curX, btnY, "Show/Hide Paragraph Marks");
@@ -739,7 +746,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
         // dropdown for whichever menu has open=true).
         int hyperlinkBtnId = btnId++;
         if (button(ctx, mk(uiRoot, hyperlinkBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Hyperlink).with_label("").with_debug_name("btn_insert_hyperlink"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Hyperlink, true).with_label("").with_debug_name("btn_insert_hyperlink"))) {
             cmd::insertHyperlink(doc);
         }
         stdTrackTooltip(curX, btnY, "Insert Hyperlink (Ctrl+K)");
@@ -747,7 +754,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
         int imageBtnId = btnId++;
         if (button(ctx, mk(uiRoot, imageBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Image).with_label("").with_debug_name("btn_insert_image"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::Image, true).with_label("").with_debug_name("btn_insert_image"))) {
             cmd::insertImagePlaceholder(doc);
         }
         stdTrackTooltip(curX, btnY, "Insert Image");
@@ -755,7 +762,7 @@ struct ToolbarRenderSystem : afterhours::System<UIContext<InputAction>> {
 
         int tableBtnId = btnId++;
         if (button(ctx, mk(uiRoot, tableBtnId),
-            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::InsertTable).with_label("").with_debug_name("btn_insert_table"))) {
+            absToolbarButton(curX, btnY, stdButtonSize, !headerEditing, false, stdIsMouseOver(curX, btnY), ToolbarIcon::InsertTable, true).with_label("").with_debug_name("btn_insert_table"))) {
             // Toggle the Table menu dropdown (same mechanism as
             // clicking the Table header / E2E menu_open Table).
             if (cache_.menu) {

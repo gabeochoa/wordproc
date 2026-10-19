@@ -1,0 +1,11 @@
+# Test: Standard toolbar idle bevel (Batch 13).
+# Idle Standard buttons carry a subtle Raised 1px bevel (Word 95).
+# The runner has no bevel property, so the proof is the
+# screenshot: idle buttons (mouse parked at 0,0, no hover) show
+# the raised edge, pressed buttons stay sunken, disabled
+# buttons (Cut/Copy with no selection here) stay flat + gray.
+# Formatting B/I/U are untouched (flat idle, sunken when active).
+
+wait_frames 30
+
+screenshot toolbar_idle_bevel

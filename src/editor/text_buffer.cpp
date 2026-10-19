@@ -792,6 +792,53 @@ TextStyle TextBuffer::effectiveStyleAt(std::size_t offset) const {
     return span != nullptr ? span->style : style_;
 }
 
+std::vector<TextBuffer::StyledSegment> TextBuffer::styledSegments(
+    std::size_t start, std::size_t end) const {
+    return styledSegments(start, end, style_);
+}
+
+std::vector<TextBuffer::StyledSegment> TextBuffer::styledSegments(
+    std::size_t start, std::size_t end, const TextStyle& base) const {
+    std::vector<StyledSegment> segments;
+    start = std::min(start, chars_.size());
+    end = std::min(end, chars_.size());
+    if (start >= end) return segments;
+    // Spans are kept sorted and non-overlapping (see
+    // normalizeCharStyleSpans), so one scan finds the covering
+    // span or the next span after the cursor.
+    std::size_t cursor = start;
+    while (cursor < end) {
+        const CharStyleSpan* covering = nullptr;
+        std::size_t nextStart = end;
+        for (const auto& span : charStyleSpans_) {
+            if (span.endOffset <= cursor) continue;
+            if (span.startOffset > cursor) {
+                nextStart = span.startOffset;
+                break;
+            }
+            covering = &span;
+            break;
+        }
+        std::size_t segEnd = end;
+        TextStyle segStyle = base;
+        if (covering != nullptr) {
+            segEnd = std::min(end, covering->endOffset);
+            segStyle = covering->style;
+        } else {
+            segEnd = std::min(end, nextStart);
+        }
+        if (segEnd <= cursor) break;  // Defensive: never loop on an empty span.
+        if (!segments.empty() && segments.back().style == segStyle &&
+            segments.back().endOffset == cursor) {
+            segments.back().endOffset = segEnd;
+        } else {
+            segments.push_back(StyledSegment{cursor, segEnd, segStyle});
+        }
+        cursor = segEnd;
+    }
+    return segments;
+}
+
 const TextBuffer::CharStyleSpan* TextBuffer::charStyleSpanAt(
     std::size_t offset) const {
     for (const auto& span : charStyleSpans_) {

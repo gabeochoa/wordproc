@@ -1457,12 +1457,46 @@ inline void renderTextBuffer(const TextBuffer& buffer,
 
             std::string textToDraw = displayLine;
 
-            // Drop cap support: draw first character larger
+            // Drop cap support: draw first character larger, in
+            // the effective style at offset 0 of its paragraph
+            // (span-aware, Batch 13 — the same effectiveStyleAt
+            // the per-segment path uses), not the global style:
+            // a bold / italic / red first letter drops bold /
+            // italic / red. Paragraph-style bold / italic still
+            // apply, as for the rest of the line; the rest of
+            // the drop-cap line keeps the whole-line global draw.
             if (span.hasDropCap && !textToDraw.empty()) {
                 std::string dropChar = textToDraw.substr(0, 1);
                 int dropFontSize = lineFontSize * span.dropCapLines;
-                afterhours::draw_text(dropChar.c_str(), x, y - lineFontSize / 2,
-                                 dropFontSize, textColor);
+                const TextStyle dropStyle =
+                    buffer.effectiveStyleAt(span.offset);
+                const afterhours::Color dropColor{
+                    dropStyle.textColor.r, dropStyle.textColor.g,
+                    dropStyle.textColor.b, dropStyle.textColor.a};
+                const bool dropBold =
+                    paragraphStyleIsBold(paraStyle) || dropStyle.bold;
+                const bool dropItalic =
+                    paragraphStyleIsItalic(paraStyle) || dropStyle.italic;
+                const afterhours::Color dropDrawColor =
+                    dropItalic
+                        ? afterhours::Color{
+                              static_cast<unsigned char>(dropColor.r / 2 + 64),
+                              static_cast<unsigned char>(dropColor.g / 2 + 64),
+                              static_cast<unsigned char>(dropColor.b / 2 + 64),
+                              dropColor.a}
+                        : dropColor;
+                if (dropBold) {
+                    afterhours::draw_text(dropChar.c_str(), x,
+                                          y - lineFontSize / 2, dropFontSize,
+                                          dropDrawColor);
+                    afterhours::draw_text(dropChar.c_str(), x + 1,
+                                          y - lineFontSize / 2, dropFontSize,
+                                          dropDrawColor);
+                } else {
+                    afterhours::draw_text(dropChar.c_str(), x,
+                                          y - lineFontSize / 2, dropFontSize,
+                                          dropDrawColor);
+                }
                 int dropWidth = afterhours::graphics::measure_text(dropChar.c_str(), dropFontSize);
                 textToDraw = textToDraw.substr(1);
                 if (!textToDraw.empty()) {

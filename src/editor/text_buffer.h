@@ -469,6 +469,26 @@ class TextBuffer {
     // Effective style at a document offset: the covering span's
     // style, else the global style. Out of range -> global.
     TextStyle effectiveStyleAt(std::size_t offset) const;
+    // Maximal runs of equal effective style over [start, end)
+    // (clipped to the document; empty when start >= end): the
+    // segment iterator the exporters walk. A run's style is the
+    // covering span's style, else `base` — the two-arg form uses
+    // the buffer's global style, the three-arg form lets a
+    // caller (the exporters, whose global style is
+    // settings.textStyle, not necessarily buffer.textStyle())
+    // supply the fallback. Adjacent runs with equal styles are
+    // merged, so a span whose style equals the base does not
+    // split its neighbours.
+    struct StyledSegment {
+        std::size_t startOffset = 0;  // Inclusive, document offset
+        std::size_t endOffset = 0;    // Exclusive, document offset
+        TextStyle style;
+    };
+    std::vector<StyledSegment> styledSegments(std::size_t start,
+                                              std::size_t end) const;
+    std::vector<StyledSegment> styledSegments(std::size_t start,
+                                              std::size_t end,
+                                              const TextStyle& base) const;
     // The span covering offset, or nullptr.
     const CharStyleSpan* charStyleSpanAt(std::size_t offset) const;
     // Effective style at the selection start (when a selection
