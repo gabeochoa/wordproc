@@ -58,6 +58,19 @@ TEST_CASE("listTemplateNames scans only .wpdoc stems, sorted", "[templates]") {
     REQUIRE(templates::listTemplateNames(dir / "missing").empty());
 }
 
+TEST_CASE("template descriptions: Blank first, one line per entry",
+          "[templates]") {
+    REQUIRE(templates::templateDescriptionFor(
+                templates::kBlankTemplateName) == "Empty document");
+    REQUIRE(templates::templateDescriptionFor("Letter") ==
+            "Business letter with return address");
+    REQUIRE(templates::templateDescriptionFor("Memo") ==
+            "MEMORANDUM header block");
+    REQUIRE(templates::templateDescriptionFor("Report") ==
+            "Title, headings, body sections");
+    REQUIRE(templates::templateDescriptionFor("No Such Template").empty());
+}
+
 TEST_CASE("adoptTemplate carries text, styles, and caret", "[templates]") {
     TextBuffer source;
     source.setText("MEMORANDUM\n\nSummary");

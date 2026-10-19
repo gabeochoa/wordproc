@@ -27,6 +27,21 @@
 
 namespace templates {
 
+// First entry of the New from Template list: no file on disk, OK
+// opens an empty document (File > New semantics).
+inline constexpr const char* kBlankTemplateName = "Blank Document";
+
+// One-line description per template entry, shown in the dialog as
+// "Name — description". Blank has no file; the others are the
+// shipped .wpdoc stems.
+inline std::string templateDescriptionFor(const std::string& name) {
+    if (name == kBlankTemplateName) return "Empty document";
+    if (name == "Letter") return "Business letter with return address";
+    if (name == "Memo") return "MEMORANDUM header block";
+    if (name == "Report") return "Title, headings, body sections";
+    return "";
+}
+
 // Directory holding the shipped .wpdoc templates. Resolution
 // mirrors the afterhours files provider's resource root (an
 // exe-adjacent resources/ dir, else <cwd>/resources — the same

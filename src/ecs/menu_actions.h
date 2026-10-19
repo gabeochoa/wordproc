@@ -53,8 +53,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 1:  // New from Template...
                     dialogs.showTemplateDialog = true;
-                    dialogs.templateNames = templates::listTemplateNames(
-                        templates::templateDir());
+                    // Blank Document first (no file on disk), then the
+                    // shipped .wpdoc stems.
+                    dialogs.templateNames = {templates::kBlankTemplateName};
+                    for (const auto& name : templates::listTemplateNames(
+                             templates::templateDir())) {
+                        dialogs.templateNames.push_back(name);
+                    }
                     dialogs.templateSelected = 0;
                     break;
                 case 2:  // Open

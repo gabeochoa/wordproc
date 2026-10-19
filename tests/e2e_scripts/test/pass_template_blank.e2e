@@ -1,0 +1,29 @@
+# Test: File > New from Template... first entry is "Blank Document".
+# Picking it + OK opens an empty document (File > New semantics:
+# Untitled, clean, not dirty) instead of loading a .wpdoc file.
+# RED-ON-REVERT: without the Blank special-case, OK would try to
+# load "Blank Document.wpdoc" and fail / leave the old document.
+
+type "Old text"
+wait_frames 12
+
+menu_open File
+wait_frames 12
+menu_select "New from Template..."
+wait_frames 12
+
+validate dialog_open=Template
+expect_text "Blank Document"
+expect_text "Empty document"
+
+screenshot template_dialog_blank
+
+click_ui template_item_Blank_Document
+wait_frames 12
+click_ui template_ok
+wait_frames 12
+
+validate dialog_open=false
+validate text=
+validate is_dirty=false
+validate window_doc_label=1 Untitled

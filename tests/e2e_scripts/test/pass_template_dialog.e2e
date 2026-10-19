@@ -9,9 +9,13 @@ wait_frames 12
 
 validate dialog_open=Template
 expect_text "Templates:"
+expect_text "Blank Document"
 expect_text "Memo"
 expect_text "Letter"
 expect_text "Report"
+expect_text "Business letter with return address"
+expect_text "MEMORANDUM header block"
+expect_text "Title, headings, body sections"
 
 screenshot template_dialog
 

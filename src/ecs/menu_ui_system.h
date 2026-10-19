@@ -1734,15 +1734,19 @@ struct MenuUISystem : System<UIContext<InputAction>> {
         }
         
         // New from Template dialog (File > New from Template...) -
-        // Win95 shell: sunken list of the .wpdoc templates found in
-        // resources/templates/, OK opens the selected template as a
-        // NEW Untitled document (filePath cleared, dirty).
+        // Win95 shell: sunken list of templates, OK opens the
+        // selected template as a NEW Untitled document (filePath
+        // cleared, dirty). Real Word's New dialog has tabs +
+        // template icons; a clean categorized list (name + one-line
+        // description) is acceptable parity here, not a debug
+        // picker: the list is compact (height fits the entries,
+        // ~6 rows max) and each row reads "Name — description".
         if (dialogs.showTemplateDialog) {
             constexpr int TEMPLATE_MODAL_ID = 50003;
             auto result = afterhours::modal(ctx, mk(entity, TEMPLATE_MODAL_ID),
                 dialogs.showTemplateDialog,
                 ah_win95::win95DialogConfig(
-                    afterhours::ui::h720(380), afterhours::ui::h720(300),
+                    afterhours::ui::h720(460), afterhours::ui::h720(200),
                     static_cast<float>(layout.screenWidth),
                     static_cast<float>(layout.screenHeight)));
 
@@ -1792,12 +1796,36 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         const std::string& name = dialogs.templateNames[i];
                         bool selected =
                             static_cast<int>(i) == dialogs.templateSelected;
+                        // Row label is "Name — description"; register
+                        // both parts so E2E can expect/click either.
+                        const std::string desc =
+                            templates::templateDescriptionFor(name);
+                        const std::string label =
+                            desc.empty() ? name : name + " — " + desc;
                         test_input::register_visible_text(name);
+                        if (!desc.empty()) {
+                            test_input::register_visible_text(desc);
+                        }
+                        // Debug names are single tokens (E2E click_ui):
+                        // spaces become underscores.
+                        std::string debugName = "template_item_" + name;
+                        for (char& c : debugName) {
+                            if (c == ' ') c = '_';
+                        }
                         if (button(ctx, mk(templateList.ent(), 100 + static_cast<int>(i)),
                             ComponentConfig{}
-                                .with_debug_name("template_item_" + name)
-                                .with_label(name)
+                                .with_debug_name(debugName)
+                                .with_label(label)
                                 .with_size(ComponentSize{percent(1.0f), h720(22)})
+                                // Padding on a label is a no-op in
+                                // afterhours; text_inset is what
+                                // actually insets the text. Without
+                                // it the selected row's text sat on
+                                // the list's left edge (clipped).
+                                // Vertical inset stays 2: the row is
+                                // only ~20px tall and a 14px font
+                                // needs >12px of usable height.
+                                .with_text_inset(8.0f, 2.0f)
                                 .with_roundness(0.0f)
                                 .with_custom_background(selected
                                     ? ui_imm::win95_colors::HIGHLIGHT

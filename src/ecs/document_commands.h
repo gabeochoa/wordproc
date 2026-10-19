@@ -95,6 +95,8 @@ inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
     }
 }
 
+inline void newDocument(DocumentComponent& doc);
+
 // File > New from Template...: open a shipped .wpdoc template as a
 // NEW Untitled document — filePath cleared, dirty, template content
 // + per-line styles adopted, undo history cleared (no undoing into
@@ -102,6 +104,13 @@ inline void refreshMenuBar(MenuComponent& menu, DocumentComponent& doc,
 // as a recent file (refreshMenuBar with addRecent=false).
 inline bool openTemplateAsNew(DocumentComponent& doc, MenuComponent& menu,
                               const std::string& name) {
+    // Blank Document has no file: an empty document, File > New
+    // semantics (clean, not dirty).
+    if (name == templates::kBlankTemplateName) {
+        newDocument(doc);
+        refreshMenuBar(menu, doc, "", false);
+        return true;
+    }
     std::filesystem::path path =
         templates::templateDir() / (name + ".wpdoc");
     TextBuffer tmp;
