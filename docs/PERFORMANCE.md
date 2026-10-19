@@ -303,6 +303,78 @@ Verification: `make test` all pass (2931 assertions, 254 cases, incl.
 the new `Scroll checks only newly-visible rows` case); headless
 `e2e_large_doc_scroll.e2e` exits 0.
 
+### Final numbers (all three fixes, same commands, medians of 3)
+
+| Metric | Baseline (`-O0`, `78417f1`) | Final (Fixes 1–3) |
+|---|---|---|
+| First-open, no file: wall / `Startup` | 231.1 ms / 119 ms | 129.6 ms / 53 ms |
+| First-open, War and Peace: wall / `Startup` | 331.9 ms / 105 ms | 133.5 ms / 49 ms |
+| Scroll, War and Peace (fps-test, 600 vs 60 frames) | 3.09 ms/frame | 0.59 ms/frame ((427.3−110.1)/540) |
+| Format menu open, steady-state (script-mode differential, War, 200 frames) | +3.83 ms/frame | +0.24 ms/frame ((1303.6−1255.8)/200) |
+| Typing guard (`make bench-unit` typing burst) | 0.154 µs/keystroke | 0.160 µs/keystroke (median of 3 re-runs: 0.151–0.183; no regression — no fix touches the typing path) |
+
+Caveat on variance: this box ran a load average of 15–27 during the
+lane (other lanes active), so individual runs swing widely (e.g.
+`Startup` 31–253 ms across all runs). Every number above is a median
+of 3 runs of the exact command; the in-app `SCOPED_TIMER` values are
+the least noisy signal for the small fixes.
+
+### Not worth fixing (investigated, evidence in hand)
+
+- **Menu re-architecture (dropdown caching).** The menu paints next
+  frame by construction (`menu_open` sets the flag, the dropdown
+  renders the next frame). Steady-state open cost is ~0.5 ms fixed +
+  ~30 µs/item in immediate-mode rebuild (~2.3 ms/frame for the
+  largest, 60-item Format menu at `-O0`; +0.24 ms/frame at `-O2`).
+  `TextMeasureCache` is a persistent LRU — no per-frame re-measure
+  misses. Caching dropdown UI across frames would mean retaining
+  entities in vendored afterhours code: big change, risk >> benefit
+  for a sub-ms steady cost inside the frame budget. At floor.
+- **Deferring Garamond at startup.** At `-O2` the Garamond load is
+  0.45 ms. Deferring it needs ensure-loaded wiring at every
+  font-switch site (menu, Ctrl+2, toolbar, font dialog) for a gain
+  inside measurement noise. The font dropdown never requests the
+  Garamond face (its labels render in the UI font), and switching
+  fonts only sets `style.font` metadata — so a lazy load would have
+  no first-use trigger in current code anyway.
+- **Per-frame rewrap in `renderTextBuffer`.** There is no wrapping:
+  each buffer line draws as one line; the render loop iterates only
+  visible rows (breaks past the text area). `RenderCache`
+  (`text_layout.h`) exists but has no callers on the render path —
+  dead scaffolding, not a per-frame cost. No fix.
+- **Spell squiggle recheck beyond Fix 3.** One candidate was
+  "recheck only the edited row on typing": an edit anywhere can
+  split/join lines and shift later rows, so a version change must
+  recheck the whole window. Fix 3 (scroll-only incremental) is the
+  safe form.
+- **Status-bar `stats()` O(n) per frame.** Already version-cached
+  (`status_bar_system.h`: recompute only when `buffer.version()`
+  changes). The only other `stats()` call is the Word Count dialog,
+  gated on the dialog being open. No remaining per-frame call.
+- **`setText` 18 ms preload cost.** Fully explained by `-O0` +
+  line count: at `-O2` it is 2.8 ms for 66,032 lines (~40 ns/line,
+  same order as the 20 ns/line bench-unit figure for a 5,000-line
+  doc). No algorithm change needed.
+- **`DocumentTextRegistration` per-frame whole-doc registration**
+  (~5 ms/frame on War and Peace in script mode at `-O2`, ~13 ms at
+  `-O0`). Real, but test-mode-only: it early-returns in production,
+  so real users pay nothing. It is also load-bearing for E2E:
+  `app_frame` clears the visible-text registry every frame and
+  `expect_text` searches that registry, so the registration is what
+  makes off-screen document text assertable. Version-gating it
+  would silently break off-screen `expect_text`; gating it on
+  "a text assertion is pending" depends on fragile runner ordering.
+  Left as-is; script-mode absolutes must never be quoted as frame
+  time (see the baseline caveat).
+- **Vendored fmt bump.** Already 11.2.0 (mailboy's fix version);
+  compiles clean under Apple clang 17 and zig-bundled clang 21.1.8
+  including the `FMT_COMPILE` consteval path. No change.
+- **Build hygiene note (not fixed):** test objects are compiled
+  without `-MMD`, so editing a header does not rebuild the test
+  binary — a stale test binary can silently pass. (Hit during this
+  lane's red-check: had to `rm` the test object to force a rebuild.)
+  App objects do track headers.
+
 ## Planned SoA Architecture (v0.2)
 
 ### Contiguous Character Storage
