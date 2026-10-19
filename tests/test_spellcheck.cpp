@@ -52,6 +52,15 @@ TEST_CASE("SpellChecker - Basic word checking", "[spellcheck]") {
         REQUIRE(checker.checkText("Column line").empty());
     }
 
+    SECTION("Normal / neighbor are correct (Batch 6 fix round)") {
+        // Pinned: "normal" earned a squiggle in the Normal-view
+        // screenshot and "neighbor" in the Borders screenshot.
+        REQUIRE(checker.isCorrect("normal"));
+        REQUIRE(checker.isCorrect("neighbor"));
+        REQUIRE(checker.isCorrect("neighbour"));
+        REQUIRE(checker.checkText("The normal neighbor.").empty());
+    }
+
     SECTION("Top-1000 g-z delta (Batch 3 fix round 2)") {
         // Pinned: "sat" earned a squiggle in the Grammar screenshot.
         REQUIRE(checker.isCorrect("sat"));

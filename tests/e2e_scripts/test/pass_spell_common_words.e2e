@@ -2,8 +2,10 @@
 # Regression: "sat" was missing from en_basic.txt, so "The cat
 # sat." showed a spell squiggle under "sat." in the Grammar
 # screenshot; "preview" / "table" / "view" / "tools" were missing
-# too. On pre-fix bytes spell_error_count is 5 here.
-type "The cat sat. Preview the table view tools."
+# too. "normal" / "neighbor" (Batch 6 fix round) were missing
+# as well: squiggles in the Normal-view / Borders screenshots.
+# On pre-fix bytes spell_error_count is 7 here.
+type "The cat sat. Preview the table view tools. The normal neighbor."
 wait_frames 12
 
 validate spell_error_count=0
