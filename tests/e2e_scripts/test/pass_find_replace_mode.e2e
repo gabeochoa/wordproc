@@ -1,0 +1,42 @@
+# Test: Find/Replace dialog, Replace mode (Ctrl+H)
+# Opens Replace mode, finds "quick", replaces the selection with
+# "slow", and verifies the document text changed. Covers the
+# Replace button path (selection must match the search term),
+# which the Find-only dialog test does not exercise.
+# Batch 10: the dialog moved to the Win95 shell; this test pins
+# the Replace-mode behavior across that migration.
+
+type "The quick brown fox"
+wait_frames 12
+
+key CTRL+H
+wait_frames 12
+
+validate dialog_open=Find
+
+focus_ui find_input
+wait_frames 12
+type "quick"
+wait_frames 12
+
+# Select the "quick" occurrence, then fill the Replace field.
+# click_ui by debug name: click_text "Replace" is substring
+# matching and would hit the "Replace with:" label instead of
+# the Replace button.
+click_ui find_next
+wait_frames 12
+
+focus_ui replace_input
+wait_frames 12
+type "slow"
+wait_frames 12
+
+click_ui find_replace
+wait_frames 12
+
+validate text=The slow brown fox
+
+click_ui find_close
+wait_frames 12
+
+validate dialog_open=false

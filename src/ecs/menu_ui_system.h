@@ -5025,83 +5025,117 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
         
-        // Find/Replace Dialog
+        // Find/Replace Dialog - Win95 shell: square BUTTON_FACE
+        // panel, navy caption, no backdrop dim, sunken fields,
+        // raised 90px buttons. Both modes kept: Find, and Replace
+        // with the Replace field + options checkboxes.
         if (dialogs.showFindDialog) {
             constexpr int FIND_MODAL_ID = 50009;
             std::string title = dialogs.findReplaceMode ? "Find and Replace" : "Find";
+            // Height fits the content: title(20) + Find label(20) +
+            // Find field(28) [+ Replace label(20) + top margin(4) +
+            // Replace field(28)] + options(22) + top margin(4) +
+            // buttons(44) + top margin(4) + panel padding(8).
+            float findHeight = dialogs.findReplaceMode ? 202.0f : 150.0f;
             auto result = afterhours::modal(ctx, mk(entity, FIND_MODAL_ID),
                 dialogs.showFindDialog,
-                afterhours::ModalConfig{}
-                    .with_size(afterhours::ui::h720(450), dialogs.findReplaceMode ? afterhours::ui::h720(280) : afterhours::ui::h720(220))
-                    .with_title(title)
-                    .with_show_close_button(true));
-            
+                ah_win95::win95DialogConfig(
+                    afterhours::ui::h720(450), afterhours::ui::h720(findHeight),
+                    static_cast<float>(layout.screenWidth),
+                    static_cast<float>(layout.screenHeight)));
+
             if (result) {
                 using namespace afterhours::ui;
                 using namespace afterhours::ui::imm;
                 constexpr int CONTENT_LAYER = 1001;
-                
+
+                ah_win95::win95DialogTitleBar(ctx, mk(result.ent(), 900),
+                                              title, CONTENT_LAYER);
+
                 // Find label and input
                 div(ctx, mk(result.ent(), 0),
                     ComponentConfig{}
                         .with_label("Find:")
-                        .with_size(ComponentSize{percent(1.0f), h720(24)})
+                        .with_size(ComponentSize{percent(1.0f), h720(20)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
+                        .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                        .with_alignment(afterhours::ui::TextAlignment::Left)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 afterhours::text_input::text_input(ctx, mk(result.ent(), 1),
                     dialogs.findInputStr,
-                    ComponentConfig{}
+                    ah_win95::win95SunkenStyle()
                         .with_debug_name("find_input")
-                        .with_size(ComponentSize{percent(1.0f), h720(32)})
-                        .with_background(Theme::Usage::Surface)
+                        .with_size(ComponentSize{percent(1.0f), h720(28)})
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 // Replace label and input (only in replace mode)
                 if (dialogs.findReplaceMode) {
                     div(ctx, mk(result.ent(), 2),
                         ComponentConfig{}
                             .with_label("Replace with:")
-                            .with_size(ComponentSize{percent(1.0f), h720(24)})
-                            .with_margin(Margin{.top = DefaultSpacing::small()})
+                            .with_size(ComponentSize{percent(1.0f), h720(20)})
+                            .with_margin(Margin{.top = pixels(4)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
+                            .with_custom_text_color(ui_imm::win95_colors::TEXT)
+                            .with_alignment(afterhours::ui::TextAlignment::Left)
                             .with_render_layer(CONTENT_LAYER));
-                    
+
                     afterhours::text_input::text_input(ctx, mk(result.ent(), 3),
                         dialogs.replaceInputStr,
-                        ComponentConfig{}
+                        ah_win95::win95SunkenStyle()
                             .with_debug_name("replace_input")
-                            .with_size(ComponentSize{percent(1.0f), h720(32)})
-                            .with_background(Theme::Usage::Surface)
+                            .with_size(ComponentSize{percent(1.0f), h720(28)})
                             .with_render_layer(CONTENT_LAYER));
                 }
                 
-                // Options checkboxes
+                // Options checkboxes: Win95 sunken box + label
+                // (AutoCorrect pattern). Each checkbox lives in a
+                // fixed-width wrapper so the pair stays on one row.
                 auto optionsRow = div(ctx, mk(result.ent(), 4),
                     ComponentConfig{}
-                        .with_size(ComponentSize{percent(1.0f), h720(30)})
+                        .with_size(ComponentSize{percent(1.0f), h720(22)})
                         .with_flex_direction(FlexDirection::Row)
                         .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 if (optionsRow) {
                     // Case sensitive checkbox
-                    checkbox(ctx, mk(optionsRow.ent(), 0),
-                        dialogs.findOptions.caseSensitive,
+                    auto caseWrap = div(ctx, mk(optionsRow.ent(), 0),
                         ComponentConfig{}
-                            .with_label("Case sensitive")
-                            .with_size(ComponentSize{h720(150), h720(24)})
+                            .with_size(ComponentSize{w1280(170), h720(22)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
-                    
+                    if (caseWrap) {
+                        ah_win95::win95Checkbox(
+                            ctx, mk(caseWrap.ent(), 0),
+                            dialogs.findOptions.caseSensitive,
+                            "find_case_sensitive", "Case sensitive",
+                            CONTENT_LAYER);
+                    }
+
                     // Whole word checkbox
-                    checkbox(ctx, mk(optionsRow.ent(), 1),
-                        dialogs.findOptions.wholeWord,
+                    auto wholeWrap = div(ctx, mk(optionsRow.ent(), 1),
                         ComponentConfig{}
-                            .with_label("Whole word")
-                            .with_size(ComponentSize{h720(120), h720(24)})
-                            .with_margin(Margin{.left = DefaultSpacing::small()})
+                            .with_size(ComponentSize{w1280(150), h720(22)})
+                            .with_custom_background(
+                                ui_imm::win95_colors::BUTTON_FACE)
                             .with_render_layer(CONTENT_LAYER));
+                    if (wholeWrap) {
+                        ah_win95::win95Checkbox(
+                            ctx, mk(wholeWrap.ent(), 0),
+                            dialogs.findOptions.wholeWord,
+                            "find_whole_word", "Whole word",
+                            CONTENT_LAYER);
+                    }
                 }
-                
+
                 // Button row
                 auto buttonRow = div(ctx, mk(result.ent(), 5),
                     ComponentConfig{}
@@ -5110,17 +5144,18 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                         .with_justify_content(JustifyContent::Center)
                         .with_align_items(AlignItems::Center)
                         .with_gap(afterhours::ui::pixels(8))
-                        .with_margin(Margin{.top = DefaultSpacing::medium()})
+                        .with_margin(Margin{.top = pixels(4)})
+                        .with_custom_background(
+                            ui_imm::win95_colors::BUTTON_FACE)
                         .with_render_layer(CONTENT_LAYER));
-                
+
                 if (buttonRow) {
-                    // Find Next button
+                    // Find Next button (the default button: dark outline)
                     if (button(ctx, mk(buttonRow.ent(), 0),
-                        ComponentConfig{}
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("find_next")
                             .with_label("Find Next")
-                            .with_size(ComponentSize{h720(100), h720(32)})
-                            .with_background(Theme::Usage::Primary)
-                            .with_cursor(afterhours::ui::CursorType::Pointer)
+                            .with_border(ui_imm::win95_colors::TEXT, 1.0f)
                             .with_render_layer(CONTENT_LAYER))) {
                         // Perform find
                         if (!dialogs.findInputStr.empty()) {
@@ -5141,10 +5176,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     // Replace button (only in replace mode)
                     if (dialogs.findReplaceMode) {
                         if (button(ctx, mk(buttonRow.ent(), 1),
-                            ComponentConfig{}
+                            ah_win95::win95DialogButtonStyle()
+                                .with_debug_name("find_replace")
                                 .with_label("Replace")
-                                .with_size(ComponentSize{h720(100), h720(32)})
-                                .with_cursor(afterhours::ui::CursorType::Pointer)
                                 .with_render_layer(CONTENT_LAYER))) {
                             // Perform replace
                             if (!dialogs.findInputStr.empty()) {
@@ -5190,10 +5224,9 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     
                     // Close button
                     if (button(ctx, mk(buttonRow.ent(), 2),
-                        ComponentConfig{}
+                        ah_win95::win95DialogButtonStyle()
+                            .with_debug_name("find_close")
                             .with_label("Close")
-                            .with_size(ComponentSize{h720(80), h720(32)})
-                            .with_cursor(afterhours::ui::CursorType::Pointer)
                             .with_render_layer(CONTENT_LAYER))) {
                         dialogs.findInputStr.clear();
                         dialogs.replaceInputStr.clear();
