@@ -282,6 +282,18 @@ inline void setLineWidthLimit(LayoutComponent& layout, float chars) {
     layout.lineWidthLimit = chars;
 }
 
+// View > Normal (Word 95 parity): Normal IS the pageless view,
+// renamed — continuous text, no page frame. It is the one view
+// state derived from pageMode, never a second flag: pageMode ==
+// Pageless outside Outline / Print Preview. Outline forces
+// Pageless but is not Normal (it hides body rows); preview forces
+// Paged. The renderer, the View-menu checkmarks, and the E2E
+// `normal_view` property all read this one predicate.
+inline bool isNormalView(const LayoutComponent& layout) {
+    return layout.pageMode == PageMode::Pageless &&
+           !layout.showOutline && !layout.previewMode;
+}
+
 // --- Print Preview (File > Print Preview) ---
 // Enters preview: remembers the current page mode, forces Paged so the
 // paged renderer draws ONE page on the gray workspace, and estimates

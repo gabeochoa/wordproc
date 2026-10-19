@@ -4,7 +4,9 @@
 #include "e2e_runner.h"
 #include "../ecs/component_helpers.h"
 #include "deferred_screenshot.h"
+#include "../editor/columns_math.h"
 #include "../editor/document_settings.h"
+#include "../editor/normal_view.h"
 #include "../editor/outline_view.h"
 #include "../editor/version_history.h"
 #include "../input_mapping.h"
@@ -277,6 +279,24 @@ static void setupCallbacksEx(
             }
             return "false";
         }
+        // menu_item_checked_ITEMNAME=true/false — checkmark of a
+        // menu item (View > Normal / Page Layout / Ruler / Outline),
+        // synced every frame by MenuUISystem. Checked before
+        // menu_item_, whose prefix also matches. First label match
+        // wins: View precedes Format in the bar, so View > Normal
+        // wins over Format > Normal (the style item, never marked).
+        if (prop.length() > 18 && prop.substr(0, 18) == "menu_item_checked_") {
+            std::string itemName = prop.substr(18);
+            for (const auto& menu : menuComp.menus) {
+                for (const auto& item : menu.items) {
+                    if (item.label == itemName)
+                        return item.mark == win95::MenuMark::Checkmark
+                                   ? "true"
+                                   : "false";
+                }
+            }
+            return "false";
+        }
         // menu_item_enabled_ITEMNAME=true/false — enabled flag of a
         // menu item (checked before menu_item_, whose prefix also matches).
         if (prop.length() > 18 && prop.substr(0, 18) == "menu_item_enabled_") {
@@ -496,6 +516,26 @@ static void setupCallbacksEx(
             return std::to_string(font_dialog::previewFontPx(
                 dialogState.fontDialogSelection.size,
                 Settings::get().get_ui_scale()));
+        }
+
+        // Normal view (View > Normal): pageless continuous text
+        // with dashed computed page-break lines. normal_break_count
+        // uses the same lines-per-page the renderer draws with
+        // (page text height / line height), so the E2E asserts the
+        // computed boundaries, not just the mode flag.
+        if (prop == "normal_view")
+            return ecs::layout::isNormalView(layoutComp) ? "true" : "false";
+        if (prop == "normal_break_count") {
+            if (!ecs::layout::isNormalView(layoutComp)) return "0";
+            float ds = ecs::layout::displayScale(layoutComp);
+            int lineHeight =
+                ruler_math::scaledLineHeight(style.fontSize, ds);
+            int linesPerPage = static_cast<int>(
+                columns_math::linesPerColumnForPage(
+                    layoutComp.pageHeight, layoutComp.marginTop,
+                    layoutComp.marginBottom, ds, lineHeight));
+            return std::to_string(normal_view::pageBoundaryCount(
+                buffer.lineCount(), linesPerPage));
         }
 
         // Outline properties
@@ -1231,7 +1271,7 @@ static void setupCallbacksEx(
         scrollComp.scrollbarRepeatDir = 0;
         
         // Clear any transient status-bar message so it cannot leak
-        // into the next test (e.g. a "Paged mode" flash).
+        // into the next test (e.g. a "Page Layout" flash).
         {
             auto entities =
                 afterhours::EntityQuery({.force_merge = true})

@@ -998,7 +998,7 @@ inline void toggleOutlineMode(DocumentComponent& doc,
             }
         }
         // No floating toast: the caller (menu action) flashes the
-        // transient status-bar text, like the Pageless/Paged mode
+        // transient status-bar text, like the Normal/Page Layout
         // switches, so no rounded blue "Outline: On" pill covers
         // the document.
     } else {
@@ -1144,8 +1144,8 @@ inline bool isOutlineCollapsedAtCaret(DocumentComponent& doc,
     return layout.outlineCollapsedRows.count(doc.buffer.caret().row) > 0;
 }
 
-// Leave Outline for an explicit page-mode choice (View > Pageless /
-// Paged Mode): restore the saved scroll, then the caller sets the
+// Leave Outline for an explicit view choice (View > Normal /
+// Page Layout): restore the saved scroll, then the caller sets the
 // chosen page mode.
 inline void exitOutlineMode(LayoutComponent& layout,
                             ScrollComponent* scroll) {

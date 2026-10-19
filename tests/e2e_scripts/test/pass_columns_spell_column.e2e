@@ -18,7 +18,7 @@ wait_frames 12
 
 menu_open View
 wait_frames 12
-menu_select "Paged Mode"
+menu_select "Page Layout"
 wait_frames 12
 validate page_mode=paged
 

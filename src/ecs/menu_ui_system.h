@@ -86,11 +86,25 @@ struct MenuUISystem : System<UIContext<InputAction>> {
             }
         }
 
-        // Keep the View > Ruler / Outline checkmarks in sync: any
-        // menu rebuild resets marks to the createMenuBar defaults.
+        // Keep the View > Normal / Page Layout / Ruler / Outline
+        // checkmarks in sync: any menu rebuild resets marks to the
+        // createMenuBar defaults. Normal / Page Layout are a radio
+        // pair (Normal checked exactly when isNormalView; Page
+        // Layout checked when Paged — in Outline neither is
+        // checked, Outline is).
         for (auto& m : menu.menus) {
             if (m.label != "View") continue;
             for (auto& item : m.items) {
+                if (item.label == "Normal") {
+                    item.mark = layout::isNormalView(layout)
+                                    ? win95::MenuMark::Checkmark
+                                    : win95::MenuMark::None;
+                }
+                if (item.label == "Page Layout") {
+                    item.mark = layout.pageMode == PageMode::Paged
+                                    ? win95::MenuMark::Checkmark
+                                    : win95::MenuMark::None;
+                }
                 if (item.label == "Ruler") {
                     item.mark = layout.showRuler ? win95::MenuMark::Checkmark
                                                  : win95::MenuMark::None;

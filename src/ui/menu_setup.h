@@ -87,8 +87,13 @@ inline std::vector<win95::Menu> createMenuBar(
     // View menu
     win95::Menu viewMenu;
     viewMenu.label = "View";
-    viewMenu.items = {{"Pageless Mode", "", true, false, nullptr},       // 0
-                      {"Paged Mode", "", true, false, nullptr},          // 1
+    // Word 95 View order: Normal, Page Layout, Outline (Outline
+    // sits below, after Show Line Numbers). Normal IS the pageless
+    // view, renamed: continuous text + dashed computed page-break
+    // lines. Page Layout IS the paged view, renamed. Dispatch is
+    // by index, so the renames change no case numbers.
+    viewMenu.items = {{"Normal", "", true, false, nullptr},              // 0
+                      {"Page Layout", "", true, false, nullptr},         // 1
                       {"", "", false, true, nullptr},                    // 2 Separator
                       {"Ruler", "", true, false, nullptr},               // 3 (checkmark = shown)
                       {"", "", false, true, nullptr},                    // 4 Separator

@@ -38,8 +38,8 @@ This will:
 
 ### View Menu Tests (3 tests)
 - **`e2e_menu_view_page_modes.e2e`** - Tests page mode switching
-  - Pageless Mode
-  - Paged Mode
+  - Normal
+  - Page Layout
   
 - **`e2e_menu_view_line_width.e2e`** - Tests line width options
   - Normal (no limit)

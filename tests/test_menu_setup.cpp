@@ -62,20 +62,36 @@ TEST_CASE("Menu bar creation", "[menu][e2e]") {
     SECTION("View menu has expected items") {
         REQUIRE(menus.size() >= 3);
         REQUIRE(menus[2].label == "View");
-        bool hasPageless = false;
-        bool hasPaged = false;
+        bool hasNormal = false;
+        bool hasPageLayout = false;
         bool hasZoom = false;
         bool hasFocus = false;
         for (const auto& item : menus[2].items) {
-            if (item.label == "Pageless Mode") hasPageless = true;
-            if (item.label == "Paged Mode") hasPaged = true;
+            if (item.label == "Normal") hasNormal = true;
+            if (item.label == "Page Layout") hasPageLayout = true;
             if (item.label == "Zoom In") hasZoom = true;
             if (item.label == "Focus Mode") hasFocus = true;
         }
-        REQUIRE(hasPageless);
-        REQUIRE(hasPaged);
+        REQUIRE(hasNormal);
+        REQUIRE(hasPageLayout);
         REQUIRE(hasZoom);
         REQUIRE(hasFocus);
+    }
+
+    SECTION("View menu is Word 95 order: Normal, Page Layout, Outline") {
+        REQUIRE(menus.size() >= 3);
+        REQUIRE(menus[2].label == "View");
+        const auto& items = menus[2].items;
+        std::size_t normal = items.size(), pageLayout = items.size(),
+                    outline = items.size();
+        for (std::size_t i = 0; i < items.size(); ++i) {
+            if (items[i].label == "Normal") normal = i;
+            if (items[i].label == "Page Layout") pageLayout = i;
+            if (items[i].label == "Outline") outline = i;
+        }
+        REQUIRE(normal < items.size());
+        REQUIRE(pageLayout == normal + 1);
+        REQUIRE(outline > pageLayout);
     }
 
     SECTION("Format menu has expected items") {

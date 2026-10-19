@@ -1,0 +1,53 @@
+# Test: View > Normal (Word 95 parity)
+# Normal IS the pageless view, renamed: continuous text across the
+# full text-area width (ruler stays), with a dashed indicator line
+# at each computed page boundary (70 lines at 32 lines/page: rows
+# 32 and 64, so normal_break_count=2). Switching to Page Layout
+# clears Normal; switching back restores it. Mode switches flash
+# transient status-bar text ("Normal view" / "Page Layout"), never
+# a floating toast.
+
+fill_lines 70 Normal line
+wait_frames 12
+
+menu_open View
+wait_frames 12
+menu_select Normal
+wait_frames 12
+
+validate normal_view=true
+validate normal_break_count=2
+validate status_text=Normal view
+validate ruler_visible=true
+validate menu_item_checked_Normal=true
+validate menu_item_checked_Page Layout=false
+
+# Page Layout clears Normal (and its break lines).
+menu_open View
+wait_frames 12
+menu_select "Page Layout"
+wait_frames 12
+
+validate normal_view=false
+validate normal_break_count=0
+validate page_mode=paged
+validate status_text=Page Layout
+validate menu_item_checked_Page Layout=true
+validate menu_item_checked_Normal=false
+
+# Back to Normal restores the view and its break lines.
+menu_open View
+wait_frames 12
+menu_select Normal
+wait_frames 12
+
+validate normal_view=true
+validate normal_break_count=2
+
+# Scroll so a computed boundary is on screen: CTRL+END puts the
+# caret on the last row, and the boundary at row 64 sits a few
+# rows above it. The screenshot must show the dashed line.
+key CTRL+END
+wait_frames 12
+
+screenshot normal_view

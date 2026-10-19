@@ -1,14 +1,14 @@
-# Test: Paged Mode framing
-# Validates View > Paged Mode switches the page mode (white Letter
+# Test: Page Layout framing
+# Validates View > Page Layout switches the page mode (white Letter
 # page centered on the gray workspace, text inside the margins —
-# verified visually in the headless screenshot) and back.
+# verified visually in the headless screenshot) and back to Normal.
 
 type "Paged mode check."
 wait_frames 12
 validate page_mode=pageless
 
 menu_open View
-menu_select "Paged Mode"
+menu_select "Page Layout"
 wait_frames 12
 validate page_mode=paged
 # ONE scale: page width must be 8.5 * ruler ppi (fit ~0.59 -> ppi ~42,
@@ -36,15 +36,16 @@ wait_frames 6
 validate caret_col=9
 validate caret_row=0
 # Mode switch is transient status-bar text, not a floating toast.
-validate status_text=Paged mode
+validate status_text=Page Layout
 screenshot paged_mode
 
 menu_open View
-menu_select "Pageless Mode"
+menu_select Normal
 wait_frames 12
 validate page_mode=pageless
+validate normal_view=true
 # Pageless displayScale == zoomLevel: font metrics back to 16/20,
 # byte-identical to before the paged scaling fix.
 validate text_font_size=16
 validate text_line_height=20
-validate status_text=Pageless mode
+validate status_text=Normal view

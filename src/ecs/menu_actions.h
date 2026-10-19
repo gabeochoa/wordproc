@@ -166,7 +166,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 3:  // Track Changes
                     doc.trackChangesEnabled = !doc.trackChangesEnabled;
                     // Confirmation to the status-bar flash (same
-                    // pattern as Paged/Pageless mode above), not a
+                    // pattern as Normal/Page Layout above), not a
                     // floating toast.
                     if (doc.trackChangesEnabled) {
                         doc.trackChangesBaseline = doc.buffer.getText();
@@ -245,7 +245,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
             }
         } else if (menuIndex == 2) {  // View menu
             switch (itemIndex) {
-                case 0:  // Pageless Mode (preview owns pageMode: ignored)
+                case 0:  // Normal (preview owns pageMode: ignored)
                     if (layout.previewMode) break;
                     cmd::exitOutlineMode(layout, scroll);
                     // The View switch is a real mode change: write it
@@ -254,6 +254,10 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     // would resurrect the old mode from settings.
                     // Preview / Outline switches stay layout-only:
                     // they are transient and must not rewrite the doc.
+                    // Normal IS Pageless (PageMode::Pageless): the
+                    // rename is a label only, no file-format change;
+                    // the renderer adds the dashed computed
+                    // page-break lines for this mode.
                     doc.docSettings.pageSettings.mode = PageMode::Pageless;
                     layout.pageMode = PageMode::Pageless;
                     layout::updateLayout(layout, layout.screenWidth,
@@ -261,13 +265,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     // No floating toast for a mode switch (modern,
                     // not Word 95): transient status-bar text instead.
                     if (statusComp)
-                        status::flash(*statusComp, "Pageless mode",
+                        status::flash(*statusComp, "Normal view",
                                       afterhours::graphics::get_time());
                     break;
-                case 1:  // Paged Mode (preview owns pageMode: ignored)
+                case 1:  // Page Layout (preview owns pageMode: ignored)
                     if (layout.previewMode) break;
                     cmd::exitOutlineMode(layout, scroll);
-                    // See Pageless above: the View switch persists.
+                    // See Normal above: the View switch persists.
                     doc.docSettings.pageSettings.mode = PageMode::Paged;
                     layout.pageMode = PageMode::Paged;
                     layout::updateLayout(layout, layout.screenWidth,
@@ -275,7 +279,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     // No floating toast for a mode switch (modern,
                     // not Word 95): transient status-bar text instead.
                     if (statusComp)
-                        status::flash(*statusComp, "Paged mode",
+                        status::flash(*statusComp, "Page Layout",
                                       afterhours::graphics::get_time());
                     break;
                 case 3:  // Ruler
@@ -330,7 +334,7 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                 case 18:  // Outline
                     cmd::toggleOutlineMode(doc, layout, scroll);
                     // Transient status-bar flash, not a floating
-                    // toast (same pattern as Pageless/Paged above).
+                    // toast (same pattern as Normal/Page Layout above).
                     if (statusComp)
                         status::flash(*statusComp,
                                       layout.showOutline ? "Outline mode"

@@ -14,6 +14,7 @@
 #include <afterhours/src/drawing_helpers.h>
 #include "../editor/borders_shading.h"
 #include "../editor/columns_math.h"
+#include "../editor/normal_view.h"
 #include "../editor/outline_view.h"
 #include "../editor/revisions.h"
 #include "../editor/scroll_math.h"
@@ -256,7 +257,15 @@ inline void renderTextBuffer(const TextBuffer& buffer,
                              // @ smart chips: raised BUTTON_FACE box
                              // behind the label while the buffer still
                              // holds it at the recorded offset.
-                             const std::vector<Chip>* chips = nullptr) {
+                             const std::vector<Chip>* chips = nullptr,
+                             // View > Normal: dashed indicator at
+                             // computed page boundaries (see
+                             // normal_view::isPageBoundary).
+                             // normalLinesPerPage is the preview
+                             // estimate (page text height / line
+                             // height), passed in by the caller.
+                             bool normalMode = false,
+                             int normalLinesPerPage = 50) {
     // Cursor into the squiggle list (sorted by row). Advanced as rows pass.
     std::size_t squiggleIdx = 0;
 
@@ -500,7 +509,36 @@ inline void renderTextBuffer(const TextBuffer& buffer,
             
             y += 20;  // Add space for the page break indicator
         }
-        
+
+        // View > Normal: dashed indicator at each COMPUTED page
+        // boundary (normal_view::isPageBoundary — every
+        // normalLinesPerPage-th row, the same estimate Print
+        // Preview uses). Word 95 Normal shows page breaks as
+        // dashed lines across the text; unlike an explicit Page
+        // Break (above) this adds no vertical space and no label
+        // — the rows keep their positions, so the hit-test math
+        // is untouched. Skipped where an explicit break already
+        // drew: two lines on top of each other would read as
+        // one thick line. Editing adornment: hidden in Print
+        // Preview (normalMode is false there), like the
+        // explicit break.
+        if (normalMode && !suppressSelection &&
+            normal_view::isPageBoundary(row, normalLinesPerPage) &&
+            !buffer.hasPageBreakBefore(row)) {
+            // y is the current line's top (paragraph space-before
+            // already added): y - 2 sits in the middle of the
+            // ~4px gap between this line and the previous one.
+            int breakY = y - 2;
+            int lineStart = static_cast<int>(textArea.x) + 20;
+            int lineEnd =
+                static_cast<int>(textArea.x + textArea.width) - 20;
+            afterhours::Color breakColor = {128, 128, 128, 255};
+            for (int px = lineStart; px < lineEnd; px += 8) {
+                afterhours::draw_line(px, breakY, px + 4, breakY,
+                                      breakColor);
+            }
+        }
+
         // Draw line number in gutter if enabled (not in columns
         // mode: the gutter would collide across columns).
         if (showLineNumbers && !columnsActive) {
@@ -1633,6 +1671,14 @@ struct EditorRenderSystem
         // Outline mode: heading rows only (not in Print Preview:
         // preview shows printable content, not the outline).
         bool outlineMode = layout.showOutline && !layout.previewMode;
+        // Normal view (View > Normal): pageless continuous text
+        // plus dashed computed page-break lines. The lines-per-
+        // page is columnsLinesPerPage above: page text height /
+        // line height, the same estimate Print Preview uses
+        // (in Normal displayScale == zoomLevel, so the fit
+        // factor is 1). The ruler stays: pageless text uses
+        // the full text-area width, not a page frame.
+        bool normalMode = layout::isNormalView(layout);
         // columnsActive / columnsLinesPerPage / columnsSpacingPx
         // were computed above (the squiggle cache needs them).
 
@@ -1654,7 +1700,8 @@ struct EditorRenderSystem
                              &layout.outlineCollapsedRows,
                              layout.previewMode ? nullptr : &doc.comments,
                              layout.previewMode ? nullptr : &doc.revisions,
-                             layout.previewMode ? nullptr : &doc.chips);
+                             layout.previewMode ? nullptr : &doc.chips,
+                             normalMode, columnsLinesPerPage);
             renderTextBuffer(doc.buffer, bottomArea, caretVisible, fontSize,
                              lineHeight, scroll.secondaryOffset, showLineNumbers,
                              layout.lineNumberGutterWidth, doc.docSettings.tabWidth,
@@ -1667,7 +1714,8 @@ struct EditorRenderSystem
                              &layout.outlineCollapsedRows,
                              layout.previewMode ? nullptr : &doc.comments,
                              layout.previewMode ? nullptr : &doc.revisions,
-                             layout.previewMode ? nullptr : &doc.chips);
+                             layout.previewMode ? nullptr : &doc.chips,
+                             normalMode, columnsLinesPerPage);
 
             // Split divider
             afterhours::draw_line(static_cast<int>(effectiveArea.x),
@@ -1688,7 +1736,8 @@ struct EditorRenderSystem
                              &layout.outlineCollapsedRows,
                              layout.previewMode ? nullptr : &doc.comments,
                              layout.previewMode ? nullptr : &doc.revisions,
-                             layout.previewMode ? nullptr : &doc.chips);
+                             layout.previewMode ? nullptr : &doc.chips,
+                             normalMode, columnsLinesPerPage);
         }
 
         // === Draw Vertical Scroll Bar (Win95) ===

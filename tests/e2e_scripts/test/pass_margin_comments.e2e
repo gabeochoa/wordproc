@@ -1,11 +1,11 @@
 # Test: Margin comments (Docs comments, Win95 dress)
 # Add a comment via Insert > Comment..., verify the margin card
-# appears in Paged mode, clicking the card moves the caret to the
+# appears in Page Layout, clicking the card moves the caret to the
 # anchor start, and Resolve removes the comment.
 
 menu_open View
 wait_frames 12
-menu_select "Paged Mode"
+menu_select "Page Layout"
 wait_frames 12
 
 type "Comment here"

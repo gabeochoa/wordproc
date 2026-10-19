@@ -105,8 +105,8 @@ struct StatusBarSystem : afterhours::System<UIContext<InputAction>> {
             rightText = std::format("REC   TRK   MRK   EXT   OVR      {}", timeStr);
         }
 
-        // Transient status message (e.g. "Paged mode" after a View >
-        // Paged Mode switch) replaces the stats line until it expires.
+        // Transient status message (e.g. "Page Layout" after a View >
+        // Page Layout switch) replaces the stats line until it expires.
         // This is the StatusComponent channel, rendered here — it was
         // previously created but never read.
         if (cache_.status &&

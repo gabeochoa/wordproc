@@ -1,31 +1,32 @@
-# Test: View > Pageless/Paged Mode
-# Validates page mode switching
+# Test: View > Normal/Page Layout
+# Validates view switching (Word 95 order: Normal, Page Layout)
 
 # Type some text
 type "Testing page modes"
-wait 1
+wait_frames 12
 
-# Switch to Pageless Mode
+# Switch to Normal
 menu_open View
-wait 1
-menu_select Pageless Mode
-wait 1
+wait_frames 12
+menu_select Normal
+wait_frames 12
+validate normal_view=true
 
-# Switch to Paged Mode
+# Switch to Page Layout
 menu_open View
-wait 1
-menu_select Paged Mode
-wait 1
+wait_frames 12
+menu_select "Page Layout"
+wait_frames 12
+validate page_mode=paged
 
-# Switch back to Pageless
+# Switch back to Normal
 menu_open View
-wait 1
-menu_select Pageless Mode
-wait 1
+wait_frames 12
+menu_select Normal
+wait_frames 12
+validate normal_view=true
 
 # Final check: text should still be there
 validate text=Testing page modes
 
 screenshot e2e_menu_view_page_modes
-
-
