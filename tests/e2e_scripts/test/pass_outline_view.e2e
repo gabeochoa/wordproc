@@ -6,6 +6,11 @@
 # SECOND visible row (y ~215) and lands on buffer row 2 (Heading
 # Two), skipping the body row 1 — in the normal view the same y
 # would land on the body paragraph.
+# The second heading is Heading 2 (CTRL+ALT+2), so the screenshot
+# must show it indented (level-1)*24 = 24px right of the Heading 1:
+# the old script styled BOTH headings Heading 1 (CTRL+ALT+1 twice),
+# which hid the missing-indent bug in a same-x screenshot.
+# Entering Outline flashes the status bar, never a floating toast.
 
 type "Heading One"
 key CTRL+ALT+1
@@ -15,7 +20,7 @@ type "Body text here"
 key ENTER
 wait_frames 6
 type "Heading Two"
-key CTRL+ALT+1
+key CTRL+ALT+2
 key ENTER
 wait_frames 6
 type "More body"

@@ -744,7 +744,10 @@ inline void toggleOutlineMode(DocumentComponent& doc,
                 doc.buffer.clearSelection();
             }
         }
-        toast_notify::info("Outline: On");
+        // No floating toast: the caller (menu action) flashes the
+        // transient status-bar text, like the Pageless/Paged mode
+        // switches, so no rounded blue "Outline: On" pill covers
+        // the document.
     } else {
         layout.showOutline = false;
         layout.pageMode = layout.outlinePrevPageMode;
@@ -752,7 +755,6 @@ inline void toggleOutlineMode(DocumentComponent& doc,
             scroll->offset =
                 std::max(0, layout.outlinePrevScroll);
         }
-        toast_notify::info("Outline: Off");
     }
 }
 

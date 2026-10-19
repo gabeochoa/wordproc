@@ -27,6 +27,12 @@ TEST_CASE("SpellChecker - Basic word checking", "[spellcheck]") {
         REQUIRE(checker.isCorrect("family"));
     }
 
+    SECTION("Outline headings are correct (Batch 4 fix round)") {
+        // Pinned: "Heading" earned a squiggle in the Outline screenshot.
+        REQUIRE(checker.isCorrect("heading"));
+        REQUIRE(checker.isCorrect("Heading"));
+    }
+
     SECTION("Top-1000 g-z delta (Batch 3 fix round 2)") {
         // Pinned: "sat" earned a squiggle in the Grammar screenshot.
         REQUIRE(checker.isCorrect("sat"));

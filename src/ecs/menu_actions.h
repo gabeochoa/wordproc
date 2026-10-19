@@ -291,6 +291,13 @@ inline void handleMenuActionImpl(int menuResult, DocumentComponent& doc,
                     break;
                 case 18:  // Outline
                     cmd::toggleOutlineMode(doc, layout, scroll);
+                    // Transient status-bar flash, not a floating
+                    // toast (same pattern as Pageless/Paged above).
+                    if (statusComp)
+                        status::flash(*statusComp,
+                                      layout.showOutline ? "Outline mode"
+                                                         : "Outline off",
+                                      afterhours::graphics::get_time());
                     break;
                 case 20:  // UI Scale... (moved from Tools)
                     dialogs.showSettingsDialog = true;
