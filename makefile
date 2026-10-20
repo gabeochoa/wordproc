@@ -1,5 +1,5 @@
 ZIG ?= zig
-JOBS ?= 2
+JOBS ?= $(shell sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 ZIG_ARGS ?=
 ARGS ?=
 .DEFAULT_GOAL := all
