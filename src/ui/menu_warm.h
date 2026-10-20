@@ -49,16 +49,14 @@ inline void warmMenuMeasures(const std::vector<win95::Menu>& menus) {
                     // (base size 16, Settings-scaled inside MeasureUIText).
                     (void)theme::MeasureUIText(text.c_str(), 16);
                     break;
-                case menu_geometry::MenuWarmSite::ShortcutWidth:
-                    // Same call MenuUISystem makes for shortcut widths
-                    // (base size 14, Settings-scaled).
-                    (void)theme::MeasureUIText(text.c_str(), 14);
-                    break;
                 case menu_geometry::MenuWarmSite::Drawn:
                     // The size autolayout + the renderer measure/draw at:
-                    // default font, 14, Proportional (no Settings scale).
-                    (void)afterhours::measure_text(theme::UI_FONT, text.c_str(),
-                                                   14.0f, 1.0f);
+                    // default font, DRAWN_FONT_SIZE_PX, Proportional
+                    // (no Settings scale). Shortcuts measure here too:
+                    // their boxes are sized from this call.
+                    (void)afterhours::measure_text(
+                        theme::UI_FONT, text.c_str(),
+                        menu_geometry::DRAWN_FONT_SIZE_PX, 1.0f);
                     break;
                 default: break;
             }
@@ -72,10 +70,11 @@ inline void warmMenuMeasures(const std::vector<win95::Menu>& menus) {
 // on first DRAW — fonsTextAdvance (the measure path) only computes
 // advances, it never rasterizes, while fonsDrawText rasterizes each
 // new glyph into the atlas. So draw every string the dropdown will
-// draw, once, at the exact size it draws at (14), offscreen with
-// alpha 0: the glyphs rasterize, the pixels paint nothing. Only
-// Drawn-site strings are drawn (the MeasureUIText sizes are
-// measure-only, never drawn); exact duplicates are drawn once.
+// draw, once, at the exact size it draws at
+// (DRAWN_FONT_SIZE_PX), offscreen with alpha 0: the glyphs
+// rasterize, the pixels paint nothing. Only Drawn-site strings are
+// drawn (the MeasureUIText sizes are measure-only, never drawn);
+// exact duplicates are drawn once.
 // Returns false when there was nothing to draw (no menus / no font
 // yet) so the caller can retry on a later frame. Call once, on the
 // second frame — after the first paint, so first paint pays none of
@@ -90,9 +89,10 @@ inline bool warmMenuDraws(const std::vector<win95::Menu>& menus) {
         menus, [&](const std::string& text, menu_geometry::MenuWarmSite site) {
             if (site != menu_geometry::MenuWarmSite::Drawn) return;
             if (!drawn.insert(text).second) return;
-            afterhours::draw_text_ex(theme::UI_FONT, text.c_str(),
-                                    {-10000.0f, -10000.0f}, 14.0f, 1.0f,
-                                    afterhours::Color{0, 0, 0, 0});
+            afterhours::draw_text_ex(
+                theme::UI_FONT, text.c_str(), {-10000.0f, -10000.0f},
+                menu_geometry::DRAWN_FONT_SIZE_PX, 1.0f,
+                afterhours::Color{0, 0, 0, 0});
         });
     return true;
 }

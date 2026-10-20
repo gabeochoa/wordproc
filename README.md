@@ -15,7 +15,7 @@ nice -n 10 zig build run -j2 -- test_files/public_domain/complete_shakespeare.tx
 
 Zig owns the build graph and caches each C++ compilation using compiler dependency files, including vendored headers. Native compilation uses Apple Clang and the system macOS SDK. The app and resources are installed under `output/`. Run from the repository root or `output/` so resource paths resolve.
 
-Use `zig build --help` for available steps. `-Dopt=2` enables optimized native builds, `-Dcoverage=true` enables LLVM coverage, `-Dmcp=false` disables MCP, and `-Ddebug-text-overflow=false` disables overflow diagnostics. `-Dcxx=/path/to/clang++` selects the native compiler. The makefile forwards common commands to Zig.
+Use `zig build --help` for available steps. `-Dopt=2` enables optimized native builds, `-Dcoverage=true` enables LLVM coverage, `-Dmcp=false` disables MCP, and `-Ddebug-text-overflow=true` enables the red text-overflow diagnostics (off by default). `-Dcxx=/path/to/clang++` selects the native compiler. The makefile forwards common commands to Zig.
 
 ## Web
 

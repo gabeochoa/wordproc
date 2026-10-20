@@ -173,7 +173,7 @@ pub fn build(b: *std.Build) void {
     const e2e = b.option(bool, "e2e", "Include E2E testing support (E2E runner TU + AFTER_HOURS_ENABLE_E2E_TESTING)") orelse true;
     const profiling = b.option(bool, "profiling", "Enable bounded Afterhours frame and system profiling") orelse false;
     const mcp = b.option(bool, "mcp", "Enable MCP support") orelse true;
-    const overflow = b.option(bool, "debug-text-overflow", "Show text overflow diagnostics") orelse true;
+    const overflow = b.option(bool, "debug-text-overflow", "Show text overflow diagnostics") orelse false;
     var flags = std.ArrayList([]const u8).empty;
     flags.appendSlice(b.allocator, &warnings) catch @panic("oom");
     flags.appendSlice(b.allocator, &.{ "-std=c++23", b.fmt("-O{d}", .{optimize}), "-DBACKWARD", "-include", "src/log.h", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION" }) catch @panic("oom");

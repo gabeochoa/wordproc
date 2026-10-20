@@ -450,6 +450,13 @@ struct MenuUISystem : System<UIContext<InputAction>> {
 
                     // Register menu item label for E2E tests
                     test_input::register_visible_text(showLabel);
+                    // Same for the shortcut: render-phase registration
+                    // (register_label_for_testing) is cleared before
+                    // E2E checks run, so without this no script can
+                    // assert a shortcut rendered.
+                    if (!item.shortcut.empty()) {
+                        test_input::register_visible_text(item.shortcut);
+                    }
                     
                     int itemId = 20000 + static_cast<int>(menuIdx) * 100 + static_cast<int>(itemIdx);
                     float itemHeight = theme::layout::scale(20.0f);
@@ -487,9 +494,33 @@ struct MenuUISystem : System<UIContext<InputAction>> {
                     // Shortcut label: right-aligned, right edge exactly
                     // ITEM_PADDING_X (8px) from the dropdown edge —
                     // symmetric with the label's left inset.
+                    // Shortcut box: sized from the width measured at
+                    // the size the renderer actually draws at
+                    // (DRAWN_FONT_SIZE_PX, no Settings scale). The old
+                    // code measured via theme::MeasureUIText(14), which
+                    // applies the Settings ui_scale, so at ui_scale < 1
+                    // the box came out narrower than the drawn text:
+                    // clipped shortcuts + the overflow overlay.
                     if (!item.shortcut.empty()) {
-                        float shortcutWidth = static_cast<float>(
-                            theme::MeasureUIText(item.shortcut.c_str(), 14) + 2);
+                        // Same fallback as theme::MeasureUIText when the
+                        // UI font failed to load: backend default font.
+                        float shortcutWidth =
+                            theme::UI_FONT_LOADED
+                                ? static_cast<float>(
+                                      afterhours::measure_text(
+                                          theme::UI_FONT,
+                                          item.shortcut.c_str(),
+                                          menu_geometry::DRAWN_FONT_SIZE_PX,
+                                          1.0f)
+                                          .x +
+                                      2)
+                                : static_cast<float>(
+                                      afterhours::graphics::measure_text(
+                                          item.shortcut.c_str(),
+                                          static_cast<int>(
+                                              menu_geometry::
+                                                  DRAWN_FONT_SIZE_PX)) +
+                                      2);
                         float shortcutX = menu_geometry::dropdownShortcutRight(
                                               dropdownX, maxWidth) -
                                           shortcutWidth;

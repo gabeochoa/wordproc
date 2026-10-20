@@ -55,12 +55,18 @@ TEST_CASE("Menu warm enumeration covers every string the dropdown measures",
         {"F", MenuWarmSite::Drawn},
         {"File", MenuWarmSite::Drawn},
         // "New": every mark-prefix variant (marks change at runtime),
-        // then the shortcut at both conventions.
+        // then the shortcut at Drawn only. Shortcuts are NOT warmed
+        // at a Settings-scaled size: their boxes are sized from the
+        // Drawn-size measure, so warming a scaled measure would warm
+        // a call the dropdown never makes (and mask a drift back
+        // to the scaled measure, which clips shortcuts at
+        // ui_scale < 1). RED-ON-REVERT: restoring the scaled
+        // shortcut measure restores the ShortcutWidth site, and
+        // this expectation fails.
         {"  New", MenuWarmSite::Drawn},
         {"\xE2\x88\x9A New", MenuWarmSite::Drawn},
         {"\xE2\x80\xA2 New", MenuWarmSite::Drawn},
         {"- New", MenuWarmSite::Drawn},
-        {"Ctrl+N", MenuWarmSite::ShortcutWidth},
         {"Ctrl+N", MenuWarmSite::Drawn},
         // Separator: nothing. Recent item: display label, never the
         // raw path — the dropdown measures it as displayed.

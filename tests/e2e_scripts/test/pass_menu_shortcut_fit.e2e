@@ -1,0 +1,104 @@
+# Test: Menu shortcut labels render fully in every dropdown
+# Regression for the red-overflow-leak fix: shortcut boxes used to be
+# sized from theme::MeasureUIText (Settings ui_scale applied) while the
+# labels render at the fixed Drawn size, so at ui_scale < 1 the text
+# was wider than its box, clipped, and tripped the overflow overlay.
+# The boxes are now sized from the Drawn-size measure.
+# This script pins the visible outcome (every shortcut renders in its
+# menu); tests/test_menu_warm.cpp pins the measurement site and is the
+# check that fails if the scaled measure comes back.
+
+wait_frames 30
+
+# File menu
+menu_open "File"
+wait_frames 12
+expect_text "Ctrl+N"
+expect_text "Ctrl+O"
+expect_text "Ctrl+S"
+expect_text "F12"
+expect_text "Ctrl+P"
+expect_text "Alt+F4"
+screenshot shortcut_fit_file
+
+# Edit menu
+menu_open "Edit"
+wait_frames 12
+expect_text "Ctrl+Z"
+expect_text "Ctrl+Y"
+expect_text "Ctrl+X"
+expect_text "Ctrl+C"
+expect_text "Ctrl+V"
+expect_text "Ctrl+A"
+expect_text "Ctrl+F"
+expect_text "Shift+F3"
+expect_text "Ctrl+H"
+expect_text "Ctrl+G"
+screenshot shortcut_fit_edit
+
+# View menu
+menu_open "View"
+wait_frames 12
+expect_text "Ctrl+Alt+="
+expect_text "Ctrl+Alt+-"
+expect_text "Ctrl+Alt+0"
+expect_text "F11"
+expect_text "Ctrl+Alt+V"
+expect_text "Ctrl+Alt+D"
+screenshot shortcut_fit_view
+
+# Insert menu
+menu_open "Insert"
+wait_frames 12
+expect_text "Ctrl+Enter"
+expect_text "Ctrl+K"
+screenshot shortcut_fit_insert
+
+# Format menu: the widest shortcuts live here and are the first to clip
+menu_open "Format"
+wait_frames 12
+expect_text "Ctrl+Shift+Alt+Up"
+expect_text "Ctrl+Shift+Alt+Down"
+expect_text "Ctrl+Alt+Up"
+expect_text "Ctrl+Alt+Down"
+expect_text "Ctrl+Alt+1"
+expect_text "Ctrl+Alt+6"
+expect_text "Ctrl+B"
+expect_text "Ctrl+I"
+expect_text "Ctrl+U"
+expect_text "Ctrl+Shift+S"
+expect_text "Ctrl+Shift+="
+expect_text "Ctrl+Shift+-"
+expect_text "Ctrl+L"
+expect_text "Ctrl+E"
+expect_text "Ctrl+R"
+expect_text "Ctrl+J"
+expect_text "Ctrl+1"
+expect_text "Ctrl+2"
+expect_text "Ctrl+0"
+expect_text "Ctrl+]"
+expect_text "Ctrl+["
+expect_text "Ctrl+Shift+1"
+expect_text "Ctrl+Shift+5"
+expect_text "Ctrl+Shift+2"
+expect_text "Ctrl+Shift+8"
+expect_text "Ctrl+Shift+7"
+screenshot shortcut_fit_format
+
+# Tools menu
+menu_open "Tools"
+wait_frames 12
+expect_text "Ctrl+Shift+W"
+expect_text "Shift+F7"
+screenshot shortcut_fit_tools
+
+# Table menu has no shortcuts; still opens cleanly
+menu_open "Table"
+wait_frames 12
+screenshot shortcut_fit_table
+
+# Help menu
+menu_open "Help"
+wait_frames 12
+expect_text "F1"
+screenshot shortcut_fit_help

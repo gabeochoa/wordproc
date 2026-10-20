@@ -53,14 +53,25 @@ inline constexpr const char* MARK_PREFIX_CHECKMARK = "\xE2\x88\x9A ";
 inline constexpr const char* MARK_PREFIX_RADIO = "\xE2\x80\xA2 ";
 inline constexpr const char* MARK_PREFIX_DASH = "- ";
 
+// Font size (px) the renderer draws menu labels at: the UI default font,
+// Proportional (no Settings scale). Menu code must measure shortcut
+// boxes at this size, NOT via theme::MeasureUIText (which applies the
+// Settings ui_scale): at ui_scale != 1 the two disagree, so a box
+// sized from the scaled measure fits text that is never drawn —
+// and at ui_scale < 1 the shortcut text is wider than its box,
+// clips, and trips the overflow overlay.
+inline constexpr float DRAWN_FONT_SIZE_PX = 14.0f;
+
 // Where the dropdown measures a string (Perf Round 6). The menu bar
 // measures the same string at two size conventions, so a warm pass
 // must cover both or the first open still pays a fontstash walk:
-// - HeaderWidth / MnemonicWidth / ShortcutWidth: MenuUISystem's own
-//   theme::MeasureUIText calls (base sizes 16/16/14, Settings-scaled).
-// - Drawn: the autolayout + renderer size, 14 (Proportional scaling,
-//   no Settings scale), for every label the button actually draws.
-enum class MenuWarmSite { HeaderWidth, MnemonicWidth, ShortcutWidth, Drawn };
+// - HeaderWidth / MnemonicWidth: MenuUISystem's own
+//   theme::MeasureUIText calls (base size 16, Settings-scaled).
+// - Drawn: the autolayout + renderer size, DRAWN_FONT_SIZE_PX
+//   (Proportional scaling, no Settings scale), for every label the
+//   button actually draws — including shortcuts, whose boxes are
+//   sized from the Drawn-size measure.
+enum class MenuWarmSite { HeaderWidth, MnemonicWidth, Drawn };
 
 // Every (string, site) pair the dropdown measures for these menus,
 // for the startup warm pass. Pure / backend-free so unit tests can
@@ -91,7 +102,6 @@ void forEachMenuWarmString(const Menus& menus, Fn&& fn) {
                 fn(std::string(prefix) + show, MenuWarmSite::Drawn);
             }
             if (!item.shortcut.empty()) {
-                fn(item.shortcut, MenuWarmSite::ShortcutWidth);
                 fn(item.shortcut, MenuWarmSite::Drawn);
             }
         }
