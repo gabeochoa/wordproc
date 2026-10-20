@@ -170,19 +170,24 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(u8, "opt", "Native optimization level, 0 through 3") orelse 2;  // -O2 default: -O0 was the perf root cause (2026-10-19)
     if (optimize > 3) @panic("opt must be between 0 and 3");
     const coverage = b.option(bool, "coverage", "Enable LLVM coverage instrumentation") orelse false;
+    const e2e = b.option(bool, "e2e", "Include E2E testing support (E2E runner TU + AFTER_HOURS_ENABLE_E2E_TESTING)") orelse true;
     const profiling = b.option(bool, "profiling", "Enable bounded Afterhours frame and system profiling") orelse false;
     const mcp = b.option(bool, "mcp", "Enable MCP support") orelse true;
     const overflow = b.option(bool, "debug-text-overflow", "Show text overflow diagnostics") orelse true;
     var flags = std.ArrayList([]const u8).empty;
     flags.appendSlice(b.allocator, &warnings) catch @panic("oom");
-    flags.appendSlice(b.allocator, &.{ "-std=c++23", b.fmt("-O{d}", .{optimize}), "-DBACKWARD", "-include", "src/log.h", "-DAFTER_HOURS_ENABLE_E2E_TESTING", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION" }) catch @panic("oom");
+    flags.appendSlice(b.allocator, &.{ "-std=c++23", b.fmt("-O{d}", .{optimize}), "-DBACKWARD", "-include", "src/log.h", "-DAFTERHOURS_ENFORCE_MIN_FONT_SIZE", "-DAFTER_HOURS_UI_SINGLE_COLLECTION" }) catch @panic("oom");
+    if (e2e) flags.append(b.allocator, "-DAFTER_HOURS_ENABLE_E2E_TESTING") catch @panic("oom");
     if (profiling) flags.append(b.allocator, "-DAFTERHOURS_ENABLE_PROFILING=1") catch @panic("oom");
     if (mcp) flags.append(b.allocator, "-DAFTER_HOURS_ENABLE_MCP") catch @panic("oom");
     if (overflow) flags.append(b.allocator, "-DAFTERHOURS_DEBUG_TEXT_OVERFLOW") catch @panic("oom");
     if (coverage) flags.appendSlice(b.allocator, &.{ "-fprofile-instr-generate", "-fcoverage-mapping" }) catch @panic("oom");
     const native_link = b.addSystemCommand(&.{cxx});
     native_link.setName("link wordproc");
-    for (app_sources) |src| native_link.addFileArg(compile(b, cxx, src, flags.items, false));
+    for (app_sources) |src| {
+        if (!e2e and std.mem.eql(u8, src, "src/testing/e2e_runner.cpp")) continue;
+        native_link.addFileArg(compile(b, cxx, src, flags.items, false));
+    }
     for ([_][]const u8{ "CoreFoundation", "Metal", "MetalKit", "Cocoa", "QuartzCore", "ImageIO", "UniformTypeIdentifiers" }) |fw| native_link.addArgs(&.{ "-framework", fw });
     if (coverage) native_link.addArg("-fprofile-instr-generate");
     native_link.addArg("-o");

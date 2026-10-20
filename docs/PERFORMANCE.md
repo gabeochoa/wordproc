@@ -1304,3 +1304,111 @@ Rebuilding Word 95 using the afterhours library. Speed and performance is the na
 instant-start editor, fast text layout and editing at large document sizes, Word 95-style UI chrome.
 Every perf change reports before/after numbers from the benchmark suite (typing latency,
 scroll at 100K words, open time). No perf claim without a measured number.
+
+## Build times — 2026-10-19 (build-speed round, headless only)
+
+Method: clean = `rm -rf .zig-cache output` then `make` (`zig build
+-j10`, 10 jobs). Per-TU times are serial `clang++` with the exact
+`build.zig` app flags. Box load was 18–20 during this lane, so wall
+medians across different load windows are NOT comparable — user CPU
+time is the load-independent signal (same work, same user time).
+
+### Per-TU compile times (serial wall, before)
+
+| TU | Time | TU | Time |
+|---|---|---|---|
+| `src/main.cpp` | 29.23 s | `src/editor/text_buffer.cpp` | 5.48 s |
+| `src/testing/e2e_runner.cpp` | 7.41 s | `src/preload.cpp` | 5.43 s |
+| `src/sokol_impl.mm` | 5.66 s | `src/input/action_map.cpp` | 4.93 s |
+| `src/settings.cpp` | 5.60 s | `src/ui/theme.cpp` | 4.16 s |
+
+Remaining 16: `document_io` 3.79, `files.cpp` 2.48, `table`
+1.87, `autocorrect` 1.71, `spellcheck` 1.66, `export_rtf` 1.48,
+`file_dialog.mm` 1.39, `font_loader` 1.29, `export_html` 1.26,
+`text_layout` 1.24, `export_pdf` 1.20, `drawing` 1.12, `equation`
+1.11, `image` 0.99, `gap_buffer` 0.90, `logging` 0.86.
+Serial total ≈ 92 s. `main.cpp` is the clean-build critical path,
+and its cost is mostly NOT frontend: `-ftime-trace` on
+`main.cpp` (32.1 s) shows 24.5 s backend (13.4 s optimizer + 11.1 s
+codegen) vs 7.5 s frontend. A precompiled header can only ever
+attack the frontend fraction — and only the shared-preamble part
+of it, since the ECS headers `main.cpp` pulls in are not shared.
+
+### Dropped: binary PCH
+
+Two candidates, measured with manual `clang++` before any
+`build.zig` change:
+
+- PCH-B (shared preamble: `std_include.h` + `external.h`, 39 MB):
+  SLOWER on every sampled full compile (`gap_buffer` 0.92 → 1.66 s,
+  `text_buffer` 5.48 → 5.89 s, `e2e_runner` 7.41 → 7.45 s,
+  `settings` 5.60 → 5.51 s flat, `text_layout` 1.14 → 1.92 s).
+  Loading the 39 MB PCH costs more than parsing the preamble it
+  replaces. It helped `main.cpp`'s frontend by only 0.36 s
+  (`-fsyntax-only` 4.93 → 4.57 s).
+- PCH-A (`log.h` / fmt only, 27 MB): wins on small TUs
+  (`gap_buffer` 0.92 → 0.37 s, `text_layout` 1.14 → 0.53 s,
+  `autocorrect` 1.71 → 1.07 s) but flat/slower on the big ones
+  (`main` 29.23 → 30.49 s, `e2e_runner` 7.41 → 7.78 s).
+  Full parallel clean-build simulation (PCH + all TUs at `-P10` +
+  link): **41.4 s with PCH-A vs 40.0 s without** — no win, and the
+  +1.1 s serial PCH step sits on the critical path ahead of `main`.
+- Both `.mm` TUs fail under a C++ PCH (`Objective-C was disabled
+  in PCH file but is currently enabled`), so they would need
+  excluding, and a zig-cached PCH adds a staleness hazard for no
+  payoff. Dropped on the numbers. This matches the sibling
+  precedent: mailboy's `build.zig` deliberately uses no binary PCH
+  (its Makefile does; its `build.zig` force-includes `pch.h`
+  normally), and kart-afterhours has no `build.zig`/PCH at all.
+
+### Kept: `-De2e=false` lean build
+
+`build.zig` gains an `e2e` option (default true, so daily `make`
+is unchanged). When false it omits `-DAFTER_HOURS_ENABLE_E2E_TESTING`
+and drops `src/testing/e2e_runner.cpp` from the native app link.
+`src/main.cpp` referenced runner symbols unconditionally, so its
+runner uses are gated on `WORDPROC_HAS_E2E`, defined when
+`AFTER_HOURS_ENABLE_E2E_TESTING` or `AFTER_HOURS_USE_WEB` is set —
+the web build (`zig build web`, no E2E define) keeps the runner
+exactly as before; web flags and sources are untouched. A lean
+binary given `--test-script` fails loudly (exit 1,
+`E2E testing is disabled in this build (-De2e=false)`) instead of
+silently ignoring the script. Guard:
+`scripts/check_lean_build.sh` compiles `main.cpp` with the lean
+flag set and asserts zero undefined E2E symbols in the object
+(pre-gating `main.cpp` left 2: `e2e::initializeRunner` /
+`initializeRunnerBatch`).
+
+| Metric | Before | After, default `make` | Lean `zig build -De2e=false` |
+|---|---|---|---|
+| Clean wall, median of 2 | 50.7 s (48.6, 52.7) | 72.2 s (75.4, 69.0 — load-inflated) | 53.4 s (45.4, 61.4 — load-inflated) |
+| Clean user CPU, median of 2 | 132.1 s | 133.7 s (same work: gating is free) | 125.1 s (−8.6 s, ~6%: the dropped TU + skipped E2E header paths) |
+| Binary size | 5,545,808 | 5,545,808 (identical) | 4,890,768 (**−11.8%**) |
+| Cold-open wall, median of 3 (`--headless --test-mode --frame-limit=30`) | — | 0.11 s / `Startup` 47 ms | 0.14 s / `Startup` 81 ms (noise: no win, as expected — E2E systems register only when a script runs) |
+| Incremental 1-file (`logging.cpp`) | 4.4 s | 4.66 s (noise) | — |
+
+Reading: the lean build's real win is binary size (−11.8%) plus
+~8 s less CPU per clean build. Its wall win on an unloaded box is
+≈ 0 — `e2e_runner` runs parallel to `main`, and `main` (the
+critical path) is backend-bound and barely changes. Use it as the
+lean build: `zig build -De2e=false`.
+
+Guards: `make test` green (9927 assertions, 337 cases). Headless
+E2E spot on the default build, all exit 0: `e2e_basic_typing`,
+`pass_live_word_count`, `pass_status_bar_words_catch_up`. Zero new
+warnings: every app build log greps 0 `warning:` lines. (The test
+build shows 2 pre-existing `-Wunused-function` warnings for
+`borderStyleToString`/`borderStyleFromString` in the untouched
+`src/editor/document_io.cpp` — test flags lack
+`-Wno-unused-function`, and neither the file nor the flags changed
+in this round.)
+
+### Vendored fmt (addendum recheck, 2026-10-19)
+
+Still `FMT_VERSION 110200` (11.2.0) — the version mailboy bumped
+to for the newer-clang consteval break. An app-shaped TU
+(`-include src/log.h` + `<fmt/compile.h>` `FMT_COMPILE` consteval
+path) compiles and runs clean under the system clang (Apple clang
+17.0.0) and the zig-bundled clang (`zig c++`). **No fmt bump
+needed.** (Kart-afterhours still vendors fmt 8.0.1 — that is
+kart's exposure, not wordproc's.)

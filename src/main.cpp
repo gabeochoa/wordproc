@@ -28,7 +28,18 @@
 #ifdef __EMSCRIPTEN__
 #include <afterhours/src/plugins/files.h>
 #endif
+// E2E runner is compiled in when AFTER_HOURS_ENABLE_E2E_TESTING is set
+// (native app, `-De2e=true` default) or for the web build, which bundles
+// the runner unconditionally as before — `zig build web` does not pass
+// the E2E define, so the web build must not lose the runner. A lean
+// native build (`zig build -De2e=false`) defines neither and drops
+// src/testing/e2e_runner.cpp (see build.zig).
+#if defined(AFTER_HOURS_ENABLE_E2E_TESTING) || defined(AFTER_HOURS_USE_WEB)
+#define WORDPROC_HAS_E2E 1
+#endif
+#ifdef WORDPROC_HAS_E2E
 #include "testing/e2e_runner.h"
+#endif
 #include "testing/deferred_screenshot.h"
 #include "ui/menu_setup.h"
 #include "ui/menu_warm.h"
@@ -103,7 +114,12 @@ ecs::ToolbarComponent* toolbarComp = nullptr;
 ecs::DialogState* dialogState = nullptr;
 ecs::TestConfigComponent* testComp = nullptr;
 ecs::ScrollComponent* scrollComp = nullptr;
+#ifdef WORDPROC_HAS_E2E
 e2e::ScriptRunner* scriptRunner = nullptr;
+#else
+// No runner exists in a lean build; kept as void* so the field still exists.
+void* scriptRunner = nullptr;
+#endif
 
 int loopFrames = 0;
 bool e2eActive = false;
@@ -370,6 +386,7 @@ static void app_init() {
     
     // Initialize E2E script runner if script specified
     SCOPED_TIMER("E2E runner init + tail");
+#ifdef WORDPROC_HAS_E2E
     static e2e::ScriptRunner runner;
     app_state::scriptRunner = &runner;
     if (!app_state::testScriptDir.empty()) {
@@ -424,6 +441,17 @@ static void app_init() {
         afterhours::graphics::request_quit();
         return;
     }
+#else
+    // Lean build: no runner exists, so a script can never run. Fail loudly
+    // instead of silently ignoring the script.
+    if (!app_state::testScriptPath.empty() || !app_state::testScriptDir.empty()) {
+        LOG_WARNING("E2E testing is disabled in this build (-De2e=false); ignoring test script");
+        app_state::returnCode = 1;
+        app_state::earlyExit = true;
+        afterhours::graphics::request_quit();
+        return;
+    }
+#endif
 
     // Send deferred status-bar flash for auto-save recovery
     // (must happen after the editor entity / StatusComponent exist)
@@ -445,8 +473,10 @@ static void app_frame() {
     // further script step: quit is terminal and observable via the
     // process exit / returnCode, not via another E2E command.
     if (app_state::dialogState && app_state::dialogState->quitRequested) {
+#ifdef WORDPROC_HAS_E2E
         auto* runner = app_state::scriptRunner;
         app_state::returnCode = (runner && runner->hasFailed()) ? 1 : 0;
+#endif
         static bool quitSent = false;
         if (!quitSent) {
             quitSent = true;
@@ -598,10 +628,11 @@ static void app_frame() {
     }
 
     // Execute E2E script AFTER systems run (visible text is now registered for validation)
+#ifdef WORDPROC_HAS_E2E
     auto* runner = app_state::scriptRunner;
     if (runner->hasCommands() && !runner->isFinished()) {
         runner->tick(std::min(dt, 1.0f / 30.0f));
-        
+
         // If script finished, print results and exit
         if (runner->isFinished()) {
             runner->printResults();
@@ -616,6 +647,10 @@ static void app_frame() {
         // Clear debug overlay when not running
         testComp->e2eDebugOverlay = false;
     }
+#else
+    // Lean build: no runner exists, so the overlay is never running.
+    testComp->e2eDebugOverlay = false;
+#endif
 
     // End the GPU render pass — flush all accumulated draw commands
     afterhours::graphics::end_drawing();
@@ -850,8 +885,10 @@ int main(int argc, char* argv[]) {
                         LOG_INFO("frame %d %.3f ms", i, frameMs);
                     }
                 }
+#ifdef WORDPROC_HAS_E2E
                 if (app_state::scriptRunner && app_state::scriptRunner->isFinished())
                     break;
+#endif
                 // Quit requested (title-bar X / File > Exit): app_frame
                 // already called request_quit; stop the manual loop.
                 if (app_state::dialogState && app_state::dialogState->quitRequested)
