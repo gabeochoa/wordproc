@@ -6,6 +6,8 @@
 #include <filesystem>
 
 #include "../../vendor/afterhours/src/core/system.h"
+#include "../../vendor/afterhours/src/plugins/ui/text_input/state.h"
+#include "../../vendor/afterhours/src/plugins/ui/text_input/text_area_state.h"
 #include "../input/action_map.h"
 #include "../rl.h"
 // test_input:: available via rl.h -> external.h
@@ -19,6 +21,37 @@
 
 namespace ecs {
 
+// True when a text field (single- or multi-line) currently owns keyboard
+// focus. Routing by FOCUS, not by dialog-open: with a Find dialog open
+// but focus on a button (e.g. right after clicking Replace All), a
+// document Ctrl+Z must still undo the document -- pass_find_replace_all
+// pins that. With focus in a field, the field must win those same keys.
+//
+// The signal is the same one text_input acts on: its is_focused is set
+// when UI focus sits on the field entity or its parent container. So
+// walk UP from the focused element: focus on the field, its inner div,
+// or its label all resolve to the field's state-holder ancestor.
+static bool textFieldOwnsFocus() {
+    auto* ctx = afterhours::EntityHelper::get_singleton_cmp<
+        ui_imm::UIContextType>();
+    if (!ctx) return false;
+    afterhours::EntityID id = ctx->focus_id;
+    // Bounded like UIContext::contains_in_subtree: a corrupt parent
+    // chain must not hang the frame.
+    for (int depth = 0; depth < 64 && id != static_cast<afterhours::EntityID>(-1);
+         ++depth) {
+        auto opt = afterhours::ui::UICollectionHolder::getEntityForID(id);
+        if (!opt.has_value()) return false;
+        const auto& entity = opt.asE();
+        if (entity.has<afterhours::text_input::HasTextInputState>() ||
+            entity.has<afterhours::text_input::HasTextAreaState>()) {
+            return true;
+        }
+        if (!entity.has<afterhours::ui::UIComponent>()) return false;
+        id = entity.get<afterhours::ui::UIComponent>().parent;
+    }
+    return false;
+}
 
 // System for handling text input (typing characters) using ActionMap
 struct TextInputSystem
@@ -377,6 +410,15 @@ struct KeyboardShortcutSystem
         using input::Action;
         auto& actionMap_ = inputComp.actionMap;
 
+        // A focused text field owns these keys (see textFieldOwnsFocus):
+        // the field-handled actions below must not ALSO act on the
+        // document behind the dialog. Without this, Ctrl+Z in a
+        // focused Find field undid the field (text_input) AND the
+        // document (here) on the same frame. Deliberately NOT a
+        // modal-open gate: with a dialog open but focus on a button,
+        // document Ctrl+Z must still work (pass_find_replace_all).
+        bool fieldFocused = textFieldOwnsFocus();
+
         // Go To (Batch 9, Ctrl+G): opens the dialog from
         // anywhere — it exits header/footer editing and Print
         // Preview inside openGoToDialog (the jump targets the
@@ -662,18 +704,25 @@ struct KeyboardShortcutSystem
             doc.isDirty = true;
         }
 
-        // Clipboard
-        if (actionMap_.isActionPressed(Action::Copy)) cmd::copy(doc);
-        if (actionMap_.isActionPressed(Action::Cut)) cmd::cut(doc);
-        if (actionMap_.isActionPressed(Action::Paste)) cmd::paste(doc);
-        if (actionMap_.isActionPressed(Action::SelectAll)) cmd::selectAll(doc);
+        // Clipboard + Undo/Redo: skipped while a text field is focused.
+        // These are exactly the keys text_input handles in a focused
+        // field (Copy/Cut/Paste/SelectAll/Undo/Redo); the field wins.
+        // Everything else in this system (Save, formatting, ...) stays
+        // live, as before. With no field focused, document Ctrl+Z etc.
+        // behave exactly as before, dialog open or not.
+        if (!fieldFocused) {
+            if (actionMap_.isActionPressed(Action::Copy)) cmd::copy(doc);
+            if (actionMap_.isActionPressed(Action::Cut)) cmd::cut(doc);
+            if (actionMap_.isActionPressed(Action::Paste)) cmd::paste(doc);
+            if (actionMap_.isActionPressed(Action::SelectAll)) cmd::selectAll(doc);
 
-        // Undo/Redo (Ctrl+Y stays Redo; Repeat is F4 only)
-        if (actionMap_.isActionPressed(Action::Undo)) {
-            if (cmd::undo(doc)) caret::resetBlink(caret);
-        }
-        if (actionMap_.isActionPressed(Action::Redo)) {
-            if (cmd::redo(doc)) caret::resetBlink(caret);
+            // Undo/Redo (Ctrl+Y stays Redo; Repeat is F4 only)
+            if (actionMap_.isActionPressed(Action::Undo)) {
+                if (cmd::undo(doc)) caret::resetBlink(caret);
+            }
+            if (actionMap_.isActionPressed(Action::Redo)) {
+                if (cmd::redo(doc)) caret::resetBlink(caret);
+            }
         }
         if (actionMap_.isActionPressed(Action::Repeat)) {
             if (cmd::repeatLastAction(doc)) caret::resetBlink(caret);
@@ -907,6 +956,17 @@ struct NavigationSystem
                 scroll.offset += wheelLines;
             }
             scroll::clamp(scroll, static_cast<int>(doc.buffer.lineCount()));
+            return;
+        }
+
+        // A focused text field owns the navigation keys: arrows / word
+        // moves / Home / End in a focused dialog field must not ALSO
+        // move the document caret behind the dialog (same
+        // field-focus routing as KeyboardShortcutSystem above). Cell
+        // and header editing already returned above. With no field
+        // focused, document navigation runs as before, dialog open
+        // or not.
+        if (textFieldOwnsFocus()) {
             return;
         }
 

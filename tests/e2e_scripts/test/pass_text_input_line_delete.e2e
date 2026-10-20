@@ -1,0 +1,31 @@
+# Test: Text input delete-to-line-start / delete-to-line-end in Find dialog
+# Regression for the missing TextDeleteLineBack / TextDeleteLineForward
+# actions: without them the keys do nothing in a focused field.
+
+key CTRL+F
+wait_frames 30
+
+focus_ui find_input
+wait_frames 12
+type "alpha beta"
+wait_frames 12
+expect_input_text find_input "alpha beta"
+
+# Ctrl+Shift+Backspace = TextDeleteLineBack: whole single line goes.
+key CTRL+SHIFT+BACKSPACE
+wait_frames 6
+expect_input_text find_input ""
+screenshot text_input_line_delete_01_back
+
+# TextDeleteLineForward from line start clears the line.
+type "alpha beta"
+wait_frames 12
+key HOME
+wait_frames 6
+action TextDeleteLineForward
+wait_frames 6
+expect_input_text find_input ""
+screenshot text_input_line_delete_02_forward
+
+escape
+wait_frames 6

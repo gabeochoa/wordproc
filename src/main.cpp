@@ -289,6 +289,15 @@ static void app_init() {
 
     {
         SCOPED_TIMER("Register all systems");
+        // Input must tick before the UI reads the collector this frame:
+        // BeginUIContextManager takes last_action / all_actions from
+        // the InputCollector, and without this system the collector is
+        // never filled, so NO real key ever reached a UI action --
+        // every Text* / Widget* chord in get_mapping() was dead and
+        // only synthetic E2E `action` commands (which set last_action
+        // directly) could drive a text field. This is the afterhours
+        // ui::run() ordering.
+        afterhours::input::register_update_systems(sm);
         // Register pre-layout UI systems (context begin, clear children)
         ui_imm::registerUIPreLayoutSystems(sm);
         

@@ -1,0 +1,35 @@
+# Test: Ctrl+Z in a focused dialog field undoes the FIELD, not the document.
+# Regression for field-vs-document undo fighting: without the modal gate
+# in KeyboardShortcutSystem, the field Ctrl+Z also undid a document edit
+# on the same frame, so the document lost text it should have kept.
+
+type "doc words"
+wait_frames 6
+
+key CTRL+F
+wait_frames 30
+
+focus_ui find_input
+wait_frames 12
+type "alpha beta"
+wait_frames 12
+expect_input_text find_input "alpha beta"
+
+key CTRL+SHIFT+LEFT
+wait_frames 6
+key CTRL+BACKSPACE
+wait_frames 6
+expect_input_text find_input "alpha "
+
+# Field undo restores the field...
+key CTRL+Z
+wait_frames 6
+expect_input_text find_input "alpha beta"
+
+escape
+wait_frames 6
+
+# ...and the document is untouched by that field Ctrl+Z.
+# ("Doc words": AutoCorrect capitalizes the first sentence word.)
+expect_text "Doc words"
+screenshot text_input_field_undo_routing_doc_intact

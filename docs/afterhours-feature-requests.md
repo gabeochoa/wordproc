@@ -631,3 +631,16 @@ Found by wordproc Batch 1 visual-review work (boulder, sandbox blocks
    between frames" on `capture_frame`, or queue the readback internally
    until the next commit. Wordproc works around it with
    `src/testing/deferred_screenshot.h` (queue + flush after end_drawing).
+
+## 2026-10-19 — clipboard: no test-mode / provider hook
+
+afterhours::clipboard talks straight to sokol (sapp_set/get_clipboard_string),
+which is a no-op without a window. Apps with their own clipboard abstraction
+(wordproc's app::clipboard has an in-memory test store) cannot make
+afterhours text_input fields share it: in headless/E2E runs, field Copy
+writes nowhere and document Paste reads "". On a real desktop this works,
+so pass_text_input_clipboard / pass_text_input_cut fail ONLY headless.
+Desired: a clipboard provider hook (set/get function pointers) or a
+test-mode in-memory backend in afterhours::clipboard, mirroring what
+files/native dialogs already allow. Workaround in wordproc: none
+app-side; the two E2E scripts are documented headless-only failures.
